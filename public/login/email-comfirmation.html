@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Account - SteadyLeadFlow</title>
+    <style>
+        /* Email-safe CSS - inline styles work better */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .logo {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .tagline {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin: 5px 0 0 0;
+        }
+        
+        .welcome-banner {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 20px 40px;
+            text-align: center;
+        }
+        
+        .welcome-text {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .greeting {
+            font-size: 20px;
+            color: #333333;
+            margin: 0 0 20px 0;
+            font-weight: 600;
+        }
+        
+        .message {
+            font-size: 16px;
+            color: #555555;
+            line-height: 1.6;
+            margin: 0 0 30px 0;
+        }
+        
+        .code-container {
+            background-color: #f8fafc;
+            border: 2px dashed #48bb78;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .code-label {
+            font-size: 14px;
+            color: #666666;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .verification-code {
+            font-size: 36px;
+            font-weight: bold;
+            color: #48bb78;
+            font-family: 'Monaco', 'Menlo', monospace;
+            letter-spacing: 6px;
+            margin: 0;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .expiry-notice {
+            font-size: 14px;
+            color: #e53e3e;
+            margin: 15px 0 0 0;
+            font-weight: 500;
+        }
+        
+        .account-details {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .account-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0369a1;
+            margin: 0 0 15px 0;
+        }
+        
+        .account-info {
+            margin: 0;
+        }
+        
+        .account-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .account-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .account-label {
+            color: #666666;
+            font-weight: 500;
+        }
+        
+        .account-value {
+            color: #333333;
+            font-weight: 600;
+        }
+        
+        .instructions {
+            background-color: #fff5e6;
+            border-left: 4px solid #ff9500;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .instructions-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333333;
+            margin: 0 0 10px 0;
+        }
+        
+        .instructions-list {
+            margin: 0;
+            padding-left: 20px;
+            color: #555555;
+        }
+        
+        .instructions-list li {
+            margin-bottom: 5px;
+        }
+        
+        .benefits-section {
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        
+        .benefits-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333333;
+            margin: 0 0 15px 0;
+            text-align: center;
+        }
+        
+        .benefits-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .benefit-item {
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .benefit-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .benefit-text {
+            font-size: 14px;
+            color: #555555;
+            margin: 0;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .cta-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+        }
+        
+        .cta-text {
+            font-size: 16px;
+            margin: 0 0 20px 0;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-text {
+            font-size: 14px;
+            color: #666666;
+            margin: 0 0 10px 0;
+        }
+        
+        .footer-links {
+            margin: 20px 0 0 0;
+        }
+        
+        .footer-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            margin: 0 15px;
+        }
+        
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* Mobile responsive */
+        @media only screen and (max-width: 600px) {
+            .header, .welcome-banner {
+                padding: 20px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .verification-code {
+                font-size: 28px;
+                letter-spacing: 4px;
+            }
+            
+            .benefits-grid {
+                flex-direction: column;
+            }
+            
+            .benefit-item {
+                min-width: auto;
+            }
+            
+            .account-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .footer {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="logo">SteadyLeadFlow</h1>
+            <p class="tagline">Transform leads into revenue</p>
+        </div>
+        
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <p class="welcome-text">🎉 Welcome to SteadyLeadFlow!</p>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <h2 class="greeting">Hi there! 👋</h2>
+            
+            <p class="message">
+                Thanks for signing up for SteadyLeadFlow! We're excited to help you transform your leads into revenue. 
+                To get started, please verify your email address using the code below.
+            </p>
+            
+            <!-- Account Details -->
+            <div class="account-details">
+                <h3 class="account-title">📋 Your Account Details</h3>
+                <div class="account-info">
+                    <div class="account-row">
+                        <span class="account-label">Email Address:</span>
+                        <span class="account-value">user@example.com</span>
+                    </div>
+                    <div class="account-row">
+                        <span class="account-label">Plan:</span>
+                        <span class="account-value">Free Plan (50 leads/month)</span>
+                    </div>
+                    <div class="account-row">
+                        <span class="account-label">Account Created:</span>
+                        <span class="account-value">June 4, 2025</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Verification Code -->
+            <div class="code-container">
+                <p class="code-label">Your Verification Code</p>
+                <p class="verification-code">XYZ789</p>
+                <p class="expiry-notice">⏰ Expires in 24 hours</p>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="instructions">
+                <h3 class="instructions-title">How to verify your account:</h3>
+                <ol class="instructions-list">
+                    <li>Go back to the SteadyLeadFlow verification page</li>
+                    <li>Enter this 6-digit code exactly as shown above</li>
+                    <li>Click "Verify Account" to activate your account</li>
+                    <li>Start adding leads and growing your business!</li>
+                </ol>
+            </div>
+            
+            <!-- Benefits Section -->
+            <div class="benefits-section">
+                <h3 class="benefits-title">What you get with SteadyLeadFlow:</h3>
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🎯</div>
+                        <p class="benefit-text">Organize leads from cold to conversion</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">📊</div>
+                        <p class="benefit-text">Track your progress with analytics</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🚀</div>
+                        <p class="benefit-text">Set and achieve your sales goals</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CTA Section -->
+            <div class="cta-section">
+                <h3 class="cta-title">Ready to Get Started?</h3>
+                <p class="cta-text">
+                    Once you verify your email, you'll have access to all features and can start managing your leads immediately.
+                </p>
+            </div>
+            
+            <p class="message">
+                <strong>Need help?</strong> We're here for you! Contact our support team at 
+                <a href="mailto:support@steadyleadflow.com" style="color: #667eea;">support@steadyleadflow.com</a>
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                Welcome to the SteadyLeadFlow family! 
+                <br>We're excited to help you grow your business.
+            </p>
+            
+            <div class="footer-links">
+                <a href="#" class="footer-link">Getting Started Guide</a>
+                <a href="#" class="footer-link">Privacy Policy</a>
+                <a href="#" class="footer-link">Support</a>
+            </div>
+            
+            <p class="footer-text" style="margin-top: 20px; font-size: 12px; color: #999999;">
+                © 2024 SteadyLeadFlow. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

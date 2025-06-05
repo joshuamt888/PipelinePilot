@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - SteadyLeadFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #667eea;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-outline {
+            color: #667eea;
+            border: 2px solid #667eea;
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Story Section */
+        .story-section {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .story-grid {
+            display: block;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .story-content h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: #1a202c;
+        }
+
+        .story-content p {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .story-image {
+            background: linear-gradient(135deg, #f8fafc, #e6f3ff);
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .story-emoji {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .story-caption {
+            color: #4a5568;
+            font-style: italic;
+        }
+
+        /* Problem Section */
+        .problem-section {
+            padding: 6rem 2rem;
+            background: #f8fafc;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-badge {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .section-subtitle {
+            font-size: 1.25rem;
+            color: #4a5568;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .problem-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .problem-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .problem-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .problem-description {
+            color: #4a5568;
+        }
+
+        /* Solution Section */
+        .solution-section {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .solution-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .solution-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+
+        .solution-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .solution-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .solution-description {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        /* Mission Section */
+        .mission-section {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .mission-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+        }
+
+        .mission-description {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Values Section */
+        .values-section {
+            padding: 6rem 2rem;
+            background: #f8fafc;
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .value-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .value-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .value-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .value-description {
+            color: #4a5568;
+            font-size: 0.95rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .btn-white {
+            background: white;
+            color: #667eea;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+        }
+
+        .btn-white:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a202c;
+            color: white;
+            padding: 3rem 2rem 2rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-brand {
+            margin-bottom: 2rem;
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-description {
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .footer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #2d3748;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #4a5568;
+            cursor: pointer;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .story-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .mission-title {
+                font-size: 2rem;
+            }
+
+            .cta-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">SteadyLeadFlow</a>
+            
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/features" class="nav-link">Features</a></li>
+                <li><a href="/pricing" class="nav-link">Pricing</a></li>
+                <li><a href="/about" class="nav-link active">About</a></li>
+                <li><a href="/contact" class="nav-link">Contact</a></li>
+            </ul>
+
+            <div class="nav-cta">
+                <a href="/login" class="btn btn-outline">Sign In</a>
+                <a href="/login" class="btn btn-primary">Start Free</a>
+            </div>
+
+            <button class="mobile-menu-btn">☰</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <h1 class="hero-title">
+                Built by a College Student<br>
+                Obsessed with Systems
+            </h1>
+            
+            <p class="hero-subtitle">
+                Hi, I'm Joshua Montanez. I'm a college student who fell in love with management systems 
+                and got tired of watching people lose money to organizational chaos.
+            </p>
+        </div>
+    </section>
+
+    <!-- Story Section -->
+    <section class="story-section">
+        <div class="section-container">
+            <div class="story-grid">
+                <div class="story-content">
+                    <h2>Started in My Dorm Room</h2>
+                    <p>
+                        I'm Joshua Montanez, a college student who's weirdly obsessed with management systems. 
+                        While my friends were playing video games, I was building spreadsheets for fun and 
+                        studying how successful people organize their workflows.
+                    </p>
+                    <p>
+                        I kept hearing the same story from everyone I talked to in sales: brilliant people 
+                        losing deals because their lead tracking was a mess. Excel sheets with 47 tabs, 
+                        sticky notes everywhere, important contacts buried in phone screenshots.
+                    </p>
+                    <p>
+                        The existing solutions were either built for massive enterprises (way too complex) 
+                        or barely better than a notepad. I realized there was a huge gap for something 
+                        simple but powerful - exactly what I love building.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem Section -->
+    <section class="problem-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">The Same Story Everywhere</h2>
+                <p class="section-subtitle">
+                    I talked to 100+ people in sales and business development. Here's what they all complained about.
+                </p>
+            </div>
+
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">🔥</div>
+                    <h3 class="problem-title">Lead Chaos</h3>
+                    <p class="problem-description">
+                        Leads scattered across 10 different platforms. No single source of truth. 
+                        Hot prospects going cold while you dig through files.
+                    </p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon">💸</div>
+                    <h3 class="problem-title">Money Left on Table</h3>
+                    <p class="problem-description">
+                        Forgetting to follow up. Missing opportunities. Letting warm leads turn ice cold 
+                        because there's no system to track engagement.
+                    </p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon">🤯</div>
+                    <h3 class="problem-title">Complex CRMs</h3>
+                    <p class="problem-description">
+                        Existing solutions are either too complicated (hello, Salesforce) or too basic. 
+                        You need something that just works, not a PhD to operate.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solution Section -->
+    <section class="solution-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">My Solution</h2>
+                <p class="section-subtitle">
+                    A lead management system that actually makes sense. Simple enough for anyone to use, 
+                    powerful enough to transform how you do business.
+                </p>
+            </div>
+
+            <div class="solution-grid">
+                <div class="solution-card">
+                    <div class="solution-icon">🎯</div>
+                    <h3 class="solution-title">Dead Simple Organization</h3>
+                    <p class="solution-description">
+                        Three categories: Cold, Warm, CRM. That's it. No complex pipelines, 
+                        no overwhelming features. Just organize leads the way your brain naturally thinks.
+                    </p>
+                </div>
+
+                <div class="solution-card">
+                    <div class="solution-icon">🚀</div>
+                    <h3 class="solution-title">Built for Speed</h3>
+                    <p class="solution-description">
+                        Add a lead in 10 seconds. Update status in 2 clicks. I obsessed over every interaction 
+                        to make sure nothing gets in your way when you're in the zone.
+                    </p>
+                </div>
+
+                <div class="solution-card">
+                    <div class="solution-icon">📈</div>
+                    <h3 class="solution-title">Revenue-Focused</h3>
+                    <p class="solution-description">
+                        Every feature exists to help you close more deals. Goal tracking, source analytics, 
+                        conversion insights - all designed to turn your hustle into cash.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mission Section -->
+    <section class="mission-section">
+        <div class="section-container">
+            <h2 class="mission-title">My Mission</h2>
+            <p class="mission-description">
+                To help driven people turn their hustle into organized success. I believe that great ideas 
+                and hard work shouldn't be wasted because of bad systems. Every ambitious person deserves 
+                tools that amplify their efforts instead of getting in their way.
+            </p>
+        </div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="values-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">My Core Beliefs</h2>
+                <p class="section-subtitle">
+                    These aren't just nice words. They're the principles that guide every line of code I write.
+                </p>
+            </div>
+
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-emoji">🎯</div>
+                    <h3 class="value-title">Simplicity Wins</h3>
+                    <p class="value-description">
+                        If it takes more than 3 clicks, I'm doing it wrong. Great systems should feel invisible.
+                    </p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-emoji">💰</div>
+                    <h3 class="value-title">Revenue Obsessed</h3>
+                    <p class="value-description">
+                        Every feature must help users make more money. If it doesn't drive results, it doesn't ship.
+                    </p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-emoji">🤝</div>
+                    <h3 class="value-title">Built With Users</h3>
+                    <p class="value-description">
+                        I'm not building in isolation. Real users guide my roadmap and test every feature.
+                    </p>
+                </div>
+
+                <div class="value-card">
+                    <div class="value-emoji">⚡</div>
+                    <h3 class="value-title">Speed Matters</h3>
+                    <p class="value-description">
+                        Fast to learn, fast to use, fast to deliver results. I respect your time because time is money.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="section-container">
+            <h2 class="cta-title">Ready to Get Organized?</h2>
+            <p class="cta-subtitle">
+                Join the people who've transformed their hustle into organized success with SteadyLeadFlow.
+            </p>
+            <a href="/login" class="btn btn-white">Start Your Free Trial</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">SteadyLeadFlow</div>
+                <p class="footer-description">
+                    Transform leads into revenue with the simplest, most powerful 
+                    lead management platform built for sales professionals.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Product</h4>
+                <ul class="footer-links">
+                    <li><a href="/features">Features</a></li>
+                    <li><a href="/pricing">Pricing</a></li>
+                    <li><a href="/demo">Demo</a></li>
+                    <li><a href="/login">Sign Up</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Company</h4>
+                <ul class="footer-links">
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/contact">Contact</a></li>
+                    <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>2025 SteadyLeadFlow - A software service by Steady Scaling LLC. Built to make you money.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                navbar.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1)';
+            } else {
+                navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.boxShadow = 'none';
+            }
+        });
+
+        // Mobile menu toggle
+        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
+            alert('Mobile menu coming soon! For now, please use the desktop version.');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - SteadyLeadFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .error-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            padding: 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .error-animation {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .error-number {
+            font-size: 8rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 1rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .error-emoji {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .error-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 1rem;
+        }
+
+        .error-subtitle {
+            font-size: 1.1rem;
+            color: #718096;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .suggestions {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .suggestions-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            color: #4a5568;
+        }
+
+        .suggestion-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .suggestion-icon {
+            color: #667eea;
+            margin-right: 0.75rem;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .quick-link {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            text-decoration: none;
+            color: #4a5568;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-link:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .quick-link-icon {
+            font-size: 1.5rem;
+            color: #667eea;
+        }
+
+        .quick-link-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .footer-info {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 2rem;
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        .logo-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .logo-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .error-container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .error-number {
+                font-size: 6rem;
+            }
+
+            .error-emoji {
+                font-size: 3rem;
+            }
+
+            .action-buttons {
+                margin-bottom: 1.5rem;
+            }
+
+            .quick-links {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-animation">
+            <div class="error-emoji">🔍</div>
+            <div class="error-number">404</div>
+        </div>
+        
+        <h1 class="error-title">Page Not Found</h1>
+        <p class="error-subtitle">
+            Oops! The page you're looking for seems to have vanished into thin air. 
+            Don't worry, your leads are still safe and sound.
+        </p>
+
+        <div class="suggestions">
+            <h3 class="suggestions-title">What might have happened?</h3>
+            <div class="suggestion-item">
+                <span class="suggestion-icon">🔗</span>
+                <span>The link you clicked might be broken or outdated</span>
+            </div>
+            <div class="suggestion-item">
+                <span class="suggestion-icon">⌨️</span>
+                <span>There might be a typo in the web address</span>
+            </div>
+            <div class="suggestion-item">
+                <span class="suggestion-icon">🚧</span>
+                <span>The page might have been moved or deleted</span>
+            </div>
+            <div class="suggestion-item">
+                <span class="suggestion-icon">🔄</span>
+                <span>Our servers might be having a temporary hiccup</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/" class="btn btn-primary">
+                🏠 Take Me Home
+            </a>
+            <button class="btn btn-secondary" onclick="history.back()">
+                ← Go Back
+            </button>
+        </div>
+
+        <div class="quick-links">
+            <a href="/login" class="quick-link">
+                <div class="quick-link-icon">🔐</div>
+                <div class="quick-link-text">Login</div>
+            </a>
+            <a href="/dashboard" class="quick-link">
+                <div class="quick-link-icon">📊</div>
+                <div class="quick-link-text">Dashboard</div>
+            </a>
+            <a href="/pricing" class="quick-link">
+                <div class="quick-link-icon">💰</div>
+                <div class="quick-link-text">Pricing</div>
+            </a>
+        </div>
+
+        <div class="footer-info">
+            <p>
+                Still can't find what you're looking for? 
+                <br>Contact our support team at 
+                <a href="mailto:support@steadyleadflow.com" style="color: #667eea;">support@steadyleadflow.com</a>
+            </p>
+            <p style="margin-top: 1rem;">
+                <a href="/" class="logo-link">SteadyLeadFlow</a> - Transform leads into revenue
+            </p>
+        </div>
+    </div>
+</body>
+</html>

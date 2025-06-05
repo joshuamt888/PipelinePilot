@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - SteadyLeadFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #667eea;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-outline {
+            color: #667eea;
+            border: 2px solid #667eea;
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        /* Contact Options Section */
+        .contact-options {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-badge {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .section-subtitle {
+            font-size: 1.25rem;
+            color: #4a5568;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .contact-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .contact-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+
+        .contact-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .contact-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .contact-description {
+            color: #4a5568;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .contact-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            color: #5a67d8;
+            text-decoration: underline;
+        }
+
+        /* Contact Form Section */
+        .contact-form-section {
+            padding: 6rem 2rem;
+            background: #f8fafc;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .contact-form {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+            border: 2px solid rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Support Section */
+        .support-section {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .support-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .support-card {
+            background: #f8fafc;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .support-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .support-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .support-description {
+            color: #4a5568;
+            font-size: 0.95rem;
+        }
+
+        /* Response Time Section */
+        .response-section {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .response-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .response-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a202c;
+            color: white;
+            padding: 3rem 2rem 2rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-brand {
+            margin-bottom: 2rem;
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-description {
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .footer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #2d3748;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .response-title {
+                font-size: 2rem;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-form {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">SteadyLeadFlow</a>
+            
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/features" class="nav-link">Features</a></li>
+                <li><a href="/pricing" class="nav-link">Pricing</a></li>
+                <li><a href="/about" class="nav-link">About</a></li>
+                <li><a href="/contact" class="nav-link active">Contact</a></li>
+            </ul>
+
+            <div class="nav-cta">
+                <a href="/login" class="btn btn-outline">Sign In</a>
+                <a href="/login" class="btn btn-primary">Start Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <h1 class="hero-title">
+                Get Support That<br>
+                Actually Helps
+            </h1>
+            
+            <p class="hero-subtitle">
+                We're here to help you succeed with SteadyLeadFlow. Whether you have questions, 
+                need technical support, or want to share feedback - we've got you covered.
+            </p>
+        </div>
+    </section>
+
+    <!-- Contact Options -->
+    <section class="contact-options">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">How Can We Help You?</h2>
+                <p class="section-subtitle">
+                    Choose the best way to reach our team. We're committed to providing fast, 
+                    helpful responses to every inquiry.
+                </p>
+                <div class="section-badge">📞 Contact Methods</div>
+            </div>
+
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <div class="contact-icon">📧</div>
+                    <h3 class="contact-title">Email Support</h3>
+                    <p class="contact-description">
+                        The fastest way to get help. Our support team responds to all emails 
+                        within 24 hours, usually much faster.
+                    </p>
+                    <a href="mailto:support@steadyleadflow.com" class="contact-link">
+                        support@steadyleadflow.com
+                    </a>
+                </div>
+
+                <div class="contact-card">
+                    <div class="contact-icon">💬</div>
+                    <h3 class="contact-title">General Inquiries</h3>
+                    <p class="contact-description">
+                        Have questions about features, pricing, or partnerships? 
+                        Use our contact form for detailed inquiries.
+                    </p>
+                    <a href="#contact-form" class="contact-link">
+                        Contact Form
+                    </a>
+                </div>
+
+                <div class="contact-card">
+                    <div class="contact-icon">🐛</div>
+                    <h3 class="contact-title">Technical Issues</h3>
+                    <p class="contact-description">
+                        Experiencing bugs or technical problems? Report issues directly 
+                        to our technical team for priority handling.
+                    </p>
+                    <a href="mailto:support@steadyleadflow.com?subject=Technical Issue" class="contact-link">
+                        Report Issue
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Form -->
+    <section class="contact-form-section" id="contact-form">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Send Us a Message</h2>
+                <p class="section-subtitle">
+                    Fill out the form below and we'll get back to you as soon as possible.
+                </p>
+                <div class="section-badge">✉️ Contact Form</div>
+            </div>
+
+            <div class="form-container">
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label for="name" class="form-label">Full Name *</label>
+                        <input type="text" id="name" name="name" class="form-input" placeholder="Enter your full name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company" class="form-label">Company (Optional)</label>
+                        <input type="text" id="company" name="company" class="form-input" placeholder="Your company name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subject" class="form-label">Subject *</label>
+                        <select id="subject" name="subject" class="form-select" required>
+                            <option value="">Select a topic...</option>
+                            <option value="general">General Question</option>
+                            <option value="support">Technical Support</option>
+                            <option value="billing">Billing & Pricing</option>
+                            <option value="feature">Feature Request</option>
+                            <option value="partnership">Partnership Inquiry</option>
+                            <option value="feedback">Product Feedback</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message" class="form-label">Message *</label>
+                        <textarea id="message" name="message" class="form-input form-textarea" placeholder="Please provide details about your inquiry. The more information you include, the better we can assist you." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support Information -->
+    <section class="support-section">
+        <div class="section-container">
+            <div class="section-header">
+                <h2 class="section-title">Our Commitment to You</h2>
+                <p class="section-subtitle">
+                    We believe great support is essential to your success with SteadyLeadFlow.
+                </p>
+                <div class="section-badge">🎯 Support Promise</div>
+            </div>
+
+            <div class="support-grid">
+                <div class="support-card">
+                    <div class="support-emoji">⚡</div>
+                    <h3 class="support-title">Fast Response</h3>
+                    <p class="support-description">
+                        We respond to all support requests within 24 hours, with most queries answered within a few hours.
+                    </p>
+                </div>
+
+                <div class="support-card">
+                    <div class="support-emoji">🎯</div>
+                    <h3 class="support-title">Expert Help</h3>
+                    <p class="support-description">
+                        Our team knows SteadyLeadFlow inside and out. We provide solutions, not just responses.
+                    </p>
+                </div>
+
+                <div class="support-card">
+                    <div class="support-emoji">🚀</div>
+                    <h3 class="support-title">Continuous Improvement</h3>
+                    <p class="support-description">
+                        Your feedback drives our product roadmap. We listen to users and build what you need.
+                    </p>
+                </div>
+
+                <div class="support-card">
+                    <div class="support-emoji">🤝</div>
+                    <h3 class="support-title">Personal Touch</h3>
+                    <p class="support-description">
+                        No chatbots or automated responses. You'll always communicate with real people who care.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Response Time -->
+    <section class="response-section">
+        <div class="section-container">
+            <h2 class="response-title">We'll Get Back to You Soon</h2>
+            <p class="response-subtitle">
+                Expect a response within 24 hours. For urgent technical issues, 
+                we typically respond within just a few hours.
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">SteadyLeadFlow</div>
+                <p class="footer-description">
+                    Transform leads into revenue with the simplest, most powerful 
+                    lead management platform built for sales professionals.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Product</h4>
+                <ul class="footer-links">
+                    <li><a href="/features">Features</a></li>
+                    <li><a href="/pricing">Pricing</a></li>
+                    <li><a href="#demo">Demo</a></li>
+                    <li><a href="/login">Sign Up</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Company</h4>
+                <ul class="footer-links">
+                    <li><a href="/about">About</a></li>
+                    <li><a href="/contact">Contact</a></li>
+                    <li><a href="/privacy">Privacy</a></li>
+                    <li><a href="/terms">Terms</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Support</h4>
+                <ul class="footer-links">
+                    <li><a href="mailto:josh@steadyscaling.com">Help Center</a></li>
+                    <li><a href="mailto:josh@steadyscaling.com">Contact Support</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>2025 SteadyLeadFlow - A software service by Steady Scaling LLC. Built to make you money.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Form submission handler
+        document.querySelector('.contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            // Here you would normally send to your backend
+            console.log('Form submission:', data);
+            
+            // Show success message (you'll replace this with actual form handling)
+            alert('Thank you for your message! We\'ll get back to you within 24 hours.');
+            
+            // Reset form
+            this.reset();
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                navbar.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1)';
+            } else {
+                navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.boxShadow = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
