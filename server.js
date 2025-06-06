@@ -22,7 +22,7 @@ function getTableName(baseName) {
   return `${tablePrefix}${baseName}`;
 }
 
-// 🔥 NEW: Database initialization
+// 🔥 NEW: Database initialization with ENHANCED PIPELINE FEATURES
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
@@ -45,12 +45,14 @@ async function initializeDatabase() {
       )
     `);
 
-    // Create leads table
+    // 🚀 ENHANCED LEADS TABLE with ALL THE PIPELINE GOODNESS
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('leads')} (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
         user_type VARCHAR(50),
+        
+        -- Basic Lead Info (for AddLead.jsx)
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255),
         phone VARCHAR(50),
@@ -60,6 +62,82 @@ async function initializeDatabase() {
         type VARCHAR(20) DEFAULT 'cold',
         notes TEXT,
         quality_score INTEGER DEFAULT 5,
+        
+        -- 🔥 Pain Points & Needs
+        pain_points TEXT,
+        budget_range VARCHAR(50),
+        decision_maker BOOLEAN,
+        urgency_level VARCHAR(50),
+        
+        -- 📞 Communication History
+        contact_attempts INTEGER DEFAULT 0,
+        best_contact_time VARCHAR(50),
+        response_rate VARCHAR(50),
+        
+        -- 🤝 Relationship Building
+        referral_source VARCHAR(255),
+        social_media_profile TEXT,
+        personal_notes TEXT,
+        competitors_mentioned TEXT,
+        
+        -- 💼 Business Intel
+        company_size VARCHAR(50),
+        current_solution TEXT,
+        timeline VARCHAR(100),
+        obstacles TEXT,
+        
+        -- 🎯 Conversion Tracking
+        lead_source_detail TEXT,
+        conversion_probability INTEGER,
+        next_milestone VARCHAR(255),
+        
+        -- ⏰ Scheduling/Timeline
+        temperature VARCHAR(20),
+        potential_value INTEGER,
+        follow_up_date DATE,
+        last_contact_date DATE,
+        preferred_contact VARCHAR(50),
+        meeting_location TEXT,
+        pipeline_stage VARCHAR(100),
+        
+        -- 📈 Sales Process
+        sales_stage VARCHAR(100),
+        quote_amount DECIMAL(10,2),
+        close_date DATE,
+        lost_reason VARCHAR(255),
+        probability_percentage INTEGER,
+        
+        -- 🎯 Marketing Attribution
+        campaign_source VARCHAR(255),
+        utm_source VARCHAR(255),
+        first_touch_date DATE,
+        lead_magnet VARCHAR(255),
+        
+        -- 📊 Engagement Tracking
+        engagement_score INTEGER DEFAULT 0,
+        last_activity_type VARCHAR(100),
+        total_interactions INTEGER DEFAULT 0,
+        website_visits INTEGER DEFAULT 0,
+        
+        -- 🔔 Follow-up Management
+        reminder_frequency VARCHAR(50),
+        auto_follow_up BOOLEAN DEFAULT false,
+        snooze_until DATE,
+        priority_level VARCHAR(20),
+        
+        -- 🏷️ Tags & Categories
+        tags TEXT,
+        lead_category VARCHAR(100),
+        vertical VARCHAR(100),
+        deal_size_category VARCHAR(50),
+        
+        -- 🤖 Automation Ready
+        automation_sequence VARCHAR(255),
+        email_sequence_step INTEGER,
+        opt_in_status BOOLEAN DEFAULT true,
+        unsubscribed BOOLEAN DEFAULT false,
+        
+        -- Timestamps
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -80,7 +158,8 @@ async function initializeDatabase() {
       ON CONFLICT (name) DO NOTHING
     `);
 
-    console.log(`✅ Database initialized with tables: ${getTableName('users')}, ${getTableName('leads')}, ${getTableName('counters')}`);
+    console.log(`✅ Database initialized with ENHANCED tables: ${getTableName('users')}, ${getTableName('leads')}, ${getTableName('counters')}`);
+    console.log(`🚀 Pipeline features: 40+ tracking fields ready!`);
   } catch (error) {
     console.error('❌ Database initialization error:', error);
   } finally {
@@ -159,25 +238,45 @@ async function getUserLeads(userId, isAdmin = false, viewAll = false) {
   }
 }
 
+// 🚀 ENHANCED createLead function to handle ALL the new fields
 async function createLead(leadData) {
   const client = await pool.connect();
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('leads')} 
-       (user_id, user_type, name, email, phone, company, platform, status, type, notes, quality_score) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+       (user_id, user_type, name, email, phone, company, platform, status, type, notes, quality_score,
+        pain_points, budget_range, decision_maker, urgency_level, contact_attempts, best_contact_time,
+        response_rate, referral_source, social_media_profile, personal_notes, competitors_mentioned,
+        company_size, current_solution, timeline, obstacles, lead_source_detail, conversion_probability,
+        next_milestone, temperature, potential_value, follow_up_date, last_contact_date, preferred_contact,
+        meeting_location, pipeline_stage, sales_stage, quote_amount, close_date, lost_reason,
+        probability_percentage, campaign_source, utm_source, first_touch_date, lead_magnet,
+        engagement_score, last_activity_type, total_interactions, website_visits, reminder_frequency,
+        auto_follow_up, snooze_until, priority_level, tags, lead_category, vertical, deal_size_category,
+        automation_sequence, email_sequence_step, opt_in_status, unsubscribed) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+               $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
+               $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56,
+               $57, $58, $59, $60) RETURNING *`,
       [
-        leadData.userId,
-        leadData.userType,
-        leadData.name,
-        leadData.email,
-        leadData.phone,
-        leadData.company,
-        leadData.platform,
-        leadData.status,
-        leadData.type,
-        leadData.notes,
-        leadData.qualityScore
+        leadData.userId, leadData.userType, leadData.name, leadData.email, leadData.phone,
+        leadData.company, leadData.platform, leadData.status, leadData.type, leadData.notes,
+        leadData.qualityScore, leadData.painPoints, leadData.budgetRange, leadData.decisionMaker,
+        leadData.urgencyLevel, leadData.contactAttempts || 0, leadData.bestContactTime,
+        leadData.responseRate, leadData.referralSource, leadData.socialMediaProfile,
+        leadData.personalNotes, leadData.competitorsMentioned, leadData.companySize,
+        leadData.currentSolution, leadData.timeline, leadData.obstacles, leadData.leadSourceDetail,
+        leadData.conversionProbability, leadData.nextMilestone, leadData.temperature,
+        leadData.potentialValue, leadData.followUpDate, leadData.lastContactDate,
+        leadData.preferredContact, leadData.meetingLocation, leadData.pipelineStage,
+        leadData.salesStage, leadData.quoteAmount, leadData.closeDate, leadData.lostReason,
+        leadData.probabilityPercentage, leadData.campaignSource, leadData.utmSource,
+        leadData.firstTouchDate, leadData.leadMagnet, leadData.engagementScore || 0,
+        leadData.lastActivityType, leadData.totalInteractions || 0, leadData.websiteVisits || 0,
+        leadData.reminderFrequency, leadData.autoFollowUp || false, leadData.snoozeUntil,
+        leadData.priorityLevel, leadData.tags, leadData.leadCategory, leadData.vertical,
+        leadData.dealSizeCategory, leadData.automationSequence, leadData.emailSequenceStep || 0,
+        leadData.optInStatus !== false, leadData.unsubscribed || false
       ]
     );
     return result.rows[0];
@@ -224,7 +323,26 @@ const ADMIN_EMAILS = [
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Auth middleware
+// 🔒 NEW: Route protection middleware
+const protectRoute = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.redirect('/login');
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.user = decoded;
+    req.user.isAdmin = ADMIN_EMAILS.includes(decoded.email);
+    next();
+  } catch (err) {
+    return res.redirect('/login');
+  }
+};
+
+// Auth middleware (for API routes)
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -372,7 +490,8 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
     const categorizedLeads = {
       cold: userLeads.filter(lead => lead.type === 'cold'),
       warm: userLeads.filter(lead => lead.type === 'warm'),
-      crm: userLeads.filter(lead => lead.type === 'crm')
+      crm: userLeads.filter(lead => lead.type === 'crm'),
+      all: userLeads // For Dashboard.jsx
     };
     
     res.json(categorizedLeads);
@@ -382,7 +501,7 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
   }
 });
 
-// Create lead
+// 🚀 ENHANCED Create lead endpoint (simplified for AddLead.jsx, advanced for Pipeline.jsx)
 app.post('/api/leads', authenticateToken, async (req, res) => {
   try {
     // Check lead limits for non-admin users
@@ -398,27 +517,48 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
       }
     }
 
+    // Basic fields (required for AddLead.jsx)
     const { 
       name, email, phone, company, platform, status = 'New lead', 
       type = 'cold', notes, qualityScore = 5 
     } = req.body;
 
-    if (!name || !type) {
-      return res.status(400).json({ error: 'Name and type are required' });
+    // Extended fields (optional for Pipeline.jsx)
+    const {
+      painPoints, budgetRange, decisionMaker, urgencyLevel, contactAttempts,
+      bestContactTime, responseRate, referralSource, socialMediaProfile,
+      personalNotes, competitorsMentioned, companySize, currentSolution,
+      timeline, obstacles, leadSourceDetail, conversionProbability,
+      nextMilestone, temperature, potentialValue, followUpDate,
+      lastContactDate, preferredContact, meetingLocation, pipelineStage,
+      salesStage, quoteAmount, closeDate, lostReason, probabilityPercentage,
+      campaignSource, utmSource, firstTouchDate, leadMagnet, engagementScore,
+      lastActivityType, totalInteractions, websiteVisits, reminderFrequency,
+      autoFollowUp, snoozeUntil, priorityLevel, tags, leadCategory,
+      vertical, dealSizeCategory, automationSequence, emailSequenceStep,
+      optInStatus, unsubscribed
+    } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
     }
 
     const leadData = {
       userId: req.user.userId,
       userType: req.user.userType,
-      name,
-      email: email || null,
-      phone: phone || null,
-      company: company || null,
-      platform: platform || null,
-      status,
-      type,
-      notes: notes || null,
-      qualityScore: qualityScore || 5
+      name, email, phone, company, platform, status, type, notes, qualityScore,
+      painPoints, budgetRange, decisionMaker, urgencyLevel, contactAttempts,
+      bestContactTime, responseRate, referralSource, socialMediaProfile,
+      personalNotes, competitorsMentioned, companySize, currentSolution,
+      timeline, obstacles, leadSourceDetail, conversionProbability,
+      nextMilestone, temperature, potentialValue, followUpDate,
+      lastContactDate, preferredContact, meetingLocation, pipelineStage,
+      salesStage, quoteAmount, closeDate, lostReason, probabilityPercentage,
+      campaignSource, utmSource, firstTouchDate, leadMagnet, engagementScore,
+      lastActivityType, totalInteractions, websiteVisits, reminderFrequency,
+      autoFollowUp, snoozeUntil, priorityLevel, tags, leadCategory,
+      vertical, dealSizeCategory, automationSequence, emailSequenceStep,
+      optInStatus, unsubscribed
     };
 
     const newLead = await createLead(leadData);
@@ -435,7 +575,7 @@ app.post('/api/leads', authenticateToken, async (req, res) => {
   }
 });
 
-// Update lead
+// 🚀 ENHANCED Update lead endpoint for Pipeline.jsx
 app.put('/api/leads/:id', authenticateToken, async (req, res) => {
   try {
     const leadId = parseInt(req.params.id);
@@ -459,28 +599,50 @@ app.put('/api/leads/:id', authenticateToken, async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
-      const { 
-        name, email, phone, company, platform, status, type, notes, qualityScore 
-      } = req.body;
+      // Build dynamic update query based on provided fields
+      const updateFields = [];
+      const updateValues = [];
+      let paramCount = 1;
 
-      // Update lead
-      const updateResult = await client.query(
-        `UPDATE ${getTableName('leads')} 
-         SET name = COALESCE($1, name),
-             email = COALESCE($2, email),
-             phone = COALESCE($3, phone),
-             company = COALESCE($4, company),
-             platform = COALESCE($5, platform),
-             status = COALESCE($6, status),
-             type = COALESCE($7, type),
-             notes = COALESCE($8, notes),
-             quality_score = COALESCE($9, quality_score),
-             updated_at = NOW()
-         WHERE id = $10
-         RETURNING *`,
-        [name, email, phone, company, platform, status, type, notes, qualityScore, leadId]
-      );
+      const allowedFields = [
+        'name', 'email', 'phone', 'company', 'platform', 'status', 'type', 'notes', 'quality_score',
+        'pain_points', 'budget_range', 'decision_maker', 'urgency_level', 'contact_attempts',
+        'best_contact_time', 'response_rate', 'referral_source', 'social_media_profile',
+        'personal_notes', 'competitors_mentioned', 'company_size', 'current_solution',
+        'timeline', 'obstacles', 'lead_source_detail', 'conversion_probability',
+        'next_milestone', 'temperature', 'potential_value', 'follow_up_date',
+        'last_contact_date', 'preferred_contact', 'meeting_location', 'pipeline_stage',
+        'sales_stage', 'quote_amount', 'close_date', 'lost_reason', 'probability_percentage',
+        'campaign_source', 'utm_source', 'first_touch_date', 'lead_magnet', 'engagement_score',
+        'last_activity_type', 'total_interactions', 'website_visits', 'reminder_frequency',
+        'auto_follow_up', 'snooze_until', 'priority_level', 'tags', 'lead_category',
+        'vertical', 'deal_size_category', 'automation_sequence', 'email_sequence_step',
+        'opt_in_status', 'unsubscribed'
+      ];
 
+      for (const field of allowedFields) {
+        if (req.body.hasOwnProperty(field)) {
+          updateFields.push(`${field} = $${paramCount}`);
+          updateValues.push(req.body[field]);
+          paramCount++;
+        }
+      }
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
+
+      updateFields.push('updated_at = NOW()');
+      updateValues.push(leadId);
+
+      const updateQuery = `
+        UPDATE ${getTableName('leads')} 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING *
+      `;
+
+      const updateResult = await client.query(updateQuery, updateValues);
       res.json(updateResult.rows[0]);
     } finally {
       client.release();
@@ -557,10 +719,28 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
     userLeads.forEach(lead => {
       statusStats[lead.status] = (statusStats[lead.status] || 0) + 1;
     });
+
+    // NEW: Pipeline stage stats
+    const pipelineStats = {};
+    userLeads.forEach(lead => {
+      if (lead.pipeline_stage) {
+        pipelineStats[lead.pipeline_stage] = (pipelineStats[lead.pipeline_stage] || 0) + 1;
+      }
+    });
+
+    // NEW: Temperature stats
+    const temperatureStats = {};
+    userLeads.forEach(lead => {
+      if (lead.temperature) {
+        temperatureStats[lead.temperature] = (temperatureStats[lead.temperature] || 0) + 1;
+      }
+    });
     
     const avgQualityScore = userLeads.length > 0 
       ? userLeads.reduce((sum, lead) => sum + (lead.quality_score || 5), 0) / userLeads.length 
       : 0;
+
+    const totalPotentialValue = userLeads.reduce((sum, lead) => sum + (lead.potential_value || 0), 0);
     
     res.json({
       totalLeads,
@@ -568,8 +748,11 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
       warmLeads,
       crmLeads,
       avgQualityScore: Math.round(avgQualityScore * 10) / 10,
+      totalPotentialValue,
       platformStats,
       statusStats,
+      pipelineStats,
+      temperatureStats,
       isAdminView: req.user.isAdmin && req.query.viewAll === 'true'
     });
   } catch (error) {
@@ -694,7 +877,7 @@ app.get('/api/health', async (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         environment: isDevelopment ? 'development' : 'production',
-        features: ['postgresql-storage', 'authentication', 'lead-management', 'admin-mode'],
+        features: ['postgresql-storage', 'authentication', 'lead-management', 'admin-mode', 'pipeline-tracking'],
         database: {
           connected: true,
           tablePrefix: tablePrefix || 'none',
@@ -714,29 +897,33 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// HTML Page Routes
+// 🔒 PROTECTED ROUTES - All dashboard components require authentication
+const protectedRoutes = ['/dashboard', '/add-lead', '/pipeline', '/schedule', '/settings', '/admin'];
+
+protectedRoutes.forEach(route => {
+  app.get(route, protectRoute, (req, res) => {
+    if (route === '/admin' && !req.user.isAdmin) {
+      return res.redirect('/dashboard');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  });
+});
+
+// HTML Page Routes (Public routes) - These need to be .html files that load React
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login', 'index.html')); // ✅ .html not .jsx
 });
 
 app.get('/login/forgot-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html')); // ✅ .html
 });
 
 app.get('/login/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html')); // ✅ .html
 });
 
 app.get('/login/email-confirmation', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'email-confirmation.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login', 'email-confirmation.html')); // ✅ .html
 });
 
 app.get('/pricing', (req, res) => {
@@ -791,6 +978,8 @@ async function startServer() {
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
       console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
       console.log(`👑 Admin emails: ${ADMIN_EMAILS.join(', ')}`);
+      console.log(`🔒 Protected routes: ${protectedRoutes.join(', ')}`);
+      console.log(`🚀 Pipeline features: 40+ tracking fields enabled!`);
       console.log(`✨ Ready for testing!`);
     });
   } catch (error) {
