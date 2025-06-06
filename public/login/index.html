@@ -4,352 +4,635 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SteadyLeadFlow</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and React DOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide React Icons -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Custom scrollbar and additional styles */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Ensure minimum height */
+        #root {
             min-height: 100vh;
+        }
+        
+        /* Loading animation */
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Hide content until React loads */
+        .loading-screen {
             display: flex;
+            justify-content: center;
             align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .login-container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 420px;
-            padding: 2.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .login-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
-
-        .title {
-            text-align: center;
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #718096;
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
-        }
-
-        .form-toggle {
-            display: flex;
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 6px;
-            margin-bottom: 2rem;
-            gap: 4px;
-        }
-
-        .toggle-btn {
-            flex: 1;
-            background: none;
-            border: none;
-            padding: 0.875rem 1rem;
-            border-radius: 8px;
-            font-weight: 600;
-            color: #718096;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.95rem;
-        }
-
-        .toggle-btn.active {
-            background: white;
-            color: #667eea;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .toggle-btn:hover:not(.active) {
-            color: #4a5568;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            background: #fafafa;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .password-toggle {
-            display: block;
-            background: none;
-            border: none;
-            color: #667eea;
-            cursor: pointer;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-            text-align: left;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        .password-toggle:hover {
-            color: #764ba2;
-            text-decoration: underline;
-        }
-
-        .submit-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            padding: 1rem;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 1rem;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .submit-btn:active {
-            transform: translateY(0);
-        }
-
-        .forgot-link {
-            display: block;
-            text-align: center;
-            color: #667eea;
-            text-decoration: none;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
-            font-weight: 500;
-        }
-
-        .forgot-link:hover {
-            text-decoration: underline;
-            color: #764ba2;
-        }
-
-        .footer-links {
-            text-align: center;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-link {
-            color: #718096;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        .footer-link:hover {
-            color: #667eea;
-        }
-
-        .auth-form {
-            transition: all 0.3s ease;
-        }
-
-        .auth-form.hidden {
-            display: none;
-        }
-
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 2rem;
-                margin: 1rem;
-                max-width: 350px;
-            }
-            
-            .footer-links {
-                flex-direction: column;
-                gap: 0.75rem;
-            }
+            flex-direction: column;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">        
-        <h1 class="title">SteadyLeadFlow</h1>
-        <p class="subtitle">Transform leads into revenue</p>
-
-        <div class="form-toggle">
-            <button class="toggle-btn active" id="loginToggle">
-                Sign In
-            </button>
-            <button class="toggle-btn" id="signupToggle">
-                Sign Up
-            </button>
-        </div>
-
-        <!-- Login Form -->
-        <form class="auth-form" id="loginForm">
-            <div class="form-group">
-                <label class="form-label" for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" class="form-input" placeholder="Enter your email" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" required>
-                <button type="button" class="password-toggle" data-target="loginPassword">
-                    Show password
-                </button>
-            </div>
-
-            <button type="submit" class="submit-btn">
-                Sign In
-            </button>
-
-            <a href="/forgot-password" class="forgot-link">Forgot your password?</a>
-        </form>
-
-        <!-- Signup Form -->
-        <form class="auth-form hidden" id="signupForm">
-            <div class="form-group">
-                <label class="form-label" for="signupEmail">Email</label>
-                <input type="email" id="signupEmail" class="form-input" placeholder="Enter your email" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="signupPassword">Password</label>
-                <input type="password" id="signupPassword" class="form-input" placeholder="Create a password" required>
-                <button type="button" class="password-toggle" data-target="signupPassword">
-                    Show password
-                </button>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm your password" required>
-                <button type="button" class="password-toggle" data-target="confirmPassword">
-                    Show password
-                </button>
-            </div>
-
-            <button type="submit" class="submit-btn">
-                Create Account
-            </button>
-        </form>
-
-        <div class="footer-links">
-            <a href="/pricing" class="footer-link">Pricing</a>
-            <a href="/privacy" class="footer-link">Privacy</a>
-            <a href="/terms" class="footer-link">Terms</a>
-            <a href="/" class="footer-link">← Home</a>
-        </div>
+    <!-- Loading screen while React initializes -->
+    <div id="loading" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p class="mt-4 text-lg font-medium">Loading SteadyLeadFlow...</p>
     </div>
+    
+    <!-- React app will render here -->
+    <div id="root"></div>
 
-    <script>
-        // Simple toggle functionality
-        document.getElementById('loginToggle').addEventListener('click', function() {
-            showLogin();
-        });
+    <script type="text/babel">
+        // Import icons from Lucide React with fallbacks
+        const {
+            Eye = () => '👁️',
+            EyeOff = () => '🙈',
+            Loader = () => '⏳',
+            AlertTriangle = () => '⚠️',
+            CheckCircle = () => '✅',
+            Crown = () => '👑',
+            Zap = () => '⚡',
+            Star = () => '⭐',
+            ArrowRight = () => '→',
+            CreditCard = () => '💳',
+            Clock = () => '🕐'
+        } = LucideReact || {};
 
-        document.getElementById('signupToggle').addEventListener('click', function() {
-            showSignup();
-        });
+        // Fallback icons if Lucide doesn't load
+        const FallbackIcon = ({ emoji, className = "w-5 h-5" }) => (
+            React.createElement('span', { 
+                className: `inline-block ${className}`,
+                style: { fontSize: '1.2em' }
+            }, emoji)
+        );
 
-        // Password toggle functionality
-        document.querySelectorAll('.password-toggle').forEach(toggle => {
-            toggle.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const field = document.getElementById(targetId);
-                
-                if (field.type === 'password') {
-                    field.type = 'text';
-                    this.textContent = 'Hide password';
-                } else {
-                    field.type = 'password';
-                    this.textContent = 'Show password';
-                }
+        // Safe icon components
+        const SafeEye = Eye || (() => React.createElement(FallbackIcon, { emoji: '👁️' }));
+        const SafeEyeOff = EyeOff || (() => React.createElement(FallbackIcon, { emoji: '🙈' }));
+        const SafeLoader = Loader || (() => React.createElement(FallbackIcon, { emoji: '⏳', className: "w-5 h-5 animate-spin" }));
+        const SafeAlertTriangle = AlertTriangle || (() => React.createElement(FallbackIcon, { emoji: '⚠️' }));
+        const SafeCheckCircle = CheckCircle || (() => React.createElement(FallbackIcon, { emoji: '✅' }));
+        const SafeCrown = Crown || (() => React.createElement(FallbackIcon, { emoji: '👑', className: "w-6 h-6" }));
+        const SafeZap = Zap || (() => React.createElement(FallbackIcon, { emoji: '⚡', className: "w-6 h-6" }));
+        const SafeArrowRight = ArrowRight || (() => React.createElement(FallbackIcon, { emoji: '→', className: "w-4 h-4" }));
+        const SafeCreditCard = CreditCard || (() => React.createElement(FallbackIcon, { emoji: '💳' }));
+
+        // Login Component (Full Implementation)
+        const Login = () => {
+            // State management
+            const [isLogin, setIsLogin] = React.useState(true);
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [error, setError] = React.useState('');
+            const [success, setSuccess] = React.useState('');
+            const [showPassword, setShowPassword] = React.useState({
+                login: false,
+                signup: false,
+                confirm: false
             });
-        });
 
-        function showLogin() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('signupForm').classList.add('hidden');
-            document.getElementById('loginToggle').classList.add('active');
-            document.getElementById('signupToggle').classList.remove('active');
-        }
+            // Form data
+            const [loginData, setLoginData] = React.useState({
+                email: '',
+                password: ''
+            });
 
-        function showSignup() {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('signupForm').classList.remove('hidden');
-            document.getElementById('loginToggle').classList.remove('active');
-            document.getElementById('signupToggle').classList.add('active');
-        }
+            const [signupData, setSignupData] = React.useState({
+                email: '',
+                password: '',
+                confirmPassword: '',
+                tier: 'pro', // Default to Pro tier
+                billingCycle: 'monthly' // monthly or annual
+            });
 
-        // Form submissions (just alerts for now)
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Login form submitted! (No API connected yet)');
-        });
+            // Pricing options
+            const pricingPlans = {
+                free: {
+                    name: 'Free',
+                    price: { monthly: 0, annual: 0 },
+                    features: ['50 leads/month', 'Basic pipeline', 'Email support'],
+                    limitations: ['Limited features', 'No automation', 'Basic analytics']
+                },
+                pro: {
+                    name: 'Pro',
+                    price: { monthly: 6.99, annual: 69.99 },
+                    features: ['1,000 leads/month', 'Advanced pipeline', 'Priority support', 'Full analytics'],
+                    popular: true
+                }
+            };
 
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const password = document.getElementById('signupPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-            
-            alert('Signup form submitted! (No API connected yet)');
-        });
+            // Clear error when switching forms
+            React.useEffect(() => {
+                setError('');
+                setSuccess('');
+            }, [isLogin]);
+
+            // Handle login form submission
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(loginData)
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Login failed');
+                    }
+
+                    // Store token and user data
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+
+                    setSuccess(data.message);
+                    
+                    // Redirect to dashboard after short delay
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+
+                } catch (error) {
+                    setError(error.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Handle signup form submission
+            const handleSignup = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+
+                // Validate passwords match
+                if (signupData.password !== signupData.confirmPassword) {
+                    setError('Passwords do not match');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Validate password strength
+                if (signupData.password.length < 6) {
+                    setError('Password must be at least 6 characters long');
+                    setIsLoading(false);
+                    return;
+                }
+
+                try {
+                    // If Pro tier selected, redirect to payment first
+                    if (signupData.tier === 'pro') {
+                        // Store signup data temporarily
+                        sessionStorage.setItem('pendingSignup', JSON.stringify({
+                            email: signupData.email,
+                            password: signupData.password,
+                            tier: signupData.tier,
+                            billingCycle: signupData.billingCycle
+                        }));
+
+                        // Redirect to payment page with pricing info
+                        const price = pricingPlans.pro.price[signupData.billingCycle];
+                        const plan = `${signupData.billingCycle}_pro`;
+                        window.location.href = `/payment?plan=${plan}&price=${price}&email=${encodeURIComponent(signupData.email)}`;
+                        return;
+                    }
+
+                    // For free tier, create account directly
+                    const response = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email: signupData.email,
+                            password: signupData.password,
+                            userType: 'client_free'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Registration failed');
+                    }
+
+                    setSuccess('Account created successfully! Please check your email to verify your account.');
+                    
+                    // Reset form
+                    setSignupData({
+                        email: '',
+                        password: '',
+                        confirmPassword: '',
+                        tier: 'pro',
+                        billingCycle: 'monthly'
+                    });
+
+                } catch (error) {
+                    setError(error.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Toggle password visibility
+            const togglePassword = (field) => {
+                setShowPassword(prev => ({
+                    ...prev,
+                    [field]: !prev[field]
+                }));
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-purple-800 flex items-center justify-center p-8">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+                        {/* Gradient accent */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600"></div>
+                        
+                        <div className="p-8">
+                            {/* Header */}
+                            <div className="text-center mb-8">
+                                <h1 className="text-3xl font-bold text-gray-900 mb-2">SteadyLeadFlow</h1>
+                                <p className="text-gray-600">Transform leads into revenue</p>
+                            </div>
+
+                            {/* Form Toggle */}
+                            <div className="flex bg-gray-100 rounded-xl p-1 mb-8">
+                                <button
+                                    onClick={() => setIsLogin(true)}
+                                    className={`flex-1 py-3 px-4 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                                        isLogin 
+                                            ? 'bg-white text-blue-600 shadow-sm transform translate-y-[-1px]' 
+                                            : 'text-gray-600 hover:text-gray-800'
+                                    }`}
+                                >
+                                    Sign In
+                                </button>
+                                <button
+                                    onClick={() => setIsLogin(false)}
+                                    className={`flex-1 py-3 px-4 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                                        !isLogin 
+                                            ? 'bg-white text-blue-600 shadow-sm transform translate-y-[-1px]' 
+                                            : 'text-gray-600 hover:text-gray-800'
+                                    }`}
+                                >
+                                    Sign Up
+                                </button>
+                            </div>
+
+                            {/* Success Message */}
+                            {success && (
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                        {React.createElement(SafeCheckCircle, { className: "w-5 h-5 text-green-600" })}
+                                        <p className="text-green-800 text-sm">{success}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Message */}
+                            {error && (
+                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                        {React.createElement(SafeAlertTriangle, { className: "w-5 h-5 text-red-600" })}
+                                        <p className="text-red-800 text-sm">{error}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Login Form */}
+                            {isLogin ? (
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={loginData.email}
+                                            onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
+                                            placeholder="Enter your email"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword.login ? 'text' : 'password'}
+                                                value={loginData.password}
+                                                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
+                                                placeholder="Enter your password"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePassword('login')}
+                                            className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
+                                        >
+                                            {showPassword.login ? 'Hide password' : 'Show password'}
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={handleLogin}
+                                        disabled={isLoading}
+                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+                                    >
+                                        {isLoading ? (
+                                            <div className="flex items-center justify-center space-x-2">
+                                                {React.createElement(SafeLoader, { className: "w-5 h-5 animate-spin" })}
+                                                <span>Signing In...</span>
+                                            </div>
+                                        ) : (
+                                            'Sign In'
+                                        )}
+                                    </button>
+
+                                    <div className="text-center">
+                                        <a 
+                                            href="/login/forgot-password" 
+                                            className="text-blue-600 hover:text-purple-600 text-sm font-medium transition-colors"
+                                        >
+                                            Forgot your password?
+                                        </a>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Signup Form */
+                                <div className="space-y-6">
+                                    {/* Pricing Selection */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                            Choose Your Plan
+                                        </label>
+                                        
+                                        {/* Pro Plan (Default/Recommended) */}
+                                        <div 
+                                            onClick={() => setSignupData({...signupData, tier: 'pro'})}
+                                            className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 mb-3 ${
+                                                signupData.tier === 'pro' 
+                                                    ? 'border-blue-500 bg-blue-50' 
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {/* Popular badge */}
+                                            <div className="absolute -top-3 left-4">
+                                                <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                                    ⭐ RECOMMENDED
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3">
+                                                    {React.createElement(SafeCrown, { className: "w-6 h-6 text-blue-600" })}
+                                                    <div>
+                                                        <h3 className="font-bold text-gray-900">Pro Plan</h3>
+                                                        <p className="text-sm text-gray-600">1,000 leads • Full features</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-blue-600">
+                                                        ${signupData.billingCycle === 'monthly' ? '6.99/mo' : '69.99/yr'}
+                                                    </p>
+                                                    {signupData.billingCycle === 'annual' && (
+                                                        <p className="text-xs text-green-600">Save 20%!</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Billing Cycle Toggle (only for Pro) */}
+                                        {signupData.tier === 'pro' && (
+                                            <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSignupData({...signupData, billingCycle: 'monthly'})}
+                                                    className={`flex-1 py-2 px-3 text-sm font-medium rounded transition-all ${
+                                                        signupData.billingCycle === 'monthly'
+                                                            ? 'bg-white text-blue-600 shadow-sm'
+                                                            : 'text-gray-600'
+                                                    }`}
+                                                >
+                                                    Monthly
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSignupData({...signupData, billingCycle: 'annual'})}
+                                                    className={`flex-1 py-2 px-3 text-sm font-medium rounded transition-all ${
+                                                        signupData.billingCycle === 'annual'
+                                                            ? 'bg-white text-blue-600 shadow-sm'
+                                                            : 'text-gray-600'
+                                                    }`}
+                                                >
+                                                    <span>Annual</span>
+                                                    <span className="ml-1 text-xs text-green-600">Save 20%</span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Free Plan */}
+                                        <div 
+                                            onClick={() => setSignupData({...signupData, tier: 'free'})}
+                                            className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                                                signupData.tier === 'free' 
+                                                    ? 'border-gray-400 bg-gray-50' 
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3">
+                                                    {React.createElement(SafeZap, { className: "w-6 h-6 text-gray-500" })}
+                                                    <div>
+                                                        <h3 className="font-bold text-gray-900">Free Plan</h3>
+                                                        <p className="text-sm text-gray-600">50 leads • Basic features</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-gray-600">$0/mo</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Email Field */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Email
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={signupData.email}
+                                            onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
+                                            placeholder="Enter your email"
+                                            required
+                                        />
+                                    </div>
+
+                                    {/* Password Field */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword.signup ? 'text' : 'password'}
+                                                value={signupData.password}
+                                                onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
+                                                placeholder="Create a password"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePassword('signup')}
+                                            className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
+                                        >
+                                            {showPassword.signup ? 'Hide password' : 'Show password'}
+                                        </button>
+                                    </div>
+
+                                    {/* Confirm Password Field */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Confirm Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword.confirm ? 'text' : 'password'}
+                                                value={signupData.confirmPassword}
+                                                onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
+                                                placeholder="Confirm your password"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePassword('confirm')}
+                                            className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
+                                        >
+                                            {showPassword.confirm ? 'Hide password' : 'Show password'}
+                                        </button>
+                                    </div>
+
+                                    {/* Submit Button */}
+                                    <button
+                                        onClick={handleSignup}
+                                        disabled={isLoading}
+                                        className={`w-full py-3 px-4 rounded-xl font-semibold transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none ${
+                                            signupData.tier === 'pro'
+                                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                                                : 'bg-gray-600 text-white hover:bg-gray-700'
+                                        }`}
+                                    >
+                                        {isLoading ? (
+                                            <div className="flex items-center justify-center space-x-2">
+                                                {React.createElement(SafeLoader, { className: "w-5 h-5 animate-spin" })}
+                                                <span>Creating Account...</span>
+                                            </div>
+                                        ) : signupData.tier === 'pro' ? (
+                                            <div className="flex items-center justify-center space-x-2">
+                                                {React.createElement(SafeCreditCard, { className: "w-5 h-5" })}
+                                                <span>Continue to Payment</span>
+                                                {React.createElement(SafeArrowRight, { className: "w-4 h-4" })}
+                                            </div>
+                                        ) : (
+                                            'Create Free Account'
+                                        )}
+                                    </button>
+
+                                    {signupData.tier === 'pro' && (
+                                        <p className="text-xs text-center text-gray-600">
+                                            You'll be redirected to secure payment processing
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Footer Links */}
+                            <div className="flex justify-center space-x-6 pt-8 border-t border-gray-200 mt-8">
+                                <a href="/pricing" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">
+                                    Pricing
+                                </a>
+                                <a href="/privacy" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">
+                                    Privacy
+                                </a>
+                                <a href="/terms" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">
+                                    Terms
+                                </a>
+                                <a href="/" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">
+                                    ← Home
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Initialize the app
+        const App = () => {
+            return React.createElement(Login);
+        };
+
+        // Hide loading screen and show app
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('root').style.display = 'block';
+        
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
     </script>
 </body>
-</html>

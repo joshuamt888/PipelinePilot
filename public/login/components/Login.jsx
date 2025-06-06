@@ -39,12 +39,23 @@ const Login = () => {
     billingCycle: 'monthly' // monthly or annual
   });
 
+  // Check for URL parameters (cancelled payment, locked account, etc.)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('cancelled') === 'true') {
+      setError('Payment was cancelled. You can try again or create a free account.');
+    }
+    if (urlParams.get('locked') === 'true') {
+      setError('Account is temporarily locked due to too many failed login attempts.');
+    }
+  }, []);
+
   // Pricing options
   const pricingPlans = {
     free: {
       name: 'Free',
       price: { monthly: 0, annual: 0 },
-      features: ['50 leads/month', 'Basic pipeline', 'Email support'],
+      features: ['100 leads/month', 'Basic pipeline', 'Email support'],
       limitations: ['Limited features', 'No automation', 'Basic analytics']
     },
     pro: {
@@ -79,6 +90,10 @@ const Login = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 423) {
+          throw new Error('Account is temporarily locked. Please try again later.');
+        }
         throw new Error(data.error || 'Login failed');
       }
 
@@ -100,45 +115,70 @@ const Login = () => {
     }
   };
 
+  // Handle Pro tier Stripe payment
+  const handleProPayment = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+
+      // Create Stripe checkout session
+      const plan = signupData.billingCycle === 'monthly' ? 'monthly_pro' : 'annual_pro';
+      
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plan: plan,
+          email: signupData.email
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+
+    } catch (error) {
+      setError(error.message);
+      setIsLoading(false);
+    }
+  };
+
   // Handle signup form submission
   const handleSignup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Validate passwords match
+    // Client-side validation
     if (signupData.password !== signupData.confirmPassword) {
       setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
-    // Validate password strength
-    if (signupData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    // Check password strength (must match server requirements)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(signupData.password)) {
+      setError('Password must be 8+ characters with uppercase, lowercase, number, and special character');
       setIsLoading(false);
       return;
     }
 
     try {
-      // If Pro tier selected, redirect to payment first
+      // If Pro tier selected, go through Stripe payment flow
       if (signupData.tier === 'pro') {
-        // Store signup data temporarily
-        sessionStorage.setItem('pendingSignup', JSON.stringify({
-          email: signupData.email,
-          password: signupData.password,
-          tier: signupData.tier,
-          billingCycle: signupData.billingCycle
-        }));
-
-        // Redirect to payment page with pricing info
-        const price = pricingPlans.pro.price[signupData.billingCycle];
-        const plan = `${signupData.billingCycle}_pro`;
-        window.location.href = `/payment?plan=${plan}&price=${price}&email=${encodeURIComponent(signupData.email)}`;
-        return;
+        await handleProPayment();
+        return; // Will redirect to Stripe
       }
 
-      // For free tier, create account directly
+      // For free tier, create account directly with correct format
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -147,26 +187,30 @@ const Login = () => {
         body: JSON.stringify({
           email: signupData.email,
           password: signupData.password,
-          userType: 'client_free'
+          confirmPassword: signupData.confirmPassword // ✅ Required by server
         })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle validation errors from server
+        if (data.details && Array.isArray(data.details)) {
+          throw new Error(data.details.join(', '));
+        }
         throw new Error(data.error || 'Registration failed');
       }
 
-      setSuccess('Account created successfully! Please check your email to verify your account.');
+      // Store token and user data immediately for free accounts
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+
+      setSuccess(data.message);
       
-      // Reset form
-      setSignupData({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        tier: 'pro',
-        billingCycle: 'monthly'
-      });
+      // Redirect to dashboard after short delay
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
 
     } catch (error) {
       setError(error.message);
@@ -242,7 +286,7 @@ const Login = () => {
 
           {/* Login Form */}
           {isLogin ? (
-            <div className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Email
@@ -288,7 +332,7 @@ const Login = () => {
               </div>
 
               <button
-                onClick={handleLogin}
+                type="submit"
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
               >
@@ -304,16 +348,16 @@ const Login = () => {
 
               <div className="text-center">
                 <a 
-                  href="/forgot-password" 
+                  href="/login/forgot-password" 
                   className="text-blue-600 hover:text-purple-600 text-sm font-medium transition-colors"
                 >
                   Forgot your password?
                 </a>
               </div>
-            </div>
+            </form>
           ) : (
             /* Signup Form */
-            <div className="space-y-6">
+            <form onSubmit={handleSignup} className="space-y-6">
               {/* Pricing Selection */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -349,7 +393,7 @@ const Login = () => {
                         ${signupData.billingCycle === 'monthly' ? '6.99/mo' : '69.99/yr'}
                       </p>
                       {signupData.billingCycle === 'annual' && (
-                        <p className="text-xs text-green-600">Save 17%!</p>
+                        <p className="text-xs text-green-600">Save 20%!</p>
                       )}
                     </div>
                   </div>
@@ -379,7 +423,7 @@ const Login = () => {
                       }`}
                     >
                       <span>Annual</span>
-                      <span className="ml-1 text-xs text-green-600">Save 17%</span>
+                      <span className="ml-1 text-xs text-green-600">Save 20%</span>
                     </button>
                   </div>
                 )}
@@ -398,7 +442,7 @@ const Login = () => {
                       <Zap className="w-6 h-6 text-gray-500" />
                       <div>
                         <h3 className="font-bold text-gray-900">Free Plan</h3>
-                        <p className="text-sm text-gray-600">50 leads • Basic features</p>
+                        <p className="text-sm text-gray-600">100 leads • Basic features</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -434,7 +478,7 @@ const Login = () => {
                     value={signupData.password}
                     onChange={(e) => setSignupData({...signupData, password: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200 pr-12"
-                    placeholder="Create a password"
+                    placeholder="Create a password (8+ chars, mixed case, number, symbol)"
                     required
                   />
                   <button
@@ -471,9 +515,20 @@ const Login = () => {
                 </div>
               </div>
 
+              {/* Password Requirements */}
+              <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <p className="font-medium mb-1">Password must contain:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>At least 8 characters</li>
+                  <li>Uppercase and lowercase letters</li>
+                  <li>At least one number</li>
+                  <li>At least one special character (@$!%*?&)</li>
+                </ul>
+              </div>
+
               {/* Submit Button */}
               <button
-                onClick={handleSignup}
+                type="submit"
                 disabled={isLoading}
                 className={`w-full py-3 px-4 rounded-xl font-semibold transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none ${
                   signupData.tier === 'pro'
@@ -484,7 +539,9 @@ const Login = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <Loader className="w-5 h-5 animate-spin" />
-                    <span>Creating Account...</span>
+                    <span>
+                      {signupData.tier === 'pro' ? 'Creating Checkout...' : 'Creating Account...'}
+                    </span>
                   </div>
                 ) : signupData.tier === 'pro' ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -502,7 +559,13 @@ const Login = () => {
                   You'll be redirected to secure payment processing
                 </p>
               )}
-            </div>
+
+              {signupData.tier === 'free' && (
+                <p className="text-xs text-center text-gray-600">
+                  No credit card required • Upgrade anytime
+                </p>
+              )}
+            </form>
           )}
 
           {/* Footer Links */}
