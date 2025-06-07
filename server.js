@@ -30,9 +30,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "https://js.stripe.com"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'",  // Needed for Babel compilation
+        "https://js.stripe.com",
+        "https://unpkg.com",  // For React, ReactDOM, Babel, Lucide
+        "https://cdn.tailwindcss.com"  // For Tailwind CSS
+      ],
       connectSrc: ["'self'", "https://api.stripe.com"],
       frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
     },
@@ -585,7 +591,7 @@ app.use('/api/register', strictLimiter);
 app.use('/api/create-checkout-session', moderateLimiter);
 app.use('/api', apiLimiter);
 
-// Stripe checkout session - with enhanced security
+// Stripe checkout session - UPDATED for seamless dashboard redirect
 app.post('/api/create-checkout-session', 
   [
     body('plan').isIn(['monthly_pro', 'annual_pro']).withMessage('Invalid plan'),
@@ -598,18 +604,18 @@ app.post('/api/create-checkout-session',
       
       const validPlans = {
         'monthly_pro': {
-          priceId: 'price_1RX80sDhSlID87uJjGfEMJB7',
-          name: 'V1 Pro Monthly'
-        },
+         priceId: process.env.STRIPE_MONTHLY_PRICE_ID ,
+         name: 'V1 Pro Monthly'
+       },
         'annual_pro': {
-          priceId: 'price_1RX81yDhSlID87uJ6HuVlL2q',
-          name: 'V1 Pro Annual'
-        }
-      };
+         priceId: process.env.STRIPE_ANNUAL_PRICE_ID ,
+         name: 'V1 Pro Annual'
+       }
+     };
       
       const planData = validPlans[plan];
       const baseUrl = isDevelopment 
-        ? req.headers.origin
+        ? process.env.DEV_BASE_URL || req.headers.origin
         : 'https://steadyleadflow.steadyscaling.com';
       
       const session = await stripe.checkout.sessions.create({
@@ -620,8 +626,18 @@ app.post('/api/create-checkout-session',
         }],
         mode: 'subscription',
         customer_email: email,
-        success_url: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        
+        // 🔥 STEADYLEADFLOW BRANDING
+        custom_text: {
+          submit: {
+            message: 'Join SteadyLeadFlow Pro and transform your leads into revenue! 🚀'
+          }
+        },
+        
+        // 🚀 SEAMLESS FLOW: Redirect directly to dashboard with upgrade params
+        success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/login?cancelled=true`,
+        
         metadata: {
           plan: plan,
           email: email,
@@ -629,7 +645,9 @@ app.post('/api/create-checkout-session',
           environment: isDevelopment ? 'development' : 'production',
           created_from_ip: req.ip
         },
+        
         subscription_data: {
+          description: `SteadyLeadFlow ${plan === 'monthly_pro' ? 'Pro Monthly' : 'Pro Annual'} - 1,000 leads/month with advanced pipeline features`,
           metadata: {
             plan: plan,
             email: email,
@@ -651,6 +669,250 @@ app.post('/api/create-checkout-session',
       res.status(500).json({ 
         error: 'Failed to create checkout session'
       });
+    }
+  }
+);
+
+// 🎁 NEW: Free Trial endpoint - Add this to your server.js
+
+app.post('/api/start-trial',
+  [
+    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('name').trim().isLength({ min: 1, max: 255 }).escape().withMessage('Name is required'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await findUserByEmail(email);
+      if (existingUser) {
+        // If user exists but is free tier, upgrade to trial
+        if (existingUser.user_type === 'client_v1') {
+          const client = await pool.connect();
+          try {
+            const trialEndDate = new Date();
+            trialEndDate.setDate(trialEndDate.getDate() + 14); // 14 days from now
+            
+            await client.query(
+              `UPDATE ${getTableName('users')} 
+               SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
+               WHERE email = $4`,
+              [
+                'client_v1_trial', 
+                1000, 
+                JSON.stringify({
+                  ...existingUser.settings,
+                  subscriptionTier: 'V1_TRIAL',
+                  trialStartDate: new Date().toISOString(),
+                  trialEndDate: trialEndDate.toISOString(),
+                  name: name
+                }),
+                email.toLowerCase()
+              ]
+            );
+            
+            await logUserAction(existingUser.id, 'TRIAL_STARTED', 'users', existingUser.id, existingUser, null, req);
+            
+            return res.json({ 
+              message: 'Trial started successfully! Check your email for login instructions.',
+              trialEndDate: trialEndDate.toISOString()
+            });
+          } finally {
+            client.release();
+          }
+        } else {
+          return res.status(400).json({ error: 'User already has an active account or trial' });
+        }
+      }
+
+      // Create new trial user with temporary password
+      const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'; // Random secure password
+      const hashedPassword = await bcrypt.hash(tempPassword, 12);
+      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+      
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 14); // 14 days from now
+      
+      const userData = {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        userType: 'client_v1_trial',
+        isAdmin,
+        monthlyLeadLimit: 1000, // Full Pro access during trial
+        currentMonthLeads: 0,
+        goals: {
+          daily: 30,
+          weekly: 150,
+          monthly: 1000
+        },
+        settings: {
+          darkMode: false,
+          notifications: true,
+          subscriptionTier: 'V1_TRIAL',
+          trialStartDate: new Date().toISOString(),
+          trialEndDate: trialEndDate.toISOString(),
+          name: name,
+          tempPassword: tempPassword // Store temp password for email
+        }
+      };
+
+      const newUser = await createUser(userData);
+      await logUserAction(newUser.id, 'TRIAL_USER_CREATED', 'users', newUser.id, null, { 
+        email: newUser.email, 
+        trialEnd: trialEndDate.toISOString() 
+      }, req);
+
+      // TODO: Send welcome email with temporary password
+      // You can integrate with your email service here
+      console.log(`🎁 Trial user created: ${email} - Temp password: ${tempPassword} - Expires: ${trialEndDate}`);
+
+      res.status(201).json({
+        message: 'Free trial started successfully! Check your email for login instructions.',
+        trialEndDate: trialEndDate.toISOString()
+      });
+
+    } catch (error) {
+      console.error('Start trial error:', error.message);
+      res.status(500).json({ error: 'Failed to start trial' });
+    }
+  }
+);
+
+// 🔄 NEW: Cron job to downgrade expired trials (add this function)
+async function checkExpiredTrials() {
+  const client = await pool.connect();
+  try {
+    const now = new Date().toISOString();
+    
+    // Find expired trial users
+    const result = await client.query(
+      `SELECT id, email, settings FROM ${getTableName('users')} 
+       WHERE user_type = 'client_v1_trial' 
+       AND settings->>'trialEndDate' < $1`,
+      [now]
+    );
+
+    for (const user of result.rows) {
+      // Downgrade to free tier
+      const updatedSettings = {
+        ...user.settings,
+        subscriptionTier: 'FREE',
+        trialEndedDate: now,
+        downgradedFromTrial: true
+      };
+
+      await client.query(
+        `UPDATE ${getTableName('users')} 
+         SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
+         WHERE id = $4`,
+        ['client_v1', 100, JSON.stringify(updatedSettings), user.id]
+      );
+
+      await logUserAction(user.id, 'TRIAL_EXPIRED_DOWNGRADE', 'users', user.id, null, { 
+        email: user.email, 
+        expiredAt: now 
+      });
+
+      console.log(`⬇️ Trial expired - downgraded user: ${user.email}`);
+    }
+
+    if (result.rows.length > 0) {
+      console.log(`✅ Processed ${result.rows.length} expired trials`);
+    }
+
+  } catch (error) {
+    console.error('Check expired trials error:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+// 🕐 Run trial expiration check every hour
+setInterval(checkExpiredTrials, 60 * 60 * 1000); // Every hour
+
+// Also run on startup
+setTimeout(checkExpiredTrials, 5000); // Run 5 seconds after startup
+
+// 🚀 NEW: Set upgrade password endpoint for seamless onboarding
+app.post('/api/set-upgrade-password',
+  [
+    body('sessionId').notEmpty().withMessage('Session ID required'),
+    body('password').isLength({ min: 8, max: 128 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/).withMessage('Password must be 8+ chars with uppercase, lowercase, number, and special character'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { sessionId, password } = req.body;
+      
+      // Verify the session with Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (!session || session.payment_status !== 'paid') {
+        return res.status(400).json({ error: 'Invalid or unpaid session' });
+      }
+      
+      const email = session.metadata.email || session.customer_email;
+      if (!email) {
+        return res.status(400).json({ error: 'No email found in session' });
+      }
+      
+      // Find the user
+      const user = await findUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      // Update user password
+      const client = await pool.connect();
+      try {
+        await client.query(
+          `UPDATE ${getTableName('users')} 
+           SET password = $1, updated_at = NOW()
+           WHERE id = $2`,
+          [hashedPassword, user.id]
+        );
+      } finally {
+        client.release();
+      }
+      
+      // Generate JWT token for automatic login
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email,
+          userType: user.user_type
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      await logUserAction(user.id, 'UPGRADE_PASSWORD_SET', 'users', user.id, null, { sessionId }, req);
+      
+      console.log(`✅ Upgrade password set for: ${email}`);
+      
+      res.json({
+        message: 'Password set successfully! Welcome to V1 Pro! 🚀',
+        token,
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          isAdmin: user.is_admin,
+          userType: user.user_type,
+          subscriptionTier: 'V1_PRO',
+          monthlyLeadLimit: user.monthly_lead_limit,
+          currentMonthLeads: user.current_month_leads,
+          goals: user.goals,
+          settings: user.settings
+        }
+      });
+      
+    } catch (error) {
+      console.error('Set upgrade password error:', error.message);
+      res.status(500).json({ error: 'Failed to set password' });
     }
   }
 );
@@ -1438,7 +1700,8 @@ app.get('/api/health', async (req, res) => {
           'stripe-billing',
           'audit-logging',
           'rate-limiting',
-          'input-validation'
+          'input-validation',
+          'seamless-upgrade-flow'  // 🚀 NEW FEATURE
         ],
         database: {
           connected: true,
@@ -1617,6 +1880,7 @@ async function startServer() {
       console.log(`🔒 Protected routes: ${protectedRoutes.join(', ')}`);
       console.log(`🚀 Pipeline features: 40+ tracking fields enabled!`);
       console.log(`💳 Stripe billing: ENABLED with V1 Pro upgrades!`);
+      console.log(`🎯 Seamless upgrade flow: Payment → Dashboard → Password Setup!`);
       console.log(`✨ Ready for production with enterprise-grade security!`);
       
       if (ADMIN_EMAILS.length === 0) {
