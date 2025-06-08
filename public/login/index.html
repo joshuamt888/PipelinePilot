@@ -34,7 +34,9 @@
             ArrowRight = () => '→',
             CreditCard = () => '💳',
             Gift = () => '🎁',
-            Star = () => '⭐'
+            Star = () => '⭐',
+            Eye = () => '👁️',
+            EyeOff = () => '🙈'
         } = LucideReact || {};
 
         const LoginApp = () => {
@@ -50,6 +52,7 @@
                 if (params.get('cancelled') === 'true') setError('Payment cancelled. Try again or start free trial.');
                 if (params.get('locked') === 'true') setError('Account locked due to failed login attempts.');
                 if (params.get('upgrade') === 'success') setSuccess('Welcome to V1 Pro! Account upgraded successfully.');
+                if (params.get('trial') === 'started') setSuccess('Trial started! You can now sign in with your credentials.');
             }, []);
 
             // Clear messages when switching views
@@ -121,7 +124,7 @@
             );
         };
 
-        // 🔐 Login Form Component
+        // 🔐 Login Form Component (UNCHANGED - only for existing users)
         const LoginForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({ email: '', password: '' });
             const [showPassword, setShowPassword] = useState(false);
@@ -140,7 +143,8 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error);
 
-                    localStorage.setItem('auth_token', result.token);
+                    // Store token with consistent key
+                    localStorage.setItem('token', result.token);
                     localStorage.setItem('user_data', JSON.stringify(result.user));
                     setSuccess(result.message);
                     setTimeout(() => window.location.href = '/dashboard', 1000);
@@ -167,21 +171,23 @@
 
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={data.password}
-                            onChange={(e) => setData({...data, password: e.target.value})}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
-                            placeholder="Enter your password"
-                            required
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
-                        >
-                            {showPassword ? 'Hide password' : 'Show password'}
-                        </button>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={data.password}
+                                onChange={(e) => setData({...data, password: e.target.value})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200 pr-12"
+                                placeholder="Enter your password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
                     </div>
 
                     <button
@@ -206,7 +212,7 @@
             );
         };
 
-        // 🆓 Signup Form Component
+        // 🆓 Signup Form Component (FIXED - Always collects password)
         const SignupForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({
                 email: '',
@@ -217,34 +223,64 @@
             });
             const [showPassword, setShowPassword] = useState({ password: false, confirm: false });
 
+            // Password validation function
+            const validatePassword = (password) => {
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+                return passwordRegex.test(password);
+            };
+
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setLoading(true);
 
                 try {
+                    // Validate passwords ALWAYS
+                    if (data.password !== data.confirmPassword) {
+                        throw new Error('Passwords do not match');
+                    }
+
+                    if (!validatePassword(data.password)) {
+                        throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
+                    }
+
                     if (data.tier === 'pro') {
-                        // Stripe checkout for Pro
+                        // 🔥 NEW FLOW: Create account first, THEN redirect to Stripe
+                        const registerResponse = await fetch('/api/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: data.email,
+                                password: data.password,
+                                confirmPassword: data.confirmPassword,
+                                pendingUpgrade: true, // Flag that this user wants Pro
+                                billingCycle: data.billingCycle
+                            })
+                        });
+
+                        const registerResult = await registerResponse.json();
+                        if (!registerResponse.ok) throw new Error(registerResult.error);
+
+                        // Store credentials temporarily
+                        localStorage.setItem('pendingUpgradeToken', registerResult.token);
+                        localStorage.setItem('pendingUpgradeUser', JSON.stringify(registerResult.user));
+
+                        // Now create Stripe checkout
                         const plan = data.billingCycle === 'monthly' ? 'monthly_pro' : 'annual_pro';
-                        const response = await fetch('/api/create-checkout-session', {
+                        const stripeResponse = await fetch('/api/create-checkout-session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ plan, email: data.email })
                         });
 
-                        const result = await response.json();
-                        if (!response.ok) throw new Error(result.error);
-                        if (result.url) window.location.href = result.url;
+                        const stripeResult = await stripeResponse.json();
+                        if (!stripeResponse.ok) throw new Error(stripeResult.error);
+                        
+                        if (stripeResult.url) {
+                            setSuccess('Account created! Redirecting to payment...');
+                            setTimeout(() => window.location.href = stripeResult.url, 1000);
+                        }
                     } else {
-                        // Free signup with password
-                        if (data.password !== data.confirmPassword) {
-                            throw new Error('Passwords do not match');
-                        }
-
-                        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-                        if (!passwordRegex.test(data.password)) {
-                            throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
-                        }
-
+                        // Free signup - immediate account creation and login
                         const response = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -258,7 +294,7 @@
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.error);
 
-                        localStorage.setItem('auth_token', result.token);
+                        localStorage.setItem('token', result.token);
                         localStorage.setItem('user_data', JSON.stringify(result.user));
                         setSuccess('Free account created successfully!');
                         setTimeout(() => window.location.href = '/dashboard', 1000);
@@ -356,7 +392,7 @@
                         )}
                     </div>
 
-                    {/* Email */}
+                    {/* Email - ALWAYS REQUIRED */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                         <input
@@ -367,67 +403,69 @@
                             placeholder="Enter your email"
                             required
                         />
-                        {data.tier === 'pro' && (
-                            <p className="text-xs text-gray-600 mt-2">You'll set your password after payment</p>
+                    </div>
+
+                    {/* Password - ALWAYS REQUIRED FOR ALL SIGNUPS */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword.password ? 'text' : 'password'}
+                                value={data.password}
+                                onChange={(e) => setData({...data, password: e.target.value})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200 pr-12"
+                                placeholder="Create a password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword.password ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Confirm Password - ALWAYS REQUIRED FOR ALL SIGNUPS */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword.confirm ? 'text' : 'password'}
+                                value={data.confirmPassword}
+                                onChange={(e) => setData({...data, confirmPassword: e.target.value})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200 pr-12"
+                                placeholder="Confirm your password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
+                        {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
+                            <p className="text-red-600 text-xs mt-1">Passwords do not match</p>
                         )}
                     </div>
 
-                    {/* Password fields (only for FREE) */}
-                    {data.tier === 'free' && (
-                        <>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                                <input
-                                    type={showPassword.password ? 'text' : 'password'}
-                                    value={data.password}
-                                    onChange={(e) => setData({...data, password: e.target.value})}
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
-                                    placeholder="Create a password"
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
-                                    className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
-                                >
-                                    {showPassword.password ? 'Hide password' : 'Show password'}
-                                </button>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
-                                <input
-                                    type={showPassword.confirm ? 'text' : 'password'}
-                                    value={data.confirmPassword}
-                                    onChange={(e) => setData({...data, confirmPassword: e.target.value})}
-                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-200"
-                                    placeholder="Confirm your password"
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
-                                    className="text-blue-600 hover:text-purple-600 text-sm font-medium mt-2 transition-colors"
-                                >
-                                    {showPassword.confirm ? 'Hide password' : 'Show password'}
-                                </button>
-                            </div>
-
-                            <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
-                                <p className="font-medium mb-1">Password must contain:</p>
-                                <ul className="list-disc list-inside space-y-1">
-                                    <li>At least 8 characters</li>
-                                    <li>Uppercase and lowercase letters</li>
-                                    <li>At least one number</li>
-                                    <li>At least one special character (@$!%*?&)</li>
-                                </ul>
-                            </div>
-                        </>
-                    )}
+                    {/* Password Requirements */}
+                    <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                        <p className="font-medium mb-1">Password must contain:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li className={validatePassword(data.password) ? 'text-green-600' : ''}>At least 8 characters</li>
+                            <li className={/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? 'text-green-600' : ''}>Uppercase and lowercase letters</li>
+                            <li className={/\d/.test(data.password) ? 'text-green-600' : ''}>At least one number</li>
+                            <li className={/[@$!%*?&]/.test(data.password) ? 'text-green-600' : ''}>At least one special character (@$!%*?&)</li>
+                        </ul>
+                    </div>
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !validatePassword(data.password) || data.password !== data.confirmPassword}
                         className={`w-full py-3 px-4 rounded-xl font-semibold transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none ${
                             data.tier === 'pro'
                                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
@@ -437,40 +475,81 @@
                         {loading ? (
                             <div className="flex items-center justify-center space-x-2">
                                 <Loader className="w-5 h-5 animate-spin" />
-                                <span>{data.tier === 'pro' ? 'Creating Checkout...' : 'Creating Account...'}</span>
+                                <span>{data.tier === 'pro' ? 'Creating Account...' : 'Creating Account...'}</span>
                             </div>
                         ) : data.tier === 'pro' ? (
                             <div className="flex items-center justify-center space-x-2">
                                 <CreditCard className="w-5 h-5" />
-                                <span>Continue to Payment</span>
+                                <span>Create Account & Pay</span>
                                 <ArrowRight className="w-4 h-4" />
                             </div>
                         ) : 'Create Free Account'}
                     </button>
+
+                    {data.tier === 'pro' && (
+                        <p className="text-xs text-center text-gray-600">
+                            Account will be created, then you'll be redirected to secure payment
+                        </p>
+                    )}
                 </form>
             );
         };
 
-        // 🎁 Trial Form Component
+        // 🎁 Trial Form Component (FIXED - Always collects password)
         const TrialForm = ({ loading, setLoading, setError, setSuccess }) => {
-            const [data, setData] = useState({ email: '', name: '' });
+            const [data, setData] = useState({ 
+                email: '', 
+                name: '',
+                password: '',
+                confirmPassword: ''
+            });
+            const [showPassword, setShowPassword] = useState({ password: false, confirm: false });
+
+            // Password validation function
+            const validatePassword = (password) => {
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+                return passwordRegex.test(password);
+            };
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 setLoading(true);
 
                 try {
+                    // Validate passwords
+                    if (data.password !== data.confirmPassword) {
+                        throw new Error('Passwords do not match');
+                    }
+
+                    if (!validatePassword(data.password)) {
+                        throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
+                    }
+
+                    // 🔥 NEW: Start trial with password (no temp passwords!)
                     const response = await fetch('/api/start-trial', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                        body: JSON.stringify({
+                            email: data.email,
+                            name: data.name,
+                            password: data.password,
+                            confirmPassword: data.confirmPassword
+                        })
                     });
 
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error);
 
-                    setSuccess('🎉 Free trial started! Check your email for login instructions.');
-                    setTimeout(() => window.location.href = '/login?trial=started', 2000);
+                    // If trial includes token (user created and logged in)
+                    if (result.token) {
+                        localStorage.setItem('token', result.token);
+                        localStorage.setItem('user_data', JSON.stringify(result.user));
+                        setSuccess('🎉 Free trial started! Welcome to V1 Pro!');
+                        setTimeout(() => window.location.href = '/dashboard', 1500);
+                    } else {
+                        setSuccess('🎉 Free trial started! You can now sign in.');
+                        setTimeout(() => window.location.href = '/login?trial=started', 2000);
+                    }
                 } catch (err) {
                     setError(err.message);
                 } finally {
@@ -501,7 +580,7 @@
                             </div>
                             <div className="flex items-center space-x-2">
                                 <span className="text-green-500">✓</span>
-                                <span>Email setup & onboarding</span>
+                                <span>Instant dashboard access</span>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <span className="text-green-500">✓</span>
@@ -510,6 +589,7 @@
                         </div>
                     </div>
 
+                    {/* Name */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
                         <input
@@ -522,6 +602,7 @@
                         />
                     </div>
 
+                    {/* Email */}
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                         <input
@@ -532,12 +613,69 @@
                             placeholder="Enter your email"
                             required
                         />
-                        <p className="text-xs text-gray-600 mt-2">We'll send you login instructions via email</p>
+                    </div>
+
+                    {/* Password - NOW REQUIRED FOR TRIAL TOO */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Create Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword.password ? 'text' : 'password'}
+                                value={data.password}
+                                onChange={(e) => setData({...data, password: e.target.value})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-200 pr-12"
+                                placeholder="Create a secure password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword.password ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Confirm Password - NOW REQUIRED FOR TRIAL TOO */}
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword.confirm ? 'text' : 'password'}
+                                value={data.confirmPassword}
+                                onChange={(e) => setData({...data, confirmPassword: e.target.value})}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-200 pr-12"
+                                placeholder="Confirm your password"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
+                        {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
+                            <p className="text-red-600 text-xs mt-1">Passwords do not match</p>
+                        )}
+                    </div>
+
+                    {/* Password Requirements for Trial */}
+                    <div className="text-xs text-gray-600 bg-green-50 p-3 rounded-lg border border-green-200">
+                        <p className="font-medium mb-1 text-green-800">Password must contain:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li className={validatePassword(data.password) ? 'text-green-600' : ''}>At least 8 characters</li>
+                            <li className={/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? 'text-green-600' : ''}>Uppercase and lowercase letters</li>
+                            <li className={/\d/.test(data.password) ? 'text-green-600' : ''}>At least one number</li>
+                            <li className={/[@$!%*?&]/.test(data.password) ? 'text-green-600' : ''}>At least one special character (@$!%*?&)</li>
+                        </ul>
                     </div>
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !validatePassword(data.password) || data.password !== data.confirmPassword}
                         className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-green-700 hover:to-blue-700 transform hover:translate-y-[-2px] transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                     >
                         {loading ? (
@@ -553,15 +691,13 @@
                         )}
                     </button>
 
-                    <p className="text-xs text-center text-gray-600">
-                        No payment required • Trial expires automatically
-                    </p>
                 </form>
             );
         };
 
         // Render the app
-        ReactDOM.render(<LoginApp />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LoginApp />);
     </script>
 </body>
 </html>
