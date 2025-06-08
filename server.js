@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// 🔒 SECURITY: Environment validation
+// 🔒 Environment validation
 const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
@@ -15,8 +15,7 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-// 🔒 SECURITY: Security middleware
-const helmet = require('helmet');
+// Basic security middleware
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult, param } = require('express-validator');
@@ -25,115 +24,43 @@ const compression = require('compression');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔒 SECURITY: HTTP security headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: [
-        "'self'", 
-        "'unsafe-inline'",  // Needed for Babel compilation
-        "https://js.stripe.com",
-        "https://unpkg.com",  // For React, ReactDOM, Babel, Lucide
-        "https://cdn.tailwindcss.com"  // For Tailwind CSS
-      ],
-      connectSrc: ["'self'", "https://api.stripe.com"],
-      frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
-    },
-  },
-}));
-
-// 🔒 SECURITY: CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:3000', 'http://localhost:8080'];
-
+// 🔒 Basic CORS & Security
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  maxAge: 86400 // Cache preflight for 24 hours
+  origin: process.env.NODE_ENV === 'development' ? true : process.env.ALLOWED_ORIGINS?.split(','),
+  credentials: true
 }));
 
-// 🔒 SECURITY: Request size limits and compression
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.set('trust proxy', 1);
 
-// 🔒 SECURITY: Rate limiting configurations
+// 🔒 Rate limiting (simplified but effective)
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
-  message: { error: 'Too many attempts, please try again later' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for admin users in development
-    return process.env.NODE_ENV === 'development' && 
-           req.headers['x-admin-bypass'] === process.env.ADMIN_BYPASS_KEY;
-  }
-});
-
-const moderateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100, // 100 requests per 15 minutes
-  message: { error: 'Rate limit exceeded' },
-  standardHeaders: true,
-  legacyHeaders: false
+  max: 5, // Login/register attempts
+  message: { error: 'Too many attempts, please try again later' }
 });
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // 1000 API calls per 15 minutes
-  message: { error: 'API rate limit exceeded' },
-  standardHeaders: true,
-  legacyHeaders: false
+  max: 1000, // API calls
+  message: { error: 'API rate limit exceeded' }
 });
 
-// 🔒 SECURITY: Input validation middleware
-const validateEmail = body('email')
-  .isEmail()
-  .normalizeEmail()
-  .isLength({ max: 255 })
-  .withMessage('Valid email required');
-
+// 🔒 Input validation (essential fields only)
+const validateEmail = body('email').isEmail().normalizeEmail().withMessage('Valid email required');
 const validatePassword = body('password')
   .isLength({ min: 8, max: 128 })
-  .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-  .withMessage('Password must be 8+ chars with uppercase, lowercase, number, and special character');
+  .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+  .withMessage('Password must be 8+ chars with uppercase, lowercase, and number');
 
-const validateLeadName = body('name')
-  .trim()
-  .isLength({ min: 1, max: 255 })
-  .escape()
-  .withMessage('Name is required and must be under 255 characters');
+const validateLeadName = body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required');
+const validateNumericId = param('id').isInt({ min: 1 }).withMessage('Valid ID required');
 
-const validateLeadEmail = body('email')
-  .optional()
-  .isEmail()
-  .normalizeEmail()
-  .isLength({ max: 255 });
-
-const validateNumericId = param('id')
-  .isInt({ min: 1 })
-  .withMessage('Valid ID required');
-
-// 🔒 SECURITY: Error handling middleware
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.warn(`🚫 Validation failed for ${req.method} ${req.path}:`, errors.array());
     return res.status(400).json({ 
       error: 'Validation failed', 
       details: errors.array().map(err => err.msg)
@@ -142,44 +69,38 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// 🔒 SECURITY: Database connection with error handling
+// 🗄️ Database setup
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const tablePrefix = isDevelopment ? 'dev_' : '';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of clients
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
 
-// 🔒 SECURITY: Database connection error handling
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err.message);
+  console.error('❌ Database error:', err.message);
 });
 
-// 🔒 SECURITY: Admin emails from environment
+// 👑 Admin emails
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS 
   ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim())
   : [];
 
-if (ADMIN_EMAILS.length === 0) {
-  console.warn('⚠️  No admin emails configured. Set ADMIN_EMAILS environment variable.');
-}
-
-// Helper function for table names
 function getTableName(baseName) {
   return `${tablePrefix}${baseName}`;
 }
 
-// 🔒 SECURITY: Enhanced database initialization with better error handling
+// 🔧 Database initialization (simplified schema)
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
     console.log(`🔧 Initializing ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} database...`);
     
-    // Create users table
+    // Users table (simplified)
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('users')} (
         id SERIAL PRIMARY KEY,
@@ -189,25 +110,20 @@ async function initializeDatabase() {
         is_admin BOOLEAN DEFAULT FALSE,
         monthly_lead_limit INTEGER DEFAULT 100,
         current_month_leads INTEGER DEFAULT 0,
-        last_reset_date DATE DEFAULT CURRENT_DATE,
-        goals JSONB DEFAULT '{"daily": 10, "weekly": 50, "monthly": 100}',
+        goals JSONB DEFAULT '{"daily": 10, "monthly": 100}',
         settings JSONB DEFAULT '{"darkMode": false, "notifications": true}',
+        reset_token VARCHAR(255),
+        reset_token_expires TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        last_login TIMESTAMP,
-        failed_login_attempts INTEGER DEFAULT 0,
-        account_locked_until TIMESTAMP
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
-    // Enhanced leads table
+    // Leads table (core fields only)
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('leads')} (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        user_type VARCHAR(50),
-        
-        -- Basic Lead Info
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255),
         phone VARCHAR(50),
@@ -217,97 +133,14 @@ async function initializeDatabase() {
         type VARCHAR(20) DEFAULT 'cold',
         notes TEXT,
         quality_score INTEGER DEFAULT 5 CHECK (quality_score >= 1 AND quality_score <= 10),
-        
-        -- Extended pipeline fields (keeping your existing schema)
-        pain_points TEXT,
-        budget_range VARCHAR(50),
-        decision_maker BOOLEAN,
-        urgency_level VARCHAR(50),
-        contact_attempts INTEGER DEFAULT 0,
-        best_contact_time VARCHAR(50),
-        response_rate VARCHAR(50),
-        referral_source VARCHAR(255),
-        social_media_profile TEXT,
-        personal_notes TEXT,
-        competitors_mentioned TEXT,
-        company_size VARCHAR(50),
-        current_solution TEXT,
-        timeline VARCHAR(100),
-        obstacles TEXT,
-        lead_source_detail TEXT,
-        conversion_probability INTEGER CHECK (conversion_probability >= 0 AND conversion_probability <= 100),
-        next_milestone VARCHAR(255),
-        temperature VARCHAR(20),
-        potential_value INTEGER CHECK (potential_value >= 0),
+        potential_value INTEGER DEFAULT 0,
         follow_up_date DATE,
-        last_contact_date DATE,
-        preferred_contact VARCHAR(50),
-        meeting_location TEXT,
-        pipeline_stage VARCHAR(100),
-        sales_stage VARCHAR(100),
-        quote_amount DECIMAL(10,2) CHECK (quote_amount >= 0),
-        close_date DATE,
-        lost_reason VARCHAR(255),
-        probability_percentage INTEGER CHECK (probability_percentage >= 0 AND probability_percentage <= 100),
-        campaign_source VARCHAR(255),
-        utm_source VARCHAR(255),
-        first_touch_date DATE,
-        lead_magnet VARCHAR(255),
-        engagement_score INTEGER DEFAULT 0 CHECK (engagement_score >= 0),
-        last_activity_type VARCHAR(100),
-        total_interactions INTEGER DEFAULT 0 CHECK (total_interactions >= 0),
-        website_visits INTEGER DEFAULT 0 CHECK (website_visits >= 0),
-        reminder_frequency VARCHAR(50),
-        auto_follow_up BOOLEAN DEFAULT false,
-        snooze_until DATE,
-        priority_level VARCHAR(20),
-        tags TEXT,
-        lead_category VARCHAR(100),
-        vertical VARCHAR(100),
-        deal_size_category VARCHAR(50),
-        automation_sequence VARCHAR(255),
-        email_sequence_step INTEGER DEFAULT 0 CHECK (email_sequence_step >= 0),
-        opt_in_status BOOLEAN DEFAULT true,
-        unsubscribed BOOLEAN DEFAULT false,
-        
-        -- Timestamps
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
-    // Create counters table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('counters')} (
-        name VARCHAR(50) PRIMARY KEY,
-        value INTEGER DEFAULT 1
-      )
-    `);
-
-    // 🔒 SECURITY: Create audit log table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('audit_logs')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE SET NULL,
-        action VARCHAR(100) NOT NULL,
-        table_name VARCHAR(100),
-        record_id INTEGER,
-        old_values JSONB,
-        new_values JSONB,
-        ip_address INET,
-        user_agent TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // Initialize counters
-    await client.query(`
-      INSERT INTO ${getTableName('counters')} (name, value) 
-      VALUES ('user_id', 1), ('lead_id', 1)
-      ON CONFLICT (name) DO NOTHING
-    `);
-
-    console.log(`✅ Database initialized with enhanced security features`);
+    console.log(`✅ Database initialized successfully`);
   } catch (error) {
     console.error('❌ Database initialization error:', error.message);
     throw error;
@@ -316,7 +149,7 @@ async function initializeDatabase() {
   }
 }
 
-// 🔒 SECURITY: Enhanced database helper functions with better error handling
+// 🔧 Database helper functions
 async function findUserByEmail(email) {
   const client = await pool.connect();
   try {
@@ -349,34 +182,6 @@ async function findUserById(id) {
   }
 }
 
-// 🔒 SECURITY: Audit logging function
-async function logUserAction(userId, action, tableName = null, recordId = null, oldValues = null, newValues = null, req = null) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      `INSERT INTO ${getTableName('audit_logs')} 
-       (user_id, action, table_name, record_id, old_values, new_values, ip_address, user_agent) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        userId,
-        action,
-        tableName,
-        recordId,
-        oldValues ? JSON.stringify(oldValues) : null,
-        newValues ? JSON.stringify(newValues) : null,
-        req ? req.ip : null,
-        req ? req.get('User-Agent') : null
-      ]
-    );
-  } catch (error) {
-    console.error('Audit logging failed:', error.message);
-    // Don't throw - audit logging failure shouldn't break the main operation
-  } finally {
-    client.release();
-  }
-}
-
-// Enhanced createUser function
 async function createUser(userData) {
   const client = await pool.connect();
   try {
@@ -427,45 +232,26 @@ async function getUserLeads(userId, isAdmin = false, viewAll = false) {
   }
 }
 
-// Enhanced createLead function with better error handling
 async function createLead(leadData) {
   const client = await pool.connect();
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('leads')} 
-       (user_id, user_type, name, email, phone, company, platform, status, type, notes, quality_score,
-        pain_points, budget_range, decision_maker, urgency_level, contact_attempts, best_contact_time,
-        response_rate, referral_source, social_media_profile, personal_notes, competitors_mentioned,
-        company_size, current_solution, timeline, obstacles, lead_source_detail, conversion_probability,
-        next_milestone, temperature, potential_value, follow_up_date, last_contact_date, preferred_contact,
-        meeting_location, pipeline_stage, sales_stage, quote_amount, close_date, lost_reason,
-        probability_percentage, campaign_source, utm_source, first_touch_date, lead_magnet,
-        engagement_score, last_activity_type, total_interactions, website_visits, reminder_frequency,
-        auto_follow_up, snooze_until, priority_level, tags, lead_category, vertical, deal_size_category,
-        automation_sequence, email_sequence_step, opt_in_status, unsubscribed) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-               $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
-               $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56,
-               $57, $58, $59, $60) RETURNING *`,
+       (user_id, name, email, phone, company, platform, status, type, notes, quality_score, potential_value, follow_up_date) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
-        leadData.userId, leadData.userType, leadData.name, leadData.email?.toLowerCase(), leadData.phone,
-        leadData.company, leadData.platform, leadData.status, leadData.type, leadData.notes,
-        leadData.qualityScore, leadData.painPoints, leadData.budgetRange, leadData.decisionMaker,
-        leadData.urgencyLevel, leadData.contactAttempts || 0, leadData.bestContactTime,
-        leadData.responseRate, leadData.referralSource, leadData.socialMediaProfile,
-        leadData.personalNotes, leadData.competitorsMentioned, leadData.companySize,
-        leadData.currentSolution, leadData.timeline, leadData.obstacles, leadData.leadSourceDetail,
-        leadData.conversionProbability, leadData.nextMilestone, leadData.temperature,
-        leadData.potentialValue, leadData.followUpDate, leadData.lastContactDate,
-        leadData.preferredContact, leadData.meetingLocation, leadData.pipelineStage,
-        leadData.salesStage, leadData.quoteAmount, leadData.closeDate, leadData.lostReason,
-        leadData.probabilityPercentage, leadData.campaignSource, leadData.utmSource,
-        leadData.firstTouchDate, leadData.leadMagnet, leadData.engagementScore || 0,
-        leadData.lastActivityType, leadData.totalInteractions || 0, leadData.websiteVisits || 0,
-        leadData.reminderFrequency, leadData.autoFollowUp || false, leadData.snoozeUntil,
-        leadData.priorityLevel, leadData.tags, leadData.leadCategory, leadData.vertical,
-        leadData.dealSizeCategory, leadData.automationSequence, leadData.emailSequenceStep || 0,
-        leadData.optInStatus !== false, leadData.unsubscribed || false
+        leadData.userId,
+        leadData.name,
+        leadData.email?.toLowerCase(),
+        leadData.phone,
+        leadData.company,
+        leadData.platform,
+        leadData.status,
+        leadData.type,
+        leadData.notes,
+        leadData.qualityScore || 5,
+        leadData.potentialValue || 0,
+        leadData.followUpDate
       ]
     );
     return result.rows[0];
@@ -486,9 +272,6 @@ async function incrementUserLeadCount(userId) {
        WHERE id = $1`,
       [userId]
     );
-  } catch (error) {
-    console.error('Database error in incrementUserLeadCount:', error.message);
-    throw new Error('Failed to update lead count');
   } finally {
     client.release();
   }
@@ -503,56 +286,101 @@ async function decrementUserLeadCount(userId) {
        WHERE id = $1`,
       [userId]
     );
-  } catch (error) {
-    console.error('Database error in decrementUserLeadCount:', error.message);
-    throw new Error('Failed to update lead count');
   } finally {
     client.release();
   }
 }
 
-// Body parsing and static files
+// 🔒 Password reset helper functions
+function generateResetToken() {
+  return require('crypto').randomBytes(32).toString('hex');
+}
+
+async function saveResetToken(email, token) {
+  const client = await pool.connect();
+  try {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiry
+    
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET reset_token = $1, reset_token_expires = $2, updated_at = NOW()
+       WHERE email = $3`,
+      [token, expiresAt.toISOString(), email.toLowerCase()]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function findUserByResetToken(token) {
+  const client = await pool.connect();
+  try {
+    const now = new Date().toISOString();
+    const result = await client.query(
+      `SELECT * FROM ${getTableName('users')} 
+       WHERE reset_token = $1 AND reset_token_expires > $2`,
+      [token, now]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Database error in findUserByResetToken:', error.message);
+    throw new Error('Database query failed');
+  } finally {
+    client.release();
+  }
+}
+
+async function clearResetToken(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET reset_token = NULL, reset_token_expires = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [userId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+// 📁 Static files and dashboard routing
 app.use(express.static(path.join(__dirname, 'public')));
 
-// JSX middleware (keeping your existing setup)
-app.get('*.jsx', (req, res, next) => {
-  res.type('application/javascript');
-  next();
+// 🚀 NEW: Dashboard folder routing
+app.get('/dashboard', (req, res) => {
+  const { upgrade, session_id } = req.query;
+  
+  if (upgrade === 'success') {
+    console.log('✅ Payment success redirect:', session_id);
+  }
+  
+  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
 });
 
-// 🔒 SECURITY: Enhanced route protection middleware with account lockout
-const protectRoute = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) {
-    return res.redirect('/login');
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Check if user still exists and account isn't locked
-    const user = await findUserById(decoded.userId);
-    if (!user) {
-      return res.redirect('/login');
+// Handle all dashboard sub-pages
+app.get('/dashboard/*', (req, res) => {
+  const page = req.params[0];
+  const filePath = path.join(__dirname, 'public', 'dashboard', `${page}.html`);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      // If specific page doesn't exist, serve main dashboard
+      res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
     }
-    
-    if (user.account_locked_until && new Date() < user.account_locked_until) {
-      return res.redirect('/login?locked=true');
-    }
-    
-    req.user = decoded;
-    req.user.isAdmin = ADMIN_EMAILS.includes(decoded.email);
-    await logUserAction(decoded.userId, 'PAGE_ACCESS', null, null, null, { page: req.path }, req);
-    next();
-  } catch (err) {
-    console.warn(`🚫 Invalid token access attempt from ${req.ip}`);
-    return res.redirect('/login');
-  }
-};
+  });
+});
 
-// 🔒 SECURITY: Enhanced API authentication with account lockout
+// 🔐 Password reset routes
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
+});
+
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html'));
+});
+
+// 🔒 Authentication middleware
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -563,36 +391,31 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Check if user still exists and account isn't locked
     const user = await findUserById(decoded.userId);
+    
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
-    }
-    
-    if (user.account_locked_until && new Date() < user.account_locked_until) {
-      return res.status(423).json({ error: 'Account temporarily locked' });
     }
     
     req.user = decoded;
     req.user.isAdmin = ADMIN_EMAILS.includes(decoded.email);
     next();
   } catch (err) {
-    console.warn(`🚫 Invalid API token from ${req.ip}: ${err.message}`);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
 
-// ROUTES
+// 🚀 ROUTES & API ENDPOINTS
 
-// 🔒 SECURITY: Apply rate limiting to specific routes
+// Apply rate limiting
 app.use('/api/login', strictLimiter);
 app.use('/api/register', strictLimiter);
 app.use('/api/start-trial', strictLimiter);
-app.use('/api/create-checkout-session', moderateLimiter);
+app.use('/api/forgot-password', strictLimiter);
+app.use('/api/reset-password', strictLimiter);
 app.use('/api', apiLimiter);
 
-// 🚀 NEW: Universal Register endpoint - handles ALL signups with passwords
+// 🔥 Register endpoint
 app.post('/api/register', 
   [
     validateEmail,
@@ -603,75 +426,33 @@ app.post('/api/register',
       }
       return true;
     }),
-    body('pendingUpgrade').optional().isBoolean(),
-    body('billingCycle').optional().isIn(['monthly', 'annual']),
     handleValidationErrors
   ],
   async (req, res) => {
     try {
       const { email, password, pendingUpgrade, billingCycle } = req.body;
       
-      // Check if user already exists
-      // In /api/register endpoint
-const existingUser = await findUserByEmail(email);
-if (existingUser) {
-  
-  if (existingUser.user_type === 'client_v1_pending_pro') {
-    // 🔥 SMART: Create new checkout for existing pending user
-    const plan = billingCycle === 'monthly' ? 'monthly_pro' : 'annual_pro';
-    try {
-  const plan = billingCycle === 'monthly' ? 'monthly_pro' : 'annual_pro';
-  const session = await createStripeCheckoutSession(plan, email, req);
-  
-  // Generate JWT for existing user
-  const token = jwt.sign(
-    { userId: existingUser.id, email: existingUser.email, userType: existingUser.user_type },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-  
-  await logUserAction(existingUser.id, 'PENDING_PRO_CONTINUED', 'users', existingUser.id, null, { 
-    sessionId: session.id,
-    plan: plan 
-  }, req);
-  
-  console.log(`🔄 Continuing Pro signup for existing user: ${email}`);
-  
-  return res.status(200).json({
-    message: 'Continuing your Pro signup! Redirecting to payment...',
-    existingAccount: true,
-    checkoutUrl: session.url,
-    token: token
-  });
-} catch (stripeError) {
-  console.error('Stripe error for existing pending user:', stripeError.message);
-  return res.status(500).json({ error: 'Failed to create checkout session' });
-}
-  }
-  
-  // Regular duplicate user error for other types
-  return res.status(400).json({ error: 'User already exists' });
-}
+      const existingUser = await findUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
 
       const hashedPassword = await bcrypt.hash(password, 12);
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
-      // 🔥 NEW: Different user types based on signup intent
-      let userType = 'client_v1'; // Default free
+      let userType = 'client_v1';
       let monthlyLeadLimit = 100;
-      let goals = { daily: 10, weekly: 50, monthly: 100 };
+      let goals = { daily: 10, monthly: 100 };
       
       if (pendingUpgrade) {
-        // Pro user (will be upgraded after payment)
         userType = 'client_v1_pending_pro';
-        monthlyLeadLimit = 100; // Still free until payment confirms
-        goals = { daily: 30, weekly: 150, monthly: 1000 };
+        goals = { daily: 30, monthly: 1000 };
       }
       
       if (isAdmin) {
         userType = 'admin';
-        monthlyLeadLimit = null;
-        goals = { daily: 999999, weekly: 999999, monthly: 999999 };
+        monthlyLeadLimit = 999999;
+        goals = { daily: 999999, monthly: 999999 };
       }
       
       const userData = {
@@ -691,88 +472,14 @@ if (existingUser) {
       };
 
       const newUser = await createUser(userData);
-      await logUserAction(newUser.id, 'USER_REGISTERED', 'users', newUser.id, null, { 
-        email: newUser.email, 
-        pendingUpgrade: pendingUpgrade || false 
-      }, req);
 
       const token = jwt.sign(
-        { 
-          userId: newUser.id, 
-          email: newUser.email,
-          userType: newUser.user_type
-        },
+        { userId: newUser.id, email: newUser.email, userType: newUser.user_type },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       console.log(`✅ New user registered: ${email} ${isAdmin ? '(ADMIN)' : pendingUpgrade ? '(PENDING PRO)' : '(FREE)'}`);
-
-      // 🔥 FIXED: Helper function to create Stripe checkout session
-async function createStripeCheckoutSession(plan, email, req) {
-  try {
-    const validPlans = {
-      'monthly_pro': {
-        priceId: process.env.STRIPE_MONTHLY_PRICE_ID,
-        name: 'V1 Pro Monthly'
-      },
-      'annual_pro': {
-        priceId: process.env.STRIPE_ANNUAL_PRICE_ID,
-        name: 'V1 Pro Annual'
-      }
-    };
-    
-    const planData = validPlans[plan];
-    if (!planData) {
-      throw new Error('Invalid plan');
-    }
-
-    const baseUrl = isDevelopment 
-      ? process.env.DEV_BASE_URL || (req ? req.headers.origin : 'http://localhost:3000')
-      : 'https://steadyleadflow.steadyscaling.com';
-    
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price: planData.priceId,
-        quantity: 1,
-      }],
-      mode: 'subscription',
-      customer_email: email,
-      
-      custom_text: {
-        submit: {
-          message: 'Join SteadyLeadFlow Pro and transform your leads into revenue! 🚀'
-        }
-      },
-      
-      success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/login?cancelled=true`,
-      
-      metadata: {
-        plan: plan,
-        email: email,
-        pendingSignup: 'true',
-        environment: isDevelopment ? 'development' : 'production',
-        created_from_ip: req ? req.ip : 'unknown'
-      },
-      
-      subscription_data: {
-        description: `SteadyLeadFlow ${plan === 'monthly_pro' ? 'Pro Monthly' : 'Pro Annual'} - 1,000 leads/month with advanced pipeline features`,
-        metadata: {
-          plan: plan,
-          email: email,
-          environment: isDevelopment ? 'development' : 'production'
-        }
-      }
-    });
-    
-    return session;
-  } catch (error) {
-    console.error('Stripe checkout creation error:', error.message);
-    throw error;
-  }
-}
 
       res.status(201).json({
         message: pendingUpgrade ? 'Account created! Complete payment to activate Pro.' : 
@@ -795,12 +502,12 @@ async function createStripeCheckoutSession(plan, email, req) {
   }
 );
 
-// 🎁 NEW: Universal Trial endpoint - now with REAL passwords!
+// 🎁 Trial endpoint
 app.post('/api/start-trial',
   [
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    body('name').trim().isLength({ min: 1, max: 255 }).escape().withMessage('Name is required'),
-    validatePassword, // 🔥 NEW: Require real password
+    validateEmail,
+    body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required'),
+    validatePassword,
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.password) {
         throw new Error('Passwords do not match');
@@ -813,70 +520,11 @@ app.post('/api/start-trial',
     try {
       const { email, name, password } = req.body;
       
-      // Check if user already exists
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
-        // If user exists but is free tier, upgrade to trial
-        if (existingUser.user_type === 'client_v1') {
-          const client = await pool.connect();
-          try {
-            const trialEndDate = new Date();
-            trialEndDate.setDate(trialEndDate.getDate() + 14);
-            
-            // 🔥 NEW: Update password too if provided
-            const hashedPassword = await bcrypt.hash(password, 12);
-            
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = $1, monthly_lead_limit = $2, settings = $3, password = $4, updated_at = NOW()
-               WHERE email = $5`,
-              [
-                'client_v1_trial', 
-                1000, 
-                JSON.stringify({
-                  ...existingUser.settings,
-                  subscriptionTier: 'V1_TRIAL',
-                  trialStartDate: new Date().toISOString(),
-                  trialEndDate: trialEndDate.toISOString(),
-                  name: name
-                }),
-                hashedPassword,
-                email.toLowerCase()
-              ]
-            );
-            
-            await logUserAction(existingUser.id, 'TRIAL_STARTED', 'users', existingUser.id, existingUser, null, req);
-            
-            // 🔥 NEW: Return token for immediate login
-            const token = jwt.sign(
-              { userId: existingUser.id, email: existingUser.email, userType: 'client_v1_trial' },
-              process.env.JWT_SECRET,
-              { expiresIn: '24h' }
-            );
-            
-            return res.json({ 
-              message: 'Trial started successfully! Welcome to V1 Pro! 🚀',
-              token,
-              user: { 
-                id: existingUser.id, 
-                email: existingUser.email, 
-                isAdmin: existingUser.is_admin,
-                userType: 'client_v1_trial',
-                subscriptionTier: 'V1_TRIAL',
-                monthlyLeadLimit: 1000,
-                currentMonthLeads: existingUser.current_month_leads
-              },
-              trialEndDate: trialEndDate.toISOString()
-            });
-          } finally {
-            client.release();
-          }
-        } else {
-          return res.status(400).json({ error: 'User already has an active account or trial' });
-        }
+        return res.status(400).json({ error: 'User already exists' });
       }
 
-      // 🔥 NEW: Create trial user with REAL password (no temp!)
       const hashedPassword = await bcrypt.hash(password, 12);
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
@@ -885,16 +533,12 @@ app.post('/api/start-trial',
       
       const userData = {
         email: email.toLowerCase(),
-        password: hashedPassword, // 🔥 REAL password, not temp!
+        password: hashedPassword,
         userType: 'client_v1_trial',
         isAdmin,
         monthlyLeadLimit: 1000,
         currentMonthLeads: 0,
-        goals: {
-          daily: 30,
-          weekly: 150,
-          monthly: 1000
-        },
+        goals: { daily: 30, monthly: 1000 },
         settings: {
           darkMode: false,
           notifications: true,
@@ -906,19 +550,14 @@ app.post('/api/start-trial',
       };
 
       const newUser = await createUser(userData);
-      await logUserAction(newUser.id, 'TRIAL_USER_CREATED', 'users', newUser.id, null, { 
-        email: newUser.email, 
-        trialEnd: trialEndDate.toISOString() 
-      }, req);
 
-      // 🔥 NEW: Return token for immediate login  
       const token = jwt.sign(
         { userId: newUser.id, email: newUser.email, userType: 'client_v1_trial' },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
-      console.log(`🎁 Trial user created: ${email} - Real password set - Expires: ${trialEndDate}`);
+      console.log(`🎁 Trial user created: ${email} - Expires: ${trialEndDate}`);
 
       res.status(201).json({
         message: 'Free trial started successfully! Welcome to V1 Pro! 🚀',
@@ -942,242 +581,25 @@ app.post('/api/start-trial',
   }
 );
 
-// Stripe checkout session - UPDATED for seamless dashboard redirect
-app.post('/api/create-checkout-session', 
-  [
-    body('plan').isIn(['monthly_pro', 'annual_pro']).withMessage('Invalid plan'),
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    handleValidationErrors
-  ],
-  async (req, res) => {
-    try {
-      const { plan, email } = req.body;
-      
-      const validPlans = {
-        'monthly_pro': {
-         priceId: process.env.STRIPE_MONTHLY_PRICE_ID ,
-         name: 'V1 Pro Monthly'
-       },
-        'annual_pro': {
-         priceId: process.env.STRIPE_ANNUAL_PRICE_ID ,
-         name: 'V1 Pro Annual'
-       }
-     };
-      
-      const planData = validPlans[plan];
-      const baseUrl = isDevelopment 
-        ? process.env.DEV_BASE_URL || req.headers.origin
-        : 'https://steadyleadflow.steadyscaling.com';
-      
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [{
-          price: planData.priceId,
-          quantity: 1,
-        }],
-        mode: 'subscription',
-        customer_email: email,
-        
-        // 🔥 STEADYLEADFLOW BRANDING
-        custom_text: {
-          submit: {
-            message: 'Join SteadyLeadFlow Pro and transform your leads into revenue! 🚀'
-          }
-        },
-        
-        // 🚀 SEAMLESS FLOW: Redirect directly to dashboard
-        success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/login?cancelled=true`,
-        
-        metadata: {
-          plan: plan,
-          email: email,
-          pendingSignup: 'true',
-          environment: isDevelopment ? 'development' : 'production',
-          created_from_ip: req.ip
-        },
-        
-        subscription_data: {
-          description: `SteadyLeadFlow ${plan === 'monthly_pro' ? 'Pro Monthly' : 'Pro Annual'} - 1,000 leads/month with advanced pipeline features`,
-          metadata: {
-            plan: plan,
-            email: email,
-            environment: isDevelopment ? 'development' : 'production'
-          }
-        }
-      });
-      
-      console.log(`💳 Checkout session created for ${email} (${plan}) from ${req.ip}`);
-      
-      res.json({ 
-        sessionId: session.id,
-        url: session.url,
-        environment: isDevelopment ? 'development' : 'production'
-      });
-      
-    } catch (error) {
-      console.error('Stripe checkout error:', error.message);
-      res.status(500).json({ 
-        error: 'Failed to create checkout session'
-      });
-    }
-  }
-);
-
-// 🔄 Cron job to downgrade expired trials
-async function checkExpiredTrials() {
-  const client = await pool.connect();
-  try {
-    const now = new Date().toISOString();
-    
-    // Find expired trial users
-    const result = await client.query(
-      `SELECT id, email, settings FROM ${getTableName('users')} 
-       WHERE user_type = 'client_v1_trial' 
-       AND settings->>'trialEndDate' < $1`,
-      [now]
-    );
-
-    for (const user of result.rows) {
-      // Downgrade to free tier
-      const updatedSettings = {
-        ...user.settings,
-        subscriptionTier: 'FREE',
-        trialEndedDate: now,
-        downgradedFromTrial: true
-      };
-
-      await client.query(
-        `UPDATE ${getTableName('users')} 
-         SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
-         WHERE id = $4`,
-        ['client_v1', 100, JSON.stringify(updatedSettings), user.id]
-      );
-
-      await logUserAction(user.id, 'TRIAL_EXPIRED_DOWNGRADE', 'users', user.id, null, { 
-        email: user.email, 
-        expiredAt: now 
-      });
-
-      console.log(`⬇️ Trial expired - downgraded user: ${user.email}`);
-    }
-
-    if (result.rows.length > 0) {
-      console.log(`✅ Processed ${result.rows.length} expired trials`);
-    }
-
-  } catch (error) {
-    console.error('Check expired trials error:', error.message);
-  } finally {
-    client.release();
-  }
-}
-
-// 🕐 Run trial expiration check every hour
-setInterval(checkExpiredTrials, 60 * 60 * 1000); // Every hour
-
-// Also run on startup
-setTimeout(checkExpiredTrials, 5000); // Run 5 seconds after startup
-
-// 🚀 NEW: Create billing portal session for subscription management
-app.post('/api/create-portal-session', authenticateToken, async (req, res) => {
-  try {
-    const user = await findUserById(req.user.userId);
-    const customerId = user.settings?.stripeCustomerId;
-    
-    if (!customerId) {
-      return res.status(400).json({ error: 'No subscription found' });
-    }
-    
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${req.headers.origin}/settings?tab=billing`,
-    });
-    
-    res.json({ url: session.url });
-  } catch (error) {
-    console.error('Create portal session error:', error.message);
-    res.status(500).json({ error: 'Failed to create portal session' });
-  }
-});
-
-// 🔒 SECURITY: Enhanced login endpoint with account lockout
+// 🔐 Login endpoint
 app.post('/api/login', 
-  [
-    validateEmail,
-    body('password').notEmpty().withMessage('Password required'),
-    handleValidationErrors
-  ],
+  [validateEmail, body('password').notEmpty().withMessage('Password required'), handleValidationErrors],
   async (req, res) => {
     try {
       const { email, password } = req.body;
       
       const user = await findUserByEmail(email);
       if (!user) {
-        await logUserAction(null, 'FAILED_LOGIN_NO_USER', null, null, null, { email, ip: req.ip }, req);
         return res.status(400).json({ error: 'Invalid credentials' });
-      }
-      
-      // Check if account is locked
-      if (user.account_locked_until && new Date() < user.account_locked_until) {
-        const lockTimeRemaining = Math.ceil((user.account_locked_until - new Date()) / (1000 * 60));
-        await logUserAction(user.id, 'FAILED_LOGIN_LOCKED', null, null, null, { email, ip: req.ip }, req);
-        return res.status(423).json({ 
-          error: `Account locked. Try again in ${lockTimeRemaining} minutes.` 
-        });
       }
       
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        // Increment failed login attempts
-        const client = await pool.connect();
-        try {
-          const failedAttempts = (user.failed_login_attempts || 0) + 1;
-          let lockUntil = null;
-          
-          if (failedAttempts >= 5) {
-            lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-            console.warn(`🚫 Account locked for ${email} after ${failedAttempts} failed attempts`);
-          }
-          
-          await client.query(
-            `UPDATE ${getTableName('users')} 
-             SET failed_login_attempts = $1, account_locked_until = $2, updated_at = NOW()
-             WHERE id = $3`,
-            [failedAttempts, lockUntil, user.id]
-          );
-          
-          await logUserAction(user.id, 'FAILED_LOGIN_WRONG_PASSWORD', null, null, null, { 
-            email, ip: req.ip, attempts: failedAttempts 
-          }, req);
-          
-          return res.status(400).json({ 
-            error: lockUntil ? 'Too many failed attempts. Account locked for 15 minutes.' : 'Invalid credentials'
-          });
-        } finally {
-          client.release();
-        }
-      }
-      
-      // Successful login - reset failed attempts
-      const client = await pool.connect();
-      try {
-        await client.query(
-          `UPDATE ${getTableName('users')} 
-           SET failed_login_attempts = 0, account_locked_until = NULL, last_login = NOW(), updated_at = NOW()
-           WHERE id = $1`,
-          [user.id]
-        );
-      } finally {
-        client.release();
+        return res.status(400).json({ error: 'Invalid credentials' });
       }
       
       const token = jwt.sign(
-        { 
-          userId: user.id, 
-          email: user.email,
-          userType: user.user_type
-        },
+        { userId: user.id, email: user.email, userType: user.user_type },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -1187,9 +609,7 @@ app.post('/api/login',
          user.user_type === 'client_v1_trial' ? 'V1_TRIAL' :
          user.user_type === 'admin' ? 'ADMIN' : 'FREE');
       
-      await logUserAction(user.id, 'USER_LOGIN', null, null, null, { email, ip: req.ip }, req);
-      
-      console.log(`✅ User login: ${email} from ${req.ip}`);
+      console.log(`✅ User login: ${email}`);
       
       res.json({
         message: user.is_admin ? 'Welcome back, Admin! 👑' : 
@@ -1215,7 +635,299 @@ app.post('/api/login',
   }
 );
 
-// 🔥 UPDATED: Stripe webhook handler with new Pro user flow
+// 🔑 Forgot password endpoint
+app.post('/api/forgot-password',
+  [validateEmail, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      const user = await findUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists - security best practice
+        return res.json({ 
+          message: 'If that email exists, we sent a password reset link!' 
+        });
+      }
+      
+      const resetToken = generateResetToken();
+      await saveResetToken(email, resetToken);
+      
+      console.log(`🔑 Password reset requested for: ${email}`);
+      console.log(`🔗 Reset link: ${req.headers.origin}/reset-password?token=${resetToken}`);
+      
+      // In production, you'd send an email here
+      // For now, just log the reset link
+      
+      res.json({ 
+        message: 'If that email exists, we sent a password reset link!',
+        // Remove this in production - only for development
+        ...(isDevelopment && { resetLink: `${req.headers.origin}/reset-password?token=${resetToken}` })
+      });
+      
+    } catch (error) {
+      console.error('Forgot password error:', error.message);
+      res.status(500).json({ error: 'Failed to process password reset request' });
+    }
+  }
+);
+
+// 🔄 Reset password endpoint
+app.post('/api/reset-password',
+  [
+    body('token').notEmpty().withMessage('Reset token required'),
+    validatePassword,
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      const user = await findUserByResetToken(token);
+      if (!user) {
+        return res.status(400).json({ 
+          error: 'Invalid or expired reset token' 
+        });
+      }
+      
+      const hashedPassword = await bcrypt.hash(password, 12);
+      
+      const client = await pool.connect();
+      try {
+        await client.query(
+          `UPDATE ${getTableName('users')} 
+           SET password = $1, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW()
+           WHERE id = $2`,
+          [hashedPassword, user.id]
+        );
+      } finally {
+        client.release();
+      }
+      
+      console.log(`🔓 Password reset successful for: ${user.email}`);
+      
+      res.json({ 
+        message: 'Password reset successful! You can now log in with your new password.' 
+      });
+      
+    } catch (error) {
+      console.error('Reset password error:', error.message);
+      res.status(500).json({ error: 'Failed to reset password' });
+    }
+  }
+);
+
+// 💳 Stripe checkout
+app.post('/api/create-checkout-session', 
+  [
+    body('plan').isIn(['monthly_pro', 'annual_pro']).withMessage('Invalid plan'),
+    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { plan, email } = req.body;
+      
+      const validPlans = {
+        'monthly_pro': { priceId: process.env.STRIPE_MONTHLY_PRICE_ID },
+        'annual_pro': { priceId: process.env.STRIPE_ANNUAL_PRICE_ID }
+      };
+      
+      const planData = validPlans[plan];
+      const baseUrl = isDevelopment 
+        ? process.env.DEV_BASE_URL || req.headers.origin
+        : 'https://steadyleadflow.steadyscaling.com';
+      
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{ price: planData.priceId, quantity: 1 }],
+        mode: 'subscription',
+        customer_email: email,
+        success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/login?cancelled=true`,
+        metadata: { plan, email, environment: isDevelopment ? 'development' : 'production' }
+      });
+      
+      console.log(`💳 Checkout session created for ${email} (${plan})`);
+      res.json({ sessionId: session.id, url: session.url });
+      
+    } catch (error) {
+      console.error('Stripe checkout error:', error.message);
+      res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  }
+);
+
+// 🔄 Auto-downgrade trials (with enhanced monitoring)
+let lastTrialCheckTime = null;
+let dailyDowngradeCount = 0;
+
+async function checkExpiredTrials() {
+  const checkTime = new Date().toISOString();
+  console.log(`🕐 [${checkTime}] Checking for expired trials...`);
+  
+  const client = await pool.connect();
+  try {
+    const now = new Date().toISOString();
+    
+    const result = await client.query(
+      `SELECT id, email, settings FROM ${getTableName('users')} 
+       WHERE user_type = 'client_v1_trial' 
+       AND settings->>'trialEndDate' < $1`,
+      [now]
+    );
+
+    for (const user of result.rows) {
+      const updatedSettings = {
+        ...user.settings,
+        subscriptionTier: 'FREE',
+        trialEndedDate: now,
+        downgradedFromTrial: true
+      };
+
+      await client.query(
+        `UPDATE ${getTableName('users')} 
+         SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
+         WHERE id = $4`,
+        ['client_v1', 100, JSON.stringify(updatedSettings), user.id]
+      );
+
+      console.log(`⬇️ Trial expired - downgraded user: ${user.email}`);
+      dailyDowngradeCount++;
+    }
+
+    if (result.rows.length > 0) {
+      console.log(`✅ Processed ${result.rows.length} expired trials`);
+    } else {
+      console.log(`ℹ️  No expired trials found`);
+    }
+    
+    lastTrialCheckTime = checkTime;
+
+  } catch (error) {
+    console.error('Check expired trials error:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+// Run trial check every hour
+setInterval(checkExpiredTrials, 60 * 60 * 1000);
+setTimeout(checkExpiredTrials, 5000); // Run 5 seconds after startup
+
+// Reset daily counter at midnight
+setInterval(() => {
+  const now = new Date();
+  if (now.getHours() === 0 && now.getMinutes() === 0) {
+    dailyDowngradeCount = 0;
+    console.log('🔄 Daily downgrade counter reset');
+  }
+}, 60000); // Check every minute
+
+// 🎛️ Admin endpoint to manually check trials
+app.post('/api/admin/check-trials', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  console.log(`🔧 Manual trial check triggered by admin: ${req.user.email}`);
+  await checkExpiredTrials();
+  res.json({ 
+    message: 'Trial check completed - check server logs for details',
+    lastCheckTime: lastTrialCheckTime,
+    dailyDowngrades: dailyDowngradeCount
+  });
+});
+
+// 📊 Admin trial status dashboard
+app.get('/api/admin/trial-status', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  try {
+    const client = await pool.connect();
+    try {
+      const trialUsers = await client.query(
+        `SELECT id, email, settings->>'trialEndDate' as trial_end_date, 
+         settings->>'trialStartDate' as trial_start_date, created_at
+         FROM ${getTableName('users')} 
+         WHERE user_type = 'client_v1_trial' 
+         ORDER BY settings->>'trialEndDate' ASC`
+      );
+      
+      res.json({
+        activeTrials: trialUsers.rows,
+        lastTrialCheckTime,
+        dailyDowngradeCount,
+        nextCheckIn: 'Next automatic check in less than 1 hour'
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Trial status error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch trial status' });
+  }
+});
+
+// 🧪 Create test trial (expires in 2 minutes)
+app.post('/api/admin/create-test-trial', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  try {
+    const testEmail = `test-trial-${Date.now()}@example.com`;
+    const testTrialEnd = new Date();
+    testTrialEnd.setMinutes(testTrialEnd.getMinutes() + 2); // Expires in 2 minutes
+    
+    const hashedPassword = await bcrypt.hash('TestPassword123!', 12);
+    
+    const userData = {
+      email: testEmail,
+      password: hashedPassword,
+      userType: 'client_v1_trial',
+      isAdmin: false,
+      monthlyLeadLimit: 1000,
+      currentMonthLeads: 0,
+      goals: { daily: 30, monthly: 1000 },
+      settings: {
+        subscriptionTier: 'V1_TRIAL',
+        trialStartDate: new Date().toISOString(),
+        trialEndDate: testTrialEnd.toISOString(),
+        name: 'Test Trial User',
+        isTestAccount: true
+      }
+    };
+
+    const newUser = await createUser(userData);
+    
+    console.log(`🧪 Test trial user created: ${testEmail} - Expires in 2 minutes`);
+    
+    res.json({
+      message: 'Test trial user created! Will be downgraded in 2 minutes.',
+      testUser: {
+        id: newUser.id,
+        email: testEmail,
+        trialEndDate: testTrialEnd.toISOString()
+      },
+      instructions: 'Wait 2 minutes, then check trial status or run manual trial check to see the downgrade.'
+    });
+    
+  } catch (error) {
+    console.error('Create test trial error:', error.message);
+    res.status(500).json({ error: 'Failed to create test trial' });
+  }
+});
+
+// 🔥 Stripe webhook - ENHANCED with payment failure handling
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -1237,11 +949,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         
         console.log(`💰 Payment successful for ${email} - Plan: ${plan}`);
         
-        // 🔥 NEW: Check if user already exists (from new signup flow)
         const existingUser = await findUserByEmail(email);
-        
-        if (existingUser && existingUser.user_type === 'client_v1_pending_pro') {
-          // 🔥 User already exists with password - just upgrade them!
+        if (existingUser) {
           const client = await pool.connect();
           try {
             await client.query(
@@ -1257,53 +966,33 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                   subscriptionTier: 'V1_PRO',
                   stripeCustomerId: session.customer,
                   stripeSubscriptionId: subscription.id,
-                  subscriptionStatus: subscription.status,
                   upgradeDate: new Date().toISOString(),
-                  pendingUpgrade: false // 🔥 Clear pending flag
+                  pendingUpgrade: false
                 }),
                 email.toLowerCase()
               ]
             );
-            console.log(`✅ Existing user upgraded to V1 Pro: ${email}`);
+            console.log(`✅ User upgraded to V1 Pro: ${email}`);
           } finally {
             client.release();
           }
-        } else if (!existingUser) {
-          // 🔥 Old flow: Create new user (for direct Stripe signups)
-          const userData = {
-            email: email.toLowerCase(),
-            password: await bcrypt.hash('temp_password_reset_required', 12),
-            userType: 'client_v1_pro',
-            isAdmin: ADMIN_EMAILS.includes(email.toLowerCase()),
-            monthlyLeadLimit: 1000,
-            currentMonthLeads: 0,
-            goals: { daily: 30, weekly: 150, monthly: 1000 },
-            settings: {
-              darkMode: false,
-              notifications: true,
-              plan: plan,
-              subscriptionTier: 'V1_PRO',
-              stripeCustomerId: session.customer,
-              stripeSubscriptionId: subscription.id,
-              subscriptionStatus: subscription.status,
-              upgradeDate: new Date().toISOString(),
-              needsPasswordSetup: true // 🔥 Flag for old direct Stripe flow
-            }
-          };
-
-          await createUser(userData);
-          console.log(`✅ V1 Pro user created: ${email}`);
         }
         break;
-        
-      case 'customer.subscription.updated':
-        console.log('Subscription updated:', event.data.object.id);
+
+      case 'customer.subscription.created':
+        const newSubscription = event.data.object;
+        console.log(`🆕 New subscription created: ${newSubscription.id}`);
         break;
+
+      case 'customer.subscription.updated':
+        const updatedSubscription = event.data.object;
         
-      case 'customer.subscription.deleted':
-        const cancelledSubscription = event.data.object;
-        const customerEmail = cancelledSubscription.metadata.email;
-        if (customerEmail) {
+        // Only act on status changes that require downgrade
+        if (updatedSubscription.status === 'unpaid' || updatedSubscription.status === 'canceled') {
+          const customer = await stripe.customers.retrieve(updatedSubscription.customer);
+          
+          console.log(`⬇️ Downgrading ${customer.email} - Status: ${updatedSubscription.status}`);
+          
           const client = await pool.connect();
           try {
             await client.query(
@@ -1313,15 +1002,54 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
               [
                 'client_v1', 
                 100, 
-                JSON.stringify({ subscriptionTier: 'FREE', downgradedDate: new Date().toISOString() }),
-                customerEmail.toLowerCase()
+                JSON.stringify({ 
+                  subscriptionTier: 'FREE', 
+                  downgradedDate: new Date().toISOString(),
+                  reason: updatedSubscription.status 
+                }),
+                customer.email.toLowerCase()
               ]
             );
-            console.log(`⬇️ User downgraded to free: ${customerEmail}`);
           } finally {
             client.release();
           }
         }
+        break;
+        
+      case 'customer.subscription.deleted':
+        const cancelledSubscription = event.data.object;
+        const customer = await stripe.customers.retrieve(cancelledSubscription.customer);
+        
+        console.log(`🗑️ Subscription cancelled for ${customer.email}`);
+        
+        const client = await pool.connect();
+        try {
+          await client.query(
+            `UPDATE ${getTableName('users')} 
+             SET user_type = $1, monthly_lead_limit = $2, settings = settings || $3, updated_at = NOW()
+             WHERE email = $4`,
+            [
+              'client_v1', 
+              100, 
+              JSON.stringify({ 
+                subscriptionTier: 'FREE', 
+                downgradedDate: new Date().toISOString(),
+                reason: 'cancelled' 
+              }),
+              customer.email.toLowerCase()
+            ]
+          );
+          console.log(`⬇️ User downgraded to free: ${customer.email}`);
+        } finally {
+          client.release();
+        }
+        break;
+
+      case 'invoice.payment_failed':
+        const failedInvoice = event.data.object;
+        console.log(`💳 Payment failed for invoice: ${failedInvoice.id}`);
+        // Don't downgrade immediately - Stripe will retry
+        // Just log for monitoring
         break;
         
       default:
@@ -1343,11 +1071,9 @@ app.get('/api/stripe-config', (req, res) => {
   });
 });
 
-// 🔒 SECURITY: Enhanced get leads endpoint
+// 📋 Get leads
 app.get('/api/leads', authenticateToken, async (req, res) => {
   try {
-    await logUserAction(req.user.userId, 'VIEW_LEADS', 'leads', null, null, { viewAll: req.query.viewAll }, req);
-    
     const userLeads = await getUserLeads(req.user.userId, req.user.isAdmin, req.query.viewAll === 'true');
     
     const categorizedLeads = {
@@ -1364,31 +1090,22 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
   }
 });
 
-// 🔒 SECURITY: Enhanced create lead endpoint with comprehensive validation
+// ➕ Create lead
 app.post('/api/leads', 
   authenticateToken,
   [
     validateLeadName,
-    validateLeadEmail,
-    body('phone').optional().isLength({ max: 50 }).matches(/^[\d\s\-\+\(\)]+$/).withMessage('Invalid phone format'),
-    body('company').optional().isLength({ max: 255 }).escape(),
-    body('platform').optional().isLength({ max: 100 }).escape(),
+    body('email').optional().isEmail().normalizeEmail(),
     body('type').optional().isIn(['cold', 'warm', 'crm']).withMessage('Invalid lead type'),
     body('qualityScore').optional().isInt({ min: 1, max: 10 }).withMessage('Quality score must be 1-10'),
-    body('potentialValue').optional().isInt({ min: 0 }).withMessage('Potential value must be positive'),
-    body('conversionProbability').optional().isInt({ min: 0, max: 100 }).withMessage('Conversion probability must be 0-100'),
     handleValidationErrors
   ],
   async (req, res) => {
     try {
-      // Check lead limits for non-admin users
+      // Check lead limits
       if (!req.user.isAdmin) {
         const user = await findUserById(req.user.userId);
         if (user && user.current_month_leads >= user.monthly_lead_limit) {
-          await logUserAction(req.user.userId, 'LEAD_LIMIT_EXCEEDED', null, null, null, { 
-            currentCount: user.current_month_leads, 
-            limit: user.monthly_lead_limit 
-          }, req);
           return res.status(403).json({ 
             error: `Monthly lead limit reached (${user.monthly_lead_limit}). Upgrade to add more!`,
             limitReached: true,
@@ -1398,57 +1115,28 @@ app.post('/api/leads',
         }
       }
 
-      const { 
-        name, email, phone, company, platform, status = 'New lead', 
-        type = 'cold', notes, qualityScore = 5 
-      } = req.body;
-
-      // Extended fields for pipeline
-      const {
-        painPoints, budgetRange, decisionMaker, urgencyLevel, contactAttempts,
-        bestContactTime, responseRate, referralSource, socialMediaProfile,
-        personalNotes, competitorsMentioned, companySize, currentSolution,
-        timeline, obstacles, leadSourceDetail, conversionProbability,
-        nextMilestone, temperature, potentialValue, followUpDate,
-        lastContactDate, preferredContact, meetingLocation, pipelineStage,
-        salesStage, quoteAmount, closeDate, lostReason, probabilityPercentage,
-        campaignSource, utmSource, firstTouchDate, leadMagnet, engagementScore,
-        lastActivityType, totalInteractions, websiteVisits, reminderFrequency,
-        autoFollowUp, snoozeUntil, priorityLevel, tags, leadCategory,
-        vertical, dealSizeCategory, automationSequence, emailSequenceStep,
-        optInStatus, unsubscribed
-      } = req.body;
-
       const leadData = {
         userId: req.user.userId,
-        userType: req.user.userType,
-        name, email, phone, company, platform, status, type, notes, qualityScore,
-        painPoints, budgetRange, decisionMaker, urgencyLevel, contactAttempts,
-        bestContactTime, responseRate, referralSource, socialMediaProfile,
-        personalNotes, competitorsMentioned, companySize, currentSolution,
-        timeline, obstacles, leadSourceDetail, conversionProbability,
-        nextMilestone, temperature, potentialValue, followUpDate,
-        lastContactDate, preferredContact, meetingLocation, pipelineStage,
-        salesStage, quoteAmount, closeDate, lostReason, probabilityPercentage,
-        campaignSource, utmSource, firstTouchDate, leadMagnet, engagementScore,
-        lastActivityType, totalInteractions, websiteVisits, reminderFrequency,
-        autoFollowUp, snoozeUntil, priorityLevel, tags, leadCategory,
-        vertical, dealSizeCategory, automationSequence, emailSequenceStep,
-        optInStatus, unsubscribed
+        name: req.body.name,
+        email: req.body.email,
+        phone: req.body.phone,
+        company: req.body.company,
+        platform: req.body.platform,
+        status: req.body.status || 'New lead',
+        type: req.body.type || 'cold',
+        notes: req.body.notes,
+        qualityScore: req.body.qualityScore || 5,
+        potentialValue: req.body.potentialValue || 0,
+        followUpDate: req.body.followUpDate
       };
 
       const newLead = await createLead(leadData);
       
-      // Increment lead count for non-admin users
       if (!req.user.isAdmin) {
         await incrementUserLeadCount(req.user.userId);
       }
       
-      await logUserAction(req.user.userId, 'LEAD_CREATED', 'leads', newLead.id, null, { 
-        leadName: name, leadType: type 
-      }, req);
-      
-      console.log(`✅ Lead created: ${name} by user ${req.user.userId}`);
+      console.log(`✅ Lead created: ${leadData.name} by user ${req.user.userId}`);
       res.status(201).json(newLead);
     } catch (error) {
       console.error('Create lead error:', error.message);
@@ -1457,26 +1145,17 @@ app.post('/api/leads',
   }
 );
 
-// 🔒 SECURITY: Enhanced update lead endpoint
+// ✏️ Update lead
 app.put('/api/leads/:id', 
   authenticateToken,
-  [
-    validateNumericId,
-    validateLeadName.optional(),
-    validateLeadEmail.optional(),
-    body('phone').optional().isLength({ max: 50 }).matches(/^[\d\s\-\+\(\)]+$/).withMessage('Invalid phone format'),
-    body('qualityScore').optional().isInt({ min: 1, max: 10 }).withMessage('Quality score must be 1-10'),
-    body('potentialValue').optional().isInt({ min: 0 }).withMessage('Potential value must be positive'),
-    body('conversionProbability').optional().isInt({ min: 0, max: 100 }).withMessage('Conversion probability must be 0-100'),
-    handleValidationErrors
-  ],
+  [validateNumericId, handleValidationErrors],
   async (req, res) => {
     try {
       const leadId = parseInt(req.params.id);
       const client = await pool.connect();
       
       try {
-        // Get the current lead
+        // Get current lead
         const leadResult = await client.query(
           `SELECT * FROM ${getTableName('leads')} WHERE id = $1`,
           [leadId]
@@ -1490,37 +1169,21 @@ app.put('/api/leads/:id',
         
         // Check permissions
         if (!req.user.isAdmin && currentLead.user_id !== req.user.userId) {
-          await logUserAction(req.user.userId, 'UNAUTHORIZED_LEAD_UPDATE', 'leads', leadId, null, null, req);
           return res.status(403).json({ error: 'Unauthorized' });
         }
 
-        // Build dynamic update query
+        // Build update query
         const updateFields = [];
         const updateValues = [];
         let paramCount = 1;
 
-        const allowedFields = [
-          'name', 'email', 'phone', 'company', 'platform', 'status', 'type', 'notes', 'quality_score',
-          'pain_points', 'budget_range', 'decision_maker', 'urgency_level', 'contact_attempts',
-          'best_contact_time', 'response_rate', 'referral_source', 'social_media_profile',
-          'personal_notes', 'competitors_mentioned', 'company_size', 'current_solution',
-          'timeline', 'obstacles', 'lead_source_detail', 'conversion_probability',
-          'next_milestone', 'temperature', 'potential_value', 'follow_up_date',
-          'last_contact_date', 'preferred_contact', 'meeting_location', 'pipeline_stage',
-          'sales_stage', 'quote_amount', 'close_date', 'lost_reason', 'probability_percentage',
-          'campaign_source', 'utm_source', 'first_touch_date', 'lead_magnet', 'engagement_score',
-          'last_activity_type', 'total_interactions', 'website_visits', 'reminder_frequency',
-          'auto_follow_up', 'snooze_until', 'priority_level', 'tags', 'lead_category',
-          'vertical', 'deal_size_category', 'automation_sequence', 'email_sequence_step',
-          'opt_in_status', 'unsubscribed'
-        ];
+        const allowedFields = ['name', 'email', 'phone', 'company', 'platform', 'status', 'type', 'notes', 'quality_score', 'potential_value', 'follow_up_date'];
 
         for (const field of allowedFields) {
           if (req.body.hasOwnProperty(field)) {
-            updateFields.push(`${field} = $${paramCount}`);
+            updateFields.push(`${field} = ${paramCount}`);
             let value = req.body[field];
             
-            // Normalize email if provided
             if (field === 'email' && value) {
               value = value.toLowerCase();
             }
@@ -1547,8 +1210,6 @@ app.put('/api/leads/:id',
         const updateResult = await client.query(updateQuery, updateValues);
         const updatedLead = updateResult.rows[0];
         
-        await logUserAction(req.user.userId, 'LEAD_UPDATED', 'leads', leadId, currentLead, updatedLead, req);
-        
         console.log(`✅ Lead updated: ${leadId} by user ${req.user.userId}`);
         res.json(updatedLead);
       } finally {
@@ -1561,7 +1222,7 @@ app.put('/api/leads/:id',
   }
 );
 
-// 🔒 SECURITY: Enhanced delete lead endpoint
+// 🗑️ Delete lead
 app.delete('/api/leads/:id', 
   authenticateToken,
   [validateNumericId, handleValidationErrors],
@@ -1571,7 +1232,6 @@ app.delete('/api/leads/:id',
       const client = await pool.connect();
       
       try {
-        // Get the lead first
         const leadResult = await client.query(
           `SELECT * FROM ${getTableName('leads')} WHERE id = $1`,
           [leadId]
@@ -1585,22 +1245,14 @@ app.delete('/api/leads/:id',
         
         // Check permissions
         if (!req.user.isAdmin && lead.user_id !== req.user.userId) {
-          await logUserAction(req.user.userId, 'UNAUTHORIZED_LEAD_DELETE', 'leads', leadId, null, null, req);
           return res.status(403).json({ error: 'Unauthorized' });
         }
 
-        // Delete lead
-        await client.query(
-          `DELETE FROM ${getTableName('leads')} WHERE id = $1`,
-          [leadId]
-        );
+        await client.query(`DELETE FROM ${getTableName('leads')} WHERE id = $1`, [leadId]);
 
-        // Decrement lead count for non-admin users
-        if (!req.user.isAdmin && lead.user_type !== 'admin') {
+        if (!req.user.isAdmin) {
           await decrementUserLeadCount(lead.user_id);
         }
-
-        await logUserAction(req.user.userId, 'LEAD_DELETED', 'leads', leadId, lead, null, req);
         
         console.log(`✅ Lead deleted: ${leadId} by user ${req.user.userId}`);
         res.json({ message: 'Lead deleted successfully' });
@@ -1614,7 +1266,7 @@ app.delete('/api/leads/:id',
   }
 );
 
-// Enhanced statistics endpoint
+// 📊 Statistics
 app.get('/api/statistics', authenticateToken, async (req, res) => {
   try {
     const userLeads = await getUserLeads(req.user.userId, req.user.isAdmin, req.query.viewAll === 'true');
@@ -1628,25 +1280,6 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
     userLeads.forEach(lead => {
       if (lead.platform) {
         platformStats[lead.platform] = (platformStats[lead.platform] || 0) + 1;
-      }
-    });
-    
-    const statusStats = {};
-    userLeads.forEach(lead => {
-      statusStats[lead.status] = (statusStats[lead.status] || 0) + 1;
-    });
-
-    const pipelineStats = {};
-    userLeads.forEach(lead => {
-      if (lead.pipeline_stage) {
-        pipelineStats[lead.pipeline_stage] = (pipelineStats[lead.pipeline_stage] || 0) + 1;
-      }
-    });
-
-    const temperatureStats = {};
-    userLeads.forEach(lead => {
-      if (lead.temperature) {
-        temperatureStats[lead.temperature] = (temperatureStats[lead.temperature] || 0) + 1;
       }
     });
     
@@ -1664,9 +1297,6 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
       avgQualityScore: Math.round(avgQualityScore * 10) / 10,
       totalPotentialValue,
       platformStats,
-      statusStats,
-      pipelineStats,
-      temperatureStats,
       isAdminView: req.user.isAdmin && req.query.viewAll === 'true'
     });
   } catch (error) {
@@ -1675,22 +1305,17 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
   }
 });
 
-// 🔒 SECURITY: Enhanced admin stats with rate limiting
-app.get('/api/admin/stats', authenticateToken, moderateLimiter, async (req, res) => {
+// 👑 Admin stats
+app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   if (!req.user.isAdmin) {
-    await logUserAction(req.user.userId, 'UNAUTHORIZED_ADMIN_ACCESS', null, null, null, null, req);
     return res.status(403).json({ error: 'Admin access required' });
   }
   
   try {
     const client = await pool.connect();
-    
     try {
       const usersResult = await client.query(`SELECT COUNT(*), SUM(CASE WHEN is_admin THEN 1 ELSE 0 END) as admin_count FROM ${getTableName('users')}`);
       const leadsResult = await client.query(`SELECT COUNT(*) FROM ${getTableName('leads')}`);
-      const recentUsersResult = await client.query(
-        `SELECT id, email, user_type, created_at FROM ${getTableName('users')} ORDER BY created_at DESC LIMIT 10`
-      );
       
       const totalUsers = parseInt(usersResult.rows[0].count);
       const adminUsers = parseInt(usersResult.rows[0].admin_count);
@@ -1699,22 +1324,15 @@ app.get('/api/admin/stats', authenticateToken, moderateLimiter, async (req, res)
       
       const monthlyRevenue = clientUsers * 6.99;
       
-      await logUserAction(req.user.userId, 'ADMIN_STATS_VIEWED', null, null, null, null, req);
-      
       res.json({
-        users: {
-          total: totalUsers,
-          admins: adminUsers,
-          clients: clientUsers
-        },
-        leads: {
-          total: totalLeads
-        },
-        revenue: {
-          monthly: monthlyRevenue,
-          annual: monthlyRevenue * 12
-        },
-        recentUsers: recentUsersResult.rows
+        users: { total: totalUsers, admins: adminUsers, clients: clientUsers },
+        leads: { total: totalLeads },
+        revenue: { monthly: monthlyRevenue, annual: monthlyRevenue * 12 },
+        trialSystem: {
+          lastCheckTime: lastTrialCheckTime,
+          dailyDowngrades: dailyDowngradeCount,
+          status: 'Active - checking every hour'
+        }
       });
     } finally {
       client.release();
@@ -1725,7 +1343,7 @@ app.get('/api/admin/stats', authenticateToken, moderateLimiter, async (req, res)
   }
 });
 
-// Enhanced user settings endpoints
+// ⚙️ User settings
 app.get('/api/user/settings', authenticateToken, async (req, res) => {
   try {
     const user = await findUserById(req.user.userId);
@@ -1779,8 +1397,6 @@ app.put('/api/user/settings',
           [JSON.stringify(updatedGoals), JSON.stringify(updatedSettings), req.user.userId]
         );
         
-        await logUserAction(req.user.userId, 'SETTINGS_UPDATED', 'users', req.user.userId, user, result.rows[0], req);
-        
         res.json({ message: 'Settings updated successfully', user: result.rows[0] });
       } finally {
         client.release();
@@ -1792,7 +1408,7 @@ app.put('/api/user/settings',
   }
 );
 
-// 🔒 SECURITY: Enhanced health check with security info
+// 🏥 Health check
 app.get('/api/health', async (req, res) => {
   try {
     const client = await pool.connect();
@@ -1804,30 +1420,26 @@ app.get('/api/health', async (req, res) => {
         status: 'OK', 
         timestamp: new Date().toISOString(),
         environment: isDevelopment ? 'development' : 'production',
-        security: {
-          rateLimiting: 'enabled',
-          inputValidation: 'enabled',
-          auditLogging: 'enabled',
-          accountLockout: 'enabled',
-          adminEmailsConfigured: ADMIN_EMAILS.length > 0
-        },
         features: [
           'postgresql-storage', 
           'authentication', 
           'lead-management', 
           'admin-mode', 
-          'pipeline-tracking', 
           'stripe-billing',
-          'audit-logging',
-          'rate-limiting',
-          'input-validation',
-          'universal-password-flow'  // 🚀 NEW FEATURE
+          'auto-trial-downgrade',
+          'password-reset',
+          'simplified-architecture'
         ],
         database: {
           connected: true,
           tablePrefix: tablePrefix || 'none',
           users: parseInt(usersResult.rows[0].count),
           leads: parseInt(leadsResult.rows[0].count)
+        },
+        trialSystem: {
+          lastCheckTime,
+          dailyDowngradeCount,
+          status: 'Active'
         }
       });
     } finally {
@@ -1843,140 +1455,35 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// 🔒 SECURITY: Audit log endpoint for admins
-app.get('/api/admin/audit-logs', 
-  authenticateToken, 
-  moderateLimiter,
-  [
-    body('limit').optional().isInt({ min: 1, max: 1000 }).withMessage('Limit must be 1-1000'),
-    body('offset').optional().isInt({ min: 0 }).withMessage('Offset must be non-negative'),
-    handleValidationErrors
-  ],
-  async (req, res) => {
-    if (!req.user.isAdmin) {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
+// 📄 Static page routes
+const staticPages = ['login', 'pricing', 'features', 'about', 'contact', 'privacy', 'terms'];
 
-    try {
-      const limit = parseInt(req.query.limit) || 100;
-      const offset = parseInt(req.query.offset) || 0;
-      
-      const client = await pool.connect();
-      try {
-        const result = await client.query(
-          `SELECT al.*, u.email as user_email 
-           FROM ${getTableName('audit_logs')} al
-           LEFT JOIN ${getTableName('users')} u ON al.user_id = u.id
-           ORDER BY al.created_at DESC
-           LIMIT $1 OFFSET $2`,
-          [limit, offset]
-        );
-        
-        res.json({
-          logs: result.rows,
-          pagination: {
-            limit,
-            offset,
-            hasMore: result.rows.length === limit
-          }
-        });
-      } finally {
-        client.release();
+staticPages.forEach(page => {
+  app.get(`/${page}`, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', `${page}.html`), (err) => {
+      if (err) {
+        res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
       }
-    } catch (error) {
-      console.error('Audit logs error:', error.message);
-      res.status(500).json({ error: 'Failed to fetch audit logs' });
-    }
-  }
-);
-
-// 🔒 SECURITY: Global error handler
-app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error.message);
-  
-  // Don't expose internal errors in production
-  const message = isDevelopment ? error.message : 'Internal server error';
-  
-  res.status(500).json({ 
-    error: message,
-    timestamp: new Date().toISOString()
+    });
   });
 });
 
-// 🔒 SECURITY: Protected routes with enhanced middleware
-const protectedRoutes = ['/dashboard', '/add-lead', '/pipeline', '/schedule', '/settings', '/admin'];
-
-protectedRoutes.forEach(route => {
-  app.get(route, protectRoute, (req, res) => {
-    if (route === '/admin' && !req.user.isAdmin) {
-      console.warn(`🚫 Non-admin user ${req.user.email} attempted to access admin panel from ${req.ip}`);
-      return res.redirect('/dashboard');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-  });
-});
-
-// HTML Page Routes (Public routes) - These need to be .html files that load React
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'index.html'));
-});
-
-app.get('/login/forgot-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
-});
-
-app.get('/login/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html'));
-});
-
-app.get('/login/email-confirmation', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'email-confirmation.html'));
-});
-
-app.get('/pricing', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'pricing.html'));
-});
-
-app.get('/features', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'features.html'));
-});
-
-app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'about.html'));
-});
-
-app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
-});
-
-app.get('/account', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'account.html'));
-});
-
-app.get('/docs', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'docs.html'));
-});
-
-app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
-});
-
-app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'terms.html'));
-});
-
-// Landing page
+// 🏠 Landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 🔒 SECURITY: Enhanced 404 handler
+// 🚫 404 handler
 app.get('*', (req, res) => {
-  console.warn(`🚫 404 request from ${req.ip}: ${req.method} ${req.originalUrl}`);
-  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  console.warn(`🚫 404 request: ${req.method} ${req.originalUrl}`);
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'), (err) => {
+    if (err) {
+      res.status(404).json({ error: 'Page not found' });
+    }
+  });
 });
 
-// Initialize database and start server
+// 🚀 Start server
 async function startServer() {
   try {
     await initializeDatabase();
@@ -1986,30 +1493,25 @@ async function startServer() {
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
       console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
       console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.length : 'NONE - SET ADMIN_EMAILS!'}`);
-      console.log(`🔒 Security features enabled:`);
-      console.log(`   ✅ Rate limiting (strict: 5/15min, moderate: 100/15min, API: 1000/15min)`);
-      console.log(`   ✅ Input validation & sanitization`);
-      console.log(`   ✅ Account lockout (5 attempts = 15min lock)`);
-      console.log(`   ✅ Audit logging`);
+      console.log(`🔒 Security features:`);
+      console.log(`   ✅ Rate limiting (Login: 5/15min, API: 1000/15min)`);
+      console.log(`   ✅ Input validation on critical endpoints`);
       console.log(`   ✅ SQL injection protection`);
-      console.log(`   ✅ XSS protection`);
-      console.log(`   ✅ CORS configuration`);
-      console.log(`   ✅ Security headers (helmet)`);
-      console.log(`   ✅ Request size limits`);
-      console.log(`   ✅ Environment variable validation`);
-      console.log(`🔒 Protected routes: ${protectedRoutes.join(', ')}`);
-      console.log(`🚀 Pipeline features: 40+ tracking fields enabled!`);
-      console.log(`💳 Stripe billing: ENABLED with V1 Pro upgrades!`);
-      console.log(`🔥 Universal password flow: ALL signups collect passwords!`);
-      console.log(`🎁 Trial system: Real passwords, immediate login, auto-downgrade!`);
-      console.log(`✨ Ready for production with enterprise-grade security!`);
+      console.log(`   ✅ Basic CORS protection`);
+      console.log(`🚀 Dashboard routing: /dashboard/* → public/dashboard/`);
+      console.log(`🔑 Password reset: /forgot-password & /reset-password`);
+      console.log(`💳 Stripe billing: ENHANCED with payment failure protection`);
+      console.log(`🎁 Trial system: Auto-downgrade every hour + manual controls`);
+      console.log(`🔧 Monitoring endpoints:`);
+      console.log(`   📊 GET  /api/admin/trial-status (view all trials)`);
+      console.log(`   🔄 POST /api/admin/check-trials (manual trial check)`);
+      console.log(`   🧪 POST /api/admin/create-test-trial (2-minute test trial)`);
+      console.log(`   🔑 POST /api/forgot-password (request password reset)`);
+      console.log(`   🔄 POST /api/reset-password (reset with token)`);
+      console.log(`✨ Clean, readable, maintainable architecture!`);
       
       if (ADMIN_EMAILS.length === 0) {
         console.warn(`⚠️  WARNING: No admin emails configured! Set ADMIN_EMAILS environment variable.`);
-      }
-      
-      if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
-        console.error(`❌ CRITICAL: JWT_SECRET not set or using default! This is a security risk!`);
       }
     });
   } catch (error) {
