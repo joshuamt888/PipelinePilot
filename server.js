@@ -14,6 +14,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const nodemailer = require('nodemailer');
 
 // Basic security middleware
 const cors = require('cors');
@@ -23,6 +24,82 @@ const compression = require('compression');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 📧 Email usage tracking
+let dailyEmailCount = 0;
+let lastResetDate = new Date().toDateString();
+
+function resetDailyCountIfNeeded() {
+  const today = new Date().toDateString();
+  if (today !== lastResetDate) {
+    dailyEmailCount = 0;
+    lastResetDate = today;
+  }
+}
+
+function canSendEmail() {
+  resetDailyCountIfNeeded();
+  return dailyEmailCount < 90; // Leave buffer under 100
+}
+
+function incrementEmailCount() {
+  resetDailyCountIfNeeded();
+  dailyEmailCount++;
+  console.log(`📧 Emails sent today: ${dailyEmailCount}/90`);
+}
+
+// 📧 Email transporter setup
+let emailTransporter = null;
+
+function initializeEmailTransporter() {
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    emailTransporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    console.log('✅ Email transporter initialized');
+  } else {
+    console.log('⚠️ Email not configured - will log reset links instead');
+  }
+}
+
+async function sendPasswordResetEmail(email, resetToken, origin) {
+  const resetLink = `${origin}/reset-password?token=${resetToken}`;
+  
+  if (!emailTransporter) {
+    console.log(`🔗 Password reset link for ${email}: ${resetLink}`);
+    return true;
+  }
+  
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'noreply@steadyscaling.com',
+      to: email,
+      subject: 'SteadyLeadFlow - Reset Your Password',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Reset Your Password</h2>
+          <p>We received a request to reset your password for your SteadyLeadFlow account.</p>
+          <p>Click the button below to reset your password:</p>
+          <a href="${resetLink}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">Reset Password</a>
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #666;">${resetLink}</p>
+          <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+          <p style="color: #666; font-size: 14px;">If you didn't request this reset, you can safely ignore this email.</p>
+        </div>
+      `
+    });
+    return true;
+  } catch (error) {
+    console.error('Email send error:', error.message);
+    return false;
+  }
+}
 
 // 🔒 Basic CORS & Security
 app.use(cors({
@@ -112,8 +189,8 @@ async function initializeDatabase() {
         current_month_leads INTEGER DEFAULT 0,
         goals JSONB DEFAULT '{"daily": 10, "monthly": 100}',
         settings JSONB DEFAULT '{"darkMode": false, "notifications": true}',
-        reset_token VARCHAR(255),
-        reset_token_expires TIMESTAMP,
+        reset_token TEXT,
+        reset_token_expires DATE,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -304,7 +381,7 @@ async function saveResetToken(email, token) {
     
     await client.query(
       `UPDATE ${getTableName('users')} 
-       SET reset_token = $1, reset_token_expires = $2, updated_at = NOW()
+       SET reset_token = $1, reset_token_expires = $2
        WHERE email = $3`,
       [token, expiresAt.toISOString(), email.toLowerCase()]
     );
@@ -635,12 +712,19 @@ app.post('/api/login',
   }
 );
 
-// 🔑 Forgot password endpoint
+// 🔑 Forgot password endpoint - UPDATED WITH EMAIL SENDING
 app.post('/api/forgot-password',
   [validateEmail, handleValidationErrors],
   async (req, res) => {
     try {
       const { email } = req.body;
+      
+      // Check email limits first
+      if (!canSendEmail()) {
+        return res.status(429).json({ 
+          error: "We've reached our daily email limit. Please try again tomorrow or contact josh@steadyscaling.com" 
+        });
+      }
       
       const user = await findUserByEmail(email);
       if (!user) {
@@ -654,10 +738,14 @@ app.post('/api/forgot-password',
       await saveResetToken(email, resetToken);
       
       console.log(`🔑 Password reset requested for: ${email}`);
-      console.log(`🔗 Reset link: ${req.headers.origin}/reset-password?token=${resetToken}`);
       
-      // In production, you'd send an email here
-      // For now, just log the reset link
+      // Try to send email
+      const emailSent = await sendPasswordResetEmail(email, resetToken, req.headers.origin || 'http://localhost:3000');
+      
+      if (emailSent) {
+        incrementEmailCount();
+        console.log(`📧 Password reset email sent to: ${email}`);
+      }
       
       res.json({ 
         message: 'If that email exists, we sent a password reset link!',
@@ -1408,6 +1496,21 @@ app.put('/api/user/settings',
   }
 );
 
+// 📧 Email stats endpoint - NEW!
+app.get('/api/email-stats', authenticateToken, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  resetDailyCountIfNeeded();
+  res.json({
+    daily: { count: dailyEmailCount, limit: 90 },
+    canSend: canSendEmail(),
+    lastResetDate,
+    emailConfigured: !!emailTransporter
+  });
+});
+
 // 🏥 Health check
 app.get('/api/health', async (req, res) => {
   try {
@@ -1428,6 +1531,7 @@ app.get('/api/health', async (req, res) => {
           'stripe-billing',
           'auto-trial-downgrade',
           'password-reset',
+          'email-sending',
           'simplified-architecture'
         ],
         database: {
@@ -1440,6 +1544,11 @@ app.get('/api/health', async (req, res) => {
           lastCheckTime,
           dailyDowngradeCount,
           status: 'Active'
+        },
+        emailSystem: {
+          configured: !!emailTransporter,
+          dailyCount: dailyEmailCount,
+          canSend: canSendEmail()
         }
       });
     } finally {
@@ -1487,12 +1596,14 @@ app.get('*', (req, res) => {
 async function startServer() {
   try {
     await initializeDatabase();
+    initializeEmailTransporter(); // Initialize email system
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 SteadyLeadFlow server running on port ${PORT}`);
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
       console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
       console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.length : 'NONE - SET ADMIN_EMAILS!'}`);
+      console.log(`📧 Email system: ${emailTransporter ? 'CONFIGURED ✅' : 'DISABLED ⚠️'}`);
       console.log(`🔒 Security features:`);
       console.log(`   ✅ Rate limiting (Login: 5/15min, API: 1000/15min)`);
       console.log(`   ✅ Input validation on critical endpoints`);
@@ -1508,10 +1619,21 @@ async function startServer() {
       console.log(`   🧪 POST /api/admin/create-test-trial (2-minute test trial)`);
       console.log(`   🔑 POST /api/forgot-password (request password reset)`);
       console.log(`   🔄 POST /api/reset-password (reset with token)`);
-      console.log(`✨ Clean, readable, maintainable architecture!`);
+      console.log(`   📧 GET  /api/email-stats (email usage stats)`);
+      console.log(`✨ Clean, readable, maintainable architecture with EMAIL SENDING!`);
       
       if (ADMIN_EMAILS.length === 0) {
         console.warn(`⚠️  WARNING: No admin emails configured! Set ADMIN_EMAILS environment variable.`);
+      }
+      
+      if (!emailTransporter) {
+        console.warn(`⚠️  WARNING: Email not configured! Password reset links will be logged to console.`);
+        console.warn(`   To enable emails, add these to your .env file:`);
+        console.warn(`   EMAIL_HOST=smtp.sendgrid.net`);
+        console.warn(`   EMAIL_PORT=587`);
+        console.warn(`   EMAIL_USER=apikey`);
+        console.warn(`   EMAIL_PASS=your-sendgrid-api-key`);
+        console.warn(`   EMAIL_FROM=josh@steadyscaling.com`);
       }
     });
   } catch (error) {
