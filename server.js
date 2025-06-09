@@ -237,7 +237,7 @@ async function initializeDatabase() {
         goals JSONB DEFAULT '{"daily": 10, "monthly": 100}',
         settings JSONB DEFAULT '{"darkMode": false, "notifications": true}',
         reset_token TEXT,
-        reset_token_expires DATE,
+        reset_token_expires TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
