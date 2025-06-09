@@ -48,6 +48,53 @@ function incrementEmailCount() {
   console.log(`📧 Emails sent today: ${dailyEmailCount}/90`);
 }
 
+// 🛡️ Enhanced Email Rate Limiting - Track emails per email address
+const emailRequestTracker = new Map();
+
+function canSendEmailToAddress(email) {
+  const now = Date.now();
+  const key = email.toLowerCase();
+  
+  if (!emailRequestTracker.has(key)) {
+    emailRequestTracker.set(key, []);
+  }
+  
+  const requests = emailRequestTracker.get(key);
+  
+  // Remove requests older than 1 hour
+  const oneHourAgo = now - (60 * 60 * 1000);
+  const recentRequests = requests.filter(timestamp => timestamp > oneHourAgo);
+  emailRequestTracker.set(key, recentRequests);
+  
+  // Allow max 3 emails per hour per email address
+  return recentRequests.length < 3;
+}
+
+function recordEmailRequest(email) {
+  const now = Date.now();
+  const key = email.toLowerCase();
+  
+  if (!emailRequestTracker.has(key)) {
+    emailRequestTracker.set(key, []);
+  }
+  
+  emailRequestTracker.get(key).push(now);
+}
+
+// Clean up old entries every hour to prevent memory bloat
+setInterval(() => {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  for (const [email, timestamps] of emailRequestTracker.entries()) {
+    const recent = timestamps.filter(timestamp => timestamp > oneHourAgo);
+    if (recent.length === 0) {
+      emailRequestTracker.delete(email);
+    } else {
+      emailRequestTracker.set(email, recent);
+    }
+  }
+  console.log(`🧹 Cleaned email tracker - tracking ${emailRequestTracker.size} emails`);
+}, 60 * 60 * 1000);
+
 // 📧 Email transporter setup
 let emailTransporter = null;
 
@@ -712,23 +759,31 @@ app.post('/api/login',
   }
 );
 
-// 🔑 Forgot password endpoint - UPDATED WITH EMAIL SENDING
+// 🔑 Enhanced Forgot Password Endpoint with Triple Protection
 app.post('/api/forgot-password',
   [validateEmail, handleValidationErrors],
   async (req, res) => {
     try {
       const { email } = req.body;
       
-      // Check email limits first
+      // 🛡️ Check 1: Global daily email limits
       if (!canSendEmail()) {
         return res.status(429).json({ 
           error: "We've reached our daily email limit. Please try again tomorrow or contact josh@steadyscaling.com" 
         });
       }
       
+      // 🛡️ Check 2: Per-email rate limits (3 emails per hour per email)
+      if (!canSendEmailToAddress(email)) {
+        return res.status(429).json({ 
+          error: "Too many reset requests for this email. Please wait 1 hour before requesting again." 
+        });
+      }
+      
       const user = await findUserByEmail(email);
       if (!user) {
-        // Don't reveal if email exists - security best practice
+        // Still record the attempt even for non-existent emails (security)
+        recordEmailRequest(email);
         return res.json({ 
           message: 'If that email exists, we sent a password reset link!' 
         });
@@ -743,8 +798,12 @@ app.post('/api/forgot-password',
       const emailSent = await sendPasswordResetEmail(email, resetToken, req.headers.origin || 'http://localhost:3000');
       
       if (emailSent) {
-        incrementEmailCount();
+        incrementEmailCount(); // Global counter
+        recordEmailRequest(email); // Per-email counter
         console.log(`📧 Password reset email sent to: ${email}`);
+      } else {
+        // Still record attempt even if email failed to send
+        recordEmailRequest(email);
       }
       
       res.json({ 
@@ -1496,7 +1555,7 @@ app.put('/api/user/settings',
   }
 );
 
-// 📧 Email stats endpoint - NEW!
+// 📧 Enhanced Email stats endpoint - NEW!
 app.get('/api/email-stats', authenticateToken, async (req, res) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
@@ -1507,11 +1566,15 @@ app.get('/api/email-stats', authenticateToken, async (req, res) => {
     daily: { count: dailyEmailCount, limit: 90 },
     canSend: canSendEmail(),
     lastResetDate,
-    emailConfigured: !!emailTransporter
+    emailConfigured: !!emailTransporter,
+    perEmailTracking: {
+      totalEmailsTracked: emailRequestTracker.size,
+      description: 'Max 3 emails per hour per email address'
+    }
   });
 });
 
-// 🏥 Health check
+// 🏥 Enhanced Health check
 app.get('/api/health', async (req, res) => {
   try {
     const client = await pool.connect();
@@ -1532,6 +1595,7 @@ app.get('/api/health', async (req, res) => {
           'auto-trial-downgrade',
           'password-reset',
           'email-sending',
+          'enhanced-email-rate-limiting',
           'simplified-architecture'
         ],
         database: {
@@ -1548,7 +1612,12 @@ app.get('/api/health', async (req, res) => {
         emailSystem: {
           configured: !!emailTransporter,
           dailyCount: dailyEmailCount,
-          canSend: canSendEmail()
+          canSend: canSendEmail(),
+          protections: [
+            '90 emails per day globally',
+            '3 emails per hour per email address',
+            '5 requests per 15 minutes per IP'
+          ]
         }
       });
     } finally {
@@ -1609,6 +1678,11 @@ async function startServer() {
       console.log(`   ✅ Input validation on critical endpoints`);
       console.log(`   ✅ SQL injection protection`);
       console.log(`   ✅ Basic CORS protection`);
+      console.log(`   🛡️ ENHANCED EMAIL PROTECTION:`);
+      console.log(`      • 90 emails per day globally`);
+      console.log(`      • 3 emails per hour per email address`);
+      console.log(`      • 5 requests per 15 minutes per IP`);
+      console.log(`      • Memory cleanup prevents spam tracking bloat`);
       console.log(`🚀 Dashboard routing: /dashboard/* → public/dashboard/`);
       console.log(`🔑 Password reset: /forgot-password & /reset-password`);
       console.log(`💳 Stripe billing: ENHANCED with payment failure protection`);
@@ -1617,10 +1691,11 @@ async function startServer() {
       console.log(`   📊 GET  /api/admin/trial-status (view all trials)`);
       console.log(`   🔄 POST /api/admin/check-trials (manual trial check)`);
       console.log(`   🧪 POST /api/admin/create-test-trial (2-minute test trial)`);
-      console.log(`   🔑 POST /api/forgot-password (request password reset)`);
+      console.log(`   🔑 POST /api/forgot-password (TRIPLE PROTECTED reset requests)`);
       console.log(`   🔄 POST /api/reset-password (reset with token)`);
-      console.log(`   📧 GET  /api/email-stats (email usage stats)`);
-      console.log(`✨ Clean, readable, maintainable architecture with EMAIL SENDING!`);
+      console.log(`   📧 GET  /api/email-stats (enhanced email usage stats)`);
+      console.log(`   🏥 GET  /api/health (system status with email protection info)`);
+      console.log(`✨ SPAM-PROOF architecture with TRIPLE email protection!`);
       
       if (ADMIN_EMAILS.length === 0) {
         console.warn(`⚠️  WARNING: No admin emails configured! Set ADMIN_EMAILS environment variable.`);
@@ -1634,6 +1709,12 @@ async function startServer() {
         console.warn(`   EMAIL_USER=apikey`);
         console.warn(`   EMAIL_PASS=your-sendgrid-api-key`);
         console.warn(`   EMAIL_FROM=josh@steadyscaling.com`);
+      } else {
+        console.log(`🛡️ EMAIL SPAM PROTECTION ACTIVE:`);
+        console.log(`   • Global daily limit: ${dailyEmailCount}/90`);
+        console.log(`   • Per-email hourly limit: 3 max`);
+        console.log(`   • Currently tracking: ${emailRequestTracker.size} unique emails`);
+        console.log(`   • Auto-cleanup running every hour`);
       }
     });
   } catch (error) {
