@@ -484,15 +484,24 @@ app.get('/dashboard', (req, res) => {
 });
 
 // Handle all dashboard sub-pages
+// 🔧 UPDATED: Handle dashboard sub-routes and assets
 app.get('/dashboard/*', (req, res) => {
-  const page = req.params[0];
-  const filePath = path.join(__dirname, 'public', 'dashboard', `${page}.html`);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      // If specific page doesn't exist, serve main dashboard
-      res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
-    }
-  });
+  const requestPath = req.params[0];
+  
+  // If requesting an asset file (CSS, JS, icons), serve it directly
+  if (requestPath.startsWith('assets/')) {
+    const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.warn(`📁 Asset not found: ${requestPath}`);
+        res.status(404).json({ error: 'Asset not found' });
+      }
+    });
+  } 
+  // For any other dashboard route, serve the main SPA (React will handle routing)
+  else {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
+  }
 });
 
 // 🔐 Password reset routes
