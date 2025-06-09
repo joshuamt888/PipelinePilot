@@ -819,7 +819,7 @@ app.post('/api/forgot-password',
   }
 );
 
-// 🔄 Reset password endpoint
+// 🔄 Enhanced Reset password endpoint with password reuse prevention
 app.post('/api/reset-password',
   [
     body('token').notEmpty().withMessage('Reset token required'),
@@ -840,6 +840,14 @@ app.post('/api/reset-password',
       if (!user) {
         return res.status(400).json({ 
           error: 'Invalid or expired reset token' 
+        });
+      }
+      
+      // 🛡️ NEW: Check if new password is same as current password
+      const isSamePassword = await bcrypt.compare(password, user.password);
+      if (isSamePassword) {
+        return res.status(400).json({ 
+          error: 'New password must be different from your current password' 
         });
       }
       
