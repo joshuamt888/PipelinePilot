@@ -1,5 +1,5 @@
 {
-  "name": "steadyleadtracker",
+  "name": "steadymanager",
   "version": "1.0.0",
   "description": "Professional lead tracking and CRM platform for fitness coaches targeting real estate agents",
   "main": "server.js",
@@ -16,7 +16,7 @@
     "real-estate",
     "business"
   ],
-  "author": "SteadyTrainer",
+  "author": "SteadyScaling",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",

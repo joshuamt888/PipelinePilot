@@ -127,11 +127,11 @@ async function sendPasswordResetEmail(email, resetToken, origin) {
     await emailTransporter.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@steadyscaling.com',
       to: email,
-      subject: 'SteadyLeadFlow - Reset Your Password',
+      subject: 'SteadyManager - Reset Your Password',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Reset Your Password</h2>
-          <p>We received a request to reset your password for your SteadyLeadFlow account.</p>
+          <p>We received a request to reset your password for your SteadyManager account.</p>
           <p>Click the button below to reset your password:</p>
           <a href="${resetLink}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">Reset Password</a>
           <p>If the button doesn't work, copy and paste this link into your browser:</p>
@@ -906,7 +906,7 @@ app.post('/api/create-checkout-session',
       const planData = validPlans[plan];
       const baseUrl = isDevelopment 
         ? process.env.DEV_BASE_URL || req.headers.origin
-        : 'https://steadyleadflow.steadyscaling.com';
+        : 'https://steadymanager.com';
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -1685,7 +1685,7 @@ async function startServer() {
     initializeEmailTransporter(); // Initialize email system
     
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 SteadyLeadFlow server running on port ${PORT}`);
+      console.log(`🚀 SteadyManager server running on port ${PORT}`);
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
       console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
       console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.length : 'NONE - SET ADMIN_EMAILS!'}`);
