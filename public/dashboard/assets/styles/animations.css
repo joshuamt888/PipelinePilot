@@ -1,0 +1,625 @@
+/* 🎬 STEADYMANAGER ANIMATIONS - BUTTER SMOOTH MOTION */
+
+/* 🎯 CORE ANIMATION PRINCIPLES */
+/*
+  1. Respect user preferences (prefers-reduced-motion)
+  2. Use CSS custom properties for consistency
+  3. Layer animations (entrance, hover, exit)
+  4. Admin gets MAXIMUM CHAOS
+  5. Mobile gets reduced chaos for performance
+*/
+
+/* ⚡ ENTRANCE ANIMATIONS */
+
+/* Fade In - Smooth element appearance */
+.fade-in {
+    animation: fadeIn var(--transition-smooth) ease-out;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Scale In - Elements that pop into view */
+.scale-in {
+    animation: scaleIn var(--transition-fast) ease-out;
+}
+
+@keyframes scaleIn {
+    from { 
+        opacity: 0; 
+        transform: scale(0.9); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1); 
+    }
+}
+
+/* Slide In From Left */
+.slide-in-left {
+    animation: slideInLeft var(--transition-smooth) ease-out;
+}
+
+@keyframes slideInLeft {
+    from { 
+        opacity: 0; 
+        transform: translateX(-30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
+}
+
+/* Slide In From Right */
+.slide-in-right {
+    animation: slideInRight var(--transition-smooth) ease-out;
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0; 
+        transform: translateX(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
+}
+
+/* Bounce In - Playful entrance */
+.bounce-in {
+    animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes bounceIn {
+    0% { 
+        opacity: 0; 
+        transform: scale(0.3); 
+    }
+    50% { 
+        opacity: 1; 
+        transform: scale(1.05); 
+    }
+    70% { 
+        transform: scale(0.9); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: scale(1); 
+    }
+}
+
+/* Staggered Animations - For lists and grids */
+.stagger-delay-1 { animation-delay: 0.1s; }
+.stagger-delay-2 { animation-delay: 0.2s; }
+.stagger-delay-3 { animation-delay: 0.3s; }
+.stagger-delay-4 { animation-delay: 0.4s; }
+.stagger-delay-5 { animation-delay: 0.5s; }
+
+/* 🎭 HOVER ANIMATIONS */
+
+/* Smooth Lift - Cards and buttons */
+.hover-lift {
+    transition: var(--transition-spring);
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Gentle Scale */
+.hover-scale {
+    transition: var(--transition-fast);
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+/* Rotate on Hover */
+.hover-rotate {
+    transition: var(--transition-fast);
+}
+
+.hover-rotate:hover {
+    transform: rotate(5deg);
+}
+
+/* Glow Effect */
+.hover-glow {
+    transition: var(--transition-fast);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* 🌟 LOADING ANIMATIONS */
+
+/* Spinning Loader */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Pulsing Loader */
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1); 
+    }
+    50% { 
+        opacity: 0.7; 
+        transform: scale(1.05); 
+    }
+}
+
+/* Breathing Animation - Subtle continuous motion */
+.breathe {
+    animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+/* Shimmer Effect - For loading states */
+.shimmer {
+    background: linear-gradient(90deg, 
+        var(--bg-secondary) 25%, 
+        var(--bg-tertiary) 50%, 
+        var(--bg-secondary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* 🎪 ADMIN CHAOS ANIMATIONS */
+
+/* Admin Glow - Supreme overlord vibes */
+[data-tier="admin"] .admin-glow {
+    animation: adminChaos 3s ease-in-out infinite;
+}
+
+@keyframes adminChaos {
+    0% { 
+        box-shadow: var(--glow);
+        transform: scale(1);
+    }
+    33% { 
+        box-shadow: var(--glow-strong);
+        transform: scale(1.02);
+    }
+    66% { 
+        box-shadow: var(--glow-chaos);
+        transform: scale(1.01);
+    }
+    100% { 
+        box-shadow: var(--glow);
+        transform: scale(1);
+    }
+}
+
+/* Sparkle Rotation */
+[data-tier="admin"] .sparkle-rotate {
+    animation: sparkleRotate 4s linear infinite;
+}
+
+@keyframes sparkleRotate {
+    from { 
+        transform: rotate(0deg) scale(1); 
+        opacity: 0.7; 
+    }
+    50% { 
+        transform: rotate(180deg) scale(1.2); 
+        opacity: 1; 
+    }
+    to { 
+        transform: rotate(360deg) scale(1); 
+        opacity: 0.7; 
+    }
+}
+
+/* Crown Bob */
+[data-tier="admin"] .crown-bob {
+    animation: crownBob 2s ease-in-out infinite alternate;
+}
+
+@keyframes crownBob {
+    from { transform: translateY(0px) rotate(-5deg); }
+    to { transform: translateY(-3px) rotate(5deg); }
+}
+
+/* Golden Particle Effect */
+[data-tier="admin"] .golden-particles::before,
+[data-tier="admin"] .golden-particles::after {
+    content: '✨';
+    position: absolute;
+    font-size: 0.8rem;
+    pointer-events: none;
+    animation: floatingParticles 6s ease-in-out infinite;
+}
+
+[data-tier="admin"] .golden-particles::before {
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+[data-tier="admin"] .golden-particles::after {
+    top: 20%;
+    right: 15%;
+    animation-delay: 3s;
+}
+
+@keyframes floatingParticles {
+    0%, 100% { 
+        opacity: 0;
+        transform: translateY(0px) scale(0.5);
+    }
+    10% { 
+        opacity: 1;
+        transform: translateY(-5px) scale(1);
+    }
+    90% { 
+        opacity: 1;
+        transform: translateY(-5px) scale(1);
+    }
+}
+
+/* Admin Avatar Special Effects */
+[data-tier="admin"] .user-avatar {
+    animation: adminAvatarGlow 2s ease-in-out infinite alternate;
+    position: relative;
+}
+
+@keyframes adminAvatarGlow {
+    from { 
+        box-shadow: var(--glow);
+    }
+    to { 
+        box-shadow: var(--glow-strong);
+    }
+}
+
+/* Chaos Button Animation */
+[data-tier="admin"] .chaos-button {
+    animation: chaosButton 1s ease-in-out infinite alternate;
+}
+
+@keyframes chaosButton {
+    from { 
+        transform: scale(1) rotate(0deg);
+        filter: hue-rotate(0deg);
+    }
+    to { 
+        transform: scale(1.05) rotate(2deg);
+        filter: hue-rotate(10deg);
+    }
+}
+
+/* 🎁 TRIAL TIER EFFECTS */
+
+/* Trial Glow - Purple magic */
+[data-tier="professional_trial"] .trial-glow {
+    animation: trialPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes trialPulse {
+    from { 
+        box-shadow: var(--glow);
+    }
+    to { 
+        box-shadow: var(--glow-strong);
+    }
+}
+
+/* Trial Countdown Effect */
+.trial-countdown {
+    animation: trialUrgency 3s ease-in-out infinite;
+}
+
+@keyframes trialUrgency {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 📊 DATA ANIMATIONS */
+
+/* Number Counter Animation */
+.count-up {
+    animation: countUp 2s ease-out;
+}
+
+@keyframes countUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Progress Bar Fill */
+.progress-fill-animate {
+    animation: progressFill 1.5s ease-out;
+}
+
+@keyframes progressFill {
+    from { width: 0%; }
+    to { width: var(--progress-width, 50%); }
+}
+
+/* Chart Appear Animation */
+.chart-appear {
+    animation: chartAppear 1s ease-out;
+}
+
+@keyframes chartAppear {
+    from { 
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: bottom;
+    }
+    to { 
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+/* 🎉 SUCCESS ANIMATIONS */
+
+/* Confetti Burst - For achievements */
+.confetti-burst {
+    animation: confettiBurst 0.6s ease-out;
+}
+
+@keyframes confettiBurst {
+    0% { 
+        transform: scale(0.3) rotate(0deg);
+        opacity: 0;
+    }
+    50% { 
+        transform: scale(1.2) rotate(180deg);
+        opacity: 1;
+    }
+    100% { 
+        transform: scale(1) rotate(360deg);
+        opacity: 1;
+    }
+}
+
+/* Success Checkmark */
+.success-check {
+    animation: successCheck 0.5s ease-out;
+}
+
+@keyframes successCheck {
+    0% { 
+        stroke-dasharray: 0 100;
+        opacity: 0;
+    }
+    100% { 
+        stroke-dasharray: 100 0;
+        opacity: 1;
+    }
+}
+
+/* 🚨 ERROR ANIMATIONS */
+
+/* Shake Effect - For errors */
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Error Bounce */
+.error-bounce {
+    animation: errorBounce 0.6s ease-out;
+}
+
+@keyframes errorBounce {
+    0%, 20%, 53%, 80%, 100% { 
+        transform: translate3d(0, 0, 0); 
+    }
+    40%, 43% { 
+        transform: translate3d(0, -10px, 0); 
+    }
+    70% { 
+        transform: translate3d(0, -5px, 0); 
+    }
+    90% { 
+        transform: translate3d(0, -2px, 0); 
+    }
+}
+
+/* 🎮 INTERACTIVE ANIMATIONS */
+
+/* Button Press */
+.btn-press {
+    transition: var(--transition-fast);
+}
+
+.btn-press:active {
+    transform: scale(0.95);
+}
+
+/* Card Flip */
+.card-flip {
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.card-flip.flipped {
+    transform: rotateY(180deg);
+}
+
+/* Slide Toggle */
+.slide-toggle {
+    transition: var(--transition-smooth);
+    max-height: 0;
+    overflow: hidden;
+}
+
+.slide-toggle.open {
+    max-height: 500px;
+}
+
+/* 🌊 BACKGROUND ANIMATIONS */
+
+/* Floating Background Elements */
+.floating-bg {
+    animation: floatingBackground 20s ease-in-out infinite;
+}
+
+@keyframes floatingBackground {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg);
+    }
+    33% { 
+        transform: translateY(-10px) rotate(120deg);
+    }
+    66% { 
+        transform: translateY(5px) rotate(240deg);
+    }
+}
+
+/* Gradient Animation */
+.animated-gradient {
+    background-size: 200% 200%;
+    animation: gradientShift 4s ease infinite;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 📱 MOBILE OPTIMIZATIONS */
+@media (max-width: 768px) {
+    /* Reduce admin chaos on mobile for performance */
+    [data-tier="admin"] .admin-glow,
+    [data-tier="admin"] .sparkle-rotate,
+    [data-tier="admin"] .golden-particles {
+        animation: none;
+    }
+    
+    /* Simpler hover effects on mobile */
+    .hover-lift:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Faster animations on mobile */
+    .fade-in,
+    .scale-in,
+    .slide-in-left,
+    .slide-in-right {
+        animation-duration: 0.3s;
+    }
+}
+
+/* 🎯 ACCESSIBILITY */
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    /* Keep only essential animations */
+    .loading-spinner {
+        animation: spin 1s linear infinite;
+    }
+}
+
+/* High performance mode - Disable complex animations */
+@media (prefers-reduced-motion: reduce) {
+    [data-tier="admin"] .admin-glow,
+    [data-tier="admin"] .sparkle-rotate,
+    [data-tier="admin"] .golden-particles,
+    .floating-bg,
+    .animated-gradient {
+        animation: none;
+    }
+}
+
+/* 🎪 UTILITY ANIMATION CLASSES */
+
+/* Animation Delays */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-1000 { animation-delay: 1s; }
+
+/* Animation Speeds */
+.animate-fast { animation-duration: 0.15s; }
+.animate-normal { animation-duration: 0.3s; }
+.animate-slow { animation-duration: 0.5s; }
+.animate-slower { animation-duration: 1s; }
+
+/* Infinite Animations */
+.animate-infinite { animation-iteration-count: infinite; }
+
+/* Pause Animation */
+.animate-pause { animation-play-state: paused; }
+
+/* 🎉 SPECIAL EFFECTS */
+
+/* Typewriter Effect */
+.typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid var(--primary);
+    animation: 
+        typing 3s steps(40, end),
+        blink-caret 0.5s step-end infinite;
+}
+
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: var(--primary); }
+}

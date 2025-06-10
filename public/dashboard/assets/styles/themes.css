@@ -1,0 +1,295 @@
+/* 🎨 STEADYMANAGER THEMES - APPLE-LEVEL SLEEKNESS */
+
+/* ✨ BASE DESIGN SYSTEM */
+:root {
+    /* 🎯 Core Tier Colors - Changes based on subscription */
+    --primary: #3b82f6;
+    --accent: #8b5cf6;
+    
+    /* 🍎 Apple-Style System Colors */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-quaternary: #e2e8f0;
+    
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --text-quaternary: #d1d5db;
+    
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+    --border-strong: #d1d5db;
+    
+    /* 🎨 Semantic Colors */
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --error: #ef4444;
+    --error-light: #fee2e2;
+    --info: #3b82f6;
+    --info-light: #dbeafe;
+    
+    /* 📏 8px Grid Spacing System */
+    --space-xs: 0.5rem;   /* 8px */
+    --space-sm: 1rem;     /* 16px */
+    --space-md: 1.5rem;   /* 24px */
+    --space-lg: 2rem;     /* 32px */
+    --space-xl: 3rem;     /* 48px */
+    --space-2xl: 4rem;    /* 64px */
+    --space-3xl: 6rem;    /* 96px */
+    
+    /* ⚡ Butter-Smooth Animations */
+    --transition-instant: 0.1s ease;
+    --transition-fast: 0.15s ease;
+    --transition-smooth: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    --transition-spring: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    
+    /* 🌙 Elegant Shadows */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+    
+    /* 🔄 Border Radius System */
+    --radius-xs: 0.125rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* 📱 Responsive Breakpoints */
+    --mobile: 768px;
+    --tablet: 1024px;
+    --desktop: 1280px;
+    --wide: 1536px;
+}
+
+/* 🌙 DARK MODE - Sophisticated Night Theme */
+[data-theme="dark"] {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-quaternary: #475569;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-quaternary: #64748b;
+    
+    --border: #334155;
+    --border-light: #475569;
+    --border-strong: #64748b;
+    
+    /* Enhanced shadows for dark mode */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* 💰 TIER-SPECIFIC THEMES */
+
+/* 🆓 FREE TIER - Humble Gray */
+[data-tier="free"] {
+    --primary: #6b7280;
+    --accent: #9ca3af;
+    --tier-gradient: linear-gradient(135deg, #6b7280, #9ca3af);
+}
+
+/* 🚀 PROFESSIONAL TIER - Confident Blue */
+[data-tier="professional"] {
+    --primary: #3b82f6;
+    --accent: #8b5cf6;
+    --tier-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+/* 🎁 PROFESSIONAL TRIAL - Electric Purple with Glow */
+[data-tier="professional_trial"] {
+    --primary: #8b5cf6;
+    --accent: #ec4899;
+    --tier-gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+    --glow: 0 0 20px rgba(139, 92, 246, 0.3);
+    --glow-strong: 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+/* 💼 BUSINESS TIER - Professional Green */
+[data-tier="business"] {
+    --primary: #059669;
+    --accent: #0d9488;
+    --tier-gradient: linear-gradient(135deg, #059669, #0d9488);
+}
+
+/* ⭐ ENTERPRISE TIER - Premium Red */
+[data-tier="enterprise"] {
+    --primary: #dc2626;
+    --accent: #ea580c;
+    --tier-gradient: linear-gradient(135deg, #dc2626, #ea580c);
+}
+
+/* 👑 ADMIN TIER - Supreme Gold with Maximum Chaos */
+[data-tier="admin"] {
+    --primary: #fbbf24;
+    --accent: #f59e0b;
+    --tier-gradient: linear-gradient(135deg, #fbbf24, #f59e0b);
+    --glow: 0 0 20px rgba(251, 191, 36, 0.3);
+    --glow-strong: 0 0 30px rgba(251, 191, 36, 0.5);
+    --glow-chaos: 0 0 40px rgba(251, 191, 36, 0.7);
+}
+
+/* 🎭 TIER-SPECIFIC EFFECTS */
+
+/* Trial tier gets subtle pulsing */
+[data-tier="professional_trial"] .tier-effect {
+    animation: trialPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes trialPulse {
+    from { box-shadow: var(--glow); }
+    to { box-shadow: var(--glow-strong); }
+}
+
+/* Admin tier gets MAXIMUM CHAOS */
+[data-tier="admin"] .admin-glow {
+    box-shadow: var(--glow);
+    animation: adminChaos 3s ease-in-out infinite;
+}
+
+@keyframes adminChaos {
+    0% { 
+        box-shadow: var(--glow);
+        transform: scale(1);
+    }
+    33% { 
+        box-shadow: var(--glow-strong);
+        transform: scale(1.02);
+    }
+    66% { 
+        box-shadow: var(--glow-chaos);
+        transform: scale(1.01);
+    }
+    100% { 
+        box-shadow: var(--glow);
+        transform: scale(1);
+    }
+}
+
+/* Admin sparkle effects */
+[data-tier="admin"] .sparkle-container {
+    position: relative;
+    overflow: hidden;
+}
+
+[data-tier="admin"] .sparkle-container::before {
+    content: '✨';
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    font-size: 1.5rem;
+    animation: sparkleRotate 4s linear infinite;
+    opacity: 0.7;
+}
+
+[data-tier="admin"] .sparkle-container::after {
+    content: '👑';
+    position: absolute;
+    top: var(--space-sm);
+    left: var(--space-sm);
+    font-size: 1.2rem;
+    animation: crownBob 2s ease-in-out infinite alternate;
+}
+
+@keyframes sparkleRotate {
+    from { transform: rotate(0deg) scale(1); opacity: 0.7; }
+    50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+    to { transform: rotate(360deg) scale(1); opacity: 0.7; }
+}
+
+@keyframes crownBob {
+    from { transform: translateY(0px) rotate(-5deg); }
+    to { transform: translateY(-3px) rotate(5deg); }
+}
+
+/* 🎯 TIER-BASED COMPONENT OVERRIDES */
+
+/* Premium tiers get enhanced shadows */
+[data-tier="business"] .card,
+[data-tier="enterprise"] .card,
+[data-tier="admin"] .card {
+    box-shadow: var(--shadow-lg);
+}
+
+[data-tier="business"] .card:hover,
+[data-tier="enterprise"] .card:hover,
+[data-tier="admin"] .card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-4px);
+}
+
+/* Trial and admin get special gradients */
+[data-tier="professional_trial"] .gradient-bg,
+[data-tier="admin"] .gradient-bg {
+    background: var(--tier-gradient);
+}
+
+/* Admin gets extra spacing because they're special */
+[data-tier="admin"] .header {
+    padding: var(--space-md) var(--space-xl);
+}
+
+[data-tier="admin"] .welcome-header {
+    margin-bottom: var(--space-2xl);
+}
+
+/* 📱 RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+    :root {
+        /* Smaller spacing on mobile */
+        --space-xs: 0.375rem;
+        --space-sm: 0.75rem;
+        --space-md: 1rem;
+        --space-lg: 1.5rem;
+        --space-xl: 2rem;
+    }
+    
+    /* Reduce admin chaos on mobile */
+    [data-tier="admin"] .admin-glow {
+        animation: none;
+        box-shadow: var(--glow);
+    }
+}
+
+/* 🎨 TIER COLOR UTILITIES */
+.tier-primary { color: var(--primary); }
+.tier-accent { color: var(--accent); }
+.tier-bg { background: var(--tier-gradient); }
+.tier-border { border-color: var(--primary); }
+.tier-shadow { box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.15); }
+
+/* 🌟 ACCESSIBILITY */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border: #000000;
+        --text-secondary: var(--text-primary);
+    }
+    
+    [data-theme="dark"] {
+        --border: #ffffff;
+        --text-secondary: var(--text-primary);
+    }
+}

@@ -25,6 +25,67 @@ const compression = require('compression');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 💳 UPDATED: Multi-tier pricing configuration
+const PRICING_PLANS = {
+  free: {
+    name: 'Free',
+    userType: 'free',
+    leadLimit: 50,
+    features: ['Basic pipeline', 'Core dashboard']
+  },
+  professional_monthly: {
+    name: 'Professional',
+    userType: 'professional',
+    leadLimit: 1000,
+    priceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
+    features: ['Full pipeline', 'Advanced analytics']
+  },
+  professional_yearly: {
+    name: 'Professional Yearly',
+    userType: 'professional',
+    leadLimit: 1000,
+    priceId: process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
+    features: ['Full pipeline', 'Advanced analytics', 'Save 20%']
+  },
+  business_monthly: {
+    name: 'Business',
+    userType: 'business',
+    leadLimit: 10000,
+    priceId: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID,
+    features: ['AI scoring', 'Automation', 'Team features']
+  },
+  business_yearly: {
+    name: 'Business Yearly',
+    userType: 'business',
+    leadLimit: 10000,
+    priceId: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID,
+    features: ['AI scoring', 'Automation', 'Team features', 'Save 20%']
+  },
+  enterprise_monthly: {
+    name: 'Enterprise',
+    userType: 'enterprise',
+    leadLimit: 999999,
+    priceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
+    features: ['Custom integrations', 'White-label', 'Dedicated support']
+  },
+  enterprise_yearly: {
+    name: 'Enterprise Yearly',
+    userType: 'enterprise',
+    leadLimit: 999999,
+    priceId: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
+    features: ['Custom integrations', 'White-label', 'Dedicated support', 'Save 20%']
+  }
+};
+
+// Helper function to get plan details
+function getPlanByUserType(userType) {
+  return Object.values(PRICING_PLANS).find(plan => plan.userType === userType) || PRICING_PLANS.free;
+}
+
+function getPlanByPriceId(priceId) {
+  return Object.values(PRICING_PLANS).find(plan => plan.priceId === priceId);
+}
+
 // 📧 Email usage tracking
 let dailyEmailCount = 0;
 let lastResetDate = new Date().toDateString();
@@ -218,26 +279,30 @@ function getTableName(baseName) {
   return `${tablePrefix}${baseName}`;
 }
 
-// 🔧 Database initialization (simplified schema)
+// 🔧 Database initialization (updated schema)
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
     console.log(`🔧 Initializing ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} database...`);
     
-    // Users table (simplified)
+    // UPDATED: Users table with new subscription structure
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('users')} (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        user_type VARCHAR(50) DEFAULT 'client_v1',
+        user_type VARCHAR(50) DEFAULT 'free',
+        subscription_tier VARCHAR(50) DEFAULT 'FREE',
+        billing_cycle VARCHAR(20),
         is_admin BOOLEAN DEFAULT FALSE,
-        monthly_lead_limit INTEGER DEFAULT 100,
+        monthly_lead_limit INTEGER DEFAULT 50,
         current_month_leads INTEGER DEFAULT 0,
-        goals JSONB DEFAULT '{"daily": 10, "monthly": 100}',
+        goals JSONB DEFAULT '{"daily": 5, "monthly": 50}',
         settings JSONB DEFAULT '{"darkMode": false, "notifications": true}',
         reset_token TEXT,
         reset_token_expires TIMESTAMP,
+        stripe_customer_id VARCHAR(255),
+        stripe_subscription_id VARCHAR(255),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -311,17 +376,21 @@ async function createUser(userData) {
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('users')} 
-       (email, password, user_type, is_admin, monthly_lead_limit, current_month_leads, goals, settings) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings, stripe_customer_id, stripe_subscription_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         userData.email.toLowerCase(),
         userData.password,
         userData.userType,
+        userData.subscriptionTier,
+        userData.billingCycle,
         userData.isAdmin,
         userData.monthlyLeadLimit,
         userData.currentMonthLeads,
         JSON.stringify(userData.goals),
-        JSON.stringify(userData.settings)
+        JSON.stringify(userData.settings),
+        userData.stripeCustomerId,
+        userData.stripeSubscriptionId
       ]
     );
     return result.rows[0];
@@ -472,7 +541,7 @@ async function clearResetToken(userId) {
 // 📁 Static files and dashboard routing
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 🚀 NEW: Dashboard folder routing
+// 🚀 Dashboard folder routing
 app.get('/dashboard', (req, res) => {
   const { upgrade, session_id } = req.query;
   
@@ -484,7 +553,6 @@ app.get('/dashboard', (req, res) => {
 });
 
 // Handle all dashboard sub-pages
-// 🔧 UPDATED: Handle dashboard sub-routes and assets
 app.get('/dashboard/*', (req, res) => {
   const requestPath = req.params[0];
   
@@ -548,7 +616,158 @@ app.use('/api/forgot-password', strictLimiter);
 app.use('/api/reset-password', strictLimiter);
 app.use('/api', apiLimiter);
 
-// 🔥 Register endpoint
+// 🎁 UPDATED: Trial endpoint with pending user retry logic and debugging
+app.post('/api/start-trial',
+  [
+    validateEmail,
+    validatePassword,
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      console.log('🔍 Trial request received:', { 
+        email: req.body.email, 
+        hasPassword: !!req.body.password,
+        hasConfirmPassword: !!req.body.confirmPassword,
+        bodyKeys: Object.keys(req.body)
+      });
+      
+      const { email, password } = req.body;
+      
+      const existingUser = await findUserByEmail(email);
+      
+      // 🎯 SMART HANDLING: If user exists and is pending, allow trial conversion
+      if (existingUser) {
+        // Check if they're a pending user wanting to try trial instead
+        if (existingUser.user_type.includes('_pending')) {
+          
+          console.log(`🔄 Converting pending user to trial: ${email}`);
+          
+          // Convert pending user to trial
+          const trialEndDate = new Date();
+          trialEndDate.setDate(trialEndDate.getDate() + 14);
+          
+          const client = await pool.connect();
+          try {
+            await client.query(
+              `UPDATE ${getTableName('users')} 
+               SET user_type = $1, subscription_tier = $2, monthly_lead_limit = $3, 
+                   settings = $4, updated_at = NOW()
+               WHERE email = $5`,
+              [
+                'professional_trial',
+                'PROFESSIONAL_TRIAL', 
+                1000,
+                JSON.stringify({
+                  ...existingUser.settings,
+                  subscriptionTier: 'PROFESSIONAL_TRIAL',
+                  trialStartDate: new Date().toISOString(),
+                  trialEndDate: trialEndDate.toISOString(),
+                  convertedFromPending: true
+                }),
+                email.toLowerCase()
+              ]
+            );
+          } finally {
+            client.release();
+          }
+          
+          const token = jwt.sign(
+            { userId: existingUser.id, email: existingUser.email, userType: 'professional_trial' },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+
+          return res.status(200).json({
+            message: 'Trial started! Converted from pending account. Welcome to Professional! 🚀',
+            token,
+            user: { 
+              id: existingUser.id, 
+              email: existingUser.email, 
+              isAdmin: existingUser.is_admin,
+              userType: 'professional_trial',
+              subscriptionTier: 'PROFESSIONAL_TRIAL',
+              monthlyLeadLimit: 1000,
+              currentMonthLeads: existingUser.current_month_leads
+            },
+            trialEndDate: trialEndDate.toISOString()
+          });
+        }
+        
+        // Regular user already exists error (not pending)
+        return res.status(400).json({ 
+          error: 'User already exists with this email. Try signing in instead.',
+          shouldSignIn: true
+        });
+      }
+
+      // 🆕 NEW TRIAL USER CREATION
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+      
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 14);
+      
+      const userData = {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        userType: 'professional_trial',
+        subscriptionTier: 'PROFESSIONAL_TRIAL',
+        billingCycle: null,
+        isAdmin,
+        monthlyLeadLimit: 1000,
+        currentMonthLeads: 0,
+        goals: { daily: 33, monthly: 1000 },
+        settings: {
+          darkMode: false,
+          notifications: true,
+          subscriptionTier: 'PROFESSIONAL_TRIAL',
+          trialStartDate: new Date().toISOString(),
+          trialEndDate: trialEndDate.toISOString()
+        },
+        stripeCustomerId: null,
+        stripeSubscriptionId: null
+      };
+
+      const newUser = await createUser(userData);
+
+      const token = jwt.sign(
+        { userId: newUser.id, email: newUser.email, userType: 'professional_trial' },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      console.log(`🎁 Trial user created: ${email} - Expires: ${trialEndDate}`);
+
+      res.status(201).json({
+        message: 'Free trial started successfully! Welcome to Professional! 🚀',
+        token,
+        user: { 
+          id: newUser.id, 
+          email: newUser.email, 
+          isAdmin,
+          userType: 'professional_trial',
+          subscriptionTier: 'PROFESSIONAL_TRIAL',
+          monthlyLeadLimit: 1000,
+          currentMonthLeads: 0
+        },
+        trialEndDate: trialEndDate.toISOString()
+      });
+
+    } catch (error) {
+      console.error('Start trial error:', error.message);
+      res.status(500).json({ error: 'Failed to start trial' });
+    }
+  }
+);
+
+// 🔥 UPDATED: Register endpoint with pending user retry logic
 app.post('/api/register', 
   [
     validateEmail,
@@ -563,27 +782,102 @@ app.post('/api/register',
   ],
   async (req, res) => {
     try {
-      const { email, password, pendingUpgrade, billingCycle } = req.body;
+      const { email, password, pendingUpgrade, plan } = req.body;
       
       const existingUser = await findUserByEmail(email);
+      
+      // 🎯 SMART HANDLING: If user exists and is pending, allow retry
       if (existingUser) {
-        return res.status(400).json({ error: 'User already exists' });
+        // Check if they're a pending user trying to pay again
+        if (existingUser.user_type.includes('_pending') && pendingUpgrade) {
+          
+          // 🛡️ Rate limiting: Check retry attempts in last hour
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+          const retryAttempts = existingUser.settings?.retryAttempts || [];
+          const recentAttempts = retryAttempts.filter(attempt => new Date(attempt) > oneHourAgo);
+          
+          if (recentAttempts.length >= 3) {
+            return res.status(429).json({ 
+              error: 'Too many payment attempts. Please wait 1 hour before trying again.',
+              isPendingUser: true,
+              retryAfter: 3600 // 1 hour in seconds
+            });
+          }
+          
+          // 🔄 Log this retry attempt
+          const updatedAttempts = [...recentAttempts, new Date().toISOString()];
+          const client = await pool.connect();
+          try {
+            await client.query(
+              `UPDATE ${getTableName('users')} 
+               SET settings = settings || $1, updated_at = NOW()
+               WHERE email = $2`,
+              [
+                JSON.stringify({ retryAttempts: updatedAttempts }),
+                email.toLowerCase()
+              ]
+            );
+          } finally {
+            client.release();
+          }
+          
+          console.log(`🔄 Pending user retry: ${email} (${recentAttempts.length + 1}/3 attempts this hour)`);
+          
+          // ✅ Return existing user data for Stripe checkout
+          const token = jwt.sign(
+            { userId: existingUser.id, email: existingUser.email, userType: existingUser.user_type },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+
+          return res.status(200).json({
+            message: 'Redirecting to payment for existing pending account...',
+            token,
+            user: { 
+              id: existingUser.id, 
+              email: existingUser.email, 
+              isAdmin: existingUser.is_admin,
+              userType: existingUser.user_type,
+              subscriptionTier: existingUser.subscription_tier,
+              monthlyLeadLimit: existingUser.monthly_lead_limit,
+              currentMonthLeads: existingUser.current_month_leads,
+              pendingUpgrade: true,
+              isRetry: true
+            }
+          });
+        } 
+        
+        // Regular user already exists error
+        return res.status(400).json({ 
+          error: 'User already exists with this email. Try signing in instead.',
+          shouldSignIn: true
+        });
       }
 
+      // 🆕 NEW USER CREATION (existing logic)
       const hashedPassword = await bcrypt.hash(password, 12);
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
-      let userType = 'client_v1';
-      let monthlyLeadLimit = 100;
-      let goals = { daily: 10, monthly: 100 };
+      let userType = 'free';
+      let subscriptionTier = 'FREE';
+      let monthlyLeadLimit = 50;
+      let goals = { daily: 5, monthly: 50 };
+      let billingCycle = null;
       
-      if (pendingUpgrade) {
-        userType = 'client_v1_pending_pro';
-        goals = { daily: 30, monthly: 1000 };
+      if (pendingUpgrade && plan) {
+        const planConfig = PRICING_PLANS[plan];
+        if (planConfig) {
+          userType = `${planConfig.userType}_pending`;
+          subscriptionTier = planConfig.name.toUpperCase();
+          monthlyLeadLimit = planConfig.leadLimit;
+          billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
+          goals = { daily: Math.floor(planConfig.leadLimit / 30), monthly: planConfig.leadLimit };
+        }
       }
       
       if (isAdmin) {
         userType = 'admin';
+        subscriptionTier = 'ADMIN';
         monthlyLeadLimit = 999999;
         goals = { daily: 999999, monthly: 999999 };
       }
@@ -592,6 +886,8 @@ app.post('/api/register',
         email: email.toLowerCase(),
         password: hashedPassword,
         userType,
+        subscriptionTier,
+        billingCycle,
         isAdmin,
         monthlyLeadLimit,
         currentMonthLeads: 0,
@@ -600,8 +896,11 @@ app.post('/api/register',
           darkMode: false,
           notifications: true,
           pendingUpgrade: pendingUpgrade || false,
-          billingCycle: billingCycle || null
-        }
+          plan: plan || null,
+          retryAttempts: []
+        },
+        stripeCustomerId: null,
+        stripeSubscriptionId: null
       };
 
       const newUser = await createUser(userData);
@@ -612,10 +911,10 @@ app.post('/api/register',
         { expiresIn: '24h' }
       );
 
-      console.log(`✅ New user registered: ${email} ${isAdmin ? '(ADMIN)' : pendingUpgrade ? '(PENDING PRO)' : '(FREE)'}`);
+      console.log(`✅ New user registered: ${email} ${isAdmin ? '(ADMIN)' : pendingUpgrade ? `(PENDING ${subscriptionTier})` : '(FREE)'}`);
 
       res.status(201).json({
-        message: pendingUpgrade ? 'Account created! Complete payment to activate Pro.' : 
+        message: pendingUpgrade ? `Account created! Complete payment to activate ${subscriptionTier}.` : 
                  isAdmin ? 'Admin account created! 👑' : 'Free account created!',
         token,
         user: { 
@@ -623,6 +922,7 @@ app.post('/api/register',
           email: newUser.email, 
           isAdmin,
           userType: newUser.user_type,
+          subscriptionTier: newUser.subscription_tier,
           monthlyLeadLimit: newUser.monthly_lead_limit,
           currentMonthLeads: newUser.current_month_leads,
           pendingUpgrade: pendingUpgrade || false
@@ -635,86 +935,7 @@ app.post('/api/register',
   }
 );
 
-// 🎁 Trial endpoint
-app.post('/api/start-trial',
-  [
-    validateEmail,
-    body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required'),
-    validatePassword,
-    body('confirmPassword').custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Passwords do not match');
-      }
-      return true;
-    }),
-    handleValidationErrors
-  ],
-  async (req, res) => {
-    try {
-      const { email, name, password } = req.body;
-      
-      const existingUser = await findUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ error: 'User already exists' });
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-      
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 14);
-      
-      const userData = {
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        userType: 'client_v1_trial',
-        isAdmin,
-        monthlyLeadLimit: 1000,
-        currentMonthLeads: 0,
-        goals: { daily: 30, monthly: 1000 },
-        settings: {
-          darkMode: false,
-          notifications: true,
-          subscriptionTier: 'V1_TRIAL',
-          trialStartDate: new Date().toISOString(),
-          trialEndDate: trialEndDate.toISOString(),
-          name: name
-        }
-      };
-
-      const newUser = await createUser(userData);
-
-      const token = jwt.sign(
-        { userId: newUser.id, email: newUser.email, userType: 'client_v1_trial' },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      console.log(`🎁 Trial user created: ${email} - Expires: ${trialEndDate}`);
-
-      res.status(201).json({
-        message: 'Free trial started successfully! Welcome to V1 Pro! 🚀',
-        token,
-        user: { 
-          id: newUser.id, 
-          email: newUser.email, 
-          isAdmin,
-          userType: 'client_v1_trial',
-          subscriptionTier: 'V1_TRIAL',
-          monthlyLeadLimit: 1000,
-          currentMonthLeads: 0
-        },
-        trialEndDate: trialEndDate.toISOString()
-      });
-
-    } catch (error) {
-      console.error('Start trial error:', error.message);
-      res.status(500).json({ error: 'Failed to start trial' });
-    }
-  }
-);
-
-// 🔐 Login endpoint
+// 🔐 UPDATED: Login endpoint with new subscription structure
 app.post('/api/login', 
   [validateEmail, body('password').notEmpty().withMessage('Password required'), handleValidationErrors],
   async (req, res) => {
@@ -737,17 +958,21 @@ app.post('/api/login',
         { expiresIn: '24h' }
       );
       
-      const subscriptionTier = user.settings?.subscriptionTier || 
-        (user.user_type === 'client_v1_pro' ? 'V1_PRO' : 
-         user.user_type === 'client_v1_trial' ? 'V1_TRIAL' :
-         user.user_type === 'admin' ? 'ADMIN' : 'FREE');
+      const subscriptionTier = user.subscription_tier || 'FREE';
       
-      console.log(`✅ User login: ${email}`);
+      console.log(`✅ User login: ${email} (${subscriptionTier})`);
+      
+      const welcomeMessages = {
+        'ADMIN': 'Welcome back, Admin! 👑',
+        'PROFESSIONAL': 'Welcome back, Professional! 🚀',
+        'PROFESSIONAL_TRIAL': 'Welcome back to your trial! 🎁',
+        'BUSINESS': 'Welcome back, Business! 💼',
+        'ENTERPRISE': 'Welcome back, Enterprise! ⭐',
+        'FREE': 'Welcome back!'
+      };
       
       res.json({
-        message: user.is_admin ? 'Welcome back, Admin! 👑' : 
-                 subscriptionTier === 'V1_PRO' ? 'Welcome back, V1 Pro! 🚀' : 
-                 subscriptionTier === 'V1_TRIAL' ? 'Welcome back to your trial! 🎁' : 'Welcome back!',
+        message: welcomeMessages[subscriptionTier] || 'Welcome back!',
         token,
         user: { 
           id: user.id, 
@@ -755,6 +980,7 @@ app.post('/api/login',
           isAdmin: user.is_admin,
           userType: user.user_type,
           subscriptionTier,
+          billingCycle: user.billing_cycle,
           monthlyLeadLimit: user.monthly_lead_limit,
           currentMonthLeads: user.current_month_leads,
           goals: user.goals,
@@ -852,7 +1078,7 @@ app.post('/api/reset-password',
         });
       }
       
-      // 🛡️ NEW: Check if new password is same as current password
+      // 🛡️ Check if new password is same as current password
       const isSamePassword = await bcrypt.compare(password, user.password);
       if (isSamePassword) {
         return res.status(400).json({ 
@@ -887,10 +1113,14 @@ app.post('/api/reset-password',
   }
 );
 
-// 💳 Stripe checkout
+// 💳 UPDATED: Multi-tier Stripe checkout
 app.post('/api/create-checkout-session', 
   [
-    body('plan').isIn(['monthly_pro', 'annual_pro']).withMessage('Invalid plan'),
+    body('plan').isIn([
+      'professional_monthly', 'professional_yearly',
+      'business_monthly', 'business_yearly', 
+      'enterprise_monthly', 'enterprise_yearly'
+    ]).withMessage('Invalid plan'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
     handleValidationErrors
   ],
@@ -898,27 +1128,31 @@ app.post('/api/create-checkout-session',
     try {
       const { plan, email } = req.body;
       
-      const validPlans = {
-        'monthly_pro': { priceId: process.env.STRIPE_MONTHLY_PRICE_ID },
-        'annual_pro': { priceId: process.env.STRIPE_ANNUAL_PRICE_ID }
-      };
+      const planConfig = PRICING_PLANS[plan];
+      if (!planConfig || !planConfig.priceId) {
+        return res.status(400).json({ error: 'Invalid plan configuration' });
+      }
       
-      const planData = validPlans[plan];
       const baseUrl = isDevelopment 
         ? process.env.DEV_BASE_URL || req.headers.origin
         : 'https://steadymanager.com';
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [{ price: planData.priceId, quantity: 1 }],
+        line_items: [{ price: planConfig.priceId, quantity: 1 }],
         mode: 'subscription',
         customer_email: email,
         success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/login?cancelled=true`,
-        metadata: { plan, email, environment: isDevelopment ? 'development' : 'production' }
+        metadata: { 
+          plan, 
+          email, 
+          tier: planConfig.userType,
+          environment: isDevelopment ? 'development' : 'production' 
+        }
       });
       
-      console.log(`💳 Checkout session created for ${email} (${plan})`);
+      console.log(`💳 Checkout session created for ${email} (${planConfig.name})`);
       res.json({ sessionId: session.id, url: session.url });
       
     } catch (error) {
@@ -928,7 +1162,154 @@ app.post('/api/create-checkout-session',
   }
 );
 
-// 🔄 Auto-downgrade trials (with enhanced monitoring)
+// 🔥 UPDATED: Stripe webhook with multi-tier support
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(`🚫 Webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        const email = session.metadata.email || session.customer_email;
+        const plan = session.metadata.plan;
+        const planConfig = PRICING_PLANS[plan];
+        
+        if (!planConfig) {
+          console.error(`❌ Unknown plan in webhook: ${plan}`);
+          break;
+        }
+        
+        console.log(`💰 Payment successful for ${email} - Plan: ${planConfig.name}`);
+        
+        const existingUser = await findUserByEmail(email);
+        if (existingUser) {
+          const client = await pool.connect();
+          try {
+            const billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
+            
+            await client.query(
+              `UPDATE ${getTableName('users')} 
+               SET user_type = $1, subscription_tier = $2, billing_cycle = $3, monthly_lead_limit = $4, 
+                   stripe_customer_id = $5, stripe_subscription_id = $6, settings = $7, updated_at = NOW()
+               WHERE email = $8`,
+              [
+                planConfig.userType, 
+                planConfig.name.toUpperCase(),
+                billingCycle,
+                planConfig.leadLimit, 
+                session.customer,
+                subscription.id,
+                JSON.stringify({
+                  ...existingUser.settings,
+                  plan: plan,
+                  subscriptionTier: planConfig.name.toUpperCase(),
+                  upgradeDate: new Date().toISOString(),
+                  pendingUpgrade: false
+                }),
+                email.toLowerCase()
+              ]
+            );
+            console.log(`✅ User upgraded to ${planConfig.name}: ${email}`);
+          } finally {
+            client.release();
+          }
+        }
+        break;
+
+      case 'customer.subscription.updated':
+        const updatedSubscription = event.data.object;
+        
+        // Only act on status changes that require downgrade
+        if (updatedSubscription.status === 'unpaid' || updatedSubscription.status === 'canceled') {
+          const customer = await stripe.customers.retrieve(updatedSubscription.customer);
+          
+          console.log(`⬇️ Downgrading ${customer.email} - Status: ${updatedSubscription.status}`);
+          
+          const client = await pool.connect();
+          try {
+            await client.query(
+              `UPDATE ${getTableName('users')} 
+               SET user_type = $1, subscription_tier = $2, billing_cycle = NULL, monthly_lead_limit = $3, 
+                   settings = settings || $4, updated_at = NOW()
+               WHERE email = $5`,
+              [
+                'free', 
+                'FREE',
+                50,
+                JSON.stringify({ 
+                  subscriptionTier: 'FREE', 
+                  downgradedDate: new Date().toISOString(),
+                  reason: updatedSubscription.status 
+                }),
+                customer.email.toLowerCase()
+              ]
+            );
+          } finally {
+            client.release();
+          }
+        }
+        break;
+        
+      case 'customer.subscription.deleted':
+        const cancelledSubscription = event.data.object;
+        const customer = await stripe.customers.retrieve(cancelledSubscription.customer);
+        
+        console.log(`🗑️ Subscription cancelled for ${customer.email}`);
+        
+        const client = await pool.connect();
+        try {
+          await client.query(
+            `UPDATE ${getTableName('users')} 
+             SET user_type = $1, subscription_tier = $2, billing_cycle = NULL, monthly_lead_limit = $3, 
+                 settings = settings || $4, updated_at = NOW()
+             WHERE email = $5`,
+            [
+              'free', 
+              'FREE',
+              50,
+              JSON.stringify({ 
+                subscriptionTier: 'FREE', 
+                downgradedDate: new Date().toISOString(),
+                reason: 'cancelled' 
+              }),
+              customer.email.toLowerCase()
+            ]
+          );
+          console.log(`⬇️ User downgraded to free: ${customer.email}`);
+        } finally {
+          client.release();
+        }
+        break;
+
+      case 'invoice.payment_failed':
+        const failedInvoice = event.data.object;
+        console.log(`💳 Payment failed for invoice: ${failedInvoice.id}`);
+        // Don't downgrade immediately - Stripe will retry
+        // Just log for monitoring
+        break;
+        
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+    
+    res.json({ received: true });
+    
+  } catch (error) {
+    console.error('Webhook handler error:', error.message);
+    res.status(500).json({ error: 'Webhook handler failed' });
+  }
+});
+
+// 🔄 UPDATED: Auto-downgrade trials with new pricing structure
 let lastTrialCheckTime = null;
 let dailyDowngradeCount = 0;
 
@@ -942,7 +1323,7 @@ async function checkExpiredTrials() {
     
     const result = await client.query(
       `SELECT id, email, settings FROM ${getTableName('users')} 
-       WHERE user_type = 'client_v1_trial' 
+       WHERE user_type = 'professional_trial' 
        AND settings->>'trialEndDate' < $1`,
       [now]
     );
@@ -957,9 +1338,9 @@ async function checkExpiredTrials() {
 
       await client.query(
         `UPDATE ${getTableName('users')} 
-         SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
-         WHERE id = $4`,
-        ['client_v1', 100, JSON.stringify(updatedSettings), user.id]
+         SET user_type = $1, subscription_tier = $2, monthly_lead_limit = $3, settings = $4, updated_at = NOW()
+         WHERE id = $5`,
+        ['free', 'FREE', 50, JSON.stringify(updatedSettings), user.id]
       );
 
       console.log(`⬇️ Trial expired - downgraded user: ${user.email}`);
@@ -1022,7 +1403,7 @@ app.get('/api/admin/trial-status', authenticateToken, async (req, res) => {
         `SELECT id, email, settings->>'trialEndDate' as trial_end_date, 
          settings->>'trialStartDate' as trial_start_date, created_at
          FROM ${getTableName('users')} 
-         WHERE user_type = 'client_v1_trial' 
+         WHERE user_type = 'professional_trial' 
          ORDER BY settings->>'trialEndDate' ASC`
       );
       
@@ -1057,18 +1438,22 @@ app.post('/api/admin/create-test-trial', authenticateToken, async (req, res) => 
     const userData = {
       email: testEmail,
       password: hashedPassword,
-      userType: 'client_v1_trial',
+      userType: 'professional_trial',
+      subscriptionTier: 'PROFESSIONAL_TRIAL',
+      billingCycle: null,
       isAdmin: false,
       monthlyLeadLimit: 1000,
       currentMonthLeads: 0,
-      goals: { daily: 30, monthly: 1000 },
+      goals: { daily: 33, monthly: 1000 },
       settings: {
-        subscriptionTier: 'V1_TRIAL',
+        subscriptionTier: 'PROFESSIONAL_TRIAL',
         trialStartDate: new Date().toISOString(),
         trialEndDate: testTrialEnd.toISOString(),
         name: 'Test Trial User',
         isTestAccount: true
-      }
+      },
+      stripeCustomerId: null,
+      stripeSubscriptionId: null
     };
 
     const newUser = await createUser(userData);
@@ -1091,148 +1476,24 @@ app.post('/api/admin/create-test-trial', authenticateToken, async (req, res) => 
   }
 });
 
-// 🔥 Stripe webhook - ENHANCED with payment failure handling
-app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    console.error(`🚫 Webhook signature verification failed: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed':
-        const session = event.data.object;
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
-        const email = session.metadata.email || session.customer_email;
-        const plan = session.metadata.plan;
-        
-        console.log(`💰 Payment successful for ${email} - Plan: ${plan}`);
-        
-        const existingUser = await findUserByEmail(email);
-        if (existingUser) {
-          const client = await pool.connect();
-          try {
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = $1, monthly_lead_limit = $2, settings = $3, updated_at = NOW()
-               WHERE email = $4`,
-              [
-                'client_v1_pro', 
-                1000, 
-                JSON.stringify({
-                  ...existingUser.settings,
-                  plan: plan,
-                  subscriptionTier: 'V1_PRO',
-                  stripeCustomerId: session.customer,
-                  stripeSubscriptionId: subscription.id,
-                  upgradeDate: new Date().toISOString(),
-                  pendingUpgrade: false
-                }),
-                email.toLowerCase()
-              ]
-            );
-            console.log(`✅ User upgraded to V1 Pro: ${email}`);
-          } finally {
-            client.release();
-          }
-        }
-        break;
-
-      case 'customer.subscription.created':
-        const newSubscription = event.data.object;
-        console.log(`🆕 New subscription created: ${newSubscription.id}`);
-        break;
-
-      case 'customer.subscription.updated':
-        const updatedSubscription = event.data.object;
-        
-        // Only act on status changes that require downgrade
-        if (updatedSubscription.status === 'unpaid' || updatedSubscription.status === 'canceled') {
-          const customer = await stripe.customers.retrieve(updatedSubscription.customer);
-          
-          console.log(`⬇️ Downgrading ${customer.email} - Status: ${updatedSubscription.status}`);
-          
-          const client = await pool.connect();
-          try {
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = $1, monthly_lead_limit = $2, settings = settings || $3, updated_at = NOW()
-               WHERE email = $4`,
-              [
-                'client_v1', 
-                100, 
-                JSON.stringify({ 
-                  subscriptionTier: 'FREE', 
-                  downgradedDate: new Date().toISOString(),
-                  reason: updatedSubscription.status 
-                }),
-                customer.email.toLowerCase()
-              ]
-            );
-          } finally {
-            client.release();
-          }
-        }
-        break;
-        
-      case 'customer.subscription.deleted':
-        const cancelledSubscription = event.data.object;
-        const customer = await stripe.customers.retrieve(cancelledSubscription.customer);
-        
-        console.log(`🗑️ Subscription cancelled for ${customer.email}`);
-        
-        const client = await pool.connect();
-        try {
-          await client.query(
-            `UPDATE ${getTableName('users')} 
-             SET user_type = $1, monthly_lead_limit = $2, settings = settings || $3, updated_at = NOW()
-             WHERE email = $4`,
-            [
-              'client_v1', 
-              100, 
-              JSON.stringify({ 
-                subscriptionTier: 'FREE', 
-                downgradedDate: new Date().toISOString(),
-                reason: 'cancelled' 
-              }),
-              customer.email.toLowerCase()
-            ]
-          );
-          console.log(`⬇️ User downgraded to free: ${customer.email}`);
-        } finally {
-          client.release();
-        }
-        break;
-
-      case 'invoice.payment_failed':
-        const failedInvoice = event.data.object;
-        console.log(`💳 Payment failed for invoice: ${failedInvoice.id}`);
-        // Don't downgrade immediately - Stripe will retry
-        // Just log for monitoring
-        break;
-        
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
-    
-    res.json({ received: true });
-    
-  } catch (error) {
-    console.error('Webhook handler error:', error.message);
-    res.status(500).json({ error: 'Webhook handler failed' });
-  }
-});
-
 // Get Stripe config
 app.get('/api/stripe-config', (req, res) => {
   res.json({
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
   });
+});
+app.get('/api/pricing-plans', (req, res) => {
+  const plans = Object.entries(PRICING_PLANS).map(([key, plan]) => ({
+    id: key,
+    name: plan.name,
+    userType: plan.userType,
+    leadLimit: plan.leadLimit,
+    features: plan.features,
+    priceId: plan.priceId,
+    isYearly: key.includes('yearly')
+  }));
+  
+  res.json({ plans });
 });
 
 // 📋 Get leads
@@ -1469,7 +1730,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
   }
 });
 
-// 👑 Admin stats
+// 👑 UPDATED: Admin stats with new pricing structure
 app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
@@ -1478,24 +1739,48 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   try {
     const client = await pool.connect();
     try {
-      const usersResult = await client.query(`SELECT COUNT(*), SUM(CASE WHEN is_admin THEN 1 ELSE 0 END) as admin_count FROM ${getTableName('users')}`);
+      const usersResult = await client.query(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN is_admin THEN 1 ELSE 0 END) as admin_count,
+          SUM(CASE WHEN subscription_tier = 'FREE' THEN 1 ELSE 0 END) as free_count,
+          SUM(CASE WHEN subscription_tier = 'PROFESSIONAL' THEN 1 ELSE 0 END) as professional_count,
+          SUM(CASE WHEN subscription_tier = 'PROFESSIONAL_TRIAL' THEN 1 ELSE 0 END) as trial_count,
+          SUM(CASE WHEN subscription_tier = 'BUSINESS' THEN 1 ELSE 0 END) as business_count,
+          SUM(CASE WHEN subscription_tier = 'ENTERPRISE' THEN 1 ELSE 0 END) as enterprise_count
+        FROM ${getTableName('users')}
+      `);
+      
       const leadsResult = await client.query(`SELECT COUNT(*) FROM ${getTableName('leads')}`);
       
-      const totalUsers = parseInt(usersResult.rows[0].count);
-      const adminUsers = parseInt(usersResult.rows[0].admin_count);
-      const clientUsers = totalUsers - adminUsers;
+      const stats = usersResult.rows[0];
+      const totalUsers = parseInt(stats.total);
       const totalLeads = parseInt(leadsResult.rows[0].count);
       
-      const monthlyRevenue = clientUsers * 6.99;
+      // Calculate estimated revenue (you'll need to set actual prices)
+      const estimatedMonthlyRevenue = 
+        (parseInt(stats.professional_count) * 6.99) +
+        (parseInt(stats.business_count) * 19.99) +
+        (parseInt(stats.enterprise_count) * 49.99);
       
       res.json({
-        users: { total: totalUsers, admins: adminUsers, clients: clientUsers },
+        users: {
+          total: totalUsers,
+          admins: parseInt(stats.admin_count),
+          free: parseInt(stats.free_count),
+          professional: parseInt(stats.professional_count),
+          trials: parseInt(stats.trial_count),
+          business: parseInt(stats.business_count),
+          enterprise: parseInt(stats.enterprise_count)
+        },
         leads: { total: totalLeads },
-        revenue: { monthly: monthlyRevenue, annual: monthlyRevenue * 12 },
-        trialSystem: {
-          lastCheckTime: lastTrialCheckTime,
-          dailyDowngrades: dailyDowngradeCount,
-          status: 'Active - checking every hour'
+        revenue: { 
+          estimatedMonthly: estimatedMonthlyRevenue, 
+          estimatedAnnual: estimatedMonthlyRevenue * 12 
+        },
+        subscriptionBreakdown: {
+          free: parseInt(stats.free_count),
+          paid: parseInt(stats.professional_count) + parseInt(stats.business_count) + parseInt(stats.enterprise_count)
         }
       });
     } finally {
@@ -1519,6 +1804,8 @@ app.get('/api/user/settings', authenticateToken, async (req, res) => {
       id: user.id,
       email: user.email,
       userType: user.user_type,
+      subscriptionTier: user.subscription_tier,
+      billingCycle: user.billing_cycle,
       isAdmin: user.is_admin,
       goals: user.goals,
       settings: user.settings,
@@ -1572,7 +1859,7 @@ app.put('/api/user/settings',
   }
 );
 
-// 📧 Enhanced Email stats endpoint - NEW!
+// 📧 Enhanced Email stats endpoint
 app.get('/api/email-stats', authenticateToken, async (req, res) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
@@ -1591,7 +1878,7 @@ app.get('/api/email-stats', authenticateToken, async (req, res) => {
   });
 });
 
-// 🏥 Enhanced Health check
+// 🏥 UPDATED: Enhanced Health check with new pricing info
 app.get('/api/health', async (req, res) => {
   try {
     const client = await pool.connect();
@@ -1609,11 +1896,11 @@ app.get('/api/health', async (req, res) => {
           'lead-management', 
           'admin-mode', 
           'stripe-billing',
-          'auto-trial-downgrade',
+          'multi-tier-pricing',
           'password-reset',
           'email-sending',
           'enhanced-email-rate-limiting',
-          'simplified-architecture'
+          'professional-business-enterprise-tiers'
         ],
         database: {
           connected: true,
@@ -1621,10 +1908,9 @@ app.get('/api/health', async (req, res) => {
           users: parseInt(usersResult.rows[0].count),
           leads: parseInt(leadsResult.rows[0].count)
         },
-        trialSystem: {
-          lastCheckTime,
-          dailyDowngradeCount,
-          status: 'Active'
+        pricingTiers: {
+          available: Object.keys(PRICING_PLANS),
+          configured: Object.values(PRICING_PLANS).filter(p => p.priceId).length
         },
         emailSystem: {
           configured: !!emailTransporter,
@@ -1682,7 +1968,7 @@ app.get('*', (req, res) => {
 async function startServer() {
   try {
     await initializeDatabase();
-    initializeEmailTransporter(); // Initialize email system
+    initializeEmailTransporter();
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 SteadyManager server running on port ${PORT}`);
@@ -1690,6 +1976,11 @@ async function startServer() {
       console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
       console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.length : 'NONE - SET ADMIN_EMAILS!'}`);
       console.log(`📧 Email system: ${emailTransporter ? 'CONFIGURED ✅' : 'DISABLED ⚠️'}`);
+      console.log(`💳 MULTI-TIER PRICING CONFIGURED:`);
+      console.log(`   🆓 Free: ${PRICING_PLANS.free.leadLimit} leads`);
+      console.log(`   💼 Professional: ${PRICING_PLANS.professional_monthly.leadLimit} leads (Monthly & Yearly)`);
+      console.log(`   🏢 Business: ${PRICING_PLANS.business_monthly.leadLimit} leads (Monthly & Yearly)`);
+      console.log(`   ⭐ Enterprise: Unlimited leads (Monthly & Yearly)`);
       console.log(`🔒 Security features:`);
       console.log(`   ✅ Rate limiting (Login: 5/15min, API: 1000/15min)`);
       console.log(`   ✅ Input validation on critical endpoints`);
@@ -1702,17 +1993,24 @@ async function startServer() {
       console.log(`      • Memory cleanup prevents spam tracking bloat`);
       console.log(`🚀 Dashboard routing: /dashboard/* → public/dashboard/`);
       console.log(`🔑 Password reset: /forgot-password & /reset-password`);
-      console.log(`💳 Stripe billing: ENHANCED with payment failure protection`);
-      console.log(`🎁 Trial system: Auto-downgrade every hour + manual controls`);
       console.log(`🔧 Monitoring endpoints:`);
-      console.log(`   📊 GET  /api/admin/trial-status (view all trials)`);
-      console.log(`   🔄 POST /api/admin/check-trials (manual trial check)`);
-      console.log(`   🧪 POST /api/admin/create-test-trial (2-minute test trial)`);
+      console.log(`   📊 GET  /api/pricing-plans (view all available plans)`);
       console.log(`   🔑 POST /api/forgot-password (TRIPLE PROTECTED reset requests)`);
       console.log(`   🔄 POST /api/reset-password (reset with token)`);
       console.log(`   📧 GET  /api/email-stats (enhanced email usage stats)`);
-      console.log(`   🏥 GET  /api/health (system status with email protection info)`);
-      console.log(`✨ SPAM-PROOF architecture with TRIPLE email protection!`);
+      console.log(`   🏥 GET  /api/health (system status with pricing info)`);
+      console.log(`✨ MULTI-TIER PRICING SYSTEM with enhanced subscription management!`);
+      
+      // Check pricing configuration
+      const configuredPlans = Object.values(PRICING_PLANS).filter(p => p.priceId).length;
+      const totalPlans = Object.keys(PRICING_PLANS).length - 1; // Subtract free plan
+      
+      if (configuredPlans < totalPlans) {
+        console.warn(`⚠️  WARNING: Only ${configuredPlans}/${totalPlans} paid plans have Stripe price IDs configured!`);
+        console.warn(`   Missing price IDs for some plans. Check your .env file.`);
+      } else {
+        console.log(`✅ All ${configuredPlans} paid plans properly configured with Stripe!`);
+      }
       
       if (ADMIN_EMAILS.length === 0) {
         console.warn(`⚠️  WARNING: No admin emails configured! Set ADMIN_EMAILS environment variable.`);

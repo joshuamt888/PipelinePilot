@@ -130,7 +130,9 @@
             Sparkles = () => '✨',
             Lock = () => '🔒',
             Mail = () => '✉️',
-            User = () => '👤'
+            User = () => '👤',
+            Building = () => '🏢',
+            Briefcase = () => '💼'
         } = LucideReact || {};
 
         const LoginApp = () => {
@@ -143,9 +145,10 @@
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 if (params.get('trial') === 'true') setView('trial');
-                if (params.get('cancelled') === 'true') setError('Payment cancelled. Try again or start free trial.');
+                if (params.get('signup') === 'true') setView('signup');
+                if (params.get('cancelled') === 'true') setError('Payment cancelled. Try again or start with free plan.');
                 if (params.get('locked') === 'true') setError('Account locked due to failed login attempts.');
-                if (params.get('upgrade') === 'success') setSuccess('Welcome to V1 Pro! Account upgraded successfully.');
+                if (params.get('upgrade') === 'success') setSuccess('Welcome! Account upgraded successfully.');
                 if (params.get('trial') === 'started') setSuccess('Trial started! You can now sign in with your credentials.');
             }, []);
 
@@ -235,6 +238,7 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
+                if (loading) return; // Prevent duplicate submissions
                 setLoading(true);
 
                 try {
@@ -252,7 +256,12 @@
                     setSuccess(result.message);
                     setTimeout(() => window.location.href = '/dashboard', 1000);
                 } catch (err) {
-                    setError(err.message);
+                    // Handle "user already exists" more gracefully
+                    if (err.message.includes('User already exists')) {
+                        setError('Account with this email already exists. Try signing in instead.');
+                    } else {
+                        setError(err.message);
+                    }
                 } finally {
                     setLoading(false);
                 }
@@ -324,20 +333,25 @@
             );
         };
 
-        // 🆓 Signup Form Component
+        // 🆓 UPDATED: Signup Form Component with Multi-Tier Pricing
         const SignupForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({
                 email: '',
                 password: '',
                 confirmPassword: '',
-                tier: 'free',
+                plan: 'free',
                 billingCycle: 'monthly'
             });
-            const [showPassword, setShowPassword] = useState({ password: false, confirm: false });
+            const [showPasswords, setShowPasswords] = useState({ password: false, confirm: false });
 
             const validatePassword = (password) => {
                 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
                 return passwordRegex.test(password);
+            };
+
+            const getPlanKey = () => {
+                if (data.plan === 'free') return 'free';
+                return `${data.plan}_${data.billingCycle}`;
             };
 
             const handleSubmit = async (e) => {
@@ -353,7 +367,8 @@
                         throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
                     }
 
-                    if (data.tier === 'pro') {
+                    if (data.plan !== 'free') {
+                        // Paid plan - create account with pending upgrade
                         const registerResponse = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -362,7 +377,7 @@
                                 password: data.password,
                                 confirmPassword: data.confirmPassword,
                                 pendingUpgrade: true,
-                                billingCycle: data.billingCycle
+                                plan: getPlanKey()
                             })
                         });
 
@@ -372,11 +387,11 @@
                         localStorage.setItem('pendingUpgradeToken', registerResult.token);
                         localStorage.setItem('pendingUpgradeUser', JSON.stringify(registerResult.user));
 
-                        const plan = data.billingCycle === 'monthly' ? 'monthly_pro' : 'annual_pro';
+                        // Create Stripe checkout session
                         const stripeResponse = await fetch('/api/create-checkout-session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ plan, email: data.email })
+                            body: JSON.stringify({ plan: getPlanKey(), email: data.email })
                         });
 
                         const stripeResult = await stripeResponse.json();
@@ -387,6 +402,7 @@
                             setTimeout(() => window.location.href = stripeResult.url, 1000);
                         }
                     } else {
+                        // Free plan
                         const response = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -406,9 +422,60 @@
                         setTimeout(() => window.location.href = '/dashboard', 1000);
                     }
                 } catch (err) {
-                    setError(err.message);
+                    // Handle different error types intelligently
+                    if (err.message.includes('Too many payment attempts')) {
+                        setError('Too many payment attempts. Please wait 1 hour before trying again.');
+                    } else if (err.message.includes('Try signing in instead')) {
+                        setError('Account exists. Please sign in instead or try the "Forgot Password" link.');
+                    } else if (err.message.includes('User already exists')) {
+                        setError('Account with this email already exists. Try signing in instead.');
+                    } else {
+                        setError(err.message);
+                    }
                 } finally {
                     setLoading(false);
+                }
+            };
+
+            const planConfigs = {
+                free: {
+                    name: 'Free',
+                    icon: Zap,
+                    color: 'gray',
+                    leads: '50',
+                    price: '$0',
+                    period: 'Forever',
+                    features: ['Basic pipeline', 'Core dashboard']
+                },
+                professional: {
+                    name: 'Professional',
+                    icon: Crown,
+                    color: 'blue',
+                    leads: '1,000',
+                    price: data.billingCycle === 'monthly' ? '$6.99' : '$69.99',
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
+                    originalPrice: data.billingCycle === 'yearly' ? '$83.88' : null,
+                    features: ['Full pipeline', 'Advanced analytics']
+                },
+                business: {
+                    name: 'Business',
+                    icon: Briefcase,
+                    color: 'purple',
+                    leads: '10,000',
+                    price: data.billingCycle === 'monthly' ? '$19.99' : '$199.99',
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
+                    originalPrice: data.billingCycle === 'yearly' ? '$239.88' : null,
+                    features: ['AI lead scoring', 'Sales automation', 'Team collaboration']
+                },
+                enterprise: {
+                    name: 'Enterprise',
+                    icon: Building,
+                    color: 'indigo',
+                    leads: 'Unlimited',
+                    price: data.billingCycle === 'monthly' ? '$49.99' : '$499.99',
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
+                    originalPrice: data.billingCycle === 'yearly' ? '$599.88' : null,
+                    features: ['Custom integrations', 'White-label', 'Dedicated support']
                 }
             };
 
@@ -418,70 +485,60 @@
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-4">Choose Your Plan</label>
                         
-                        {/* Free Plan */}
-                        <div 
-                            onClick={() => setData({...data, tier: 'free'})}
-                            className={`p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 mb-4 transform hover:scale-105 ${
-                                data.tier === 'free' ? 'border-gray-400 bg-gradient-to-r from-gray-50 to-gray-100 shadow-lg' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl flex items-center justify-center">
-                                        <Zap className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-gray-900 text-lg">Free Plan</h3>
-                                        <p className="text-sm text-gray-600 font-medium">100 leads • Basic features</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-black text-gray-600 text-2xl">$0</p>
-                                    <p className="text-xs text-gray-500 font-semibold">Forever free</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Pro Plan */}
-                        <div 
-                            onClick={() => setData({...data, tier: 'pro'})}
-                            className={`relative p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                                data.tier === 'pro' ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-purple-50 shadow-lg' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                            }`}
-                        >
-                            <div className="absolute -top-4 left-6">
-                                <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-xs font-black flex items-center space-x-2 shadow-lg">
-                                    <Star className="w-4 h-4" />
-                                    <span>POPULAR</span>
-                                </span>
-                            </div>
+                        {Object.entries(planConfigs).map(([key, config]) => {
+                            const Icon = config.icon;
+                            const isSelected = data.plan === key;
                             
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                                        <Crown className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-gray-900 text-lg">Pro Plan</h3>
-                                        <p className="text-sm text-gray-600 font-medium">1,000 leads • Full features</p>
+                            return (
+                                <div 
+                                    key={key}
+                                    onClick={() => setData({...data, plan: key})}
+                                    className={`relative p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 mb-4 transform hover:scale-105 ${
+                                        isSelected 
+                                            ? `border-${config.color}-500 bg-gradient-to-r from-${config.color}-50 to-${config.color}-100 shadow-lg` 
+                                            : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                                    }`}
+                                >
+                                    {key === 'professional' && (
+                                        <div className="absolute -top-4 left-6">
+                                            <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-xs font-black flex items-center space-x-2 shadow-lg">
+                                                <Star className="w-4 h-4" />
+                                                <span>POPULAR</span>
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-4">
+                                            <div className={`w-12 h-12 bg-gradient-to-r from-${config.color}-${key === 'free' ? '500' : '600'} to-${config.color}-${key === 'free' ? '600' : '700'} rounded-xl flex items-center justify-center`}>
+                                                <Icon className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-gray-900 text-lg">{config.name}</h3>
+                                                <p className="text-sm text-gray-600 font-medium">{config.leads} leads • {config.features[0]}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            {config.originalPrice && (
+                                                <p className="text-xs text-gray-400 line-through font-medium">{config.originalPrice}</p>
+                                            )}
+                                            <p className={`font-black text-2xl ${isSelected ? `text-${config.color}-600` : 'text-gray-600'}`}>
+                                                {config.price}
+                                            </p>
+                                            <p className="text-xs text-gray-500 font-semibold">
+                                                {config.period}
+                                                {config.originalPrice && (
+                                                    <span className="text-green-600 block">Save 20%!</span>
+                                                )}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="font-black text-blue-600 text-2xl">
-                                        ${data.billingCycle === 'monthly' ? '6.99' : '69.99'}
-                                    </p>
-                                    <p className="text-xs font-semibold">
-                                        {data.billingCycle === 'monthly' ? '/month' : '/year'}
-                                        {data.billingCycle === 'annual' && (
-                                            <span className="text-green-600 block">Save 20%!</span>
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                            );
+                        })}
 
-                        {/* Billing Toggle for Pro */}
-                        {data.tier === 'pro' && (
+                        {/* Billing Toggle for Paid Plans */}
+                        {data.plan !== 'free' && (
                             <div className="flex bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-1.5 mt-4">
                                 <button
                                     type="button"
@@ -494,12 +551,12 @@
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setData({...data, billingCycle: 'annual'})}
+                                    onClick={() => setData({...data, billingCycle: 'yearly'})}
                                     className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all ${
-                                        data.billingCycle === 'annual' ? 'bg-white text-blue-600 shadow-lg transform scale-105' : 'text-gray-600'
+                                        data.billingCycle === 'yearly' ? 'bg-white text-blue-600 shadow-lg transform scale-105' : 'text-gray-600'
                                     }`}
                                 >
-                                    Annual <span className="text-xs text-green-600 block">Save 20%</span>
+                                    Yearly <span className="text-xs text-green-600 block">Save 20%</span>
                                 </button>
                             </div>
                         )}
@@ -528,7 +585,7 @@
                             Password
                         </label>
                         <input
-                            type={showPassword.password ? 'text' : 'password'}
+                            type={showPasswords.password ? 'text' : 'password'}
                             value={data.password}
                             onChange={(e) => setData({...data, password: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
@@ -537,10 +594,10 @@
                         />
                         <button
                             type="button"
-                            onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
+                            onClick={() => setShowPasswords({...showPasswords, password: !showPasswords.password})}
                             className="text-blue-600 hover:text-purple-600 text-sm font-semibold mt-2 transition-colors"
                         >
-                            {showPassword.password ? 'Hide password' : 'Show password'}
+                            {showPasswords.password ? 'Hide password' : 'Show password'}
                         </button>
                     </div>
 
@@ -548,7 +605,7 @@
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3">Confirm Password</label>
                         <input
-                            type={showPassword.confirm ? 'text' : 'password'}
+                            type={showPasswords.confirm ? 'text' : 'password'}
                             value={data.confirmPassword}
                             onChange={(e) => setData({...data, confirmPassword: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
@@ -557,10 +614,10 @@
                         />
                         <button
                             type="button"
-                            onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
+                            onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
                             className="text-blue-600 hover:text-purple-600 text-sm font-semibold mt-2 transition-colors"
                         >
-                            {showPassword.confirm ? 'Hide password' : 'Show password'}
+                            {showPasswords.confirm ? 'Hide password' : 'Show password'}
                         </button>
                         {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
                             <p className="text-red-600 text-sm mt-2 font-medium">Passwords do not match</p>
@@ -594,7 +651,7 @@
                         type="submit"
                         disabled={loading || !validatePassword(data.password) || data.password !== data.confirmPassword}
                         className={`w-full py-4 px-6 rounded-2xl font-bold text-lg transform hover:translate-y-[-3px] hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none glow-button ${
-                            data.tier === 'pro'
+                            data.plan !== 'free'
                                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
                                 : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800'
                         }`}
@@ -602,9 +659,9 @@
                         {loading ? (
                             <div className="flex items-center justify-center space-x-3">
                                 <Loader className="w-6 h-6 animate-spin" />
-                                <span>{data.tier === 'pro' ? 'Creating Account...' : 'Creating Account...'}</span>
+                                <span>{data.plan !== 'free' ? 'Creating Account...' : 'Creating Account...'}</span>
                             </div>
-                        ) : data.tier === 'pro' ? (
+                        ) : data.plan !== 'free' ? (
                             <div className="flex items-center justify-center space-x-3">
                                 <CreditCard className="w-6 h-6" />
                                 <span>Create Account & Pay</span>
@@ -618,7 +675,7 @@
                         )}
                     </button>
 
-                    {data.tier === 'pro' && (
+                    {data.plan !== 'free' && (
                         <p className="text-sm text-center text-gray-600 font-medium">
                             Account will be created, then you'll be redirected to secure payment
                         </p>
@@ -631,11 +688,10 @@
         const TrialForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({ 
                 email: '', 
-                name: '',
                 password: '',
                 confirmPassword: ''
             });
-            const [showPassword, setShowPassword] = useState({ password: false, confirm: false });
+            const [showPasswords, setShowPasswords] = useState({ password: false, confirm: false });
 
             const validatePassword = (password) => {
                 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -660,7 +716,6 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             email: data.email,
-                            name: data.name,
                             password: data.password,
                             confirmPassword: data.confirmPassword
                         })
@@ -672,7 +727,7 @@
                     if (result.token) {
                         localStorage.setItem('token', result.token);
                         localStorage.setItem('user_data', JSON.stringify(result.user));
-                        setSuccess('🎉 Free trial started! Welcome to V1 Pro!');
+                        setSuccess('🎉 Free trial started! Welcome to Professional!');
                         setTimeout(() => window.location.href = '/dashboard', 1500);
                     } else {
                         setSuccess('🎉 Free trial started! You can now sign in.');
@@ -694,7 +749,7 @@
                             </div>
                             <h3 className="text-2xl font-black text-gray-900">14-Day Free Trial</h3>
                         </div>
-                        <p className="text-lg text-gray-700 font-semibold">Full V1 Pro access • No credit card required</p>
+                        <p className="text-lg text-gray-700 font-semibold">Full Professional access • No credit card required</p>
                     </div>
 
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
@@ -706,7 +761,7 @@
                             </div>
                             <div className="flex items-center space-x-3">
                                 <span className="text-green-500 text-lg">✅</span>
-                                <span className="font-semibold">All Pro features unlocked</span>
+                                <span className="font-semibold">All Professional features unlocked</span>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <span className="text-green-500 text-lg">✅</span>
@@ -717,22 +772,6 @@
                                 <span className="font-semibold">Auto-downgrade to free after 14 days</span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Name */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
-                            <User className="w-4 h-4 mr-2 text-green-600" />
-                            Your Name
-                        </label>
-                        <input
-                            type="text"
-                            value={data.name}
-                            onChange={(e) => setData({...data, name: e.target.value})}
-                            className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
-                            placeholder="Enter your full name"
-                            required
-                        />
                     </div>
 
                     {/* Email */}
@@ -758,7 +797,7 @@
                             Create Password
                         </label>
                         <input
-                            type={showPassword.password ? 'text' : 'password'}
+                            type={showPasswords.password ? 'text' : 'password'}
                             value={data.password}
                             onChange={(e) => setData({...data, password: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
@@ -767,10 +806,10 @@
                         />
                         <button
                             type="button"
-                            onClick={() => setShowPassword({...showPassword, password: !showPassword.password})}
+                            onClick={() => setShowPasswords({...showPasswords, password: !showPasswords.password})}
                             className="text-green-600 hover:text-blue-600 text-sm font-semibold mt-2 transition-colors"
                         >
-                            {showPassword.password ? 'Hide password' : 'Show password'}
+                            {showPasswords.password ? 'Hide password' : 'Show password'}
                         </button>
                     </div>
 
@@ -778,7 +817,7 @@
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3">Confirm Password</label>
                         <input
-                            type={showPassword.confirm ? 'text' : 'password'}
+                            type={showPasswords.confirm ? 'text' : 'password'}
                             value={data.confirmPassword}
                             onChange={(e) => setData({...data, confirmPassword: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
@@ -787,10 +826,10 @@
                         />
                         <button
                             type="button"
-                            onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
+                            onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
                             className="text-green-600 hover:text-blue-600 text-sm font-semibold mt-2 transition-colors"
                         >
-                            {showPassword.confirm ? 'Hide password' : 'Show password'}
+                            {showPasswords.confirm ? 'Hide password' : 'Show password'}
                         </button>
                         {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
                             <p className="text-red-600 text-sm mt-2 font-medium">Passwords do not match</p>
