@@ -135,6 +135,33 @@
             Briefcase = () => '💼'
         } = LucideReact || {};
 
+        // ✅ FIXED: Token validation function
+        const validateTokenAndRedirect = async (token) => {
+            try {
+                console.log('🔍 Validating token before dashboard redirect...');
+                
+                const response = await fetch('/api/user/settings', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    console.log('✅ Token validated successfully, user:', userData.email);
+                    window.location.href = '/dashboard';
+                } else {
+                    throw new Error('Token validation failed');
+                }
+            } catch (error) {
+                console.error('❌ Token validation failed:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user_data');
+                throw new Error('Authentication failed. Please try again.');
+            }
+        };
+
         const LoginApp = () => {
             const [view, setView] = useState('login'); // 'login', 'signup', 'trial'
             const [loading, setLoading] = useState(false);
@@ -150,6 +177,8 @@
                 if (params.get('locked') === 'true') setError('Account locked due to failed login attempts.');
                 if (params.get('upgrade') === 'success') setSuccess('Welcome! Account upgraded successfully.');
                 if (params.get('trial') === 'started') setSuccess('Trial started! You can now sign in with your credentials.');
+                if (params.get('error') === 'auth_required') setError('Please sign in to access your dashboard.');
+                if (params.get('error') === 'session_expired') setError('Your session expired. Please sign in again.');
             }, []);
 
             // Clear messages when switching views
@@ -231,7 +260,7 @@
             );
         };
 
-        // 🔐 Login Form Component
+        // 🔐 FIXED: Login Form Component with token validation
         const LoginForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({ email: '', password: '' });
             const [showPassword, setShowPassword] = useState(false);
@@ -254,7 +283,15 @@
                     localStorage.setItem('token', result.token);
                     localStorage.setItem('user_data', JSON.stringify(result.user));
                     setSuccess(result.message);
-                    setTimeout(() => window.location.href = '/dashboard', 1000);
+
+                    // ✅ FIXED: Validate token before redirecting
+                    setTimeout(async () => {
+                        try {
+                            await validateTokenAndRedirect(result.token);
+                        } catch (error) {
+                            setError(error.message);
+                        }
+                    }, 1000);
                 } catch (err) {
                     // Handle "user already exists" more gracefully
                     if (err.message.includes('User already exists')) {
@@ -333,7 +370,7 @@
             );
         };
 
-        // 🆓 UPDATED: Signup Form Component with Multi-Tier Pricing
+        // 🆓 FIXED: Signup Form Component with token validation
         const SignupForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({
                 email: '',
@@ -419,7 +456,15 @@
                         localStorage.setItem('token', result.token);
                         localStorage.setItem('user_data', JSON.stringify(result.user));
                         setSuccess('Free account created successfully!');
-                        setTimeout(() => window.location.href = '/dashboard', 1000);
+                        
+                        // ✅ FIXED: Validate token before redirecting
+                        setTimeout(async () => {
+                            try {
+                                await validateTokenAndRedirect(result.token);
+                            } catch (error) {
+                                setError(error.message);
+                            }
+                        }, 1000);
                     }
                 } catch (err) {
                     // Handle different error types intelligently
@@ -578,29 +623,6 @@
                         />
                     </div>
 
-                    {/* Password */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
-                            <Lock className="w-4 h-4 mr-2 text-blue-600" />
-                            Password
-                        </label>
-                        <input
-                            type={showPasswords.password ? 'text' : 'password'}
-                            value={data.password}
-                            onChange={(e) => setData({...data, password: e.target.value})}
-                            className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
-                            placeholder="Create a password"
-                            required
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, password: !showPasswords.password})}
-                            className="text-blue-600 hover:text-purple-600 text-sm font-semibold mt-2 transition-colors"
-                        >
-                            {showPasswords.password ? 'Hide password' : 'Show password'}
-                        </button>
-                    </div>
-
                     {/* Confirm Password */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3">Confirm Password</label>
@@ -684,7 +706,7 @@
             );
         };
 
-        // 🎁 Trial Form Component
+        // 🎁 FIXED: Trial Form Component with token validation
         const TrialForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({ 
                 email: '', 
@@ -728,7 +750,15 @@
                         localStorage.setItem('token', result.token);
                         localStorage.setItem('user_data', JSON.stringify(result.user));
                         setSuccess('🎉 Free trial started! Welcome to Professional!');
-                        setTimeout(() => window.location.href = '/dashboard', 1500);
+                        
+                        // ✅ FIXED: Validate token before redirecting
+                        setTimeout(async () => {
+                            try {
+                                await validateTokenAndRedirect(result.token);
+                            } catch (error) {
+                                setError(error.message);
+                            }
+                        }, 1500);
                     } else {
                         setSuccess('🎉 Free trial started! You can now sign in.');
                         setTimeout(() => window.location.href = '/login?trial=started', 2000);

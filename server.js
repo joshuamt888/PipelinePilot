@@ -109,7 +109,7 @@ function incrementEmailCount() {
   console.log(`📧 Emails sent today: ${dailyEmailCount}/90`);
 }
 
-// 🛡️ Enhanced Email Rate Limiting - Track emails per email address
+// 🛡️ IMPROVED: More flexible email rate limiting per email address
 const emailRequestTracker = new Map();
 
 function canSendEmailToAddress(email) {
@@ -127,8 +127,8 @@ function canSendEmailToAddress(email) {
   const recentRequests = requests.filter(timestamp => timestamp > oneHourAgo);
   emailRequestTracker.set(key, recentRequests);
   
-  // Allow max 3 emails per hour per email address
-  return recentRequests.length < 3;
+  // Allow max 5 emails per hour per email address (increased from 3)
+  return recentRequests.length < 5;
 }
 
 function recordEmailRequest(email) {
@@ -220,15 +220,29 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.set('trust proxy', 1);
 
-// 🔒 Rate limiting (simplified but effective)
-const strictLimiter = rateLimit({
+// 🔒 IMPROVED: Separate rate limiters for different actions
+const loginLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 10, // 10 login attempts per minute (more flexible!)
+  message: { error: 'Too many login attempts, please wait 1 minute' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Login/register attempts
-  message: { error: 'Too many attempts, please try again later' }
+  max: 5, // 5 registration attempts per 15 minutes
+  message: { error: 'Too many registration attempts, please try again later' }
+});
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes window (shorter!)
+  max: 5, // 5 password reset attempts per 5 minutes (more attempts!)
+  message: { error: 'Too many password reset attempts, please wait 5 minutes' }
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // API calls
   message: { error: 'API rate limit exceeded' }
 });
@@ -396,6 +410,10 @@ async function createUser(userData) {
     return result.rows[0];
   } catch (error) {
     console.error('Database error in createUser:', error.message);
+    // Handle unique constraint violation (duplicate email)
+    if (error.code === '23505') {
+      throw new Error('User with this email already exists');
+    }
     throw new Error('Failed to create user');
   } finally {
     client.release();
@@ -465,6 +483,8 @@ async function incrementUserLeadCount(userId) {
        WHERE id = $1`,
       [userId]
     );
+  } catch (error) {
+    console.error('Database error in incrementUserLeadCount:', error.message);
   } finally {
     client.release();
   }
@@ -479,6 +499,8 @@ async function decrementUserLeadCount(userId) {
        WHERE id = $1`,
       [userId]
     );
+  } catch (error) {
+    console.error('Database error in decrementUserLeadCount:', error.message);
   } finally {
     client.release();
   }
@@ -501,6 +523,8 @@ async function saveResetToken(email, token) {
        WHERE email = $3`,
       [token, expiresAt.toISOString(), email.toLowerCase()]
     );
+  } catch (error) {
+    console.error('Database error in saveResetToken:', error.message);
   } finally {
     client.release();
   }
@@ -533,53 +557,28 @@ async function clearResetToken(userId) {
        WHERE id = $1`,
       [userId]
     );
+  } catch (error) {
+    console.error('Database error in clearResetToken:', error.message);
   } finally {
     client.release();
   }
 }
 
-// 📁 Static files and dashboard routing
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 🚀 Dashboard folder routing
-app.get('/dashboard', (req, res) => {
-  const { upgrade, session_id } = req.query;
+// 🎯 Helper function to map subscription tiers to folder paths
+function getTierPath(subscriptionTier) {
+  const tierMap = {
+    'FREE': 'free',
+    'PROFESSIONAL': 'professional',
+    'PROFESSIONAL_TRIAL': 'professional', // Trials get professional experience
+    'BUSINESS': 'business', 
+    'ENTERPRISE': 'enterprise',
+    'ADMIN': 'admin'
+  };
   
-  if (upgrade === 'success') {
-    console.log('✅ Payment success redirect:', session_id);
-  }
-  
-  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
-});
-
-// Handle all dashboard sub-pages
-app.get('/dashboard/*', (req, res) => {
-  const requestPath = req.params[0];
-  
-  // If requesting an asset file (CSS, JS, icons), serve it directly
-  if (requestPath.startsWith('assets/')) {
-    const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
-    res.sendFile(filePath, (err) => {
-      if (err) {
-        console.warn(`📁 Asset not found: ${requestPath}`);
-        res.status(404).json({ error: 'Asset not found' });
-      }
-    });
-  } 
-  // For any other dashboard route, serve the main SPA (React will handle routing)
-  else {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
-  }
-});
-
-// 🔐 Password reset routes
-app.get('/forgot-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
-});
-
-app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html'));
-});
+  const path = tierMap[subscriptionTier] || 'free';
+  console.log(`🗂️  Tier mapping: ${subscriptionTier} → ${path}`);
+  return path;
+}
 
 // 🔒 Authentication middleware
 const authenticateToken = async (req, res, next) => {
@@ -606,14 +605,96 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// 📁 Static files and dashboard routing
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 🚀 UPDATED: Tier-based dashboard routing
+app.get('/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const { upgrade, session_id } = req.query;
+    
+    if (upgrade === 'success') {
+      console.log('✅ Payment success redirect:', session_id);
+    }
+    
+    // Get user data to determine tier
+    const user = await findUserById(req.user.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    // Determine tier path based on subscription
+    const tierPath = getTierPath(user.subscription_tier);
+    
+    console.log(`🎯 Serving dashboard for ${user.email} (${user.subscription_tier}) → tiers/${tierPath}/`);
+    
+    // Serve the tier-specific dashboard
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html'));
+  } catch (error) {
+    console.error('Dashboard routing error:', error.message);
+    res.status(500).json({ error: 'Failed to load dashboard' });
+  }
+});
+
+// Handle all dashboard sub-pages with tier awareness
+app.get('/dashboard/*', authenticateToken, async (req, res) => {
+  try {
+    const requestPath = req.params[0];
+    
+    // If requesting shared assets, serve directly (if you add shared folder later)
+    if (requestPath.startsWith('shared/')) {
+      const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
+      return res.sendFile(filePath, (err) => {
+        if (err) {
+          console.warn(`📁 Shared asset not found: ${requestPath}`);
+          res.status(404).json({ error: 'Asset not found' });
+        }
+      });
+    }
+    
+    // If requesting tier-specific assets, serve from user's tier
+    if (requestPath.startsWith('tiers/')) {
+      const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
+      return res.sendFile(filePath, (err) => {
+        if (err) {
+          console.warn(`📁 Tier asset not found: ${requestPath}`);
+          res.status(404).json({ error: 'Asset not found' });
+        }
+      });
+    }
+    
+    // For any other dashboard route, redirect to user's tier dashboard
+    const user = await findUserById(req.user.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    const tierPath = getTierPath(user.subscription_tier);
+    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html'));
+    
+  } catch (error) {
+    console.error('Dashboard sub-route error:', error.message);
+    res.status(500).json({ error: 'Failed to load dashboard page' });
+  }
+});
+
+// 🔐 Password reset routes
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
+});
+
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login', 'reset-password.html'));
+});
+
 // 🚀 ROUTES & API ENDPOINTS
 
-// Apply rate limiting
-app.use('/api/login', strictLimiter);
-app.use('/api/register', strictLimiter);
-app.use('/api/start-trial', strictLimiter);
-app.use('/api/forgot-password', strictLimiter);
-app.use('/api/reset-password', strictLimiter);
+// IMPROVED: Apply separate rate limiting for different actions
+app.use('/api/login', loginLimiter);            // 10 attempts per minute
+app.use('/api/register', registerLimiter);      // 5 attempts per 15 minutes  
+app.use('/api/start-trial', registerLimiter);   // 5 attempts per 15 minutes
+app.use('/api/forgot-password', passwordResetLimiter); // 5 attempts per 5 minutes
+app.use('/api/reset-password', passwordResetLimiter);  // 5 attempts per 5 minutes
 app.use('/api', apiLimiter);
 
 // 🎁 UPDATED: Trial endpoint with pending user retry logic and debugging
@@ -994,7 +1075,7 @@ app.post('/api/login',
   }
 );
 
-// 🔑 Enhanced Forgot Password Endpoint with Triple Protection
+// 🔑 Enhanced Forgot Password Endpoint with improved protection
 app.post('/api/forgot-password',
   [validateEmail, handleValidationErrors],
   async (req, res) => {
@@ -1008,10 +1089,10 @@ app.post('/api/forgot-password',
         });
       }
       
-      // 🛡️ Check 2: Per-email rate limits (3 emails per hour per email)
+      // 🛡️ Check 2: Per-email rate limits (5 emails per hour per email)
       if (!canSendEmailToAddress(email)) {
         return res.status(429).json({ 
-          error: "Too many reset requests for this email. Please wait 1 hour before requesting again." 
+          error: "Too many reset requests for this email (5 max per hour). Please wait before requesting again." 
         });
       }
       
@@ -1482,6 +1563,7 @@ app.get('/api/stripe-config', (req, res) => {
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
   });
 });
+
 app.get('/api/pricing-plans', (req, res) => {
   const plans = Object.entries(PRICING_PLANS).map(([key, plan]) => ({
     id: key,
@@ -1606,7 +1688,7 @@ app.put('/api/leads/:id',
 
         for (const field of allowedFields) {
           if (req.body.hasOwnProperty(field)) {
-            updateFields.push(`${field} = ${paramCount}`);
+            updateFields.push(`${field} = $${paramCount}`);
             let value = req.body[field];
             
             if (field === 'email' && value) {
@@ -1628,7 +1710,7 @@ app.put('/api/leads/:id',
         const updateQuery = `
           UPDATE ${getTableName('leads')} 
           SET ${updateFields.join(', ')}
-          WHERE id = ${paramCount}
+          WHERE id = $${paramCount}
           RETURNING *
         `;
 
@@ -1873,7 +1955,7 @@ app.get('/api/email-stats', authenticateToken, async (req, res) => {
     emailConfigured: !!emailTransporter,
     perEmailTracking: {
       totalEmailsTracked: emailRequestTracker.size,
-      description: 'Max 3 emails per hour per email address'
+      description: 'Max 5 emails per hour per email address'
     }
   });
 });
@@ -1918,8 +2000,8 @@ app.get('/api/health', async (req, res) => {
           canSend: canSendEmail(),
           protections: [
             '90 emails per day globally',
-            '3 emails per hour per email address',
-            '5 requests per 15 minutes per IP'
+            '5 emails per hour per email address',
+            '5 requests per 5 minutes per IP for password reset'
           ]
         }
       });
@@ -1973,33 +2055,24 @@ async function startServer() {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 SteadyManager server running on port ${PORT}`);
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
-      console.log(`🗄️  Database tables: ${tablePrefix ? tablePrefix + '*' : 'production tables'}`);
-      console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length > 0 ? ADMIN_EMAILS.length : 'NONE - SET ADMIN_EMAILS!'}`);
-      console.log(`📧 Email system: ${emailTransporter ? 'CONFIGURED ✅' : 'DISABLED ⚠️'}`);
+      console.log(`🔒 IMPROVED Security features:`);
+      console.log(`   ✅ Flexible rate limiting:`);
+      console.log(`      • Login: 10 attempts per minute (was 5 per 15min)`);
+      console.log(`      • Password reset: 5 attempts per 5 minutes (was 3 per 15min)`);
+      console.log(`      • Email reset: 5 per hour per email (was 3)`);
+      console.log(`   ✅ All dashboard routes require authentication`);
+      console.log(`   ✅ Tier-based file serving works properly`);
+      console.log(`🎯 Dashboard serves tier-specific content from: /tiers/{tier}/`);
       console.log(`💳 MULTI-TIER PRICING CONFIGURED:`);
       console.log(`   🆓 Free: ${PRICING_PLANS.free.leadLimit} leads`);
       console.log(`   💼 Professional: ${PRICING_PLANS.professional_monthly.leadLimit} leads (Monthly & Yearly)`);
       console.log(`   🏢 Business: ${PRICING_PLANS.business_monthly.leadLimit} leads (Monthly & Yearly)`);
       console.log(`   ⭐ Enterprise: Unlimited leads (Monthly & Yearly)`);
-      console.log(`🔒 Security features:`);
-      console.log(`   ✅ Rate limiting (Login: 5/15min, API: 1000/15min)`);
-      console.log(`   ✅ Input validation on critical endpoints`);
-      console.log(`   ✅ SQL injection protection`);
-      console.log(`   ✅ Basic CORS protection`);
-      console.log(`   🛡️ ENHANCED EMAIL PROTECTION:`);
-      console.log(`      • 90 emails per day globally`);
-      console.log(`      • 3 emails per hour per email address`);
-      console.log(`      • 5 requests per 15 minutes per IP`);
-      console.log(`      • Memory cleanup prevents spam tracking bloat`);
-      console.log(`🚀 Dashboard routing: /dashboard/* → public/dashboard/`);
-      console.log(`🔑 Password reset: /forgot-password & /reset-password`);
-      console.log(`🔧 Monitoring endpoints:`);
-      console.log(`   📊 GET  /api/pricing-plans (view all available plans)`);
-      console.log(`   🔑 POST /api/forgot-password (TRIPLE PROTECTED reset requests)`);
-      console.log(`   🔄 POST /api/reset-password (reset with token)`);
-      console.log(`   📧 GET  /api/email-stats (enhanced email usage stats)`);
-      console.log(`   🏥 GET  /api/health (system status with pricing info)`);
-      console.log(`✨ MULTI-TIER PRICING SYSTEM with enhanced subscription management!`);
+      console.log(`🛡️ EMAIL SPAM PROTECTION ACTIVE:`);
+      console.log(`   • Global daily limit: ${dailyEmailCount}/90`);
+      console.log(`   • Per-email hourly limit: 5 max (increased from 3)`);
+      console.log(`   • Currently tracking: ${emailRequestTracker.size} unique emails`);
+      console.log(`   • Auto-cleanup running every hour`);
       
       // Check pricing configuration
       const configuredPlans = Object.values(PRICING_PLANS).filter(p => p.priceId).length;
@@ -2024,12 +2097,6 @@ async function startServer() {
         console.warn(`   EMAIL_USER=apikey`);
         console.warn(`   EMAIL_PASS=your-sendgrid-api-key`);
         console.warn(`   EMAIL_FROM=josh@steadyscaling.com`);
-      } else {
-        console.log(`🛡️ EMAIL SPAM PROTECTION ACTIVE:`);
-        console.log(`   • Global daily limit: ${dailyEmailCount}/90`);
-        console.log(`   • Per-email hourly limit: 3 max`);
-        console.log(`   • Currently tracking: ${emailRequestTracker.size} unique emails`);
-        console.log(`   • Auto-cleanup running every hour`);
       }
     });
   } catch (error) {
