@@ -18,6 +18,9 @@
     <!-- Lucide React Icons -->
     <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
 
+    <!-- 🔐 SECURE AUTH: Load auth manager -->
+    <script src="/login/js/auth.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
@@ -99,15 +102,6 @@
         .glow-button:hover::before {
             left: 100%;
         }
-
-        .pulse-ring {
-            animation: pulse-ring 2s infinite;
-        }
-
-        @keyframes pulse-ring {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.2); opacity: 0; }
-        }
     </style>
 </head>
 <body>
@@ -135,38 +129,56 @@
             Briefcase = () => '💼'
         } = LucideReact || {};
 
-        // ✅ FIXED: Token validation function
-        const validateTokenAndRedirect = async (token) => {
-            try {
-                console.log('🔍 Validating token before dashboard redirect...');
-                
-                const response = await fetch('/api/user/settings', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const userData = await response.json();
-                    console.log('✅ Token validated successfully, user:', userData.email);
-                    window.location.href = '/dashboard';
+        // ✅ FIXED: Wait for authManager to be available
+        const waitForAuthManager = () => {
+            return new Promise((resolve) => {
+                if (window.authManager) {
+                    resolve(window.authManager);
                 } else {
-                    throw new Error('Token validation failed');
+                    // Check every 100ms until authManager is available
+                    const checkForAuth = setInterval(() => {
+                        if (window.authManager) {
+                            clearInterval(checkForAuth);
+                            resolve(window.authManager);
+                        }
+                    }, 100);
                 }
-            } catch (error) {
-                console.error('❌ Token validation failed:', error);
-                localStorage.removeItem('token');
-                localStorage.removeItem('user_data');
-                throw new Error('Authentication failed. Please try again.');
-            }
+            });
         };
 
         const LoginApp = () => {
-            const [view, setView] = useState('login'); // 'login', 'signup', 'trial'
+            const [view, setView] = useState('login');
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
             const [success, setSuccess] = useState('');
+            const [authReady, setAuthReady] = useState(false);
+
+            // ✅ FIXED: Wait for authManager before doing auth checks
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        const authManager = await waitForAuthManager();
+                        setAuthReady(true);
+                        
+                        // Now check if already logged in
+                        if (authManager.getCookie('isLoggedIn')) {
+                            console.log('🔍 User appears to be logged in, checking...');
+                            const isAuthenticated = await authManager.checkAuth();
+                            if (isAuthenticated) {
+                                console.log('✅ User is authenticated, redirecting to dashboard');
+                                window.location.href = '/dashboard';
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Auth initialization failed:', error);
+                        // Continue without auth manager - fallback to basic functionality
+                        setAuthReady(true);
+                    }
+                };
+                
+                initAuth();
+            }, []);
 
             // Check URL params on load
             useEffect(() => {
@@ -174,7 +186,6 @@
                 if (params.get('trial') === 'true') setView('trial');
                 if (params.get('signup') === 'true') setView('signup');
                 if (params.get('cancelled') === 'true') setError('Payment cancelled. Try again or start with free plan.');
-                if (params.get('locked') === 'true') setError('Account locked due to failed login attempts.');
                 if (params.get('upgrade') === 'success') setSuccess('Welcome! Account upgraded successfully.');
                 if (params.get('trial') === 'started') setSuccess('Trial started! You can now sign in with your credentials.');
                 if (params.get('error') === 'auth_required') setError('Please sign in to access your dashboard.');
@@ -187,19 +198,28 @@
                 setSuccess('');
             }, [view]);
 
+            // Show loading while waiting for auth manager
+            if (!authReady) {
+                return (
+                    <div className="min-h-screen gradient-bg flex items-center justify-center">
+                        <div className="text-center text-white">
+                            <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
+                            <p className="text-lg font-medium">Loading...</p>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="min-h-screen gradient-bg flex items-center justify-center p-4 relative overflow-hidden">
-                    {/* Floating orbs */}
                     <div className="floating-orb"></div>
                     <div className="floating-orb"></div>
                     <div className="floating-orb"></div>
                     
                     <div className="glass-card rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative z-10">
-                        {/* Gradient accent */}
                         <div className="h-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500"></div>
                         
                         <div className="p-8">
-                            {/* Header */}
                             <div className="text-center mb-8">
                                 <h1 className="text-3xl font-black text-gray-900 mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                     SteadyManager
@@ -207,7 +227,6 @@
                                 <p className="text-gray-600 font-medium">Transform leads into revenue</p>
                             </div>
 
-                            {/* View Toggle */}
                             <div className="flex bg-gray-100 rounded-2xl p-1.5 mb-8 relative gap-1">
                                 {['login', 'signup', 'trial'].map((tab) => (
                                     <button
@@ -216,7 +235,7 @@
                                         className={`flex-1 py-3 px-4 text-sm font-bold rounded-xl transition-all duration-300 relative ${
                                             view === tab 
                                                 ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105 z-10' 
-                                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50 hover:outline hover:outline-2 hover:outline-purple-500 hover:outline-offset-[-2px] hover:z-20'
+                                                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                                         }`}
                                     >
                                         {tab === 'login' && <Lock className="w-4 h-4 inline mr-1" />}
@@ -227,12 +246,10 @@
                                 ))}
                             </div>
 
-                            {/* Forms */}
                             {view === 'login' && <LoginForm loading={loading} setLoading={setLoading} setError={setError} setSuccess={setSuccess} />}
                             {view === 'signup' && <SignupForm loading={loading} setLoading={setLoading} setError={setError} setSuccess={setSuccess} />}
                             {view === 'trial' && <TrialForm loading={loading} setLoading={setLoading} setError={setError} setSuccess={setSuccess} />}
 
-                            {/* Messages - MOVED TO BOTTOM */}
                             {success && (
                                 <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl flex items-center space-x-3">
                                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -247,12 +264,11 @@
                                 </div>
                             )}
 
-                            {/* Footer */}
                             <div className="flex justify-center space-x-6 pt-8 border-t border-gray-200 mt-8">
-                                <a href="/pricing" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors hover:scale-105 transform">Pricing</a>
-                                <a href="/privacy" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors hover:scale-105 transform">Privacy</a>
-                                <a href="/terms" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors hover:scale-105 transform">Terms</a>
-                                <a href="/" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors hover:scale-105 transform">← Home</a>
+                                <a href="/pricing" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">Pricing</a>
+                                <a href="/privacy" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">Privacy</a>
+                                <a href="/terms" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">Terms</a>
+                                <a href="/" className="text-gray-500 hover:text-blue-600 text-sm font-medium transition-colors">← Home</a>
                             </div>
                         </div>
                     </div>
@@ -260,45 +276,52 @@
             );
         };
 
-        // 🔐 FIXED: Login Form Component with token validation
+        // ✅ UPDATED: Login Form with safe authManager access
         const LoginForm = ({ loading, setLoading, setError, setSuccess }) => {
-            const [data, setData] = useState({ email: '', password: '' });
+            const [data, setData] = useState({ email: '', password: '', rememberMe: false });
             const [showPassword, setShowPassword] = useState(false);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                if (loading) return; // Prevent duplicate submissions
+                if (loading) return;
                 setLoading(true);
 
                 try {
-                    const response = await fetch('/api/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-
-                    const result = await response.json();
-                    if (!response.ok) throw new Error(result.error);
-
-                    localStorage.setItem('token', result.token);
-                    localStorage.setItem('user_data', JSON.stringify(result.user));
-                    setSuccess(result.message);
-
-                    // ✅ FIXED: Validate token before redirecting
-                    setTimeout(async () => {
-                        try {
-                            await validateTokenAndRedirect(result.token);
-                        } catch (error) {
-                            setError(error.message);
+                    console.log('🔑 Attempting login for:', data.email);
+                    
+                    // ✅ FIXED: Check if authManager is available, fallback to manual fetch
+                    if (window.authManager) {
+                        const result = await window.authManager.login(data.email, data.password, data.rememberMe);
+                        
+                        if (!result.success) {
+                            setError(result.error);
+                        } else {
+                            setSuccess('Login successful! Redirecting...');
                         }
-                    }, 1000);
-                } catch (err) {
-                    // Handle "user already exists" more gracefully
-                    if (err.message.includes('User already exists')) {
-                        setError('Account with this email already exists. Try signing in instead.');
                     } else {
-                        setError(err.message);
+                        // Fallback to manual fetch if authManager not available
+                        const response = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+                        
+                        if (!response.ok) {
+                            setError(result.error);
+                        } else {
+                            setSuccess(result.message);
+                            // Simple redirect to dashboard
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 1000);
+                        }
                     }
+                } catch (err) {
+                    console.error('❌ Login error:', err);
+                    setError(err.message || 'Login failed. Please try again.');
                 } finally {
                     setLoading(false);
                 }
@@ -334,13 +357,24 @@
                             placeholder="Enter your password"
                             required
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="text-blue-600 hover:text-purple-600 text-sm font-semibold mt-2 transition-colors"
-                        >
-                            {showPassword ? 'Hide password' : 'Show password'}
-                        </button>
+                        <div className="flex items-center justify-between mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="text-blue-600 hover:text-purple-600 text-sm font-semibold transition-colors"
+                            >
+                                {showPassword ? 'Hide password' : 'Show password'}
+                            </button>
+                            <label className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={data.rememberMe}
+                                    onChange={(e) => setData({...data, rememberMe: e.target.checked})}
+                                    className="mr-2"
+                                />
+                                <span className="text-sm text-gray-600">Remember me</span>
+                            </label>
+                        </div>
                     </div>
 
                     <button
@@ -362,7 +396,7 @@
                     </button>
 
                     <div className="text-center pt-4">
-                        <a href="/forgot-password" className="text-blue-600 hover:text-purple-600 text-sm font-bold transition-colors hover:scale-105 transform inline-block">
+                        <a href="/forgot-password" className="text-blue-600 hover:text-purple-600 text-sm font-bold transition-colors">
                             Forgot your password? →
                         </a>
                     </div>
@@ -370,7 +404,7 @@
             );
         };
 
-        // 🆓 FIXED: Signup Form Component with token validation
+        // Signup Form
         const SignupForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({
                 email: '',
@@ -379,11 +413,10 @@
                 plan: 'free',
                 billingCycle: 'monthly'
             });
-            const [showPasswords, setShowPasswords] = useState({ password: false, confirm: false });
 
             const validatePassword = (password) => {
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-                return passwordRegex.test(password);
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+                return password.length >= 8 && passwordRegex.test(password);
             };
 
             const getPlanKey = () => {
@@ -401,14 +434,14 @@
                     }
 
                     if (!validatePassword(data.password)) {
-                        throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
+                        throw new Error('Password must be 8+ chars with uppercase, lowercase, and number');
                     }
 
                     if (data.plan !== 'free') {
-                        // Paid plan - create account with pending upgrade
                         const registerResponse = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
                             body: JSON.stringify({
                                 email: data.email,
                                 password: data.password,
@@ -421,10 +454,6 @@
                         const registerResult = await registerResponse.json();
                         if (!registerResponse.ok) throw new Error(registerResult.error);
 
-                        localStorage.setItem('pendingUpgradeToken', registerResult.token);
-                        localStorage.setItem('pendingUpgradeUser', JSON.stringify(registerResult.user));
-
-                        // Create Stripe checkout session
                         const stripeResponse = await fetch('/api/create-checkout-session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -439,10 +468,10 @@
                             setTimeout(() => window.location.href = stripeResult.url, 1000);
                         }
                     } else {
-                        // Free plan
                         const response = await fetch('/api/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
                             body: JSON.stringify({
                                 email: data.email,
                                 password: data.password,
@@ -453,30 +482,14 @@
                         const result = await response.json();
                         if (!response.ok) throw new Error(result.error);
 
-                        localStorage.setItem('token', result.token);
-                        localStorage.setItem('user_data', JSON.stringify(result.user));
                         setSuccess('Free account created successfully!');
                         
-                        // ✅ FIXED: Validate token before redirecting
-                        setTimeout(async () => {
-                            try {
-                                await validateTokenAndRedirect(result.token);
-                            } catch (error) {
-                                setError(error.message);
-                            }
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
                         }, 1000);
                     }
                 } catch (err) {
-                    // Handle different error types intelligently
-                    if (err.message.includes('Too many payment attempts')) {
-                        setError('Too many payment attempts. Please wait 1 hour before trying again.');
-                    } else if (err.message.includes('Try signing in instead')) {
-                        setError('Account exists. Please sign in instead or try the "Forgot Password" link.');
-                    } else if (err.message.includes('User already exists')) {
-                        setError('Account with this email already exists. Try signing in instead.');
-                    } else {
-                        setError(err.message);
-                    }
+                    setError(err.message);
                 } finally {
                     setLoading(false);
                 }
@@ -486,47 +499,35 @@
                 free: {
                     name: 'Free',
                     icon: Zap,
-                    color: 'gray',
                     leads: '50',
                     price: '$0',
-                    period: 'Forever',
-                    features: ['Basic pipeline', 'Core dashboard']
+                    period: 'Forever'
                 },
                 professional: {
                     name: 'Professional',
                     icon: Crown,
-                    color: 'blue',
                     leads: '1,000',
                     price: data.billingCycle === 'monthly' ? '$6.99' : '$69.99',
-                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
-                    originalPrice: data.billingCycle === 'yearly' ? '$83.88' : null,
-                    features: ['Full pipeline', 'Advanced analytics']
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year'
                 },
                 business: {
                     name: 'Business',
                     icon: Briefcase,
-                    color: 'purple',
                     leads: '10,000',
                     price: data.billingCycle === 'monthly' ? '$19.99' : '$199.99',
-                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
-                    originalPrice: data.billingCycle === 'yearly' ? '$239.88' : null,
-                    features: ['AI lead scoring', 'Sales automation', 'Team collaboration']
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year'
                 },
                 enterprise: {
                     name: 'Enterprise',
                     icon: Building,
-                    color: 'indigo',
                     leads: 'Unlimited',
                     price: data.billingCycle === 'monthly' ? '$49.99' : '$499.99',
-                    period: data.billingCycle === 'monthly' ? '/month' : '/year',
-                    originalPrice: data.billingCycle === 'yearly' ? '$599.88' : null,
-                    features: ['Custom integrations', 'White-label', 'Dedicated support']
+                    period: data.billingCycle === 'monthly' ? '/month' : '/year'
                 }
             };
 
             return (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Plan Selection */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-4">Choose Your Plan</label>
                         
@@ -538,58 +539,47 @@
                                 <div 
                                     key={key}
                                     onClick={() => setData({...data, plan: key})}
-                                    className={`relative p-5 border-2 rounded-2xl cursor-pointer transition-all duration-300 mb-4 transform hover:scale-105 ${
+                                    className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 mb-3 ${
                                         isSelected 
-                                            ? `border-${config.color}-500 bg-gradient-to-r from-${config.color}-50 to-${config.color}-100 shadow-lg` 
-                                            : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                                            ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                                            : 'border-gray-200 hover:border-gray-300'
                                     }`}
                                 >
                                     {key === 'professional' && (
-                                        <div className="absolute -top-4 left-6">
-                                            <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-xs font-black flex items-center space-x-2 shadow-lg">
-                                                <Star className="w-4 h-4" />
-                                                <span>POPULAR</span>
+                                        <div className="absolute -top-3 left-4">
+                                            <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                                                <Star className="w-3 h-3 inline mr-1" />
+                                                POPULAR
                                             </span>
                                         </div>
                                     )}
                                     
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-4">
-                                            <div className={`w-12 h-12 bg-gradient-to-r from-${config.color}-${key === 'free' ? '500' : '600'} to-${config.color}-${key === 'free' ? '600' : '700'} rounded-xl flex items-center justify-center`}>
-                                                <Icon className="w-6 h-6 text-white" />
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                                                <Icon className="w-5 h-5 text-white" />
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-gray-900 text-lg">{config.name}</h3>
-                                                <p className="text-sm text-gray-600 font-medium">{config.leads} leads • {config.features[0]}</p>
+                                                <h3 className="font-bold text-gray-900">{config.name}</h3>
+                                                <p className="text-sm text-gray-600">{config.leads} leads</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            {config.originalPrice && (
-                                                <p className="text-xs text-gray-400 line-through font-medium">{config.originalPrice}</p>
-                                            )}
-                                            <p className={`font-black text-2xl ${isSelected ? `text-${config.color}-600` : 'text-gray-600'}`}>
-                                                {config.price}
-                                            </p>
-                                            <p className="text-xs text-gray-500 font-semibold">
-                                                {config.period}
-                                                {config.originalPrice && (
-                                                    <span className="text-green-600 block">Save 20%!</span>
-                                                )}
-                                            </p>
+                                            <p className="font-bold text-lg text-gray-900">{config.price}</p>
+                                            <p className="text-xs text-gray-500">{config.period}</p>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
 
-                        {/* Billing Toggle for Paid Plans */}
                         {data.plan !== 'free' && (
-                            <div className="flex bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-1.5 mt-4">
+                            <div className="flex bg-gray-100 rounded-lg p-1 mt-4">
                                 <button
                                     type="button"
                                     onClick={() => setData({...data, billingCycle: 'monthly'})}
-                                    className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all ${
-                                        data.billingCycle === 'monthly' ? 'bg-white text-blue-600 shadow-lg transform scale-105' : 'text-gray-600'
+                                    className={`flex-1 py-2 px-4 text-sm font-bold rounded-md transition-all ${
+                                        data.billingCycle === 'monthly' ? 'bg-white text-blue-600 shadow' : 'text-gray-600'
                                     }`}
                                 >
                                     Monthly
@@ -597,17 +587,16 @@
                                 <button
                                     type="button"
                                     onClick={() => setData({...data, billingCycle: 'yearly'})}
-                                    className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all ${
-                                        data.billingCycle === 'yearly' ? 'bg-white text-blue-600 shadow-lg transform scale-105' : 'text-gray-600'
+                                    className={`flex-1 py-2 px-4 text-sm font-bold rounded-md transition-all ${
+                                        data.billingCycle === 'yearly' ? 'bg-white text-blue-600 shadow' : 'text-gray-600'
                                     }`}
                                 >
-                                    Yearly <span className="text-xs text-green-600 block">Save 20%</span>
+                                    Yearly <span className="text-green-600">Save 20%</span>
                                 </button>
                             </div>
                         )}
                     </div>
 
-                    {/* Email */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
                             <Mail className="w-4 h-4 mr-2 text-blue-600" />
@@ -623,65 +612,45 @@
                         />
                     </div>
 
-                    {/* Confirm Password */}
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
+                            <Lock className="w-4 h-4 mr-2 text-blue-600" />
+                            Create Password
+                        </label>
+                        <input
+                            type="password"
+                            value={data.password}
+                            onChange={(e) => setData({...data, password: e.target.value})}
+                            className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
+                            placeholder="Create a secure password"
+                            required
+                        />
+                    </div>
+
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3">Confirm Password</label>
                         <input
-                            type={showPasswords.confirm ? 'text' : 'password'}
+                            type="password"
                             value={data.confirmPassword}
                             onChange={(e) => setData({...data, confirmPassword: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-blue-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
                             placeholder="Confirm your password"
                             required
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
-                            className="text-blue-600 hover:text-purple-600 text-sm font-semibold mt-2 transition-colors"
-                        >
-                            {showPasswords.confirm ? 'Hide password' : 'Show password'}
-                        </button>
                         {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
-                            <p className="text-red-600 text-sm mt-2 font-medium">Passwords do not match</p>
+                            <p className="text-red-600 text-sm mt-2">Passwords do not match</p>
                         )}
-                    </div>
-
-                    {/* Password Requirements */}
-                    <div className="text-sm text-gray-600 bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-xl border border-gray-200">
-                        <p className="font-bold mb-2 text-gray-800">Password must contain:</p>
-                        <ul className="space-y-1">
-                            <li className={`flex items-center space-x-2 ${validatePassword(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={validatePassword(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least 8 characters</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>Uppercase and lowercase letters</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/\d/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/\d/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least one number</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/[@$!%*?&]/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/[@$!%*?&]/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least one special character (@$!%*?&)</span>
-                            </li>
-                        </ul>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading || !validatePassword(data.password) || data.password !== data.confirmPassword}
-                        className={`w-full py-4 px-6 rounded-2xl font-bold text-lg transform hover:translate-y-[-3px] hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none glow-button ${
-                            data.plan !== 'free'
-                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                                : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-gray-700 hover:to-gray-800'
-                        }`}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-2xl font-bold text-lg hover:from-blue-700 hover:to-purple-700 transform hover:translate-y-[-3px] hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none glow-button"
                     >
                         {loading ? (
                             <div className="flex items-center justify-center space-x-3">
                                 <Loader className="w-6 h-6 animate-spin" />
-                                <span>{data.plan !== 'free' ? 'Creating Account...' : 'Creating Account...'}</span>
+                                <span>Creating Account...</span>
                             </div>
                         ) : data.plan !== 'free' ? (
                             <div className="flex items-center justify-center space-x-3">
@@ -696,28 +665,21 @@
                             </div>
                         )}
                     </button>
-
-                    {data.plan !== 'free' && (
-                        <p className="text-sm text-center text-gray-600 font-medium">
-                            Account will be created, then you'll be redirected to secure payment
-                        </p>
-                    )}
                 </form>
             );
         };
 
-        // 🎁 FIXED: Trial Form Component with token validation
+        // Trial Form
         const TrialForm = ({ loading, setLoading, setError, setSuccess }) => {
             const [data, setData] = useState({ 
                 email: '', 
                 password: '',
                 confirmPassword: ''
             });
-            const [showPasswords, setShowPasswords] = useState({ password: false, confirm: false });
 
             const validatePassword = (password) => {
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-                return passwordRegex.test(password);
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+                return password.length >= 8 && passwordRegex.test(password);
             };
 
             const handleSubmit = async (e) => {
@@ -730,12 +692,13 @@
                     }
 
                     if (!validatePassword(data.password)) {
-                        throw new Error('Password must be 8+ chars with uppercase, lowercase, number, and special character');
+                        throw new Error('Password must be 8+ chars with uppercase, lowercase, and number');
                     }
 
                     const response = await fetch('/api/start-trial', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
                         body: JSON.stringify({
                             email: data.email,
                             password: data.password,
@@ -746,23 +709,11 @@
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error);
 
-                    if (result.token) {
-                        localStorage.setItem('token', result.token);
-                        localStorage.setItem('user_data', JSON.stringify(result.user));
-                        setSuccess('🎉 Free trial started! Welcome to Professional!');
-                        
-                        // ✅ FIXED: Validate token before redirecting
-                        setTimeout(async () => {
-                            try {
-                                await validateTokenAndRedirect(result.token);
-                            } catch (error) {
-                                setError(error.message);
-                            }
-                        }, 1500);
-                    } else {
-                        setSuccess('🎉 Free trial started! You can now sign in.');
-                        setTimeout(() => window.location.href = '/login?trial=started', 2000);
-                    }
+                    setSuccess('🎉 Free trial started! Welcome to Professional!');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
                 } catch (err) {
                     setError(err.message);
                 } finally {
@@ -782,29 +733,6 @@
                         <p className="text-lg text-gray-700 font-semibold">Full Professional access • No credit card required</p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
-                        <h4 className="font-black text-green-800 mb-4 text-lg">🚀 Trial includes:</h4>
-                        <div className="grid grid-cols-1 gap-3 text-sm text-green-700">
-                            <div className="flex items-center space-x-3">
-                                <span className="text-green-500 text-lg">✅</span>
-                                <span className="font-semibold">1,000 leads for 14 days</span>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <span className="text-green-500 text-lg">✅</span>
-                                <span className="font-semibold">All Professional features unlocked</span>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <span className="text-green-500 text-lg">✅</span>
-                                <span className="font-semibold">Instant dashboard access</span>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <span className="text-green-500 text-lg">✅</span>
-                                <span className="font-semibold">Auto-downgrade to free after 14 days</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Email */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
                             <Mail className="w-4 h-4 mr-2 text-green-600" />
@@ -820,73 +748,34 @@
                         />
                     </div>
 
-                    {/* Password */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
                             <Lock className="w-4 h-4 mr-2 text-green-600" />
                             Create Password
                         </label>
                         <input
-                            type={showPasswords.password ? 'text' : 'password'}
+                            type="password"
                             value={data.password}
                             onChange={(e) => setData({...data, password: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
                             placeholder="Create a secure password"
                             required
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, password: !showPasswords.password})}
-                            className="text-green-600 hover:text-blue-600 text-sm font-semibold mt-2 transition-colors"
-                        >
-                            {showPasswords.password ? 'Hide password' : 'Show password'}
-                        </button>
                     </div>
 
-                    {/* Confirm Password */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-3">Confirm Password</label>
                         <input
-                            type={showPasswords.confirm ? 'text' : 'password'}
+                            type="password"
                             value={data.confirmPassword}
                             onChange={(e) => setData({...data, confirmPassword: e.target.value})}
                             className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl bg-gray-50 focus:bg-white focus:border-green-500 focus:outline-none transition-all duration-300 text-gray-900 font-medium placeholder-gray-400"
                             placeholder="Confirm your password"
                             required
                         />
-                        <button
-                            type="button"
-                            onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})}
-                            className="text-green-600 hover:text-blue-600 text-sm font-semibold mt-2 transition-colors"
-                        >
-                            {showPasswords.confirm ? 'Hide password' : 'Show password'}
-                        </button>
                         {data.password && data.confirmPassword && data.password !== data.confirmPassword && (
-                            <p className="text-red-600 text-sm mt-2 font-medium">Passwords do not match</p>
+                            <p className="text-red-600 text-sm mt-2">Passwords do not match</p>
                         )}
-                    </div>
-
-                    {/* Password Requirements for Trial */}
-                    <div className="text-sm text-gray-600 bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-xl border border-green-200">
-                        <p className="font-bold mb-2 text-green-800">Password must contain:</p>
-                        <ul className="space-y-1">
-                            <li className={`flex items-center space-x-2 ${validatePassword(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={validatePassword(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least 8 characters</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/[a-z]/.test(data.password) && /[A-Z]/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>Uppercase and lowercase letters</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/\d/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/\d/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least one number</span>
-                            </li>
-                            <li className={`flex items-center space-x-2 ${/[@$!%*?&]/.test(data.password) ? 'text-green-600' : ''}`}>
-                                <span className={/[@$!%*?&]/.test(data.password) ? '✅' : '⏸️'}>⏸️</span>
-                                <span>At least one special character (@$!%*?&)</span>
-                            </li>
-                        </ul>
                     </div>
 
                     <button

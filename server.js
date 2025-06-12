@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const nodemailer = require('nodemailer');
+const cookieParser = require('cookie-parser');
 
 // Basic security middleware
 const cors = require('cors');
@@ -24,6 +25,29 @@ const compression = require('compression');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 🍪 SECURE COOKIE CONFIGURATION
+const COOKIE_CONFIG = {
+  production: {
+    httpOnly: true,
+    secure: true, // HTTPS only
+    sameSite: 'strict',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    domain: process.env.COOKIE_DOMAIN // e.g., '.steadymanager.com'
+  },
+  development: {
+    httpOnly: true,
+    secure: false, // Allow HTTP in dev
+    sameSite: 'lax', // More permissive for dev
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  }
+};
+
+function getCookieConfig() {
+  return process.env.NODE_ENV === 'production' 
+    ? COOKIE_CONFIG.production 
+    : COOKIE_CONFIG.development;
+}
 
 // 💳 UPDATED: Multi-tier pricing configuration
 const PRICING_PLANS = {
@@ -218,7 +242,31 @@ app.use(cors({
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser()); 
 app.set('trust proxy', 1);
+
+// 🔐 ADDITIONAL SECURITY HEADERS
+app.use((req, res, next) => {
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // CSP for dashboard pages
+  if (req.path.startsWith('/dashboard')) {
+    res.setHeader('Content-Security-Policy', 
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: https:; " +
+      "connect-src 'self' https://api.stripe.com; " +
+      "frame-src https://js.stripe.com;"
+    );
+  }
+  
+  next();
+});
 
 // 🔒 IMPROVED: Separate rate limiters for different actions
 const loginLimiter = rateLimit({
@@ -580,13 +628,18 @@ function getTierPath(subscriptionTier) {
   return path;
 }
 
-// 🔒 Authentication middleware
-const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+// 🔐 IMPROVED: Cookie-based authentication middleware
+const authenticateFromCookie = async (req, res, next) => {
+  // Try cookie first, then fallback to header for API compatibility
+  let token = req.cookies.authToken;
+  
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    token = authHeader && authHeader.split(' ')[1];
+  }
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   try {
@@ -594,22 +647,42 @@ const authenticateToken = async (req, res, next) => {
     const user = await findUserById(decoded.userId);
     
     if (!user) {
+      // Clear invalid cookie
+      res.clearCookie('authToken', getCookieConfig());
       return res.status(401).json({ error: 'User not found' });
     }
     
-    req.user = decoded;
-    req.user.isAdmin = ADMIN_EMAILS.includes(decoded.email);
+    req.user = {
+      ...decoded,
+      isAdmin: ADMIN_EMAILS.includes(decoded.email)
+    };
     next();
   } catch (err) {
+    // Clear invalid/expired cookie
+    res.clearCookie('authToken', getCookieConfig());
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
+};
+
+// 🔐 SECURITY MIDDLEWARE: Add CSRF protection for forms
+const csrfProtection = (req, res, next) => {
+  // For state-changing operations, check referer
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const referer = req.get('Referer');
+    const host = req.get('Host');
+    
+    if (!referer || !referer.includes(host)) {
+      return res.status(403).json({ error: 'Invalid request origin' });
+    }
+  }
+  next();
 };
 
 // 📁 Static files and dashboard routing
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 🚀 UPDATED: Tier-based dashboard routing
-app.get('/dashboard', authenticateToken, async (req, res) => {
+// 🔐 UPDATED: Dashboard routing with cookie authentication
+app.get('/dashboard', async (req, res) => {
   try {
     const { upgrade, session_id } = req.query;
     
@@ -617,10 +690,43 @@ app.get('/dashboard', authenticateToken, async (req, res) => {
       console.log('✅ Payment success redirect:', session_id);
     }
     
-    // Get user data to determine tier
-    const user = await findUserById(req.user.userId);
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+    // Get token from cookie (primary) or URL parameter (fallback)
+    let token = req.cookies.authToken;
+    if (!token) {
+      token = req.query.token;
+    }
+    
+    console.log('🔍 Dashboard access attempt - Token exists:', !!token);
+    
+    if (!token) {
+      console.log('❌ No authentication token, redirecting to login');
+      return res.redirect('/login?error=auth_required');
+    }
+    
+    // Verify token and get user
+    let decoded, user;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      user = await findUserById(decoded.userId);
+      
+      if (!user) {
+        console.log('❌ User not found for userId:', decoded.userId);
+        res.clearCookie('authToken', getCookieConfig());
+        return res.redirect('/login?error=user_not_found');
+      }
+    } catch (err) {
+      console.log('❌ Token verification failed:', err.message);
+      res.clearCookie('authToken', getCookieConfig());
+      return res.redirect('/login?error=session_expired');
+    }
+    
+    // If token came from URL parameter, set it as cookie for future requests
+    if (req.query.token && !req.cookies.authToken) {
+      res.cookie('authToken', token, getCookieConfig());
+      res.cookie('isLoggedIn', 'true', {
+        ...getCookieConfig(),
+        httpOnly: false
+      });
     }
     
     // Determine tier path based on subscription
@@ -629,19 +735,58 @@ app.get('/dashboard', authenticateToken, async (req, res) => {
     console.log(`🎯 Serving dashboard for ${user.email} (${user.subscription_tier}) → tiers/${tierPath}/`);
     
     // Serve the tier-specific dashboard
-    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html'));
+    const dashboardPath = path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html');
+    console.log('📁 Serving file:', dashboardPath);
+    
+    res.sendFile(dashboardPath, (err) => {
+      if (err) {
+        console.error('❌ Failed to serve dashboard file:', err.message);
+        res.status(500).send('Dashboard file not found');
+      }
+    });
+    
   } catch (error) {
     console.error('Dashboard routing error:', error.message);
     res.status(500).json({ error: 'Failed to load dashboard' });
   }
 });
 
-// Handle all dashboard sub-pages with tier awareness
-app.get('/dashboard/*', authenticateToken, async (req, res) => {
+// 🔐 UPDATED: Dashboard sub-routes with cookie authentication  
+app.get('/dashboard/*', async (req, res) => {
   try {
     const requestPath = req.params[0];
     
-    // If requesting shared assets, serve directly (if you add shared folder later)
+    // Get token from cookie first, then URL/header as fallback
+    let token = req.cookies.authToken;
+    if (!token) {
+      token = req.query.token;
+    }
+    if (!token) {
+      const authHeader = req.headers['authorization'];
+      token = authHeader && authHeader.split(' ')[1];
+    }
+    
+    if (!token) {
+      return res.redirect('/login?error=auth_required');
+    }
+    
+    // Verify token
+    let decoded, user;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      user = await findUserById(decoded.userId);
+      
+      if (!user) {
+        res.clearCookie('authToken', getCookieConfig());
+        return res.redirect('/login?error=user_not_found');
+      }
+    } catch (err) {
+      console.error('Token verification failed in dashboard sub-route:', err.message);
+      res.clearCookie('authToken', getCookieConfig());
+      return res.redirect('/login?error=session_expired');
+    }
+    
+    // Handle different types of requests (existing logic)
     if (requestPath.startsWith('shared/')) {
       const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
       return res.sendFile(filePath, (err) => {
@@ -652,7 +797,6 @@ app.get('/dashboard/*', authenticateToken, async (req, res) => {
       });
     }
     
-    // If requesting tier-specific assets, serve from user's tier
     if (requestPath.startsWith('tiers/')) {
       const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
       return res.sendFile(filePath, (err) => {
@@ -664,12 +808,8 @@ app.get('/dashboard/*', authenticateToken, async (req, res) => {
     }
     
     // For any other dashboard route, redirect to user's tier dashboard
-    const user = await findUserById(req.user.userId);
-    if (!user) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    
     const tierPath = getTierPath(user.subscription_tier);
+    console.log(`🎯 Serving dashboard sub-route: ${user.email} → /dashboard/tiers/${tierPath}/index.html`);
     res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html'));
     
   } catch (error) {
@@ -696,6 +836,48 @@ app.use('/api/start-trial', registerLimiter);   // 5 attempts per 15 minutes
 app.use('/api/forgot-password', passwordResetLimiter); // 5 attempts per 5 minutes
 app.use('/api/reset-password', passwordResetLimiter);  // 5 attempts per 5 minutes
 app.use('/api', apiLimiter);
+
+// Apply CSRF protection to sensitive routes
+app.use('/api/leads', csrfProtection);
+app.use('/api/user/settings', csrfProtection);
+app.use('/api/admin/*', csrfProtection);
+
+// 🍪 COOKIE VALIDATION ENDPOINT (for client-side checks)
+app.get('/api/auth/check', async (req, res) => {
+  const token = req.cookies.authToken;
+  
+  if (!token) {
+    return res.json({ authenticated: false });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await findUserById(decoded.userId);
+    
+    if (!user) {
+      res.clearCookie('authToken', getCookieConfig());
+      return res.json({ authenticated: false });
+    }
+    
+    res.json({ 
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        userType: user.user_type,
+        subscriptionTier: user.subscription_tier,
+        isAdmin: user.is_admin,
+        monthlyLeadLimit: user.monthly_lead_limit,
+        currentMonthLeads: user.current_month_leads,
+        goals: user.goals,
+        settings: user.settings
+      }
+    });
+  } catch (err) {
+    res.clearCookie('authToken', getCookieConfig());
+    res.json({ authenticated: false });
+  }
+});
 
 // 🎁 UPDATED: Trial endpoint with pending user retry logic and debugging
 app.post('/api/start-trial',
@@ -765,9 +947,17 @@ app.post('/api/start-trial',
             { expiresIn: '24h' }
           );
 
+          // Set secure cookie
+          const cookieConfig = getCookieConfig();
+          res.cookie('authToken', token, cookieConfig);
+          res.cookie('isLoggedIn', 'true', {
+            ...cookieConfig,
+            httpOnly: false
+          });
+
           return res.status(200).json({
             message: 'Trial started! Converted from pending account. Welcome to Professional! 🚀',
-            token,
+            success: true,
             user: { 
               id: existingUser.id, 
               email: existingUser.email, 
@@ -824,11 +1014,19 @@ app.post('/api/start-trial',
         { expiresIn: '24h' }
       );
 
+      // Set secure cookie
+      const cookieConfig = getCookieConfig();
+      res.cookie('authToken', token, cookieConfig);
+      res.cookie('isLoggedIn', 'true', {
+        ...cookieConfig,
+        httpOnly: false
+      });
+
       console.log(`🎁 Trial user created: ${email} - Expires: ${trialEndDate}`);
 
       res.status(201).json({
         message: 'Free trial started successfully! Welcome to Professional! 🚀',
-        token,
+        success: true,
         user: { 
           id: newUser.id, 
           email: newUser.email, 
@@ -911,9 +1109,17 @@ app.post('/api/register',
             { expiresIn: '24h' }
           );
 
+          // Set secure cookie
+          const cookieConfig = getCookieConfig();
+          res.cookie('authToken', token, cookieConfig);
+          res.cookie('isLoggedIn', 'true', {
+            ...cookieConfig,
+            httpOnly: false
+          });
+
           return res.status(200).json({
             message: 'Redirecting to payment for existing pending account...',
-            token,
+            success: true,
             user: { 
               id: existingUser.id, 
               email: existingUser.email, 
@@ -992,12 +1198,20 @@ app.post('/api/register',
         { expiresIn: '24h' }
       );
 
+      // Set secure cookie
+      const cookieConfig = getCookieConfig();
+      res.cookie('authToken', token, cookieConfig);
+      res.cookie('isLoggedIn', 'true', {
+        ...cookieConfig,
+        httpOnly: false
+      });
+
       console.log(`✅ New user registered: ${email} ${isAdmin ? '(ADMIN)' : pendingUpgrade ? `(PENDING ${subscriptionTier})` : '(FREE)'}`);
 
       res.status(201).json({
         message: pendingUpgrade ? `Account created! Complete payment to activate ${subscriptionTier}.` : 
                  isAdmin ? 'Admin account created! 👑' : 'Free account created!',
-        token,
+        success: true,
         user: { 
           id: newUser.id, 
           email: newUser.email, 
@@ -1016,12 +1230,12 @@ app.post('/api/register',
   }
 );
 
-// 🔐 UPDATED: Login endpoint with new subscription structure
+// 🔐 UPDATED: Login endpoint with secure cookie
 app.post('/api/login', 
   [validateEmail, body('password').notEmpty().withMessage('Password required'), handleValidationErrors],
   async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, rememberMe } = req.body;
       
       const user = await findUserByEmail(email);
       if (!user) {
@@ -1033,10 +1247,13 @@ app.post('/api/login',
         return res.status(400).json({ error: 'Invalid credentials' });
       }
       
+      const tokenExpiry = rememberMe ? '7d' : '24h';
+      const cookieMaxAge = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      
       const token = jwt.sign(
         { userId: user.id, email: user.email, userType: user.user_type },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: tokenExpiry }
       );
       
       const subscriptionTier = user.subscription_tier || 'FREE';
@@ -1052,9 +1269,23 @@ app.post('/api/login',
         'FREE': 'Welcome back!'
       };
       
+      // Set secure cookie
+      const cookieConfig = {
+        ...getCookieConfig(),
+        maxAge: cookieMaxAge
+      };
+      
+      res.cookie('authToken', token, cookieConfig);
+      
+      // Also set a non-httpOnly cookie for client-side checks (without sensitive data)
+      res.cookie('isLoggedIn', 'true', {
+        ...cookieConfig,
+        httpOnly: false // Allows JavaScript access for UI updates
+      });
+
       res.json({
         message: welcomeMessages[subscriptionTier] || 'Welcome back!',
-        token,
+        success: true,
         user: { 
           id: user.id, 
           email: user.email, 
@@ -1068,12 +1299,24 @@ app.post('/api/login',
           settings: user.settings
         }
       });
+      
     } catch (error) {
       console.error('Login error:', error.message);
       res.status(500).json({ error: 'Login failed' });
     }
   }
 );
+
+// 🚪 LOGOUT endpoint to clear cookies
+app.post('/api/logout', (req, res) => {
+  const cookieConfig = getCookieConfig();
+  
+  res.clearCookie('authToken', cookieConfig);
+  res.clearCookie('isLoggedIn', cookieConfig);
+  
+  console.log('🚪 User logged out, cookies cleared');
+  res.json({ message: 'Logged out successfully' });
+});
 
 // 🔑 Enhanced Forgot Password Endpoint with improved protection
 app.post('/api/forgot-password',
@@ -1456,107 +1699,6 @@ setInterval(() => {
   }
 }, 60000); // Check every minute
 
-// 🎛️ Admin endpoint to manually check trials
-app.post('/api/admin/check-trials', authenticateToken, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  console.log(`🔧 Manual trial check triggered by admin: ${req.user.email}`);
-  await checkExpiredTrials();
-  res.json({ 
-    message: 'Trial check completed - check server logs for details',
-    lastCheckTime: lastTrialCheckTime,
-    dailyDowngrades: dailyDowngradeCount
-  });
-});
-
-// 📊 Admin trial status dashboard
-app.get('/api/admin/trial-status', authenticateToken, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  try {
-    const client = await pool.connect();
-    try {
-      const trialUsers = await client.query(
-        `SELECT id, email, settings->>'trialEndDate' as trial_end_date, 
-         settings->>'trialStartDate' as trial_start_date, created_at
-         FROM ${getTableName('users')} 
-         WHERE user_type = 'professional_trial' 
-         ORDER BY settings->>'trialEndDate' ASC`
-      );
-      
-      res.json({
-        activeTrials: trialUsers.rows,
-        lastTrialCheckTime,
-        dailyDowngradeCount,
-        nextCheckIn: 'Next automatic check in less than 1 hour'
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Trial status error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch trial status' });
-  }
-});
-
-// 🧪 Create test trial (expires in 2 minutes)
-app.post('/api/admin/create-test-trial', authenticateToken, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  try {
-    const testEmail = `test-trial-${Date.now()}@example.com`;
-    const testTrialEnd = new Date();
-    testTrialEnd.setMinutes(testTrialEnd.getMinutes() + 2); // Expires in 2 minutes
-    
-    const hashedPassword = await bcrypt.hash('TestPassword123!', 12);
-    
-    const userData = {
-      email: testEmail,
-      password: hashedPassword,
-      userType: 'professional_trial',
-      subscriptionTier: 'PROFESSIONAL_TRIAL',
-      billingCycle: null,
-      isAdmin: false,
-      monthlyLeadLimit: 1000,
-      currentMonthLeads: 0,
-      goals: { daily: 33, monthly: 1000 },
-      settings: {
-        subscriptionTier: 'PROFESSIONAL_TRIAL',
-        trialStartDate: new Date().toISOString(),
-        trialEndDate: testTrialEnd.toISOString(),
-        name: 'Test Trial User',
-        isTestAccount: true
-      },
-      stripeCustomerId: null,
-      stripeSubscriptionId: null
-    };
-
-    const newUser = await createUser(userData);
-    
-    console.log(`🧪 Test trial user created: ${testEmail} - Expires in 2 minutes`);
-    
-    res.json({
-      message: 'Test trial user created! Will be downgraded in 2 minutes.',
-      testUser: {
-        id: newUser.id,
-        email: testEmail,
-        trialEndDate: testTrialEnd.toISOString()
-      },
-      instructions: 'Wait 2 minutes, then check trial status or run manual trial check to see the downgrade.'
-    });
-    
-  } catch (error) {
-    console.error('Create test trial error:', error.message);
-    res.status(500).json({ error: 'Failed to create test trial' });
-  }
-});
-
 // Get Stripe config
 app.get('/api/stripe-config', (req, res) => {
   res.json({
@@ -1579,7 +1721,7 @@ app.get('/api/pricing-plans', (req, res) => {
 });
 
 // 📋 Get leads
-app.get('/api/leads', authenticateToken, async (req, res) => {
+app.get('/api/leads', authenticateFromCookie, async (req, res) => {
   try {
     const userLeads = await getUserLeads(req.user.userId, req.user.isAdmin, req.query.viewAll === 'true');
     
@@ -1599,7 +1741,7 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
 
 // ➕ Create lead
 app.post('/api/leads', 
-  authenticateToken,
+  authenticateFromCookie,
   [
     validateLeadName,
     body('email').optional().isEmail().normalizeEmail(),
@@ -1654,7 +1796,7 @@ app.post('/api/leads',
 
 // ✏️ Update lead
 app.put('/api/leads/:id', 
-  authenticateToken,
+  authenticateFromCookie,
   [validateNumericId, handleValidationErrors],
   async (req, res) => {
     try {
@@ -1688,7 +1830,7 @@ app.put('/api/leads/:id',
 
         for (const field of allowedFields) {
           if (req.body.hasOwnProperty(field)) {
-            updateFields.push(`${field} = $${paramCount}`);
+            updateFields.push(`${field} = ${paramCount}`);
             let value = req.body[field];
             
             if (field === 'email' && value) {
@@ -1710,7 +1852,7 @@ app.put('/api/leads/:id',
         const updateQuery = `
           UPDATE ${getTableName('leads')} 
           SET ${updateFields.join(', ')}
-          WHERE id = $${paramCount}
+          WHERE id = ${paramCount}
           RETURNING *
         `;
 
@@ -1731,7 +1873,7 @@ app.put('/api/leads/:id',
 
 // 🗑️ Delete lead
 app.delete('/api/leads/:id', 
-  authenticateToken,
+  authenticateFromCookie,
   [validateNumericId, handleValidationErrors],
   async (req, res) => {
     try {
@@ -1774,7 +1916,7 @@ app.delete('/api/leads/:id',
 );
 
 // 📊 Statistics
-app.get('/api/statistics', authenticateToken, async (req, res) => {
+app.get('/api/statistics', authenticateFromCookie, async (req, res) => {
   try {
     const userLeads = await getUserLeads(req.user.userId, req.user.isAdmin, req.query.viewAll === 'true');
     
@@ -1813,7 +1955,7 @@ app.get('/api/statistics', authenticateToken, async (req, res) => {
 });
 
 // 👑 UPDATED: Admin stats with new pricing structure
-app.get('/api/admin/stats', authenticateToken, async (req, res) => {
+app.get('/api/admin/stats', authenticateFromCookie, async (req, res) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
   }
@@ -1874,8 +2016,109 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// 🎛️ Admin endpoint to manually check trials
+app.post('/api/admin/check-trials', authenticateFromCookie, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  console.log(`🔧 Manual trial check triggered by admin: ${req.user.email}`);
+  await checkExpiredTrials();
+  res.json({ 
+    message: 'Trial check completed - check server logs for details',
+    lastCheckTime: lastTrialCheckTime,
+    dailyDowngrades: dailyDowngradeCount
+  });
+});
+
+// 📊 Admin trial status dashboard
+app.get('/api/admin/trial-status', authenticateFromCookie, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  try {
+    const client = await pool.connect();
+    try {
+      const trialUsers = await client.query(
+        `SELECT id, email, settings->>'trialEndDate' as trial_end_date, 
+         settings->>'trialStartDate' as trial_start_date, created_at
+         FROM ${getTableName('users')} 
+         WHERE user_type = 'professional_trial' 
+         ORDER BY settings->>'trialEndDate' ASC`
+      );
+      
+      res.json({
+        activeTrials: trialUsers.rows,
+        lastTrialCheckTime,
+        dailyDowngradeCount,
+        nextCheckIn: 'Next automatic check in less than 1 hour'
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Trial status error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch trial status' });
+  }
+});
+
+// 🧪 Create test trial (expires in 2 minutes)
+app.post('/api/admin/create-test-trial', authenticateFromCookie, async (req, res) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  try {
+    const testEmail = `test-trial-${Date.now()}@example.com`;
+    const testTrialEnd = new Date();
+    testTrialEnd.setMinutes(testTrialEnd.getMinutes() + 2); // Expires in 2 minutes
+    
+    const hashedPassword = await bcrypt.hash('TestPassword123!', 12);
+    
+    const userData = {
+      email: testEmail,
+      password: hashedPassword,
+      userType: 'professional_trial',
+      subscriptionTier: 'PROFESSIONAL_TRIAL',
+      billingCycle: null,
+      isAdmin: false,
+      monthlyLeadLimit: 1000,
+      currentMonthLeads: 0,
+      goals: { daily: 33, monthly: 1000 },
+      settings: {
+        subscriptionTier: 'PROFESSIONAL_TRIAL',
+        trialStartDate: new Date().toISOString(),
+        trialEndDate: testTrialEnd.toISOString(),
+        name: 'Test Trial User',
+        isTestAccount: true
+      },
+      stripeCustomerId: null,
+      stripeSubscriptionId: null
+    };
+
+    const newUser = await createUser(userData);
+    
+    console.log(`🧪 Test trial user created: ${testEmail} - Expires in 2 minutes`);
+    
+    res.json({
+      message: 'Test trial user created! Will be downgraded in 2 minutes.',
+      testUser: {
+        id: newUser.id,
+        email: testEmail,
+        trialEndDate: testTrialEnd.toISOString()
+      },
+      instructions: 'Wait 2 minutes, then check trial status or run manual trial check to see the downgrade.'
+    });
+    
+  } catch (error) {
+    console.error('Create test trial error:', error.message);
+    res.status(500).json({ error: 'Failed to create test trial' });
+  }
+});
+
 // ⚙️ User settings
-app.get('/api/user/settings', authenticateToken, async (req, res) => {
+app.get('/api/user/settings', authenticateFromCookie, async (req, res) => {
   try {
     const user = await findUserById(req.user.userId);
     if (!user) {
@@ -1902,7 +2145,7 @@ app.get('/api/user/settings', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/user/settings', 
-  authenticateToken,
+  authenticateFromCookie,
   [
     body('goals').optional().isObject().withMessage('Goals must be an object'),
     body('settings').optional().isObject().withMessage('Settings must be an object'),
@@ -1942,7 +2185,7 @@ app.put('/api/user/settings',
 );
 
 // 📧 Enhanced Email stats endpoint
-app.get('/api/email-stats', authenticateToken, async (req, res) => {
+app.get('/api/email-stats', authenticateFromCookie, async (req, res) => {
   if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Admin access required' });
   }
@@ -1982,7 +2225,9 @@ app.get('/api/health', async (req, res) => {
           'password-reset',
           'email-sending',
           'enhanced-email-rate-limiting',
-          'professional-business-enterprise-tiers'
+          'professional-business-enterprise-tiers',
+          'secure-cookie-authentication',
+          'csrf-protection'
         ],
         database: {
           connected: true,
@@ -2003,6 +2248,12 @@ app.get('/api/health', async (req, res) => {
             '5 emails per hour per email address',
             '5 requests per 5 minutes per IP for password reset'
           ]
+        },
+        security: {
+          cookieAuth: true,
+          csrfProtection: true,
+          securityHeaders: true,
+          rateLimit: true
         }
       });
     } finally {
@@ -2055,11 +2306,16 @@ async function startServer() {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 SteadyManager server running on port ${PORT}`);
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
-      console.log(`🔒 IMPROVED Security features:`);
+      console.log(`🔒 ENHANCED SECURITY FEATURES:`);
+      console.log(`   ✅ Secure cookie-based authentication`);
+      console.log(`   ✅ HTTP-only cookies prevent XSS`);
+      console.log(`   ✅ CSRF protection on state-changing operations`);
+      console.log(`   ✅ Security headers (XSS, clickjacking, etc.)`);
+      console.log(`   ✅ Content Security Policy for dashboard`);
       console.log(`   ✅ Flexible rate limiting:`);
-      console.log(`      • Login: 10 attempts per minute (was 5 per 15min)`);
-      console.log(`      • Password reset: 5 attempts per 5 minutes (was 3 per 15min)`);
-      console.log(`      • Email reset: 5 per hour per email (was 3)`);
+      console.log(`      • Login: 10 attempts per minute`);
+      console.log(`      • Password reset: 5 attempts per 5 minutes`);
+      console.log(`      • Email reset: 5 per hour per email`);
       console.log(`   ✅ All dashboard routes require authentication`);
       console.log(`   ✅ Tier-based file serving works properly`);
       console.log(`🎯 Dashboard serves tier-specific content from: /tiers/{tier}/`);
@@ -2070,7 +2326,7 @@ async function startServer() {
       console.log(`   ⭐ Enterprise: Unlimited leads (Monthly & Yearly)`);
       console.log(`🛡️ EMAIL SPAM PROTECTION ACTIVE:`);
       console.log(`   • Global daily limit: ${dailyEmailCount}/90`);
-      console.log(`   • Per-email hourly limit: 5 max (increased from 3)`);
+      console.log(`   • Per-email hourly limit: 5 max`);
       console.log(`   • Currently tracking: ${emailRequestTracker.size} unique emails`);
       console.log(`   • Auto-cleanup running every hour`);
       
@@ -2098,6 +2354,21 @@ async function startServer() {
         console.warn(`   EMAIL_PASS=your-sendgrid-api-key`);
         console.warn(`   EMAIL_FROM=josh@steadyscaling.com`);
       }
+      
+      console.log(`🍪 COOKIE CONFIGURATION:`);
+      console.log(`   • HttpOnly: ${getCookieConfig().httpOnly} (prevents XSS)`);
+      console.log(`   • Secure: ${getCookieConfig().secure} (HTTPS only in production)`);
+      console.log(`   • SameSite: ${getCookieConfig().sameSite} (CSRF protection)`);
+      console.log(`   • MaxAge: ${getCookieConfig().maxAge / 1000 / 60 / 60} hours`);
+      
+      console.log(`\n🔐 AUTHENTICATION ENDPOINTS:`);
+      console.log(`   • POST /api/login - Login with secure cookies`);
+      console.log(`   • POST /api/logout - Clear authentication cookies`);
+      console.log(`   • GET /api/auth/check - Verify authentication status`);
+      console.log(`   • POST /api/register - Register new account`);
+      console.log(`   • POST /api/start-trial - Start free trial`);
+      console.log(`   • POST /api/forgot-password - Request password reset`);
+      console.log(`   • POST /api/reset-password - Reset password with token`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

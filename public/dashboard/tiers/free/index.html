@@ -14,105 +14,223 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 🔐 AUTH MANAGER (matches your server auth system) -->
+    <script src="/dashboard/shared/js/auth.js"></script>
 </head>
-<body>
-    <!-- React App Container -->
-    <div id="app"></div>
+<>
+    <!-- Loading Screen (minimal - your scripts will replace this) -->
+    <div id="loading" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading your dashboard...</p>
+        </div>
+    </div>
 
-    <!-- Authentication & API Setup -->
+    <!-- React App Container (minimal - your scripts handle the UI) -->
+    <div id="app" class="hidden"></div>
+
+    <!-- 🔒 SECURE AUTHENTICATION SETUP -->
     <script>
-        // ✅ FIXED: Check for correct token key
-        const token = localStorage.getItem('token'); // Your backend stores as 'token', not 'authToken'
-        
-        if (!token) {
-            console.error('No auth token found, redirecting to login');
-            window.location.href = '/login?error=session_expired';
-        } else {
-            // Store token globally for API calls
-            window.authToken = token;
-            console.log('✅ Auth token found, user is authenticated');
+        // 🔥 AUTHENTICATION INITIALIZATION
+        let currentUser = null;
+        let isAuthenticated = false;
+
+        // 🔐 Initialize authentication on page load
+        async function initAuth() {
+            try {
+                console.log('🔍 Checking authentication...');
+                
+                // Use the AuthManager from your auth.js
+                const authResult = await window.authManager.checkAuth();
+                
+                if (!authResult) {
+                    console.error('❌ Authentication failed');
+                    window.location.href = '/login?error=session_expired';
+                    return false;
+                }
+                
+                currentUser = window.authManager.user;
+                isAuthenticated = true;
+                
+                console.log('✅ User authenticated:', currentUser.email, `(${currentUser.subscriptionTier})`);
+                
+                // 🛡️ TIER VERIFICATION - Make sure user belongs here
+                if (currentUser.subscriptionTier !== 'FREE') {
+                    console.warn('⚠️ User has different tier, redirecting to appropriate dashboard');
+                    window.location.href = '/dashboard'; // Server will route to correct tier
+                    return false;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('🚫 Auth initialization failed:', error);
+                window.location.href = '/login?error=auth_failed';
+                return false;
+            }
         }
 
-        // ✅ FIXED: Authenticated fetch function
+        // 🌐 SECURE API CALLS (uses your cookie-based auth)
         window.authenticatedFetch = async (url, options = {}) => {
-            const token = localStorage.getItem('token');
-            
-            if (!token) {
-                console.error('No auth token found');
+            if (!isAuthenticated) {
+                console.error('❌ Not authenticated for API call');
                 window.location.href = '/login?error=session_expired';
                 return;
             }
             
-            const defaultOptions = {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`, // This is what your backend expects!
-                    ...options.headers
-                }
-            };
-            
             try {
-                const response = await fetch(url, { ...options, ...defaultOptions });
-                
-                if (response.status === 401 || response.status === 403) {
-                    console.error('Auth failed, redirecting to login');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user_data');
-                    window.location.href = '/login?error=session_expired';
-                    return;
-                }
-                
+                // Use AuthManager's secure API request method
+                const response = await window.authManager.apiRequest(url, options);
                 return response;
             } catch (error) {
-                console.error('API request failed:', error);
+                console.error('🚫 API request failed:', error);
                 throw error;
             }
         };
 
-        // ✅ User data helper
-        window.getUserData = () => {
-            try {
-                return JSON.parse(localStorage.getItem('user_data') || '{}');
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                return {};
-            }
+        // 🎯 USER DATA HELPERS
+        window.getUserData = () => currentUser;
+        
+        window.getLeadLimitInfo = () => {
+            if (!currentUser) return null;
+            return window.authManager.getLeadLimitInfo();
+        };
+
+        // 🔓 LOGOUT FUNCTION
+        window.logout = async () => {
+            await window.authManager.logout();
         };
     </script>
 
-    <!-- ✅ FIXED: Correct paths with scripts/ folder for FREE TIER Scripts -->
+    <!-- 🎯 FREE TIER SCRIPTS (from /dashboard/tiers/free/scripts/) -->
     <script src="scripts/utils.js"></script>
     <script src="scripts/api.js"></script>
-    <script type="text/babel" src="scripts/dashboard.js"></script>
-    <script type="text/babel" src="scripts/AddLead.js"></script>
-    <script type="text/babel" src="scripts/Settings.js"></script>
 
-    <!-- LOCKED FEATURES (Not loaded for free tier) -->
-    <!-- <script type="text/babel" src="Analytics.js"></script> PROFESSIONAL+ ONLY -->
-    <!-- <script type="text/babel" src="Insights.js"></script> PROFESSIONAL+ ONLY -->
-    <!-- <script type="text/babel" src="Schedule.js"></script> PROFESSIONAL+ ONLY -->
-    <!-- <script type="text/babel" src="Pipeline.js"></script> BUSINESS+ ONLY -->
-    <!-- <script type="text/babel" src="Activity.js"></script> BUSINESS+ ONLY -->
-
-    <script type="text/babel">
-        // Initialize FREE tier dashboard
-        const { useState, useEffect } = React;
-        
-        // Set tier permissions globally
+    <!-- 🔒 TIER CONFIGURATION -->
+    <script>
+        // 🎯 FREE TIER PERMISSIONS
         window.TIER = 'FREE';
         window.TIER_LIMITS = {
             leadLimit: 50,
-            features: ['basic_dashboard', 'add_leads', 'basic_settings'],
-            locked: ['analytics', 'insights', 'schedule', 'pipeline', 'activity']
+            features: ['basic_dashboard', 'add_leads', 'basic_settings', 'lead_management'],
+            locked: ['analytics', 'insights', 'schedule', 'pipeline', 'activity', 'ai_scoring', 'automation'],
+            upgradeMessage: 'Upgrade to Professional to unlock this feature!'
         };
 
-        // ✅ Get user data from localStorage
-        const userData = window.getUserData();
-        console.log('User data:', userData);
-        console.log('User tier:', userData.subscriptionTier || 'FREE');
+        // 🚀 INITIALIZE DASHBOARD
+        async function initDashboard() {
+            // 1. Check authentication first
+            const authSuccess = await initAuth();
+            if (!authSuccess) return;
+            
+            // 2. Hide loading screen
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            
+            // 3. Load dashboard components
+            console.log('🎯 Loading FREE tier dashboard components...');
+            
+            // Load components in order
+            const scriptsToLoad = [
+                'scripts/dashboard.js',
+                'scripts/AddLead.js', 
+                'scripts/Settings.js'
+            ];
+            
+            for (const script of scriptsToLoad) {
+                await loadScript(script);
+            }
+            
+            // 4. Initialize React app
+            initReactApp();
+        }
 
-        // Render the main dashboard component
-        ReactDOM.render(React.createElement(Dashboard), document.getElementById('app'));
+        // 📜 DYNAMIC SCRIPT LOADER
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.type = 'text/babel';
+                script.src = src;
+                script.onload = () => {
+                    console.log(`✅ Loaded: ${src}`);
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error(`❌ Failed to load: ${src}`);
+                    reject(new Error(`Failed to load ${src}`));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // ⚛️ INITIALIZE REACT APP
+        function initReactApp() {
+            try {
+                console.log('⚛️ Initializing React dashboard...');
+                
+                // Make sure Dashboard component is loaded
+                if (typeof Dashboard === 'undefined') {
+                    console.error('❌ Dashboard component not found');
+                    document.getElementById('app').innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center">
+                            <div class="text-center">
+                                <h1 class="text-2xl font-bold text-red-600 mb-4">Dashboard Loading Error</h1>
+                                <p class="text-gray-600 mb-4">Failed to load dashboard components.</p>
+                                <button onclick="window.location.reload()" 
+                                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                    Reload Page
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render the dashboard
+                ReactDOM.render(React.createElement(Dashboard), document.getElementById('app'));
+                console.log('🚀 FREE tier dashboard loaded successfully!');
+                
+            } catch (error) {
+                console.error('❌ React initialization failed:', error);
+                document.getElementById('app').innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center">
+                        <div class="text-center">
+                            <h1 class="text-2xl font-bold text-red-600 mb-4">Dashboard Error</h1>
+                            <p class="text-gray-600 mb-4">Something went wrong loading your dashboard.</p>
+                            <button onclick="window.location.reload()" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 🚀 START THE APP when DOM is ready
+        document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
+
+    <!-- 🔒 LOCKED FEATURES NOTICE (Not loaded for free tier) -->
+    <!-- 
+    PROFESSIONAL+ ONLY FEATURES:
+    - Analytics Dashboard (scripts/Analytics.js)
+    - Advanced Insights (scripts/Insights.js) 
+    - Schedule Management (scripts/Schedule.js)
+    
+    BUSINESS+ ONLY FEATURES:
+    - Pipeline Management (scripts/Pipeline.js)
+    - Activity Tracking (scripts/Activity.js)
+    - AI Lead Scoring
+    - Automation Tools
+    
+    ENTERPRISE+ ONLY FEATURES:
+    - White-label options
+    - Custom integrations
+    - Advanced reporting
+    -->
+
+
 </body>
 </html>
