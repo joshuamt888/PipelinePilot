@@ -1,82 +1,43 @@
-// 🆓 FIXED FREE TIER API.JS
+// 🆓 FREE TIER API.JS - SECURE COOKIE AUTHENTICATION
 // Simple, working backend communication for FREE users
 
-// 🔐 FIXED: Use correct token keys that match your backend
-const getAuthToken = () => {
-    return localStorage.getItem('token'); // ✅ Your backend stores as 'token'
-};
-
-const getUserData = () => {
-    try {
-        const userData = localStorage.getItem('user_data'); // ✅ Your backend stores as 'user_data'
-        return userData ? JSON.parse(userData) : null;
-    } catch (error) {
-        console.error('Error parsing user data:', error);
-        return null;
-    }
-};
-
-// 🔐 FIXED: Authenticated fetch that matches your backend expectations
-const authenticatedFetch = async (url, options = {}) => {
-    const token = getAuthToken();
-    
-    if (!token) {
-        console.error('No auth token found');
-        window.location.href = '/login?error=session_expired';
-        return;
-    }
-    
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`, // ✅ This is what your backend expects!
-            ...options.headers
-        }
-    };
-    
-    try {
-        const response = await fetch(url, { ...options, ...defaultOptions });
-        
-        if (response.status === 401 || response.status === 403) {
-            console.error('Auth failed, redirecting to login');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_data');
-            window.location.href = '/login?error=session_expired';
-            return;
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('API request failed:', error);
-        throw error;
-    }
-};
-
-// 🔐 SIMPLE AUTH API
+// 🔐 SECURE AUTH API - Uses authManager (no localStorage!)
 const AuthAPI = {
     getCurrentUser() {
-        return getUserData();
+        return window.authManager?.user || null;
     },
     
     isAuthenticated() {
-        return !!(getAuthToken() && getUserData());
+        return window.authManager?.authenticated || false;
     },
     
-    logout() {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        window.location.href = '/login';
+    async logout() {
+        if (window.authManager) {
+            await window.authManager.logout();
+        } else {
+            window.location.href = '/login';
+        }
+    },
+    
+    getLeadLimitInfo() {
+        return window.authManager?.getLeadLimitInfo() || null;
     }
 };
 
-// 👥 SIMPLE LEADS API  
+// 👥 SECURE LEADS API - Uses cookie authentication
 const LeadsAPI = {
     async getLeads() {
         try {
-            const response = await authenticatedFetch('/api/leads');
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest('/api/leads');
+            
             if (!response.ok) {
                 throw new Error('Failed to fetch leads');
             }
+            
             const data = await response.json();
             
             return {
@@ -95,17 +56,38 @@ const LeadsAPI = {
     
     async createLead(leadData) {
         try {
-            const response = await authenticatedFetch('/api/leads', {
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest('/api/leads', {
                 method: 'POST',
                 body: JSON.stringify(leadData)
             });
             
             if (!response.ok) {
                 const errorData = await response.json();
+                
+                // Check for limit reached
+                if (errorData.limitReached) {
+                    return {
+                        success: false,
+                        error: errorData.error,
+                        limitReached: true,
+                        currentCount: errorData.currentCount,
+                        limit: errorData.limit
+                    };
+                }
+                
                 throw new Error(errorData.error || 'Failed to create lead');
             }
             
             const data = await response.json();
+            
+            // Play success sound
+            if (window.SteadyUtils) {
+                window.SteadyUtils.playSound('success');
+            }
             
             return {
                 success: true,
@@ -115,13 +97,9 @@ const LeadsAPI = {
         } catch (error) {
             console.error('Create lead error:', error);
             
-            // Check if it's a limit error
-            if (error.message.includes('limit reached')) {
-                return {
-                    success: false,
-                    error: error.message,
-                    limitReached: true
-                };
+            // Play error sound
+            if (window.SteadyUtils) {
+                window.SteadyUtils.playSound('error');
             }
             
             return {
@@ -133,7 +111,11 @@ const LeadsAPI = {
     
     async updateLead(leadId, leadData) {
         try {
-            const response = await authenticatedFetch(`/api/leads/${leadId}`, {
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest(`/api/leads/${leadId}`, {
                 method: 'PUT',
                 body: JSON.stringify(leadData)
             });
@@ -145,13 +127,23 @@ const LeadsAPI = {
             
             const data = await response.json();
             
+            // Play success sound
+            if (window.SteadyUtils) {
+                window.SteadyUtils.playSound('click');
+            }
+            
             return {
                 success: true,
-                message: 'Lead updated!',
+                message: 'Lead updated! ✅',
                 data: data
             };
         } catch (error) {
             console.error('Update lead error:', error);
+            
+            if (window.SteadyUtils) {
+                window.SteadyUtils.playSound('error');
+            }
+            
             return {
                 success: false,
                 error: error.message
@@ -161,7 +153,11 @@ const LeadsAPI = {
     
     async deleteLead(leadId) {
         try {
-            const response = await authenticatedFetch(`/api/leads/${leadId}`, {
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest(`/api/leads/${leadId}`, {
                 method: 'DELETE'
             });
             
@@ -174,7 +170,7 @@ const LeadsAPI = {
             
             return {
                 success: true,
-                message: 'Lead deleted',
+                message: 'Lead deleted 🗑️',
                 data: data
             };
         } catch (error) {
@@ -188,10 +184,16 @@ const LeadsAPI = {
     
     async getStatistics() {
         try {
-            const response = await authenticatedFetch('/api/statistics');
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest('/api/statistics');
+            
             if (!response.ok) {
                 throw new Error('Failed to fetch statistics');
             }
+            
             const data = await response.json();
             
             return {
@@ -217,14 +219,20 @@ const LeadsAPI = {
     }
 };
 
-// ⚙️ SIMPLE SETTINGS API
+// ⚙️ SECURE SETTINGS API - Uses cookie authentication
 const SettingsAPI = {
     async getUserSettings() {
         try {
-            const response = await authenticatedFetch('/api/user/settings');
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest('/api/user/settings');
+            
             if (!response.ok) {
                 throw new Error('Failed to fetch settings');
             }
+            
             const data = await response.json();
             
             return {
@@ -242,7 +250,11 @@ const SettingsAPI = {
     
     async updateSettings(settings) {
         try {
-            const response = await authenticatedFetch('/api/user/settings', {
+            if (!window.authManager) {
+                throw new Error('Authentication manager not available');
+            }
+            
+            const response = await window.authManager.apiRequest('/api/user/settings', {
                 method: 'PUT',
                 body: JSON.stringify(settings)
             });
@@ -256,7 +268,7 @@ const SettingsAPI = {
             
             return {
                 success: true,
-                message: 'Settings updated!',
+                message: 'Settings updated! ⚙️',
                 data: data
             };
         } catch (error) {
@@ -269,45 +281,136 @@ const SettingsAPI = {
     }
 };
 
-// 🎯 UPGRADE PROMPTS FOR LOCKED FEATURES
-const showUpgradePrompt = (feature) => {
-    const prompts = {
-        analytics: {
-            title: 'Unlock Analytics! 📊',
-            description: 'See which platforms convert best and track trends.',
-            cta: 'Start Professional Trial'
-        },
-        export: {
-            title: 'Export Your Data! 📥',
-            description: 'Download your leads as CSV files.',
-            cta: 'Upgrade to Professional'
-        },
-        limit: {
-            title: 'Lead Limit Reached! 🚀',
-            description: 'Upgrade to get 1,000 leads per month.',
-            cta: 'Start Free Trial'
+// 🎯 FREE TIER UPGRADE PROMPTS
+const FreeTierPrompts = {
+    showUpgradePrompt(feature) {
+        const prompts = {
+            analytics: {
+                title: '📊 Unlock Analytics!',
+                description: 'See which platforms convert best, track conversion rates, and get insights that help you focus on what works.',
+                features: ['Conversion tracking', 'Platform performance', 'Time-based insights', 'Export reports']
+            },
+            export: {
+                title: '📥 Export Your Data!',
+                description: 'Download your leads as CSV files, backup your data, and integrate with other tools.',
+                features: ['CSV export', 'Data backup', 'Integration ready', 'Bulk operations']
+            },
+            limit: {
+                title: '🚀 Lead Limit Reached!',
+                description: 'You\'ve hit your 50 lead limit! Upgrade to Professional and get 1,000 leads per month.',
+                features: ['1,000 leads/month', 'Analytics dashboard', 'Export capabilities', '14-day free trial']
+            },
+            advanced_search: {
+                title: '🔍 Advanced Search!',
+                description: 'Search by custom fields, filter by date ranges, and find leads instantly.',
+                features: ['Custom field search', 'Date range filters', 'Saved searches', 'Smart suggestions']
+            }
+        };
+        
+        const prompt = prompts[feature] || prompts.limit;
+        
+        // Use the fancy modal from utils.js
+        if (window.FreeTierUtils) {
+            window.FreeTierUtils.showUpgradeModal(prompt.description);
+        } else {
+            // Fallback to simple alert
+            if (confirm(`${prompt.title}\n\n${prompt.description}\n\nStart your free trial now?`)) {
+                window.location.href = '/login?tab=trial';
+            }
         }
-    };
+    },
     
-    const prompt = prompts[feature] || prompts.limit;
-    
-    // Simple alert for now (you can make this fancier later)
-    if (confirm(`${prompt.title}\n\n${prompt.description}\n\nWould you like to start a free trial?`)) {
-        window.location.href = '/login?tab=trial';
+    // Show limit warning when close to limit
+    showLimitWarning(current, limit) {
+        const remaining = limit - current;
+        const percentage = (current / limit) * 100;
+        
+        if (percentage >= 90) {
+            if (window.SteadyUtils) {
+                window.SteadyUtils.Toast.warning(`🔥 Only ${remaining} leads left! Ready for 1,000?`, 5000);
+            }
+        } else if (percentage >= 75) {
+            if (window.SteadyUtils) {
+                window.SteadyUtils.Toast.info(`📈 You're doing great! ${remaining} leads remaining.`, 3000);
+            }
+        }
     }
 };
 
-// 🔒 LOCKED FEATURES (FREE TIER)
+// 🔒 LOCKED FEATURES API - Shows upgrade prompts
 const LockedAPI = {
-    showUpgrade: (feature) => showUpgradePrompt(feature),
+    // Analytics features
+    async getAdvancedAnalytics() {
+        FreeTierPrompts.showUpgradePrompt('analytics');
+        return {
+            success: false,
+            error: 'Advanced analytics requires Professional plan!',
+            locked: true,
+            feature: 'analytics'
+        };
+    },
     
-    // Any locked feature calls this
-    requiresUpgrade: (featureName) => {
-        showUpgradePrompt(featureName);
+    // Export features  
+    async exportData(format = 'csv') {
+        FreeTierPrompts.showUpgradePrompt('export');
+        return {
+            success: false,
+            error: 'Data export requires Professional plan!',
+            locked: true,
+            feature: 'export'
+        };
+    },
+    
+    // Advanced search
+    async advancedSearch(query) {
+        FreeTierPrompts.showUpgradePrompt('advanced_search');
+        return {
+            success: false,
+            error: 'Advanced search requires Professional plan!',
+            locked: true,
+            feature: 'advanced_search'
+        };
+    },
+    
+    // Generic locked feature
+    requiresUpgrade(featureName) {
+        FreeTierPrompts.showUpgradePrompt(featureName);
         return {
             success: false,
             error: `${featureName} requires Professional plan!`,
-            locked: true
+            locked: true,
+            feature: featureName
+        };
+    }
+};
+
+// 📊 FREE TIER ANALYTICS - Limited but functional
+const FreeAnalyticsAPI = {
+    async getBasicStats() {
+        // This uses the real statistics endpoint
+        const stats = await LeadsAPI.getStatistics();
+        
+        if (!stats.success) {
+            return stats;
+        }
+        
+        // Return limited stats for free users
+        return {
+            success: true,
+            data: {
+                totalLeads: stats.data.totalLeads,
+                leadTypes: {
+                    cold: stats.data.coldLeads,
+                    warm: stats.data.warmLeads,
+                    crm: stats.data.crmLeads
+                },
+                // Hide advanced metrics for free users
+                lockedFeatures: {
+                    conversionRate: '🔒 Upgrade for conversion tracking',
+                    platformPerformance: '🔒 Upgrade for platform insights',
+                    timeAnalysis: '🔒 Upgrade for time-based analytics'
+                }
+            }
         };
     }
 };
@@ -317,35 +420,78 @@ window.AuthAPI = AuthAPI;
 window.LeadsAPI = LeadsAPI;
 window.SettingsAPI = SettingsAPI;
 window.LockedAPI = LockedAPI;
-window.authenticatedFetch = authenticatedFetch;
-window.showUpgradePrompt = showUpgradePrompt;
+window.FreeAnalyticsAPI = FreeAnalyticsAPI;
+window.FreeTierPrompts = FreeTierPrompts;
 
-// Simple consolidated API
+// 🎯 MAIN API OBJECT - Everything in one place
 window.SteadyAPI = {
+    // Core APIs
     Auth: AuthAPI,
     Leads: LeadsAPI,
     Settings: SettingsAPI,
+    Analytics: FreeAnalyticsAPI,
+    
+    // Free tier specific
     Locked: LockedAPI,
+    Prompts: FreeTierPrompts,
     
     // Helper functions
     isAuthenticated: () => AuthAPI.isAuthenticated(),
     getCurrentUser: () => AuthAPI.getCurrentUser(),
-    hasAccess: (feature) => ['basic_dashboard', 'add_leads', 'basic_settings'].includes(feature),
+    getLeadLimitInfo: () => AuthAPI.getLeadLimitInfo(),
     
-    // Always available
-    authenticatedFetch: authenticatedFetch
+    // Feature checking
+    hasAccess: (feature) => {
+        const freeFeatures = ['basic_dashboard', 'add_leads', 'basic_settings', 'goal_tracking', 'basic_analytics'];
+        return freeFeatures.includes(feature);
+    },
+    
+    // Secure API request wrapper
+    apiRequest: async (url, options = {}) => {
+        if (!window.authManager) {
+            throw new Error('Authentication manager not available');
+        }
+        return await window.authManager.apiRequest(url, options);
+    }
 };
 
-console.log('🆓 FREE TIER API loaded successfully!');
-console.log('✅ Available: Auth, Leads, Settings');
-console.log('🔒 Locked features will show upgrade prompts');
-
-// Verify authentication on load
-if (AuthAPI.isAuthenticated()) {
+// 🎯 INITIALIZE FREE TIER API
+function initializeFreeAPI() {
+    console.log('🆓 FREE TIER API initializing...');
+    
+    // Check if auth manager is available
+    if (!window.authManager) {
+        console.error('❌ Auth manager not found! Make sure auth.js is loaded first.');
+        return false;
+    }
+    
+    // Check authentication
+    if (!AuthAPI.isAuthenticated()) {
+        console.log('❌ User not authenticated');
+        return false;
+    }
+    
     const user = AuthAPI.getCurrentUser();
-    console.log('✅ User authenticated:', user.email);
-    console.log('🎯 Subscription:', user.subscriptionTier || 'FREE');
-} else {
-    console.log('❌ User not authenticated - redirecting...');
-    window.location.href = '/login?error=session_expired';
+    const limitInfo = AuthAPI.getLeadLimitInfo();
+    
+    console.log('✅ FREE TIER API ready!');
+    console.log(`👤 User: ${user?.email}`);
+    console.log(`🎯 Tier: ${user?.subscriptionTier || 'FREE'}`);
+    console.log(`📊 Leads: ${limitInfo?.current || 0}/${limitInfo?.limit || 50}`);
+    
+    // Show limit warning if needed
+    if (limitInfo && limitInfo.current > 0) {
+        FreeTierPrompts.showLimitWarning(limitInfo.current, limitInfo.limit);
+    }
+    
+    return true;
 }
+
+// 🚀 AUTO-INITIALIZE WHEN DOM IS READY
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeFreeAPI);
+} else {
+    initializeFreeAPI();
+}
+
+console.log('🆓 FREE TIER API loaded - Secure cookie authentication ready! 🔐');

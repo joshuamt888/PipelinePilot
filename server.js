@@ -751,73 +751,6 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-// 🔐 UPDATED: Dashboard sub-routes with cookie authentication  
-app.get('/dashboard/*', async (req, res) => {
-  try {
-    const requestPath = req.params[0];
-    
-    // Get token from cookie first, then URL/header as fallback
-    let token = req.cookies.authToken;
-    if (!token) {
-      token = req.query.token;
-    }
-    if (!token) {
-      const authHeader = req.headers['authorization'];
-      token = authHeader && authHeader.split(' ')[1];
-    }
-    
-    if (!token) {
-      return res.redirect('/login?error=auth_required');
-    }
-    
-    // Verify token
-    let decoded, user;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-      user = await findUserById(decoded.userId);
-      
-      if (!user) {
-        res.clearCookie('authToken', getCookieConfig());
-        return res.redirect('/login?error=user_not_found');
-      }
-    } catch (err) {
-      console.error('Token verification failed in dashboard sub-route:', err.message);
-      res.clearCookie('authToken', getCookieConfig());
-      return res.redirect('/login?error=session_expired');
-    }
-    
-    // Handle different types of requests (existing logic)
-    if (requestPath.startsWith('shared/')) {
-      const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
-      return res.sendFile(filePath, (err) => {
-        if (err) {
-          console.warn(`📁 Shared asset not found: ${requestPath}`);
-          res.status(404).json({ error: 'Asset not found' });
-        }
-      });
-    }
-    
-    if (requestPath.startsWith('tiers/')) {
-      const filePath = path.join(__dirname, 'public', 'dashboard', requestPath);
-      return res.sendFile(filePath, (err) => {
-        if (err) {
-          console.warn(`📁 Tier asset not found: ${requestPath}`);
-          res.status(404).json({ error: 'Asset not found' });
-        }
-      });
-    }
-    
-    // For any other dashboard route, redirect to user's tier dashboard
-    const tierPath = getTierPath(user.subscription_tier);
-    console.log(`🎯 Serving dashboard sub-route: ${user.email} → /dashboard/tiers/${tierPath}/index.html`);
-    res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html'));
-    
-  } catch (error) {
-    console.error('Dashboard sub-route error:', error.message);
-    res.status(500).json({ error: 'Failed to load dashboard page' });
-  }
-});
-
 // 🔐 Password reset routes
 app.get('/forgot-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login', 'forgot-password.html'));
@@ -2269,16 +2202,20 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// 📄 Static page routes
-const staticPages = ['login', 'pricing', 'features', 'about', 'contact', 'privacy', 'terms'];
+// Auth routes
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth', 'login.html'));
+});
 
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth', 'register.html'));
+});
+
+// Static page routes  
+const staticPages = ['pricing', 'features', 'about', 'contact', 'privacy', 'terms'];
 staticPages.forEach(page => {
   app.get(`/${page}`, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', `${page}.html`), (err) => {
-      if (err) {
-        res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-      }
-    });
+    res.sendFile(path.join(__dirname, 'public', 'pages', `${page}.html`));
   });
 });
 

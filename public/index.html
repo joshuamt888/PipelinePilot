@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteadyManager - Transform Leads Into Revenue</title>
+    <title>SteadyManager - Simple Lead Management That Scales With You</title>
+    <meta name="description" content="Born from frustration with complex CRMs. SteadyManager starts simple and scales with your business. Built by Steady Scaling LLC for real sales professionals.">
+    
+    <!-- CDN Resources -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -98,6 +105,23 @@
             border: none;
             cursor: pointer;
             font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn-outline {
@@ -116,6 +140,7 @@
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
+            position: relative;
         }
 
         .btn-primary:hover {
@@ -160,6 +185,7 @@
             font-size: 0.875rem;
             margin-bottom: 2rem;
             backdrop-filter: blur(10px);
+            animation: fadeInDown 1s ease-out;
         }
 
         .hero-title {
@@ -167,34 +193,39 @@
             font-weight: 900;
             margin-bottom: 1.5rem;
             line-height: 1.1;
+            animation: fadeInUp 1s ease-out 0.2s both;
         }
 
         .hero-subtitle {
             font-size: 1.25rem;
             opacity: 0.9;
-            margin-bottom: 3rem;
-            max-width: 600px;
+            margin-bottom: 2rem;
+            max-width: 700px;
             margin-left: auto;
             margin-right: auto;
+            animation: fadeInUp 1s ease-out 0.4s both;
         }
 
         .hero-cta {
             display: flex;
             gap: 1rem;
             justify-content: center;
-            margin-bottom: 4rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 1s ease-out 0.6s both;
         }
 
         .btn-hero {
             padding: 1rem 2rem;
             font-size: 1.1rem;
             border-radius: 12px;
+            position: relative;
         }
 
         .btn-white {
             background: white;
             color: #667eea;
             font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         .btn-white:hover {
@@ -214,41 +245,163 @@
             backdrop-filter: blur(10px);
         }
 
-        /* Stats Section */
-        .stats {
+        .company-info {
             background: rgba(255, 255, 255, 0.1);
-            padding: 3rem 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stats-container {
-            max-width: 800px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
             margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 2rem;
-            text-align: center;
+            animation: fadeInUp 1s ease-out 0.8s both;
         }
 
-        .stat-item {
-            opacity: 0.95;
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 900;
+        .company-logo {
+            font-size: 1.1rem;
+            font-weight: 700;
             margin-bottom: 0.5rem;
         }
 
-        .stat-label {
-            font-size: 0.875rem;
-            opacity: 0.8;
+        .company-tagline {
+            font-size: 0.9rem;
+            opacity: 0.85;
         }
 
-        /* Features Section */
-        .features {
+        /* Problem Section */
+        .problem-section {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%);
+        }
+
+        .problem-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .problem-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1a202c;
+            margin-bottom: 2rem;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .problem-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .problem-icon {
+            display: none;
+        }
+
+        .problem-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #dc2626;
+            margin-bottom: 1rem;
+        }
+
+        .problem-text {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        /* Solution Section */
+        .solution-section {
             padding: 6rem 2rem;
             background: #f8fafc;
+        }
+
+        .solution-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .solution-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1a202c;
+            margin-bottom: 2rem;
+        }
+
+        .solution-subtitle {
+            font-size: 1.25rem;
+            color: #4a5568;
+            max-width: 700px;
+            margin: 0 auto 3rem;
+        }
+
+        .solution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .solution-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .solution-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .solution-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .solution-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .solution-icon {
+            display: none;
+        }
+
+        .solution-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .solution-description {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 6rem 2rem;
+            background: white;
         }
 
         .section-container {
@@ -269,7 +422,6 @@
             border-radius: 50px;
             font-size: 0.875rem;
             font-weight: 600;
-            margin-top: 1rem;
             margin-bottom: 1rem;
         }
 
@@ -285,57 +437,6 @@
             color: #4a5568;
             max-width: 600px;
             margin: 0 auto;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border: 1px solid #e2e8f0;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
-            border-color: rgba(102, 126, 234, 0.2);
-        }
-
-        .feature-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .feature-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #1a202c;
-        }
-
-        .feature-description {
-            color: #4a5568;
-            line-height: 1.6;
-        }
-
-        /* How It Works */
-        .how-it-works {
-            padding: 6rem 2rem;
-            background: white;
         }
 
         .steps-grid {
@@ -362,6 +463,22 @@
             font-size: 1.5rem;
             font-weight: 700;
             margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .step-number::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 50px;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, transparent);
+            transform: translateY(-50%);
+        }
+
+        .step-card:last-child .step-number::after {
+            display: none;
         }
 
         .step-title {
@@ -375,26 +492,45 @@
             color: #4a5568;
         }
 
-        /* Pricing Preview */
-        .pricing-preview {
+        /* Pricing Section */
+        .pricing {
             padding: 6rem 2rem;
             background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 100%);
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 4rem;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .pricing-card {
             background: white;
             border-radius: 20px;
             padding: 3rem;
-            max-width: 400px;
-            margin: 0 auto;
             text-align: center;
             box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
             border: 2px solid rgba(102, 126, 234, 0.1);
             position: relative;
             overflow: hidden;
+            transition: all 0.3s ease;
         }
 
-        .pricing-card::before {
+        .pricing-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(102, 126, 234, 0.25);
+        }
+
+        .pricing-card.featured {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
             content: '';
             position: absolute;
             top: 0;
@@ -415,6 +551,13 @@
             display: inline-block;
         }
 
+        .pricing-plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 1rem;
+        }
+
         .pricing-amount {
             font-size: 4rem;
             font-weight: 900;
@@ -430,18 +573,23 @@
         .pricing-features {
             list-style: none;
             margin-bottom: 2rem;
+            text-align: left;
         }
 
         .pricing-features li {
             padding: 0.5rem 0;
             color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .pricing-features li::before {
             content: '✓';
             color: #48bb78;
             font-weight: bold;
-            margin-right: 0.5rem;
+            width: 20px;
+            text-align: center;
         }
 
         /* CTA Section */
@@ -450,6 +598,26 @@
             color: white;
             padding: 6rem 2rem;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid2" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid2)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
         }
 
         .cta-title {
@@ -540,6 +708,29 @@
             cursor: pointer;
         }
 
+        /* Animation Classes */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .nav-menu {
@@ -567,16 +758,28 @@
                 font-size: 2rem;
             }
 
-            .stats-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .features-grid {
+            .solution-grid {
                 grid-template-columns: 1fr;
             }
 
             .steps-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .step-number::after {
+                display: none;
+            }
+
+            .problem-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.featured {
+                transform: none;
             }
         }
     </style>
@@ -596,8 +799,8 @@
             </ul>
 
             <div class="nav-cta">
-                <a href="/login" class="btn btn-outline">Sign In</a>
-                <a href="/login" class="btn btn-primary">Start Free</a>
+                <a href="/auth/login" class="btn btn-outline">Sign In</a>
+                <a href="/auth/trial" class="btn btn-primary">Start Free Trial</a>
             </div>
 
             <button class="mobile-menu-btn">☰</button>
@@ -607,111 +810,96 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-container">
-
+            <div class="hero-badge">
+                Built by Sales Professionals, For Sales Professionals
+            </div>
             
             <h1 class="hero-title">
-                Transform Leads<br>
-                Into Revenue
+                Simple Lead Management<br>
+                That Scales With You
             </h1>
             
             <p class="hero-subtitle">
-                The only lead management platform built for sales professionals who want to turn chaos into cash. 
-                Simple, powerful, and designed to make you money.
+                Tired of complex CRMs with features you'll never use? We built SteadyManager because we were too. 
+                Start simple, scale smart, and focus on what matters: closing deals.
             </p>
 
             <div class="hero-cta">
-                <a href="/login" class="btn btn-white btn-hero">Start Free Trial</a>
-                <a href="/demo" class="btn btn-outline-white btn-hero">Watch Demo</a>
+                <a href="/auth/trial" class="btn btn-white btn-hero">Start Free Trial</a>
+                <a href="#demo" class="btn btn-outline-white btn-hero">See How It Works</a>
+            </div>
+
+            <div class="company-info">
+                <div class="company-logo">A Steady Scaling LLC Product</div>
+                <div class="company-tagline">We build tools that grow with your business, not against it.</div>
             </div>
         </div>
+    </section>
 
-        <!-- Stats -->
-        <div class="stats">
-            <div class="stats-container">
-                <div class="stat-item">
-                    <div class="stat-number">10K+</div>
-                    <div class="stat-label">Leads Managed</div>
+    <!-- Problem Section -->
+    <section class="problem-section">
+        <div class="problem-container">
+            <h2 class="problem-title">We Know Your Pain</h2>
+            <p style="font-size: 1.125rem; color: #4a5568; max-width: 600px; margin: 0 auto 2rem;">
+                We've been there. Drowning in "enterprise" CRMs with 500 features when you just need the basics to work perfectly.
+            </p>
+            
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <h3 class="problem-card-title">Overwhelming Interfaces</h3>
+                    <p class="problem-text">
+                        Most CRMs look like airplane cockpits. You spend more time learning the software than selling.
+                    </p>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-number">500+</div>
-                    <div class="stat-label">Happy Users</div>
+
+                <div class="problem-card">
+                    <h3 class="problem-card-title">Expensive & Bloated</h3>
+                    <p class="problem-text">
+                        Why pay for enterprise features when you just need to track leads and follow up consistently?
+                    </p>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-number">85%</div>
-                    <div class="stat-label">Conversion Boost</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">$2M+</div>
-                    <div class="stat-label">Revenue Generated</div>
+
+                <div class="problem-card">
+                    <h3 class="problem-card-title">Analysis Paralysis</h3>
+                    <p class="problem-text">
+                        Endless reports and dashboards that tell you everything except what you need to know to close more deals.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <div class="section-container">
-            <div class="section-header">
-                <h2 class="section-title">Everything You Need to Win</h2>
-                <p class="section-subtitle">
-                    Stop losing leads to spreadsheet chaos. Our platform gives you military-grade organization 
-                    with the simplicity your brain craves.
-                </p>
-                <div class="section-badge">🎯 Core Features</div>
-            </div>
+    <!-- Solution Section -->
+    <section class="solution-section">
+        <div class="solution-container">
+            <h2 class="solution-title">Our Solution: Simplicity That Scales</h2>
+            <p class="solution-subtitle">
+                SteadyManager starts with exactly what you need and grows with your business. 
+                No more, no less. Just the features that actually make you money.
+            </p>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">❄️</div>
-                    <h3 class="feature-title">Cold Lead Capture</h3>
-                    <p class="feature-description">
-                        Instantly capture prospects from LinkedIn, Facebook, referrals, and 20+ sources. 
-                        Never lose another potential customer to poor organization.
+            <div class="solution-grid">
+                <div class="solution-card">
+                    <h3 class="solution-card-title">Start Simple</h3>
+                    <p class="solution-description">
+                        Begin with our free tier - basic lead tracking that just works. 
+                        No complexity, no confusion. Just add leads and follow up.
                     </p>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">🔥</div>
-                    <h3 class="feature-title">Warm Lead Nurturing</h3>
-                    <p class="feature-description">
-                        Track engagement, schedule follow-ups, and move prospects through your pipeline 
-                        with precision timing that closes more deals.
+                <div class="solution-card">
+                    <h3 class="solution-card-title">Scale Smart</h3>
+                    <p class="solution-description">
+                        As your business grows, unlock analytics, automation, and team features. 
+                        Each tier adds value without adding complexity.
                     </p>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">💰</div>
-                    <h3 class="feature-title">CRM Dashboard</h3>
-                    <p class="feature-description">
-                        Manage active clients, track revenue opportunities, and maintain relationships 
-                        that generate recurring income for years.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3 class="feature-title">Smart Analytics</h3>
-                    <p class="feature-description">
-                        See which platforms deliver the best leads, track conversion rates, 
-                        and optimize your sales process with data-driven insights.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3 class="feature-title">Goal Tracking</h3>
-                    <p class="feature-description">
-                        Set daily, weekly, and monthly targets. Get motivated by progress bars 
-                        and achievements that keep you focused on what matters.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📱</div>
-                    <h3 class="feature-title">Mobile Ready</h3>
-                    <p class="feature-description">
-                        Add leads on the go, check your pipeline during coffee breaks, 
-                        and never miss an opportunity because you weren't at your desk.
+                <div class="solution-card">
+                    <h3 class="solution-card-title">Focus on Results</h3>
+                    <p class="solution-description">
+                        Every feature is designed with one goal: help you close more deals. 
+                        No fluff, no distractions, just results.
                     </p>
                 </div>
             </div>
@@ -719,14 +907,14 @@
     </section>
 
     <!-- How It Works -->
-    <section class="how-it-works">
+    <section class="how-it-works" id="demo">
         <div class="section-container">
             <div class="section-header">
-                <h2 class="section-title">How It Works</h2>
+                <div class="section-badge">Simple Process</div>
+                <h2 class="section-title">How SteadyManager Works</h2>
                 <p class="section-subtitle">
-                    Three steps to transform your lead chaos into a revenue-generating machine.
+                    Three steps to organized lead management. No PhD in CRM required.
                 </p>
-                <div class="section-badge">⚡ Simple Process</div>
             </div>
 
             <div class="steps-grid">
@@ -734,72 +922,43 @@
                     <div class="step-number">1</div>
                     <h3 class="step-title">Capture Leads</h3>
                     <p class="step-description">
-                        Add prospects from any source - LinkedIn, networking events, referrals. 
-                        Our platform organizes everything automatically.
+                        Add prospects from anywhere - networking events, LinkedIn, referrals. 
+                        Simple forms that take seconds, not minutes.
                     </p>
                 </div>
 
                 <div class="step-card">
                     <div class="step-number">2</div>
-                    <h3 class="step-title">Nurture & Track</h3>
+                    <h3 class="step-title">Track Progress</h3>
                     <p class="step-description">
-                        Move leads from cold to warm with systematic follow-ups. 
-                        Track every interaction and never let opportunities slip away.
+                        Move leads through your pipeline with drag-and-drop simplicity. 
+                        Set reminders and never miss a follow-up again.
                     </p>
                 </div>
 
                 <div class="step-card">
                     <div class="step-number">3</div>
-                    <h3 class="step-title">Close & Manage</h3>
+                    <h3 class="step-title">Close Deals</h3>
                     <p class="step-description">
-                        Convert warm leads to paying clients and manage relationships 
-                        in your CRM dashboard for maximum lifetime value.
+                        Convert prospects to clients and manage relationships. 
+                        See what's working and do more of it.
                     </p>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing Preview -->
-    <section class="pricing-preview">
-        <div class="section-container">
-            <div class="section-header">
-                <h2 class="section-title">Start Free, Scale Smart</h2>
-                <p class="section-subtitle">
-                    No hidden fees, no complex tiers. Just powerful lead management at a price that makes sense.
-                </p>
-                <div class="section-badge">💰 Simple Pricing</div>
-            </div>
-
-            <div class="pricing-card">
-                <div class="pricing-badge">Most Popular</div>
-                <div class="pricing-amount">$6.99</div>
-                <div class="pricing-period">per month</div>
-                
-                <ul class="pricing-features">
-                    <li>1,000 leads per month</li>
-                    <li>Unlimited cold/warm/CRM tracking</li>
-                    <li>Goal setting & analytics</li>
-                    <li>Mobile app access</li>
-                    <li>Email support</li>
-                    <li>30-day money-back guarantee</li>
-                </ul>
-
-                <a href="/login" class="btn btn-primary btn-hero">Start Your Free Trial</a>
             </div>
         </div>
     </section>
 
     <!-- CTA Section -->
     <section class="cta-section">
-        <div class="section-container">
-            <h2 class="cta-title">Ready to 10X Your Sales?</h2>
+        <div class="cta-container">
+            <h2 class="cta-title">Ready to Get Organized?</h2>
             <p class="cta-subtitle">
-                Join thousands of sales professionals who've transformed their lead chaos into consistent revenue.
+                Start with our free tier and see why sales professionals choose simplicity over complexity. 
+                No credit card required.
             </p>
             <div class="hero-cta">
-                <a href="/login" class="btn btn-white btn-hero">Start Free Trial</a>
-                <a href="/pricing" class="btn btn-outline-white btn-hero">View All Plans</a>
+                <a href="/auth/trial" class="btn btn-white btn-hero">Start Free Trial</a>
+                <a href="/auth/register" class="btn btn-outline-white btn-hero">Create Free Account</a>
             </div>
         </div>
     </section>
@@ -810,8 +969,8 @@
             <div class="footer-brand">
                 <div class="footer-logo">SteadyManager</div>
                 <p class="footer-description">
-                    Transform leads into revenue with the simplest, most powerful 
-                    lead management platform built for sales professionals.
+                    Simple lead management that scales with your business. 
+                    Built by Steady Scaling LLC for real sales professionals.
                 </p>
             </div>
 
@@ -820,8 +979,7 @@
                 <ul class="footer-links">
                     <li><a href="/features">Features</a></li>
                     <li><a href="/pricing">Pricing</a></li>
-                    <li><a href="/demo">Demo</a></li>
-                    <li><a href="/login">Sign Up</a></li>
+                    <li><a href="#demo">How It Works</a></li>
                 </ul>
             </div>
 
@@ -832,16 +990,33 @@
                     <li><a href="/contact">Contact</a></li>
                     <li><a href="/privacy">Privacy</a></li>
                     <li><a href="/terms">Terms</a></li>
+                    <li><a href="/auth/login">Sign In</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="footer-bottom">
-            <p>2025 SteadyManager - A software service by Steady Scaling LLC. Built to make you money.</p>
+            <p>© 2025 SteadyManager - A Steady Scaling LLC Product. Built to help you scale steadily.</p>
         </div>
     </footer>
 
     <script>
+        // Simple event tracking
+        function trackEvent(eventName, data = {}) {
+            console.log(`Event: ${eventName}`, data);
+            // This is where you'd send to your analytics platform
+        }
+
+        // Track CTA clicks
+        document.querySelectorAll('a[href*="trial"], a[href*="register"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                trackEvent('cta_click', {
+                    button_text: btn.textContent.trim(),
+                    button_location: btn.closest('section')?.className || 'unknown'
+                });
+            });
+        });
+
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
@@ -856,7 +1031,7 @@
             });
         });
 
-        // Navbar scroll effect
+        // Enhanced navbar scroll effect
         window.addEventListener('scroll', function() {
             const navbar = document.querySelector('.navbar');
             if (window.scrollY > 100) {
@@ -868,10 +1043,20 @@
             }
         });
 
-        // Mobile menu toggle (basic functionality)
+        // Mobile menu (placeholder)
         document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
-            alert('Mobile menu coming soon! For now, please use the desktop version.');
+            // Simple alert for now - will be replaced with actual menu
+            alert('Mobile menu coming soon! For now, try our free trial at /auth/trial');
         });
+
+        // Initialize
+        trackEvent('page_loaded', {
+            page: 'landing',
+            referrer: document.referrer
+        });
+
+        console.log('SteadyManager - Simple Lead Management That Scales');
+        console.log('Built by Steady Scaling LLC');
     </script>
 </body>
 </html>

@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Free Trial - SteadyManager</title>
+    <meta name="description" content="Start your 14-day free trial of SteadyManager Professional. 1,000 leads, advanced analytics, no credit card required.">
+    
+    <!-- CDN Resources -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 3rem;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-content {
+            text-align: center;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .mobile-back-btn {
+            display: none;
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 1.25rem;
+        }
+
+        .mobile-back-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .trial-badge {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0 auto 2rem;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trial-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .trial-badge:hover::before {
+            left: 100%;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .trial-features {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .trial-features-title {
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #166534;
+            font-size: 0.9rem;
+        }
+
+        .feature-item::before {
+            content: '✓';
+            color: #22c55e;
+            font-weight: bold;
+            width: 20px;
+            text-align: center;
+        }
+
+        .trial-highlight {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .trial-highlight-title {
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .trial-highlight-text {
+            color: #92400e;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #16a34a;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        .form-input.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .form-input.error:focus {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .password-strength {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .strength-weak {
+            color: #ef4444;
+        }
+
+        .strength-medium {
+            color: #f59e0b;
+        }
+
+        .strength-strong {
+            color: #16a34a;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submit-btn:disabled::before {
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .auth-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .auth-link:hover {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+
+        .auth-links p {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .back-home {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-home:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .guarantee {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(34, 197, 94, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .guarantee-text {
+            color: #166534;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .back-home {
+                display: none;
+            }
+
+            .mobile-back-btn {
+                display: block;
+            }
+
+            .auth-container {
+                padding: 2rem 1.5rem;
+                margin: 0;
+                border-radius: 16px;
+                max-width: none;
+            }
+
+            .logo h1 {
+                font-size: 1.75rem;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Animation classes */
+        .fadeInUp {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-home">
+        <span>←</span>
+        <span>Back to Home</span>
+    </a>
+    
+    <div class="auth-container fadeInUp">
+        <div class="logo">
+            <a href="/" class="mobile-back-btn">←</a>
+            <div class="logo-content">
+                <h1>SteadyManager</h1>
+                <p>A Steady Scaling LLC Product</p>
+            </div>
+        </div>
+
+        <div class="form-header">
+            <div class="trial-badge">14-Day Free Trial</div>
+            <h2 class="form-title">Try Professional Free</h2>
+            <p class="form-subtitle">No credit card required. Cancel anytime.</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <!-- Trial Features -->
+        <div class="trial-features">
+            <div class="trial-features-title">What You Get in Your Free Trial</div>
+            <div class="features-grid">
+                <div class="feature-item">1,000 leads/month</div>
+                <div class="feature-item">Advanced analytics</div>
+                <div class="feature-item">Data export</div>
+                <div class="feature-item">Goal tracking</div>
+                <div class="feature-item">Priority support</div>
+                <div class="feature-item">Full dashboard access</div>
+            </div>
+        </div>
+
+        <!-- Trial Highlight -->
+        <div class="trial-highlight">
+            <div class="trial-highlight-title">No Risk, All Reward</div>
+            <div class="trial-highlight-text">
+                Experience the full power of SteadyManager Professional for 14 days. 
+                No commitments, no hidden fees, no credit card required.
+            </div>
+        </div>
+
+        <form id="trialForm">
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-input" 
+                    required 
+                    autocomplete="email"
+                    placeholder="Enter your email"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Create Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    class="form-input" 
+                    required 
+                    autocomplete="new-password"
+                    placeholder="Create a strong password"
+                >
+                <div id="passwordStrength" class="password-strength"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    name="confirmPassword" 
+                    class="form-input" 
+                    required 
+                    autocomplete="new-password"
+                    placeholder="Confirm your password"
+                >
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <div class="loading-spinner" id="loadingSpinner"></div>
+                <span id="submitText">Start Free Trial</span>
+            </button>
+
+            <div class="guarantee">
+                <div class="guarantee-text">
+                    Free for 14 days, then $6.99/month. Cancel anytime with one click.
+                </div>
+            </div>
+        </form>
+
+        <div class="auth-links">
+            <p>
+                Already have an account? 
+                <a href="/login" class="auth-link">Sign in</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Password strength checker
+        document.getElementById('password').addEventListener('input', (e) => {
+            checkPasswordStrength(e.target.value);
+        });
+
+        function checkPasswordStrength(password) {
+            const strengthDiv = document.getElementById('passwordStrength');
+            
+            if (password.length === 0) {
+                strengthDiv.textContent = '';
+                return;
+            }
+            
+            let score = 0;
+            let feedback = [];
+            
+            if (password.length >= 8) score++;
+            else feedback.push('at least 8 characters');
+            
+            if (/[A-Z]/.test(password)) score++;
+            else feedback.push('uppercase letter');
+            
+            if (/[a-z]/.test(password)) score++;
+            else feedback.push('lowercase letter');
+            
+            if (/\d/.test(password)) score++;
+            else feedback.push('number');
+            
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+            else feedback.push('special character');
+            
+            if (score < 3) {
+                strengthDiv.className = 'password-strength strength-weak';
+                strengthDiv.textContent = `Weak - needs: ${feedback.slice(0, 2).join(', ')}`;
+            } else if (score < 4) {
+                strengthDiv.className = 'password-strength strength-medium';
+                strengthDiv.textContent = 'Medium - consider adding more characters';
+            } else {
+                strengthDiv.className = 'password-strength strength-strong';
+                strengthDiv.textContent = 'Strong password!';
+            }
+        }
+
+        // Error/Success message functions
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 8000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function clearMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        function setLoading(isLoading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitText.textContent = 'Starting Trial...';
+                loadingSpinner.style.display = 'inline-block';
+            } else {
+                submitBtn.disabled = false;
+                submitText.textContent = 'Start Free Trial';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.form-input').forEach(input => {
+                input.classList.remove('error');
+            });
+        }
+
+        function setFieldError(fieldName) {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                field.classList.add('error');
+            }
+        }
+
+        // Form submission
+        document.getElementById('trialForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            clearMessages();
+            clearFieldErrors();
+            setLoading(true);
+            
+            const formData = new FormData(e.target);
+            const trialData = {
+                email: formData.get('email').trim(),
+                password: formData.get('password'),
+                confirmPassword: formData.get('confirmPassword')
+            };
+            
+            // Client-side validation
+            if (!trialData.email || !trialData.password || !trialData.confirmPassword) {
+                showError('Please fill in all fields.');
+                setLoading(false);
+                if (!trialData.email) setFieldError('email');
+                if (!trialData.password) setFieldError('password');
+                if (!trialData.confirmPassword) setFieldError('confirmPassword');
+                return;
+            }
+            
+            if (!trialData.email.includes('@')) {
+                showError('Please enter a valid email address.');
+                setFieldError('email');
+                setLoading(false);
+                return;
+            }
+            
+            if (trialData.password !== trialData.confirmPassword) {
+                showError('Passwords do not match.');
+                setFieldError('password');
+                setFieldError('confirmPassword');
+                setLoading(false);
+                return;
+            }
+            
+            if (trialData.password.length < 8) {
+                showError('Password must be at least 8 characters long.');
+                setFieldError('password');
+                setLoading(false);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/start-trial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(trialData),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Success! Show message and redirect
+                    showSuccess(data.message || 'Free trial started! Redirecting to your dashboard...');
+                    
+                    // Redirect to dashboard after success
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    // Handle various error cases
+                    if (response.status === 429) {
+                        showError(data.error || 'Too many trial attempts. Please wait and try again.');
+                    } else if (response.status === 400) {
+                        if (data.shouldSignIn) {
+                            showError(data.error + ' Would you like to sign in instead?');
+                            // Could add a link to login page
+                        } else {
+                            showError(data.error || 'Failed to start trial.');
+                            // Highlight relevant fields based on error
+                            if (data.error.toLowerCase().includes('email')) {
+                                setFieldError('email');
+                            } else if (data.error.toLowerCase().includes('password')) {
+                                setFieldError('password');
+                            }
+                        }
+                    } else {
+                        showError(data.error || 'Failed to start trial. Please try again.');
+                    }
+                }
+            } catch (error) {
+                console.error('Trial start error:', error);
+                showError('Network error. Please check your connection and try again.');
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Clear error styling on input
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+            });
+        });
+
+        // Focus first input on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('email').focus();
+        });
+
+        console.log('🎁 SteadyManager Free Trial Page Loaded');
+        console.log('✅ Ready to convert visitors to trial users!');
+    </script>
+</body>
+</html>

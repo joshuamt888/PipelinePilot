@@ -3,234 +3,1481 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SteadyManager - Free Dashboard</title>
+    <title>Dashboard - SteadyManager</title>
+    <meta name="description" content="Your SteadyManager dashboard - manage leads, track progress, and grow your business.">
     
-    <!-- External Dependencies -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- CDN Resources -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
-    <!-- React -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 🔐 AUTH MANAGER (matches your server auth system) -->
+    <!-- Shared Dashboard Auth -->
     <script src="/dashboard/shared/js/auth.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1a202c;
+            line-height: 1.6;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 280px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 2rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-tier {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            padding: 0;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: white;
+        }
+
+        .nav-link.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-link.locked::after {
+            content: '🔒';
+            margin-left: auto;
+            font-size: 0.875rem;
+        }
+
+        .upgrade-prompt {
+            margin: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .upgrade-prompt h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .upgrade-prompt p {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .upgrade-btn {
+            background: white;
+            color: #667eea;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .upgrade-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header-left h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-left p {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #f8fafc;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+        }
+
+        .user-menu:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .user-tier {
+            font-size: 0.8rem;
+            color: #10b981;
+            font-weight: 500;
+        }
+
+        /* Dashboard Content */
+        .dashboard-content {
+            padding: 2rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .trend-up {
+            color: #10b981;
+        }
+
+        .trend-down {
+            color: #ef4444;
+        }
+
+        /* Lead Limit Progress */
+        .lead-limit-card {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #fbbf24;
+        }
+
+        .lead-limit-card::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-btn {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .action-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .action-icon {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 0.75rem;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+        }
+
+        .action-btn.primary .action-icon {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .action-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .action-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .action-btn.primary .action-desc {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        /* Recent Leads */
+        .leads-section {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .section-action {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .section-action:hover {
+            color: #4f46e5;
+        }
+
+        .leads-list {
+            space-y: 0.75rem;
+        }
+
+        .lead-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            transition: all 0.3s ease;
+        }
+
+        .lead-item:hover {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+
+        .lead-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .lead-info {
+            flex: 1;
+        }
+
+        .lead-name {
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+        }
+
+        .lead-details {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .lead-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-new {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-contacted {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-qualified {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+
+        /* Sidebar Panel */
+        .sidebar-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f1f5f9;
+            height: fit-content;
+        }
+
+        .upgrade-panel {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .upgrade-panel h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .upgrade-panel p {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .upgrade-panel .upgrade-btn {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Recent Activity */
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-size: 0.875rem;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 0.875rem;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .dashboard-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .scale-in {
+            animation: scaleIn 0.3s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Locked Feature Overlay */
+        .locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border-radius: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .locked-overlay:hover {
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .locked-overlay .lock-icon {
+            font-size: 2rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
+        .locked-overlay .lock-text {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+
+        .locked-overlay .lock-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+    </style>
 </head>
-<>
-    <!-- Loading Screen (minimal - your scripts will replace this) -->
-    <div id="loading" class="fixed inset-0 bg-white flex items-center justify-center z-50">
-        <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p class="text-gray-600">Loading your dashboard...</p>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">SteadyManager</div>
+            <div class="sidebar-tier" data-user-tier>Free Tier</div>
+        </div>
+
+        <nav>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="leads">
+                        <i data-lucide="users"></i>
+                        <span>Leads</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="analytics">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="insights">
+                        <i data-lucide="lightbulb"></i>
+                        <span>Insights</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="schedule">
+                        <i data-lucide="calendar"></i>
+                        <span>Schedule</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i data-lucide="settings"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="upgrade-prompt">
+            <h3>Unlock More Power</h3>
+            <p>Upgrade to Professional for advanced analytics and 1,000 leads!</p>
+            <a href="/auth/trial" class="upgrade-btn">Start Free Trial</a>
         </div>
     </div>
 
-    <!-- React App Container (minimal - your scripts handle the UI) -->
-    <div id="app" class="hidden"></div>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>Welcome back!</h1>
+                <p>Here's what's happening with your leads today.</p>
+            </div>
+            <div class="header-right">
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar" data-user-initials>JS</div>
+                    <div class="user-info">
+                        <div class="user-name" data-user-name>John Smith</div>
+                        <div class="user-tier" data-subscription-status>Free Plan</div>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+            </div>
+        </header>
 
-    <!-- 🔒 SECURE AUTHENTICATION SETUP -->
-    <script>
-        // 🔥 AUTHENTICATION INITIALIZATION
-        let currentUser = null;
-        let isAuthenticated = false;
+        <!-- Dashboard Content -->
+        <main class="dashboard-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i data-lucide="users"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="totalLeads">0</div>
+                    <div class="stat-label">Total Leads</div>
+                    <div class="stat-trend trend-up">
+                        <i data-lucide="trending-up"></i>
+                        <span>+0 this month</span>
+                    </div>
+                </div>
 
-        // 🔐 Initialize authentication on page load
-        async function initAuth() {
-            try {
-                console.log('🔍 Checking authentication...');
-                
-                // Use the AuthManager from your auth.js
-                const authResult = await window.authManager.checkAuth();
-                
-                if (!authResult) {
-                    console.error('❌ Authentication failed');
-                    window.location.href = '/login?error=session_expired';
-                    return false;
-                }
-                
-                currentUser = window.authManager.user;
-                isAuthenticated = true;
-                
-                console.log('✅ User authenticated:', currentUser.email, `(${currentUser.subscriptionTier})`);
-                
-                // 🛡️ TIER VERIFICATION - Make sure user belongs here
-                if (currentUser.subscriptionTier !== 'FREE') {
-                    console.warn('⚠️ User has different tier, redirecting to appropriate dashboard');
-                    window.location.href = '/dashboard'; // Server will route to correct tier
-                    return false;
-                }
-                
-                return true;
-                
-            } catch (error) {
-                console.error('🚫 Auth initialization failed:', error);
-                window.location.href = '/login?error=auth_failed';
-                return false;
+                <div class="stat-card lead-limit-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i data-lucide="target"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">
+                        <span id="currentLeads">0</span>/<span id="leadLimit">50</span>
+                    </div>
+                    <div class="stat-label">Monthly Lead Limit</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="leadProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i data-lucide="phone-call"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="contactedLeads">0</div>
+                    <div class="stat-label">Contacted This Week</div>
+                    <div class="stat-trend trend-up">
+                        <i data-lucide="trending-up"></i>
+                        <span>Great start!</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i data-lucide="trophy"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="conversionRate">0%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                    <div class="stat-trend">
+                        <span>Add more leads to track</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="#" class="action-btn primary" id="addLeadBtn">
+                    <div class="action-icon">
+                        <i data-lucide="plus"></i>
+                    </div>
+                    <div class="action-title">Add Lead</div>
+                    <div class="action-desc">Capture a new prospect</div>
+                </a>
+
+                <a href="#" class="action-btn" data-page="leads">
+                    <div class="action-icon">
+                        <i data-lucide="list"></i>
+                    </div>
+                    <div class="action-title">View All Leads</div>
+                    <div class="action-desc">Manage your pipeline</div>
+                </a>
+
+                <a href="#" class="action-btn locked" data-feature="analytics">
+                    <div class="action-icon">
+                        <i data-lucide="bar-chart"></i>
+                    </div>
+                    <div class="action-title">View Analytics</div>
+                    <div class="action-desc">Track performance</div>
+                </a>
+
+                <a href="#" class="action-btn locked" data-feature="insights">
+                    <div class="action-icon">
+                        <i data-lucide="lightbulb"></i>
+                    </div>
+                    <div class="action-title">Get Insights</div>
+                    <div class="action-desc">AI-powered tips</div>
+                </a>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Recent Leads -->
+                <div class="leads-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Leads</h2>
+                        <a href="#" class="section-action" data-page="leads">View All</a>
+                    </div>
+                    
+                    <div class="leads-list" id="recentLeadsList">
+                        <!-- Empty State -->
+                        <div class="empty-state" id="emptyState">
+                            <div class="empty-icon">
+                                <i data-lucide="users"></i>
+                            </div>
+                            <h3>No leads yet</h3>
+                            <p>Add your first lead to get started!</p>
+                            <button class="upgrade-btn" id="addFirstLeadBtn" style="margin-top: 1rem;">Add Your First Lead</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Panel -->
+                <div class="sidebar-panel">
+                    <!-- Upgrade Panel -->
+                    <div class="upgrade-panel sidebar-panel">
+                        <h3>🚀 Upgrade to Professional</h3>
+                        <p>Unlock advanced analytics, 1,000 leads, and priority support!</p>
+                        <a href="/auth/trial" class="upgrade-btn">Start Free Trial</a>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div>
+                        <h3 class="section-title" style="margin-bottom: 1rem;">Recent Activity</h3>
+                        <div id="recentActivity">
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i data-lucide="user-plus"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-text">Welcome to SteadyManager!</div>
+                                    <div class="activity-time">Just now</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Add Lead Modal -->
+    <div class="modal-overlay" id="addLeadModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Lead</h3>
+                <button class="modal-close" onclick="closeAddLeadModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addLeadForm">
+                    <div class="form-group">
+                        <label for="leadName">Name *</label>
+                        <input type="text" id="leadName" name="name" required placeholder="Enter lead name">
+                    </div>
+                    <div class="form-group">
+                        <label for="leadEmail">Email</label>
+                        <input type="email" id="leadEmail" name="email" placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="leadPhone">Phone</label>
+                        <input type="tel" id="leadPhone" name="phone" placeholder="Enter phone number">
+                    </div>
+                    <div class="form-group">
+                        <label for="leadCompany">Company</label>
+                        <input type="text" id="leadCompany" name="company" placeholder="Enter company name">
+                    </div>
+                    <div class="form-group">
+                        <label for="leadSource">Source</label>
+                        <select id="leadSource" name="platform">
+                            <option value="">Select source</option>
+                            <option value="LinkedIn">LinkedIn</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Cold Call">Cold Call</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="leadNotes">Notes</label>
+                        <textarea id="leadNotes" name="notes" rows="3" placeholder="Add any notes about this lead"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeAddLeadModal()">Cancel</button>
+                <button type="submit" form="addLeadForm" class="btn-primary" id="saveLeadBtn">
+                    <span class="btn-text">Save Lead</span>
+                    <span class="btn-spinner" style="display: none;">
+                        <i data-lucide="loader" class="spin"></i>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Styles -->
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
 
-        // 🌐 SECURE API CALLS (uses your cookie-based auth)
-        window.authenticatedFetch = async (url, options = {}) => {
-            if (!isAuthenticated) {
-                console.error('❌ Not authenticated for API call');
-                window.location.href = '/login?error=session_expired';
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #f1f5f9;
+            color: #374151;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+    </style>
+
+    <!-- Dashboard Scripts -->
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/api.js"></script>
+    <script src="scripts/dashboard.js"></script>
+    <script src="scripts/AddLead.js"></script>
+    <script src="scripts/Settings.js"></script>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Global Dashboard State
+        window.dashboardState = {
+            currentUser: null,
+            leads: [],
+            currentPage: 'dashboard',
+            loading: false
+        };
+
+        // Wait for auth manager to be ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🎯 Free Tier Dashboard Loading...');
+            
+            // Wait for auth manager
+            if (window.authManager) {
+                console.log('✅ Auth Manager found, checking authentication...');
+                
+                // Check authentication
+                const isAuthenticated = await window.authManager.checkAuth();
+                
+                if (isAuthenticated) {
+                    console.log('🎉 User authenticated, initializing dashboard...');
+                    
+                    // Initialize dashboard
+                    if (window.DashboardController) {
+                        window.DashboardController.init();
+                    }
+                    
+                    // Load initial data
+                    loadDashboardData();
+                } else {
+                    console.log('❌ User not authenticated, redirecting...');
+                    window.location.href = '/login';
+                }
+            } else {
+                console.log('⏳ Waiting for auth manager...');
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (window.authManager) {
+                        window.authManager.checkAuth().then(isAuth => {
+                            if (isAuth && window.DashboardController) {
+                                window.DashboardController.init();
+                                loadDashboardData();
+                            }
+                        });
+                    }
+                }, 1000);
+            }
+        });
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                showLoading(true);
+                
+                // Load leads from API
+                if (window.API && window.API.getLeads) {
+                    const leads = await window.API.getLeads();
+                    window.dashboardState.leads = leads.all || [];
+                    
+                    // Update UI
+                    updateDashboardStats();
+                    updateRecentLeads();
+                    updateActivity();
+                }
+                
+                showLoading(false);
+                console.log('✅ Dashboard data loaded successfully');
+            } catch (error) {
+                console.error('❌ Failed to load dashboard data:', error);
+                showLoading(false);
+                
+                if (window.Utils && window.Utils.showToast) {
+                    window.Utils.showToast('Failed to load dashboard data', 'error');
+                }
+            }
+        }
+
+        // Update dashboard statistics
+        function updateDashboardStats() {
+            const leads = window.dashboardState.leads;
+            const totalLeads = leads.length;
+            const contactedLeads = leads.filter(lead => 
+                lead.status && !lead.status.toLowerCase().includes('new')
+            ).length;
+            
+            // Update DOM elements
+            document.getElementById('totalLeads').textContent = totalLeads;
+            document.getElementById('currentLeads').textContent = totalLeads;
+            document.getElementById('contactedLeads').textContent = contactedLeads;
+            
+            // Update progress bar
+            const progressPercent = (totalLeads / 50) * 100;
+            document.getElementById('leadProgress').style.width = `${Math.min(progressPercent, 100)}%`;
+            
+            // Update conversion rate
+            const conversionRate = totalLeads > 0 ? Math.round((contactedLeads / totalLeads) * 100) : 0;
+            document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+        }
+
+        // Update recent leads list
+        function updateRecentLeads() {
+            const leads = window.dashboardState.leads;
+            const recentLeads = leads.slice(0, 5); // Show last 5 leads
+            const leadsContainer = document.getElementById('recentLeadsList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (recentLeads.length === 0) {
+                emptyState.style.display = 'block';
                 return;
             }
             
-            try {
-                // Use AuthManager's secure API request method
-                const response = await window.authManager.apiRequest(url, options);
-                return response;
-            } catch (error) {
-                console.error('🚫 API request failed:', error);
-                throw error;
-            }
-        };
-
-        // 🎯 USER DATA HELPERS
-        window.getUserData = () => currentUser;
-        
-        window.getLeadLimitInfo = () => {
-            if (!currentUser) return null;
-            return window.authManager.getLeadLimitInfo();
-        };
-
-        // 🔓 LOGOUT FUNCTION
-        window.logout = async () => {
-            await window.authManager.logout();
-        };
-    </script>
-
-    <!-- 🎯 FREE TIER SCRIPTS (from /dashboard/tiers/free/scripts/) -->
-    <script src="scripts/utils.js"></script>
-    <script src="scripts/api.js"></script>
-
-    <!-- 🔒 TIER CONFIGURATION -->
-    <script>
-        // 🎯 FREE TIER PERMISSIONS
-        window.TIER = 'FREE';
-        window.TIER_LIMITS = {
-            leadLimit: 50,
-            features: ['basic_dashboard', 'add_leads', 'basic_settings', 'lead_management'],
-            locked: ['analytics', 'insights', 'schedule', 'pipeline', 'activity', 'ai_scoring', 'automation'],
-            upgradeMessage: 'Upgrade to Professional to unlock this feature!'
-        };
-
-        // 🚀 INITIALIZE DASHBOARD
-        async function initDashboard() {
-            // 1. Check authentication first
-            const authSuccess = await initAuth();
-            if (!authSuccess) return;
+            emptyState.style.display = 'none';
             
-            // 2. Hide loading screen
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
+            // Create leads HTML
+            const leadsHTML = recentLeads.map(lead => `
+                <div class="lead-item fade-in">
+                    <div class="lead-avatar">${getInitials(lead.name)}</div>
+                    <div class="lead-info">
+                        <div class="lead-name">${lead.name}</div>
+                        <div class="lead-details">
+                            ${lead.email || lead.phone || lead.company || 'No contact info'}
+                        </div>
+                    </div>
+                    <div class="lead-status ${getStatusClass(lead.status)}">
+                        ${lead.status || 'New'}
+                    </div>
+                </div>
+            `).join('');
             
-            // 3. Load dashboard components
-            console.log('🎯 Loading FREE tier dashboard components...');
-            
-            // Load components in order
-            const scriptsToLoad = [
-                'scripts/dashboard.js',
-                'scripts/AddLead.js', 
-                'scripts/Settings.js'
-            ];
-            
-            for (const script of scriptsToLoad) {
-                await loadScript(script);
-            }
-            
-            // 4. Initialize React app
-            initReactApp();
+            leadsContainer.innerHTML = leadsHTML;
         }
 
-        // 📜 DYNAMIC SCRIPT LOADER
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.type = 'text/babel';
-                script.src = src;
-                script.onload = () => {
-                    console.log(`✅ Loaded: ${src}`);
-                    resolve();
-                };
-                script.onerror = () => {
-                    console.error(`❌ Failed to load: ${src}`);
-                    reject(new Error(`Failed to load ${src}`));
-                };
-                document.head.appendChild(script);
+        // Update recent activity
+        function updateActivity() {
+            const activityContainer = document.getElementById('recentActivity');
+            const leads = window.dashboardState.leads;
+            
+            if (leads.length === 0) return;
+            
+            const recentActivity = leads.slice(0, 3).map(lead => `
+                <div class="activity-item fade-in">
+                    <div class="activity-icon">
+                        <i data-lucide="user-plus"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Added ${lead.name} as a new lead</div>
+                        <div class="activity-time">${getTimeAgo(lead.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            activityContainer.innerHTML = recentActivity;
+            lucide.createIcons();
+        }
+
+        // Helper functions
+        function getInitials(name) {
+            return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+        }
+
+        function getStatusClass(status) {
+            if (!status) return 'status-new';
+            const s = status.toLowerCase();
+            if (s.includes('new')) return 'status-new';
+            if (s.includes('contact')) return 'status-contacted';
+            if (s.includes('qualified')) return 'status-qualified';
+            return 'status-new';
+        }
+
+        function getTimeAgo(dateString) {
+            if (!dateString) return 'Recently';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            return 'Just now';
+        }
+
+        function showLoading(loading) {
+            window.dashboardState.loading = loading;
+            const elements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
+            elements.forEach(el => {
+                if (loading) {
+                    el.classList.add('loading');
+                } else {
+                    el.classList.remove('loading');
+                }
             });
         }
 
-        // ⚛️ INITIALIZE REACT APP
-        function initReactApp() {
-            try {
-                console.log('⚛️ Initializing React dashboard...');
-                
-                // Make sure Dashboard component is loaded
-                if (typeof Dashboard === 'undefined') {
-                    console.error('❌ Dashboard component not found');
-                    document.getElementById('app').innerHTML = `
-                        <div class="min-h-screen flex items-center justify-center">
-                            <div class="text-center">
-                                <h1 class="text-2xl font-bold text-red-600 mb-4">Dashboard Loading Error</h1>
-                                <p class="text-gray-600 mb-4">Failed to load dashboard components.</p>
-                                <button onclick="window.location.reload()" 
-                                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                                    Reload Page
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Render the dashboard
-                ReactDOM.render(React.createElement(Dashboard), document.getElementById('app'));
-                console.log('🚀 FREE tier dashboard loaded successfully!');
-                
-            } catch (error) {
-                console.error('❌ React initialization failed:', error);
-                document.getElementById('app').innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center">
-                        <div class="text-center">
-                            <h1 class="text-2xl font-bold text-red-600 mb-4">Dashboard Error</h1>
-                            <p class="text-gray-600 mb-4">Something went wrong loading your dashboard.</p>
-                            <button onclick="window.location.reload()" 
-                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                                Try Again
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+        // Mobile sidebar toggle
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            sidebar.classList.toggle('mobile-open');
+            overlay.classList.toggle('active');
         }
 
-        // 🚀 START THE APP when DOM is ready
-        document.addEventListener('DOMContentLoaded', initDashboard);
+        // Add Lead Modal Functions
+        function openAddLeadModal() {
+            document.getElementById('addLeadModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddLeadModal() {
+            document.getElementById('addLeadModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.getElementById('addLeadForm').reset();
+        }
+
+        // Event Listeners
+        document.getElementById('addLeadBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Check lead limit
+            const currentLeads = window.dashboardState.leads.length;
+            if (currentLeads >= 50) {
+                if (window.Utils && window.Utils.showUpgradeModal) {
+                    window.Utils.showUpgradeModal('lead_limit');
+                } else {
+                    alert('You\'ve reached your monthly limit of 50 leads! Upgrade to Professional for 1,000 leads.');
+                }
+                return;
+            }
+            
+            openAddLeadModal();
+        });
+
+        document.getElementById('addFirstLeadBtn').addEventListener('click', openAddLeadModal);
+
+        // Add Lead Form Submission
+        document.getElementById('addLeadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (window.AddLeadHandler && window.AddLeadHandler.submitForm) {
+                const success = await window.AddLeadHandler.submitForm(e);
+                if (success) {
+                    closeAddLeadModal();
+                    loadDashboardData(); // Refresh data
+                }
+            }
+        });
+
+        // Navigation handling
+        document.querySelectorAll('[data-page]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = e.currentTarget.dataset.page;
+                
+                if (window.DashboardController && window.DashboardController.navigateTo) {
+                    window.DashboardController.navigateTo(page);
+                }
+            });
+        });
+
+        // Locked feature handling
+        document.querySelectorAll('[data-feature]').forEach(element => {
+            element.addEventListener('click', (e) => {
+                e.preventDefault();
+                const feature = e.currentTarget.dataset.feature;
+                
+                if (window.authManager && window.authManager.showUpgradeModal) {
+                    window.authManager.showUpgradeModal(feature);
+                } else if (window.Utils && window.Utils.showUpgradeModal) {
+                    window.Utils.showUpgradeModal(feature);
+                }
+            });
+        });
+
+        console.log('🎯 Free Tier Dashboard Script Loaded');
+        console.log('🚀 Ready for scripts integration!');
     </script>
-
-    <!-- 🔒 LOCKED FEATURES NOTICE (Not loaded for free tier) -->
-    <!-- 
-    PROFESSIONAL+ ONLY FEATURES:
-    - Analytics Dashboard (scripts/Analytics.js)
-    - Advanced Insights (scripts/Insights.js) 
-    - Schedule Management (scripts/Schedule.js)
-    
-    BUSINESS+ ONLY FEATURES:
-    - Pipeline Management (scripts/Pipeline.js)
-    - Activity Tracking (scripts/Activity.js)
-    - AI Lead Scoring
-    - Automation Tools
-    
-    ENTERPRISE+ ONLY FEATURES:
-    - White-label options
-    - Custom integrations
-    - Advanced reporting
-    -->
-
-
 </body>
 </html>

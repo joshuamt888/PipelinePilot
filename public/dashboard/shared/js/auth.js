@@ -46,7 +46,26 @@ class DashboardAuthManager {
       
       if (data.authenticated) {
         this.authenticated = true;
-        this.user = data.user;
+        
+        // 🔄 MAP BACKEND PROPERTIES TO FRONTEND EXPECTATIONS
+        this.user = {
+          ...data.user,
+          // Handle both naming conventions
+          userType: data.user.userType || data.user.user_type,
+          subscriptionTier: data.user.subscriptionTier || data.user.subscription_tier,
+          currentMonthLeads: data.user.currentMonthLeads || data.user.current_month_leads,
+          monthlyLeadLimit: data.user.monthlyLeadLimit || data.user.monthly_lead_limit,
+          isAdmin: data.user.isAdmin || data.user.is_admin,
+          billingCycle: data.user.billingCycle || data.user.billing_cycle,
+          createdAt: data.user.createdAt || data.user.created_at,
+          // Keep original properties as backup
+          user_type: data.user.user_type,
+          subscription_tier: data.user.subscription_tier,
+          current_month_leads: data.user.current_month_leads,
+          monthly_lead_limit: data.user.monthly_lead_limit,
+          is_admin: data.user.is_admin
+        };
+        
         this.tierConfig = this.getTierConfig(this.user.subscriptionTier);
         
         console.log(`✅ Dashboard auth success: ${this.user.email} (${this.user.subscriptionTier})`);
@@ -84,11 +103,6 @@ class DashboardAuthManager {
     
     // Verify with server and get full user data
     const authSuccess = await this.checkAuth();
-    
-    if (authSuccess) {
-      // 🎯 TIER VERIFICATION: Check if user is on correct dashboard
-      this.verifyTierAccess();
-    }
   }
 
   // 🎯 TIER VERIFICATION: Make sure user is on the right dashboard
@@ -203,7 +217,17 @@ class DashboardAuthManager {
 
       if (response.ok && data.success) {
         this.authenticated = true;
-        this.user = data.user;
+        
+        // 🔄 MAP BACKEND USER DATA
+        this.user = {
+          ...data.user,
+          userType: data.user.userType || data.user.user_type,
+          subscriptionTier: data.user.subscriptionTier || data.user.subscription_tier,
+          currentMonthLeads: data.user.currentMonthLeads || data.user.current_month_leads,
+          monthlyLeadLimit: data.user.monthlyLeadLimit || data.user.monthly_lead_limit,
+          isAdmin: data.user.isAdmin || data.user.is_admin
+        };
+        
         this.tierConfig = this.getTierConfig(this.user.subscriptionTier);
         
         this.notifyAuthListeners(true);
@@ -211,7 +235,7 @@ class DashboardAuthManager {
         
         // Redirect to appropriate dashboard
         window.location.href = '/dashboard';
-        return { success: true, user: data.user };
+        return { success: true, user: this.user };
       } else {
         return { success: false, error: data.error };
       }
@@ -427,7 +451,7 @@ class DashboardAuthManager {
     }
   }
 
-  // 🔐 Permission checking
+  // 🔐 Permission checking - UPDATED FOR BACKEND COMPATIBILITY
   hasPermission(requiredLevel) {
     if (!this.authenticated || !this.user) return false;
     
@@ -439,7 +463,11 @@ class DashboardAuthManager {
       'admin': 5
     };
     
-    const userLevel = levels[this.user.userType?.split('_')[0]] || 0;
+    // 🔄 HANDLE BACKEND USER_TYPE FORMAT
+    const userType = this.user.userType || this.user.user_type || 'free';
+    const baseType = userType.split('_')[0]; // handles 'professional_trial' -> 'professional'
+    
+    const userLevel = levels[baseType] || 0;
     const required = levels[requiredLevel] || 0;
     
     return userLevel >= required;
@@ -451,12 +479,12 @@ class DashboardAuthManager {
     return this.tierConfig.features.includes(featureName);
   }
 
-  // 📊 Get lead limit information
+  // 📊 Get lead limit information - UPDATED FOR BACKEND COMPATIBILITY
   getLeadLimitInfo() {
     if (!this.user) return null;
     
-    const current = this.user.currentMonthLeads || 0;
-    const limit = this.user.monthlyLeadLimit || 0;
+    const current = this.user.currentMonthLeads || this.user.current_month_leads || 0;
+    const limit = this.user.monthlyLeadLimit || this.user.monthly_lead_limit || 0;
     
     return {
       current,
@@ -468,7 +496,7 @@ class DashboardAuthManager {
     };
   }
 
-  // ⏰ Get trial status
+  // ⏰ Get trial status - UPDATED FOR BACKEND COMPATIBILITY
   getTrialStatus() {
     if (!this.user || this.user.subscriptionTier !== 'PROFESSIONAL_TRIAL') {
       return null;
