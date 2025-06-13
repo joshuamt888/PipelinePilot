@@ -6,8 +6,11 @@
     <title>Dashboard - SteadyManager</title>
     <meta name="description" content="Your SteadyManager dashboard - manage leads, track progress, and grow your business.">
     
+    <!-- Performance & Security -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    
     <!-- CDN Resources -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
@@ -15,6 +18,51 @@
     <script src="/dashboard/shared/js/auth.js"></script>
     
     <style>
+        /* 🎨 CSS VARIABLES - THEME SYSTEM */
+        :root {
+            /* Light Theme */
+            --primary: #667eea;
+            --primary-dark: #4f46e5;
+            --primary-light: #dbeafe;
+            --primary-accent: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --text-primary: #1a202c;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border: #e5e7eb;
+            --border-light: #f1f5f9;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 🌙 Dark Theme */
+        [data-theme="dark"] {
+            --primary: #60a5fa;
+            --primary-dark: #3b82f6;
+            --primary-light: #1e3a8a;
+            --primary-accent: #2563eb;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #64748b;
+            --border: #334155;
+            --border-light: #475569;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -23,24 +71,28 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1a202c;
+            background: var(--background);
+            color: var(--text-primary);
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: all 0.3s ease;
         }
 
-        /* Sidebar */
+        /* 📱 SIDEBAR */
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
             bottom: 0;
             width: 280px;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(180deg, var(--primary) 0%, var(--primary-accent) 100%);
             color: white;
             padding: 2rem 0;
             z-index: 1000;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
+            backdrop-filter: blur(20px);
         }
 
         .sidebar-header {
@@ -53,6 +105,10 @@
             font-size: 1.5rem;
             font-weight: 900;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .sidebar-tier {
@@ -61,8 +117,11 @@
             border-radius: 20px;
             font-size: 0.875rem;
             font-weight: 600;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .sidebar-nav {
@@ -71,35 +130,62 @@
         }
 
         .nav-item {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
 
         .nav-link {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.875rem;
             padding: 0.875rem 2rem;
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            font-weight: 500;
+            border-radius: 0;
+            cursor: pointer;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 2rem;
+            right: 2rem;
+            top: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: -1;
+        }
+
+        .nav-link:hover::before,
+        .nav-link.active::before {
+            opacity: 1;
         }
 
         .nav-link:hover,
         .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
             color: white;
-            backdrop-filter: blur(10px);
+            transform: translateX(4px);
         }
 
-        .nav-link.active::before {
+        .nav-link.active {
+            font-weight: 600;
+        }
+
+        .nav-link.active::after {
             content: '';
             position: absolute;
             left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
             background: white;
+            border-radius: 0 2px 2px 0;
         }
 
         .nav-link.locked {
@@ -107,17 +193,21 @@
             cursor: not-allowed;
         }
 
-        .nav-link.locked::after {
-            content: '🔒';
-            margin-left: auto;
-            font-size: 0.875rem;
+        .nav-link.locked:hover {
+            transform: none;
+        }
+
+        .nav-icon {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2;
         }
 
         .upgrade-prompt {
             margin: 2rem;
             padding: 1.5rem;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: 16px;
             text-align: center;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -127,24 +217,28 @@
             font-size: 1.1rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
         }
 
         .upgrade-prompt p {
             font-size: 0.9rem;
             margin-bottom: 1rem;
             opacity: 0.9;
+            line-height: 1.5;
         }
 
         .upgrade-btn {
             background: white;
-            color: #667eea;
+            color: var(--primary);
             padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            border-radius: 10px;
             text-decoration: none;
             font-weight: 600;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-block;
+            border: none;
+            cursor: pointer;
         }
 
         .upgrade-btn:hover {
@@ -152,32 +246,35 @@
             box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
         }
 
-        /* Main Content */
+        /* 🎯 MAIN CONTENT */
         .main-content {
             margin-left: 280px;
             min-height: 100vh;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* 📊 HEADER */
         .header {
-            background: white;
+            background: var(--surface);
             padding: 1.5rem 2rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-sm);
+            backdrop-filter: blur(20px);
         }
 
         .header-left h1 {
             font-size: 1.75rem;
             font-weight: 700;
-            color: #1a202c;
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
+            letter-spacing: -0.02em;
         }
 
         .header-left p {
-            color: #6b7280;
+            color: var(--text-secondary);
             font-size: 0.95rem;
         }
 
@@ -191,24 +288,25 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: #f8fafc;
+            background: var(--surface-hover);
             padding: 0.75rem 1rem;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid #e5e7eb;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border);
         }
 
         .user-menu:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
+            background: var(--border);
+            border-color: var(--border-light);
+            transform: translateY(-1px);
         }
 
         .user-avatar {
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -225,42 +323,40 @@
         .user-name {
             font-weight: 600;
             font-size: 0.9rem;
-            color: #374151;
+            color: var(--text-primary);
         }
 
         .user-tier {
             font-size: 0.8rem;
-            color: #10b981;
+            color: var(--success);
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
-        /* Dashboard Content */
+        /* 📈 DASHBOARD CONTENT */
         .dashboard-content {
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
-        /* Stats Cards */
+        /* 📊 STATS GRID */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f5f9;
+            background: var(--surface);
+            padding: 1.25rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .stat-card::before {
@@ -270,36 +366,38 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(90deg, var(--primary), var(--primary-accent));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
         }
 
         .stat-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+            stroke-width: 2;
         }
 
         .stat-value {
             font-size: 2rem;
             font-weight: 900;
-            color: #1a202c;
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
+            letter-spacing: -0.02em;
         }
 
         .stat-label {
-            color: #6b7280;
+            color: var(--text-secondary);
             font-size: 0.9rem;
             font-weight: 500;
         }
@@ -314,175 +412,231 @@
         }
 
         .trend-up {
-            color: #10b981;
+            color: var(--success);
         }
 
         .trend-down {
-            color: #ef4444;
+            color: var(--danger);
         }
 
-        /* Lead Limit Progress */
-        .lead-limit-card {
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            border: 1px solid #fbbf24;
+        .trend-neutral {
+            color: var(--text-secondary);
         }
 
-        .lead-limit-card::before {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-        }
-
+        /* 📊 PROGRESS BAR */
         .progress-bar {
             width: 100%;
-            height: 8px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
+            height: 6px;
+            background: var(--surface-hover);
+            border-radius: 3px;
             overflow: hidden;
-            margin-top: 1rem;
+            margin-top: 0.75rem;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-            border-radius: 4px;
-            transition: width 0.5s ease;
+            background: linear-gradient(90deg, var(--primary), var(--primary-accent));
+            border-radius: 3px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Quick Actions */
+        /* 🚀 QUICK ACTIONS */
         .quick-actions {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .action-btn {
-            background: white;
-            padding: 1.25rem;
+            background: var(--surface);
+            padding: 1rem;
             border-radius: 12px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--border);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
             text-decoration: none;
             color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
         }
 
         .action-btn:hover {
-            border-color: #667eea;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
         }
 
         .action-btn.primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
             color: white;
             border-color: transparent;
         }
 
         .action-btn.primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
         }
 
         .action-icon {
-            width: 32px;
-            height: 32px;
-            margin: 0 auto 0.75rem;
-            border-radius: 8px;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #667eea;
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 0.5rem;
+            color: var(--primary);
+            stroke-width: 2;
         }
 
         .action-btn.primary .action-icon {
-            background: rgba(255, 255, 255, 0.2);
             color: white;
+        }
+
+        .action-btn.locked .action-icon {
+            color: var(--text-tertiary);
         }
 
         .action-title {
             font-weight: 600;
             margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .action-btn.primary .action-title {
+            color: white;
         }
 
         .action-desc {
             font-size: 0.875rem;
-            color: #6b7280;
+            color: var(--text-secondary);
         }
 
         .action-btn.primary .action-desc {
             color: rgba(255, 255, 255, 0.8);
         }
 
-        /* Main Grid */
+        .action-btn.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .action-btn.locked:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: var(--border);
+        }
+
+        /* 📋 MAIN GRID */
         .main-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
-        /* Recent Leads */
+        /* 📝 LEADS SECTION */
         .leads-section {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f5f9;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
         }
 
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 0;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--surface-hover);
         }
 
         .section-title {
             font-size: 1.25rem;
             font-weight: 700;
-            color: #1a202c;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+            stroke-width: 2;
         }
 
         .section-action {
-            color: #667eea;
+            color: var(--primary);
             text-decoration: none;
             font-weight: 500;
             font-size: 0.9rem;
-            transition: color 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
         }
 
         .section-action:hover {
-            color: #4f46e5;
+            color: var(--primary-dark);
+            transform: translateX(2px);
+        }
+
+        .section-action-icon {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
         }
 
         .leads-list {
-            space-y: 0.75rem;
+            padding: 0;
         }
 
         .lead-item {
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 1rem;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
-            transition: all 0.3s ease;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .lead-item:last-child {
+            border-bottom: none;
         }
 
         .lead-item:hover {
-            background: #f1f5f9;
-            border-color: #e2e8f0;
+            background: var(--surface-hover);
+            transform: translateX(4px);
         }
 
         .lead-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -497,13 +651,22 @@
 
         .lead-name {
             font-weight: 600;
-            color: #1a202c;
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
         }
 
         .lead-details {
             font-size: 0.875rem;
-            color: #6b7280;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .lead-details-icon {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2;
         }
 
         .lead-status {
@@ -511,97 +674,118 @@
             border-radius: 12px;
             font-size: 0.8rem;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            stroke-width: 2;
         }
 
         .status-new {
-            background: #dbeafe;
-            color: #1e40af;
+            background: var(--primary-light);
+            color: var(--primary);
         }
 
         .status-contacted {
-            background: #fef3c7;
-            color: #92400e;
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
         }
 
         .status-qualified {
-            background: #d1fae5;
-            color: #065f46;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
         }
 
+        /* 🚫 EMPTY STATE */
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
-            color: #6b7280;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
         }
 
         .empty-icon {
-            width: 64px;
-            height: 64px;
+            width: 48px;
+            height: 48px;
             margin: 0 auto 1rem;
-            border-radius: 50%;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9ca3af;
+            color: var(--text-tertiary);
+            stroke-width: 1.5;
         }
 
-        /* Sidebar Panel */
+        .empty-state h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        /* 📋 SIDEBAR PANEL */
         .sidebar-panel {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            border: 1px solid #f1f5f9;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
             height: fit-content;
+            overflow: hidden;
         }
 
         .upgrade-panel {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
             color: white;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
+            padding: 1.25rem;
         }
 
         .upgrade-panel h3 {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upgrade-panel-icon {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
         }
 
         .upgrade-panel p {
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
             opacity: 0.9;
         }
 
         .upgrade-panel .upgrade-btn {
             background: white;
-            color: #667eea;
+            color: var(--primary);
         }
 
-        /* Recent Activity */
+        /* 🔔 ACTIVITY FEED */
         .activity-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border-light);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .activity-item:last-child {
             border-bottom: none;
         }
 
-        .activity-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #667eea;
-            font-size: 0.875rem;
+        .activity-item:hover {
+            background: var(--surface-hover);
         }
 
         .activity-content {
@@ -610,16 +794,17 @@
 
         .activity-text {
             font-size: 0.875rem;
-            color: #374151;
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
+            font-weight: 500;
         }
 
         .activity-time {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: var(--text-tertiary);
         }
 
-        /* Mobile Responsive */
+        /* 📱 MOBILE RESPONSIVE */
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -656,7 +841,7 @@
             }
         }
 
-        /* Loading States */
+        /* 🎉 ANIMATIONS */
         .loading {
             opacity: 0.6;
             pointer-events: none;
@@ -670,8 +855,8 @@
             width: 20px;
             height: 20px;
             margin: -10px 0 0 -10px;
-            border: 2px solid #e5e7eb;
-            border-top: 2px solid #667eea;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -681,9 +866,8 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Animations */
         .fade-in {
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes fadeIn {
@@ -692,15 +876,15 @@
         }
 
         .scale-in {
-            animation: scaleIn 0.3s ease-out;
+            animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.9); }
+            from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
 
-        /* Locked Feature Overlay */
+        /* 🔒 LOCKED FEATURE OVERLAY */
         .locked-overlay {
             position: absolute;
             top: 0;
@@ -714,465 +898,42 @@
             flex-direction: column;
             border-radius: inherit;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+        }
+
+        [data-theme="dark"] .locked-overlay {
+            background: rgba(15, 23, 42, 0.95);
         }
 
         .locked-overlay:hover {
             background: rgba(255, 255, 255, 0.98);
         }
 
+        [data-theme="dark"] .locked-overlay:hover {
+            background: rgba(15, 23, 42, 0.98);
+        }
+
         .locked-overlay .lock-icon {
-            font-size: 2rem;
-            color: #9ca3af;
+            width: 32px;
+            height: 32px;
+            color: var(--text-tertiary);
             margin-bottom: 0.5rem;
+            stroke-width: 2;
         }
 
         .locked-overlay .lock-text {
             font-weight: 600;
-            color: #374151;
+            color: var(--text-primary);
             margin-bottom: 0.25rem;
         }
 
         .locked-overlay .lock-desc {
             font-size: 0.875rem;
-            color: #6b7280;
-        }
-    </style>
-</head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">SteadyManager</div>
-            <div class="sidebar-tier" data-user-tier>Free Tier</div>
-        </div>
-
-        <nav>
-            <ul class="sidebar-nav">
-                <li class="nav-item">
-                    <a href="#" class="nav-link active" data-page="dashboard">
-                        <i data-lucide="layout-dashboard"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="leads">
-                        <i data-lucide="users"></i>
-                        <span>Leads</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="analytics">
-                        <i data-lucide="bar-chart-3"></i>
-                        <span>Analytics</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="insights">
-                        <i data-lucide="lightbulb"></i>
-                        <span>Insights</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="schedule">
-                        <i data-lucide="calendar"></i>
-                        <span>Schedule</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="settings">
-                        <i data-lucide="settings"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-
-        <div class="upgrade-prompt">
-            <h3>Unlock More Power</h3>
-            <p>Upgrade to Professional for advanced analytics and 1,000 leads!</p>
-            <a href="/auth/trial" class="upgrade-btn">Start Free Trial</a>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <h1>Welcome back!</h1>
-                <p>Here's what's happening with your leads today.</p>
-            </div>
-            <div class="header-right">
-                <div class="user-menu" id="userMenu">
-                    <div class="user-avatar" data-user-initials>JS</div>
-                    <div class="user-info">
-                        <div class="user-name" data-user-name>John Smith</div>
-                        <div class="user-tier" data-subscription-status>Free Plan</div>
-                    </div>
-                    <i data-lucide="chevron-down"></i>
-                </div>
-            </div>
-        </header>
-
-        <!-- Dashboard Content -->
-        <main class="dashboard-content">
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div class="stat-icon">
-                            <i data-lucide="users"></i>
-                        </div>
-                    </div>
-                    <div class="stat-value" id="totalLeads">0</div>
-                    <div class="stat-label">Total Leads</div>
-                    <div class="stat-trend trend-up">
-                        <i data-lucide="trending-up"></i>
-                        <span>+0 this month</span>
-                    </div>
-                </div>
-
-                <div class="stat-card lead-limit-card">
-                    <div class="stat-header">
-                        <div class="stat-icon">
-                            <i data-lucide="target"></i>
-                        </div>
-                    </div>
-                    <div class="stat-value">
-                        <span id="currentLeads">0</span>/<span id="leadLimit">50</span>
-                    </div>
-                    <div class="stat-label">Monthly Lead Limit</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="leadProgress" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div class="stat-icon">
-                            <i data-lucide="phone-call"></i>
-                        </div>
-                    </div>
-                    <div class="stat-value" id="contactedLeads">0</div>
-                    <div class="stat-label">Contacted This Week</div>
-                    <div class="stat-trend trend-up">
-                        <i data-lucide="trending-up"></i>
-                        <span>Great start!</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <div class="stat-icon">
-                            <i data-lucide="trophy"></i>
-                        </div>
-                    </div>
-                    <div class="stat-value" id="conversionRate">0%</div>
-                    <div class="stat-label">Conversion Rate</div>
-                    <div class="stat-trend">
-                        <span>Add more leads to track</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <a href="#" class="action-btn primary" id="addLeadBtn">
-                    <div class="action-icon">
-                        <i data-lucide="plus"></i>
-                    </div>
-                    <div class="action-title">Add Lead</div>
-                    <div class="action-desc">Capture a new prospect</div>
-                </a>
-
-                <a href="#" class="action-btn" data-page="leads">
-                    <div class="action-icon">
-                        <i data-lucide="list"></i>
-                    </div>
-                    <div class="action-title">View All Leads</div>
-                    <div class="action-desc">Manage your pipeline</div>
-                </a>
-
-                <a href="#" class="action-btn locked" data-feature="analytics">
-                    <div class="action-icon">
-                        <i data-lucide="bar-chart"></i>
-                    </div>
-                    <div class="action-title">View Analytics</div>
-                    <div class="action-desc">Track performance</div>
-                </a>
-
-                <a href="#" class="action-btn locked" data-feature="insights">
-                    <div class="action-icon">
-                        <i data-lucide="lightbulb"></i>
-                    </div>
-                    <div class="action-title">Get Insights</div>
-                    <div class="action-desc">AI-powered tips</div>
-                </a>
-            </div>
-
-            <!-- Main Grid -->
-            <div class="main-grid">
-                <!-- Recent Leads -->
-                <div class="leads-section">
-                    <div class="section-header">
-                        <h2 class="section-title">Recent Leads</h2>
-                        <a href="#" class="section-action" data-page="leads">View All</a>
-                    </div>
-                    
-                    <div class="leads-list" id="recentLeadsList">
-                        <!-- Empty State -->
-                        <div class="empty-state" id="emptyState">
-                            <div class="empty-icon">
-                                <i data-lucide="users"></i>
-                            </div>
-                            <h3>No leads yet</h3>
-                            <p>Add your first lead to get started!</p>
-                            <button class="upgrade-btn" id="addFirstLeadBtn" style="margin-top: 1rem;">Add Your First Lead</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sidebar Panel -->
-                <div class="sidebar-panel">
-                    <!-- Upgrade Panel -->
-                    <div class="upgrade-panel sidebar-panel">
-                        <h3>🚀 Upgrade to Professional</h3>
-                        <p>Unlock advanced analytics, 1,000 leads, and priority support!</p>
-                        <a href="/auth/trial" class="upgrade-btn">Start Free Trial</a>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div>
-                        <h3 class="section-title" style="margin-bottom: 1rem;">Recent Activity</h3>
-                        <div id="recentActivity">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i data-lucide="user-plus"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-text">Welcome to SteadyManager!</div>
-                                    <div class="activity-time">Just now</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Mobile Menu Overlay -->
-    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
-
-    <!-- Add Lead Modal -->
-    <div class="modal-overlay" id="addLeadModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add New Lead</h3>
-                <button class="modal-close" onclick="closeAddLeadModal()">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="addLeadForm">
-                    <div class="form-group">
-                        <label for="leadName">Name *</label>
-                        <input type="text" id="leadName" name="name" required placeholder="Enter lead name">
-                    </div>
-                    <div class="form-group">
-                        <label for="leadEmail">Email</label>
-                        <input type="email" id="leadEmail" name="email" placeholder="Enter email address">
-                    </div>
-                    <div class="form-group">
-                        <label for="leadPhone">Phone</label>
-                        <input type="tel" id="leadPhone" name="phone" placeholder="Enter phone number">
-                    </div>
-                    <div class="form-group">
-                        <label for="leadCompany">Company</label>
-                        <input type="text" id="leadCompany" name="company" placeholder="Enter company name">
-                    </div>
-                    <div class="form-group">
-                        <label for="leadSource">Source</label>
-                        <select id="leadSource" name="platform">
-                            <option value="">Select source</option>
-                            <option value="LinkedIn">LinkedIn</option>
-                            <option value="Facebook">Facebook</option>
-                            <option value="Website">Website</option>
-                            <option value="Referral">Referral</option>
-                            <option value="Cold Call">Cold Call</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="leadNotes">Notes</label>
-                        <textarea id="leadNotes" name="notes" rows="3" placeholder="Add any notes about this lead"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeAddLeadModal()">Cancel</button>
-                <button type="submit" form="addLeadForm" class="btn-primary" id="saveLeadBtn">
-                    <span class="btn-text">Save Lead</span>
-                    <span class="btn-spinner" style="display: none;">
-                        <i data-lucide="loader" class="spin"></i>
-                    </span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Styles -->
-    <style>
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            backdrop-filter: blur(4px);
+            color: var(--text-secondary);
         }
 
-        .modal-content {
-            background: white;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            animation: modalSlideIn 0.3s ease-out;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1a202c;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.25rem;
-            color: #6b7280;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .modal-close:hover {
-            background: #f1f5f9;
-            color: #374151;
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-        }
-
-        .modal-footer {
-            padding: 1.5rem;
-            border-top: 1px solid #f1f5f9;
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background: #f9fafb;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn-primary,
-        .btn-secondary {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-        }
-
-        .btn-secondary:hover {
-            background: #e2e8f0;
-            border-color: #cbd5e1;
-        }
-
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-
+        /* 📱 MOBILE OVERLAY */
         .mobile-overlay {
             display: none;
             position: fixed;
@@ -1190,8 +951,256 @@
             }
         }
     </style>
+</head>
+<body data-theme="light">
+    <!-- 📱 SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <i data-lucide="rocket"></i>
+                SteadyManager
+            </div>
+            <div class="sidebar-tier" data-user-tier>
+                <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
+                FREE PLAN • <span id="leadCount">0</span>/50 leads
+            </div>
+        </div>
 
-    <!-- Dashboard Scripts -->
+        <nav>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i data-lucide="layout-dashboard" class="nav-icon"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="leads">
+                        <i data-lucide="users" class="nav-icon"></i>
+                        <span>Leads</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="analytics">
+                        <i data-lucide="bar-chart-3" class="nav-icon"></i>
+                        <span>Analytics</span>
+                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="insights">
+                        <i data-lucide="lightbulb" class="nav-icon"></i>
+                        <span>Insights</span>
+                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link locked" data-feature="schedule">
+                        <i data-lucide="calendar" class="nav-icon"></i>
+                        <span>Schedule</span>
+                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i data-lucide="settings" class="nav-icon"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="upgrade-prompt">
+            <h3>🚀 Unlock More Power</h3>
+            <p>Upgrade to Professional for advanced analytics and 1,000 leads!</p>
+            <a href="/auth/trial.html" class="upgrade-btn">Start Free Trial</a>
+        </div>
+    </div>
+
+    <!-- 🎯 MAIN CONTENT -->
+    <div class="main-content">
+        <!-- 📊 HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <h1>Welcome back!</h1>
+                <p>Here's what's happening with your leads today.</p>
+            </div>
+            <div class="header-right">
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar" data-user-initials>JS</div>
+                    <div class="user-info">
+                        <div class="user-name" data-user-name>Loading...</div>
+                        <div class="user-tier" data-subscription-status>
+                            <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
+                            Free Plan
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5;"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- 📈 DASHBOARD CONTENT -->
+        <main class="dashboard-content">
+            <!-- 📊 STATS GRID -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i data-lucide="users" class="stat-icon"></i>
+                    </div>
+                    <div class="stat-value" id="totalLeads">0</div>
+                    <div class="stat-label">Total Leads</div>
+                    <div class="stat-trend trend-neutral">
+                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
+                        <span>Add your first lead!</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i data-lucide="target" class="stat-icon"></i>
+                    </div>
+                    <div class="stat-value">
+                        <span id="currentLeads">0</span>/<span id="leadLimit">50</span>
+                    </div>
+                    <div class="stat-label">Monthly Lead Limit</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="leadProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i data-lucide="phone-call" class="stat-icon"></i>
+                    </div>
+                    <div class="stat-value" id="contactedLeads">0</div>
+                    <div class="stat-label">Contacted This Week</div>
+                    <div class="stat-trend trend-up">
+                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
+                        <span>Start reaching out!</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <i data-lucide="trophy" class="stat-icon"></i>
+                    </div>
+                    <div class="stat-value" id="conversionRate">0%</div>
+                    <div class="stat-label">Conversion Rate</div>
+                    <div class="stat-trend trend-neutral">
+                        <i data-lucide="target" style="width: 14px; height: 14px;"></i>
+                        <span>Add leads to track conversion</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🚀 QUICK ACTIONS -->
+            <div class="quick-actions">
+                <a href="#" class="action-btn primary" id="addLeadBtn">
+                    <i data-lucide="plus" class="action-icon"></i>
+                    <div class="action-title">Add Lead</div>
+                    <div class="action-desc">Capture a new prospect</div>
+                </a>
+
+                <a href="#" class="action-btn" data-page="leads">
+                    <i data-lucide="list" class="action-icon"></i>
+                    <div class="action-title">View All Leads</div>
+                    <div class="action-desc">Manage your pipeline</div>
+                </a>
+
+                <a href="#" class="action-btn locked" data-feature="analytics">
+                    <i data-lucide="bar-chart" class="action-icon"></i>
+                    <div class="action-title">
+                        View Analytics
+                        <i data-lucide="crown" style="width: 16px; height: 16px; margin-left: auto; opacity: 0.6;"></i>
+                    </div>
+                    <div class="action-desc">Track performance</div>
+                </a>
+
+                <a href="#" class="action-btn locked" data-feature="insights">
+                    <i data-lucide="lightbulb" class="action-icon"></i>
+                    <div class="action-title">
+                        Get Insights
+                        <i data-lucide="crown" style="width: 16px; height: 16px; margin-left: auto; opacity: 0.6;"></i>
+                    </div>
+                    <div class="action-desc">AI-powered tips</div>
+                </a>
+            </div>
+
+            <!-- 📋 MAIN GRID -->
+            <div class="main-grid">
+                <!-- 📝 RECENT LEADS -->
+                <div class="leads-section">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i data-lucide="clock" class="section-title-icon"></i>
+                            Recent Leads
+                        </h2>
+                        <a href="#" class="section-action" data-page="leads">
+                            View All
+                            <i data-lucide="arrow-right" class="section-action-icon"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="leads-list" id="recentLeadsList">
+                        <!-- Empty State -->
+                        <div class="empty-state" id="emptyState">
+                            <i data-lucide="user-plus" class="empty-icon"></i>
+                            <h3>No leads yet</h3>
+                            <p>Add your first lead to get started tracking your prospects and growing your business!</p>
+                            <button class="upgrade-btn" id="addFirstLeadBtn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                                <i data-lucide="rocket" style="width: 16px; height: 16px; margin-right: 0.5rem;"></i>
+                                Add Your First Lead
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📋 SIDEBAR PANEL -->
+                <div class="sidebar-panel">
+                    <!-- 🌟 UPGRADE PANEL -->
+                    <div class="upgrade-panel">
+                        <h3>
+                            <i data-lucide="zap" class="upgrade-panel-icon"></i>
+                            Upgrade to Professional
+                        </h3>
+                        <p>Unlock advanced analytics, 1,000 leads, and priority support!</p>
+                        <a href="/auth/trial.html" class="upgrade-btn">Start Free Trial</a>
+                    </div>
+
+                    <!-- 🔔 RECENT ACTIVITY -->
+                    <div>
+                        <div class="section-header">
+                            <h3 class="section-title" style="font-size: 1rem;">
+                                <i data-lucide="activity" class="section-title-icon"></i>
+                                Recent Activity
+                            </h3>
+                        </div>
+                        <div id="recentActivity">
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">Welcome to SteadyManager!</div>
+                                    <div class="activity-time">Just now</div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <div class="activity-text">Account verified successfully</div>
+                                    <div class="activity-time">2 minutes ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 📱 MOBILE OVERLAY -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- 🔥 SCRIPTS - LOAD IN CORRECT ORDER -->
+    <script src="/dashboard/shared/js/auth.js"></script>
     <script src="scripts/utils.js"></script>
     <script src="scripts/api.js"></script>
     <script src="scripts/dashboard.js"></script>
@@ -1199,10 +1208,10 @@
     <script src="scripts/Settings.js"></script>
 
     <script>
-        // Initialize Lucide icons
+        // 🚀 Initialize Lucide icons
         lucide.createIcons();
 
-        // Global Dashboard State
+        // 🎯 Global Dashboard State that works with DashboardController
         window.dashboardState = {
             currentUser: null,
             leads: [],
@@ -1210,61 +1219,115 @@
             loading: false
         };
 
-        // Wait for auth manager to be ready
+        // 🔥 Wait for everything to load properly
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🎯 Free Tier Dashboard Loading...');
+            console.log('🎯 SteadyManager Free Tier Loading...');
             
-            // Wait for auth manager
-            if (window.authManager) {
-                console.log('✅ Auth Manager found, checking authentication...');
+            try {
+                // Wait for dependencies to load
+                await waitForDependencies();
                 
-                // Check authentication
-                const isAuthenticated = await window.authManager.checkAuth();
-                
-                if (isAuthenticated) {
-                    console.log('🎉 User authenticated, initializing dashboard...');
-                    
-                    // Initialize dashboard
-                    if (window.DashboardController) {
-                        window.DashboardController.init();
-                    }
-                    
-                    // Load initial data
-                    loadDashboardData();
-                } else {
+                // Check authentication with AuthManager
+                const authResult = await window.AuthManager.checkAuth();
+                if (!authResult.authenticated) {
                     console.log('❌ User not authenticated, redirecting...');
-                    window.location.href = '/login';
+                    window.location.href = '/auth/login.html';
+                    return;
                 }
-            } else {
-                console.log('⏳ Waiting for auth manager...');
-                // Retry after a short delay
-                setTimeout(() => {
-                    if (window.authManager) {
-                        window.authManager.checkAuth().then(isAuth => {
-                            if (isAuth && window.DashboardController) {
-                                window.DashboardController.init();
-                                loadDashboardData();
-                            }
-                        });
-                    }
-                }, 1000);
+                
+                // Store user data
+                window.dashboardState.currentUser = authResult.user;
+                
+                // Update user info in UI immediately
+                updateUserInfo(authResult.user);
+                
+                // Initialize the beast DashboardController
+                if (window.DashboardController) {
+                    console.log('🎯 Initializing DashboardController...');
+                    await window.DashboardController.init();
+                } else {
+                    console.log('⚠️ DashboardController not found, using fallback...');
+                    await loadDashboardData();
+                }
+                
+                // Setup event listeners
+                setupEventListeners();
+                
+                // Animate in cards with stagger
+                animateCards();
+                
+                console.log('✅ Dashboard initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ Dashboard initialization failed:', error);
+                window.location.href = '/auth/login.html';
             }
         });
 
-        // Load dashboard data
+        // 🔄 Wait for dependencies
+        async function waitForDependencies() {
+            const maxWait = 10000; // 10 seconds
+            const checkInterval = 100; // 100ms
+            let waited = 0;
+
+            return new Promise((resolve, reject) => {
+                const check = () => {
+                    if (waited >= maxWait) {
+                        reject(new Error('Timeout waiting for dependencies'));
+                        return;
+                    }
+
+                    if (window.AuthManager && window.SteadyUtils && window.API) {
+                        resolve();
+                        return;
+                    }
+
+                    waited += checkInterval;
+                    setTimeout(check, checkInterval);
+                };
+
+                check();
+            });
+        }
+
+        // 👤 Update user info in UI
+        function updateUserInfo(user) {
+            if (!user) return;
+            
+            // Update user name
+            const userName = user.firstName && user.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user.email.split('@')[0];
+            
+            document.querySelector('[data-user-name]').textContent = userName;
+            
+            // Update user initials
+            const initials = user.firstName && user.lastName
+                ? `${user.firstName[0]}${user.lastName[0]}`
+                : user.email.slice(0, 2).toUpperCase();
+            
+            document.querySelector('[data-user-initials]').textContent = initials;
+            
+            // Update lead count
+            document.getElementById('leadCount').textContent = user.currentMonthLeads || 0;
+        }
+
+        // 📊 Load dashboard data (fallback if DashboardController fails)
         async function loadDashboardData() {
             try {
                 showLoading(true);
                 
-                // Load leads from API
                 if (window.API && window.API.getLeads) {
-                    const leads = await window.API.getLeads();
-                    window.dashboardState.leads = leads.all || [];
+                    const leadsResult = await window.API.getLeads();
                     
-                    // Update UI
-                    updateDashboardStats();
-                    updateRecentLeads();
-                    updateActivity();
+                    if (leadsResult.success) {
+                        window.dashboardState.leads = leadsResult.all || [];
+                        
+                        // Update UI
+                        updateDashboardStats();
+                        updateRecentLeads();
+                        updateActivity();
+                    }
                 }
                 
                 showLoading(false);
@@ -1273,13 +1336,13 @@
                 console.error('❌ Failed to load dashboard data:', error);
                 showLoading(false);
                 
-                if (window.Utils && window.Utils.showToast) {
-                    window.Utils.showToast('Failed to load dashboard data', 'error');
+                if (window.SteadyUtils && window.SteadyUtils.showToast) {
+                    window.SteadyUtils.showToast('Failed to load dashboard data', 'error');
                 }
             }
         }
 
-        // Update dashboard statistics
+        // 📈 Update dashboard statistics
         function updateDashboardStats() {
             const leads = window.dashboardState.leads;
             const totalLeads = leads.length;
@@ -1292,19 +1355,44 @@
             document.getElementById('currentLeads').textContent = totalLeads;
             document.getElementById('contactedLeads').textContent = contactedLeads;
             
-            // Update progress bar
+            // Update progress bar with smooth animation
             const progressPercent = (totalLeads / 50) * 100;
-            document.getElementById('leadProgress').style.width = `${Math.min(progressPercent, 100)}%`;
+            const progressFill = document.getElementById('leadProgress');
+            
+            setTimeout(() => {
+                progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
+            }, 500);
             
             // Update conversion rate
             const conversionRate = totalLeads > 0 ? Math.round((contactedLeads / totalLeads) * 100) : 0;
             document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+            
+            // Update trend messages
+            updateTrendMessages(totalLeads, contactedLeads);
         }
 
-        // Update recent leads list
+        // 📊 Update trend messages
+        function updateTrendMessages(totalLeads, contactedLeads) {
+            const trends = document.querySelectorAll('.stat-trend span');
+            
+            if (trends[0]) {
+                trends[0].textContent = totalLeads === 0 ? 'Add your first lead!' : `+${totalLeads} this month`;
+            }
+            
+            if (trends[1]) {
+                trends[1].textContent = contactedLeads === 0 ? 'Start reaching out!' : 'Great progress!';
+            }
+            
+            if (trends[2]) {
+                trends[2].textContent = totalLeads === 0 ? 'Add leads to track conversion' : 
+                    contactedLeads === 0 ? 'Contact your leads!' : 'Keep it up!';
+            }
+        }
+
+        // 📝 Update recent leads list
         function updateRecentLeads() {
             const leads = window.dashboardState.leads;
-            const recentLeads = leads.slice(0, 5); // Show last 5 leads
+            const recentLeads = leads.slice(-5).reverse(); // Most recent first
             const leadsContainer = document.getElementById('recentLeadsList');
             const emptyState = document.getElementById('emptyState');
             
@@ -1315,51 +1403,164 @@
             
             emptyState.style.display = 'none';
             
-            // Create leads HTML
-            const leadsHTML = recentLeads.map(lead => `
-                <div class="lead-item fade-in">
+            const leadsHTML = recentLeads.map((lead, index) => `
+                <div class="lead-item fade-in" style="animation-delay: ${index * 0.1}s;">
                     <div class="lead-avatar">${getInitials(lead.name)}</div>
                     <div class="lead-info">
-                        <div class="lead-name">${lead.name}</div>
+                        <div class="lead-name">${escapeHtml(lead.name)}</div>
                         <div class="lead-details">
-                            ${lead.email || lead.phone || lead.company || 'No contact info'}
+                            ${getLeadContactInfo(lead)}
                         </div>
                     </div>
                     <div class="lead-status ${getStatusClass(lead.status)}">
+                        <i data-lucide="${getStatusIcon(lead.status)}" class="status-icon"></i>
                         ${lead.status || 'New'}
                     </div>
                 </div>
             `).join('');
             
             leadsContainer.innerHTML = leadsHTML;
+            lucide.createIcons(); // Re-initialize icons
         }
 
-        // Update recent activity
+        // 🔔 Update recent activity
         function updateActivity() {
             const activityContainer = document.getElementById('recentActivity');
             const leads = window.dashboardState.leads;
             
             if (leads.length === 0) return;
             
-            const recentActivity = leads.slice(0, 3).map(lead => `
-                <div class="activity-item fade-in">
-                    <div class="activity-icon">
-                        <i data-lucide="user-plus"></i>
-                    </div>
+            const recentActivity = leads.slice(-3).reverse().map((lead, index) => `
+                <div class="activity-item fade-in" style="animation-delay: ${index * 0.1}s;">
                     <div class="activity-content">
-                        <div class="activity-text">Added ${lead.name} as a new lead</div>
+                        <div class="activity-text">Added ${escapeHtml(lead.name)} as a new lead</div>
                         <div class="activity-time">${getTimeAgo(lead.created_at)}</div>
                     </div>
                 </div>
             `).join('');
             
             activityContainer.innerHTML = recentActivity;
-            lucide.createIcons();
         }
 
-        // Helper functions
+        // 🎪 Setup event listeners
+        function setupEventListeners() {
+            // Mobile menu toggle
+            document.getElementById('mobileOverlay')?.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.remove('mobile-open');
+                document.getElementById('mobileOverlay').classList.remove('active');
+            });
+
+            // Navigation - delegate to DashboardController if available
+            document.querySelectorAll('[data-page]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = link.dataset.page;
+                    
+                    if (window.DashboardController && window.DashboardController.navigateTo) {
+                        window.DashboardController.navigateTo(page);
+                    } else {
+                        console.log(`Navigate to: ${page}`);
+                        // Fallback navigation logic here
+                    }
+                });
+            });
+
+            // Add lead buttons
+            document.getElementById('addLeadBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleAddLead();
+            });
+
+            document.getElementById('addFirstLeadBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleAddLead();
+            });
+
+            // Locked features
+            document.querySelectorAll('[data-feature]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const feature = element.dataset.feature;
+                    
+                    if (window.SteadyUtils && window.SteadyUtils.showUpgradeModal) {
+                        window.SteadyUtils.showUpgradeModal(feature);
+                    } else {
+                        alert(`${feature} is available in Professional! Upgrade to unlock this feature.`);
+                    }
+                });
+            });
+
+            // User menu (placeholder)
+            document.getElementById('userMenu')?.addEventListener('click', (e) => {
+                console.log('User menu clicked - dropdown coming soon!');
+            });
+        }
+
+        // ➕ Handle add lead
+        function handleAddLead() {
+            // Check lead limit
+            const currentLeads = window.dashboardState.leads.length;
+            if (currentLeads >= 50) {
+                if (window.SteadyUtils && window.SteadyUtils.showUpgradeModal) {
+                    window.SteadyUtils.showUpgradeModal('lead_limit');
+                } else {
+                    alert('You\'ve reached your monthly limit of 50 leads! Upgrade to Professional for 1,000 leads.');
+                }
+                return;
+            }
+
+            // Use DashboardController if available, otherwise fallback
+            if (window.DashboardController && window.DashboardController.handleAddLead) {
+                window.DashboardController.handleAddLead();
+            } else if (window.openAddLeadModal) {
+                window.openAddLeadModal();
+            } else {
+                // Simple fallback modal
+                const name = prompt('Enter lead name:');
+                if (name) {
+                    addLeadSimple({ name });
+                }
+            }
+        }
+
+        // 🎬 Animate cards on load
+        function animateCards() {
+            const cards = document.querySelectorAll('.stat-card, .action-btn');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('fade-in');
+                }, index * 100);
+            });
+        }
+
+        // 🔄 Show loading states
+        function showLoading(loading) {
+            window.dashboardState.loading = loading;
+            const elements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
+            elements.forEach(el => {
+                if (loading) {
+                    el.classList.add('loading');
+                } else {
+                    el.classList.remove('loading');
+                }
+            });
+        }
+
+        // 🛠️ Helper functions
         function getInitials(name) {
             return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+        }
+
+        function getLeadContactInfo(lead) {
+            if (lead.email) {
+                return `<i data-lucide="mail" class="lead-details-icon"></i>${escapeHtml(lead.email)}`;
+            } else if (lead.phone) {
+                return `<i data-lucide="phone" class="lead-details-icon"></i>${escapeHtml(lead.phone)}`;
+            } else if (lead.company) {
+                return `<i data-lucide="building" class="lead-details-icon"></i>${escapeHtml(lead.company)}`;
+            } else {
+                return '<i data-lucide="user" class="lead-details-icon"></i>No contact info';
+            }
         }
 
         function getStatusClass(status) {
@@ -1369,6 +1570,15 @@
             if (s.includes('contact')) return 'status-contacted';
             if (s.includes('qualified')) return 'status-qualified';
             return 'status-new';
+        }
+
+        function getStatusIcon(status) {
+            if (!status) return 'circle-dot';
+            const s = status.toLowerCase();
+            if (s.includes('new')) return 'circle-dot';
+            if (s.includes('contact')) return 'phone';
+            if (s.includes('qualified')) return 'check-circle';
+            return 'circle-dot';
         }
 
         function getTimeAgo(dateString) {
@@ -1384,100 +1594,41 @@
             return 'Just now';
         }
 
-        function showLoading(loading) {
-            window.dashboardState.loading = loading;
-            const elements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
-            elements.forEach(el => {
-                if (loading) {
-                    el.classList.add('loading');
-                } else {
-                    el.classList.remove('loading');
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 🚀 Simple fallback add lead function
+        async function addLeadSimple(leadData) {
+            try {
+                if (window.API && window.API.createLead) {
+                    const result = await window.API.createLead(leadData);
+                    if (result.success) {
+                        // Refresh data
+                        await loadDashboardData();
+                        alert('Lead added successfully!');
+                    }
                 }
-            });
-        }
-
-        // Mobile sidebar toggle
-        function toggleMobileSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            sidebar.classList.toggle('mobile-open');
-            overlay.classList.toggle('active');
-        }
-
-        // Add Lead Modal Functions
-        function openAddLeadModal() {
-            document.getElementById('addLeadModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeAddLeadModal() {
-            document.getElementById('addLeadModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-            document.getElementById('addLeadForm').reset();
-        }
-
-        // Event Listeners
-        document.getElementById('addLeadBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Check lead limit
-            const currentLeads = window.dashboardState.leads.length;
-            if (currentLeads >= 50) {
-                if (window.Utils && window.Utils.showUpgradeModal) {
-                    window.Utils.showUpgradeModal('lead_limit');
-                } else {
-                    alert('You\'ve reached your monthly limit of 50 leads! Upgrade to Professional for 1,000 leads.');
-                }
-                return;
+            } catch (error) {
+                console.error('Failed to add lead:', error);
+                alert('Failed to add lead. Please try again.');
             }
-            
-            openAddLeadModal();
-        });
+        }
 
-        document.getElementById('addFirstLeadBtn').addEventListener('click', openAddLeadModal);
+        // 🎯 Export for DashboardController callbacks
+        window.dashboardCallbacks = {
+            onLeadCreated: () => loadDashboardData(),
+            onLeadUpdated: () => loadDashboardData(),
+            onLeadDeleted: () => loadDashboardData(),
+            updateStats: updateDashboardStats,
+            updateLeads: updateRecentLeads,
+            updateActivity: updateActivity
+        };
 
-        // Add Lead Form Submission
-        document.getElementById('addLeadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (window.AddLeadHandler && window.AddLeadHandler.submitForm) {
-                const success = await window.AddLeadHandler.submitForm(e);
-                if (success) {
-                    closeAddLeadModal();
-                    loadDashboardData(); // Refresh data
-                }
-            }
-        });
-
-        // Navigation handling
-        document.querySelectorAll('[data-page]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = e.currentTarget.dataset.page;
-                
-                if (window.DashboardController && window.DashboardController.navigateTo) {
-                    window.DashboardController.navigateTo(page);
-                }
-            });
-        });
-
-        // Locked feature handling
-        document.querySelectorAll('[data-feature]').forEach(element => {
-            element.addEventListener('click', (e) => {
-                e.preventDefault();
-                const feature = e.currentTarget.dataset.feature;
-                
-                if (window.authManager && window.authManager.showUpgradeModal) {
-                    window.authManager.showUpgradeModal(feature);
-                } else if (window.Utils && window.Utils.showUpgradeModal) {
-                    window.Utils.showUpgradeModal(feature);
-                }
-            });
-        });
-
-        console.log('🎯 Free Tier Dashboard Script Loaded');
-        console.log('🚀 Ready for scripts integration!');
+        console.log('🎯 SteadyManager Free Tier Dashboard Ready!');
+        console.log('🚀 Compatible with DashboardController and enhanced database!');
     </script>
 </body>
 </html>

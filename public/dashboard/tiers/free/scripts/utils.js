@@ -1,666 +1,800 @@
-// 🔧 STEADYMANAGER UTILS.JS - FREE TIER
-// Essential utilities for FREE users with upgrade hints!
+/**
+ * SteadyManager - Free Tier Utilities
+ * Core utility functions for dashboard functionality, theme management, and user interactions
+ * Compatible with DashboardController and enhanced database schema
+ */
 
-// 🎵 CLEAN WEB AUDIO SOUND MANAGER - No files needed!
-class BasicSoundManager {
-    constructor() {
-        this.enabled = localStorage.getItem('steadymanager_sounds_enabled') !== 'false';
-        this.volume = parseFloat(localStorage.getItem('steadymanager_sound_volume')) || 0.3;
-        this.audioContext = null;
-        
-        console.log('🔊 Web Audio Sound Manager (FREE) - Ready!');
-    }
-    
-    getAudioContext() {
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        return this.audioContext;
-    }
-    
-    play(soundName) {
-        if (!this.enabled) return false;
-        
-        try {
-            switch(soundName) {
-                case 'click':
-                    this.playClick();
-                    break;
-                case 'success':
-                    this.playSuccess();
-                    break;
-                case 'error':
-                    this.playError();
-                    break;
-                case 'notification':
-                    this.playNotification();
-                    break;
-                default:
-                    this.playClick(); // Default sound
-            }
-            return true;
-        } catch (error) {
-            console.warn('Sound failed:', error);
-            return false;
-        }
-    }
-    
-    // Clean click sound
-    playClick() {
-        const ctx = this.getAudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.type = 'sine';
-        
-        gain.gain.setValueAtTime(this.volume * 0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-        
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
-    }
-    
-    // Happy success chime
-    playSuccess() {
-        const ctx = this.getAudioContext();
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(ctx.destination);
-        
-        // Major chord
-        osc1.frequency.setValueAtTime(523, ctx.currentTime); // C
-        osc2.frequency.setValueAtTime(659, ctx.currentTime); // E
-        osc1.type = 'sine';
-        osc2.type = 'sine';
-        
-        gain.gain.setValueAtTime(this.volume * 0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-        
-        osc1.start();
-        osc2.start();
-        osc1.stop(ctx.currentTime + 0.4);
-        osc2.stop(ctx.currentTime + 0.4);
-    }
-    
-    // Gentle error tone
-    playError() {
-        const ctx = this.getAudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.2);
-        osc.type = 'sine';
-        
-        gain.gain.setValueAtTime(this.volume * 0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-    }
-    
-    // Soft notification ping
-    playNotification() {
-        const ctx = this.getAudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-        osc.type = 'sine';
-        
-        gain.gain.setValueAtTime(this.volume * 0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-        
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-    }
-    
-    toggle() {
-        this.enabled = !this.enabled;
-        localStorage.setItem('steadymanager_sounds_enabled', this.enabled);
-        
-        // Play test sound when enabling
-        if (this.enabled) {
-            setTimeout(() => this.play('click'), 100);
-        }
-        
-        console.log(`🔊 Sounds ${this.enabled ? 'enabled' : 'disabled'}`);
-        return this.enabled;
-    }
-    
-    setVolume(volume) {
-        this.volume = Math.max(0, Math.min(1, volume));
-        localStorage.setItem('steadymanager_sound_volume', this.volume);
-        
-        // Play test sound
-        this.play('click');
-        return this.volume;
-    }
-}
+(function() {
+    'use strict';
 
-// 🌙 BASIC THEME MANAGER
-class BasicThemeManager {
-    constructor() {
-        this.currentTheme = this.getStoredTheme();
-        this.initializeTheme();
-    }
-    
-    getStoredTheme() {
-        const stored = localStorage.getItem('steadymanager_theme');
-        if (stored) return stored;
-        
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark';
+    // 🔥 STEADYUTILS - MAIN UTILITY CLASS
+    class SteadyUtils {
+        constructor() {
+            this.theme = 'light';
+            this.notifications = [];
+            this.modals = new Map();
+            this.eventListeners = new Map();
+            this.debounceTimers = new Map();
+            this.initialized = false;
+            
+            // Feature limits for free tier
+            this.limits = {
+                leads: 50,
+                monthlyGoals: 3,
+                customFields: 0,
+                automations: 0,
+                exports: 1 // per month
+            };
+            
+            console.log('🛠️ SteadyUtils initialized');
         }
-        
-        return 'light';
-    }
-    
-    initializeTheme() {
-        document.documentElement.setAttribute('data-theme', this.currentTheme);
-        
-        if (this.currentTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }
-    
-    toggle() {
-        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
-        this.applyTheme();
-        soundManager.play('click');
-        return this.currentTheme;
-    }
-    
-    applyTheme() {
-        localStorage.setItem('steadymanager_theme', this.currentTheme);
-        document.documentElement.setAttribute('data-theme', this.currentTheme);
-        
-        if (this.currentTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }
-    
-    getCurrentTheme() {
-        return this.currentTheme;
-    }
-}
 
-// Initialize basic managers
-const soundManager = new BasicSoundManager();
-const themeManager = new BasicThemeManager();
-
-// 📅 BASIC DATE UTILITIES
-const DateUtils = {
-    formatDate(date, format = 'short') {
-        if (!date) return '';
-        
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return '';
-        
-        const formats = {
-            short: { month: 'short', day: 'numeric' },
-            medium: { month: 'short', day: 'numeric', year: 'numeric' },
-            time: { hour: 'numeric', minute: '2-digit', hour12: true }
-        };
-        
-        return d.toLocaleDateString('en-US', formats[format] || formats.medium);
-    },
-    
-    formatRelative(date) {
-        if (!date) return '';
-        
-        const d = new Date(date);
-        const now = new Date();
-        const diffMs = now - d;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-        
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        
-        return this.formatDate(date, 'short');
-    },
-    
-    isToday(date) {
-        if (!date) return false;
-        const d = new Date(date);
-        const today = new Date();
-        return d.toDateString() === today.toDateString();
-    }
-};
-
-// 🎯 FREE TIER UTILITIES
-const FreeTierUtils = {
-    // Check if feature is locked for free users
-    isFeatureLocked(feature) {
-        const freeFeatures = ['basic_dashboard', 'add_leads', 'basic_settings', 'goal_tracking'];
-        return !freeFeatures.includes(feature);
-    },
-    
-    // Show upgrade prompt
-    showUpgradePrompt(feature) {
-        const prompts = {
-            analytics: 'Unlock powerful analytics with Professional! 📊',
-            export: 'Export your data with Professional! 📥',
-            insights: 'Get smart insights with Professional! 💡',
-            advanced_search: 'Advanced search available in Professional! 🔍',
-            lead_limit: 'Upgrade to get 1,000 leads per month! 🚀'
-        };
-        
-        const message = prompts[feature] || 'Upgrade to Professional for more features! 🚀';
-        this.showUpgradeModal(message);
-    },
-    
-    // Show upgrade modal
-    showUpgradeModal(message) {
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
-        modal.innerHTML = `
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md mx-4 text-center">
-                <div class="text-4xl mb-4">🚀</div>
-                <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Ready to Level Up?</h3>
-                <p class="text-gray-600 dark:text-gray-300 mb-6">${message}</p>
-                <div class="space-y-3">
-                    <button onclick="window.location.href='/login?tab=trial'" 
-                            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transform hover:-translate-y-1 transition-all">
-                        Start Free Trial - Get 1,000 Leads! ✨
-                    </button>
-                    <button onclick="window.location.href='/pricing'" 
-                            class="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
-                        View Pricing
-                    </button>
-                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
-                            class="w-full text-gray-500 hover:text-gray-700 py-2">
-                        Maybe Later
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        soundManager.play('click');
-    },
-    
-    // Get tier info for free users
-    getTierInfo() {
-        return {
-            name: 'Free Explorer',
-            badge: '🆓 FREE',
-            color: '#6b7280',
-            leadLimit: 50,
-            upgradeMessage: 'Upgrade to unlock 1,000 leads and advanced features!'
-        };
-    },
-    
-    // Check if user is at lead limit
-    checkLeadLimit(currentLeads, maxLeads = 50) {
-        const percentage = (currentLeads / maxLeads) * 100;
-        
-        if (percentage >= 100) {
-            this.showUpgradePrompt('lead_limit');
-            return false;
+        /**
+         * Initialize utilities
+         */
+        init() {
+            if (this.initialized) return;
+            
+            this.loadTheme();
+            this.setupToastContainer();
+            this.setupKeyboardShortcuts();
+            this.setupErrorHandling();
+            this.setupPerformanceMonitoring();
+            
+            this.initialized = true;
+            console.log('✅ SteadyUtils ready');
         }
-        
-        if (percentage >= 80) {
-            this.showLimitWarning(currentLeads, maxLeads);
-        }
-        
-        return true;
-    },
-    
-    // Show limit warning
-    showLimitWarning(current, max) {
-        const remaining = max - current;
-        ToastUtils.warning(`Only ${remaining} leads left! Upgrade to get 1,000 leads.`);
-    }
-};
 
-// 🍞 SIMPLE TOAST NOTIFICATIONS
-const ToastUtils = {
-    show(message, type = 'info', duration = 3000) {
-        let container = document.getElementById('toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toast-container';
-            container.className = 'fixed top-4 right-4 z-50 space-y-2';
+        // 🎨 THEME MANAGEMENT
+        
+        /**
+         * Load saved theme from localStorage
+         */
+        loadTheme() {
+            const savedTheme = localStorage.getItem('steadymanager_theme') || 'light';
+            this.setTheme(savedTheme);
+        }
+
+        /**
+         * Set theme and persist to localStorage
+         */
+        setTheme(theme) {
+            this.theme = theme;
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('steadymanager_theme', theme);
+            
+            // Update any theme toggles
+            const toggles = document.querySelectorAll('[data-theme-toggle]');
+            toggles.forEach(toggle => {
+                if (toggle.type === 'checkbox') {
+                    toggle.checked = theme === 'dark';
+                }
+            });
+            
+            // Dispatch theme change event
+            this.dispatchEvent('themeChanged', { theme });
+            
+            console.log(`🎨 Theme set to: ${theme}`);
+        }
+
+        /**
+         * Toggle between light and dark theme
+         */
+        toggleTheme() {
+            const newTheme = this.theme === 'light' ? 'dark' : 'light';
+            this.setTheme(newTheme);
+            this.showToast(`Switched to ${newTheme} mode`, 'success');
+            return newTheme;
+        }
+
+        // 🔔 NOTIFICATION SYSTEM
+
+        /**
+         * Setup toast notification container
+         */
+        setupToastContainer() {
+            if (document.getElementById('toastContainer')) return;
+            
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = `
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                pointer-events: none;
+            `;
             document.body.appendChild(container);
         }
-        
-        const toast = document.createElement('div');
-        const toastId = 'toast-' + Date.now();
-        toast.id = toastId;
-        
-        const typeStyles = {
-            success: 'bg-green-500 text-white',
-            error: 'bg-red-500 text-white',
-            warning: 'bg-yellow-500 text-black',
-            info: 'bg-blue-500 text-white'
-        };
-        
-        toast.className = `
-            px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 
-            translate-x-full opacity-0 max-w-sm
-            ${typeStyles[type] || typeStyles.info}
-        `;
-        
-        toast.innerHTML = `
-            <div class="flex items-center justify-between">
-                <span class="text-sm font-medium">${message}</span>
-                <button onclick="ToastUtils.remove('${toastId}')" class="ml-3 text-lg opacity-70 hover:opacity-100">&times;</button>
-            </div>
-        `;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.remove('translate-x-full', 'opacity-0');
-        }, 10);
-        
-        if (duration > 0) {
-            setTimeout(() => {
-                this.remove(toastId);
-            }, duration);
-        }
-        
-        soundManager.play('notification');
-        return toastId;
-    },
-    
-    remove(toastId) {
-        const toast = document.getElementById(toastId);
-        if (!toast) return;
-        
-        toast.classList.add('translate-x-full', 'opacity-0');
-        setTimeout(() => {
-            toast.remove();
-        }, 300);
-    },
-    
-    success(message, duration = 3000) {
-        soundManager.play('success');
-        return this.show(message, 'success', duration);
-    },
-    
-    error(message, duration = 5000) {
-        soundManager.play('error');
-        return this.show(message, 'error', duration);
-    },
-    
-    warning(message, duration = 4000) {
-        soundManager.play('notification');
-        return this.show(message, 'warning', duration);
-    },
-    
-    info(message, duration = 3000) {
-        return this.show(message, 'info', duration);
-    }
-};
 
-// 🎊 BASIC CELEBRATIONS (Limited)
-const CelebrationUtils = {
-    // Simple confetti for goal achievements
-    simpleConfetti() {
-        const colors = ['#3b82f6', '#10b981', '#f59e0b'];
-        
-        for (let i = 0; i < 20; i++) {
-            const confettiPiece = document.createElement('div');
-            confettiPiece.style.cssText = `
-                position: fixed;
-                top: -10px;
-                left: ${Math.random() * 100}%;
-                width: 8px;
-                height: 8px;
-                background: ${colors[Math.floor(Math.random() * colors.length)]};
-                animation: confetti-fall 2s linear forwards;
-                pointer-events: none;
-                z-index: 9999;
+        /**
+         * Show toast notification
+         */
+        showToast(message, type = 'info', duration = 4000) {
+            const toast = this.createToast(message, type);
+            const container = document.getElementById('toastContainer');
+            
+            if (!container) {
+                console.warn('Toast container not found');
+                return;
+            }
+            
+            container.appendChild(toast);
+            this.notifications.push(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateX(0)';
+                toast.style.opacity = '1';
+            });
+            
+            // Auto remove
+            if (duration > 0) {
+                setTimeout(() => {
+                    this.removeToast(toast);
+                }, duration);
+            }
+            
+            return toast;
+        }
+
+        /**
+         * Create toast element
+         */
+        createToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️',
+                upgrade: '👑'
+            };
+            
+            const colors = {
+                success: 'linear-gradient(135deg, #10b981, #059669)',
+                error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                info: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                upgrade: 'linear-gradient(135deg, #f59e0b, #f97316)'
+            };
+            
+            toast.style.cssText = `
+                background: ${colors[type] || colors.info};
+                color: white;
+                padding: 1rem 1.25rem;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                font-weight: 500;
+                font-size: 0.875rem;
+                max-width: 350px;
+                cursor: pointer;
+                pointer-events: all;
+                transform: translateX(100%);
+                opacity: 0;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
             `;
             
-            document.body.appendChild(confettiPiece);
+            toast.innerHTML = `
+                <span style="font-size: 1.1rem;">${icons[type] || icons.info}</span>
+                <span style="flex: 1;">${this.escapeHtml(message)}</span>
+                <button onclick="window.SteadyUtils.removeToast(this.parentElement)" 
+                        style="background: none; border: none; color: white; cursor: pointer; opacity: 0.7; font-size: 1.2rem; padding: 0;">×</button>
+            `;
+            
+            // Add click handler for upgrade toasts
+            if (type === 'upgrade') {
+                toast.addEventListener('click', (e) => {
+                    if (e.target.tagName !== 'BUTTON') {
+                        window.location.href = '/auth/trial.html';
+                    }
+                });
+            }
+            
+            return toast;
+        }
+
+        /**
+         * Remove toast notification
+         */
+        removeToast(toast) {
+            if (!toast || !toast.parentElement) return;
+            
+            toast.style.transform = 'translateX(100%)';
+            toast.style.opacity = '0';
             
             setTimeout(() => {
-                confettiPiece.remove();
-            }, 2000);
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+                const index = this.notifications.indexOf(toast);
+                if (index > -1) {
+                    this.notifications.splice(index, 1);
+                }
+            }, 300);
         }
-        
-        if (!document.getElementById('confetti-styles')) {
-            const style = document.createElement('style');
-            style.id = 'confetti-styles';
-            style.textContent = `
-                @keyframes confetti-fall {
-                    to {
-                        transform: translateY(100vh) rotate(360deg);
-                        opacity: 0;
+
+        // 🚀 UPGRADE MODALS
+
+        /**
+         * Show upgrade modal for locked features
+         */
+        showUpgradeModal(feature) {
+            const featureMessages = {
+                'analytics': {
+                    title: '📊 Advanced Analytics',
+                    description: 'Get detailed insights into your lead performance with charts, trends, and conversion tracking.',
+                    features: ['Lead conversion analytics', 'Performance charts', 'Trend analysis', 'Export reports']
+                },
+                'insights': {
+                    title: '💡 AI Insights',
+                    description: 'Let AI analyze your leads and provide personalized recommendations to improve your conversion rates.',
+                    features: ['AI lead scoring', 'Smart recommendations', 'Behavior analysis', 'Optimization tips']
+                },
+                'automation': {
+                    title: '🤖 Lead Automation',
+                    description: 'Automate your lead follow-up process with smart sequences and triggers.',
+                    features: ['Email sequences', 'Smart triggers', 'Follow-up automation', 'Task automation']
+                },
+                'schedule': {
+                    title: '📅 Schedule Management',
+                    description: 'Manage your appointments and follow-ups with integrated calendar features.',
+                    features: ['Calendar integration', 'Meeting scheduling', 'Reminder system', 'Availability management']
+                },
+                'lead_limit': {
+                    title: '👥 More Leads',
+                    description: 'You\'ve reached your monthly limit of 50 leads. Upgrade to manage 1,000+ leads!',
+                    features: ['1,000 lead limit', 'Unlimited storage', 'Advanced search', 'Bulk operations']
+                },
+                'export': {
+                    title: '📥 Advanced Export',
+                    description: 'Export your leads in multiple formats with custom field selection.',
+                    features: ['Multiple formats', 'Custom fields', 'Scheduled exports', 'Advanced filtering']
+                }
+            };
+            
+            const config = featureMessages[feature] || featureMessages['analytics'];
+            
+            this.showModal(`
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">${config.title.split(' ')[0]}</div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                        ${config.title.substring(2)}
+                    </h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">
+                        ${config.description}
+                    </p>
+                    
+                    <div style="background: var(--surface-hover); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; text-align: left;">
+                        <h4 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">
+                            ✨ What you'll get:
+                        </h4>
+                        ${config.features.map(f => `
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                                <span style="color: var(--success);">✓</span>
+                                ${f}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button onclick="window.SteadyUtils.closeModal()" 
+                                style="padding: 0.75rem 1.5rem; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 500;">
+                            Maybe Later
+                        </button>
+                        <button onclick="window.location.href='/auth/trial.html'" 
+                                style="padding: 0.75rem 2rem; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                            🚀 Start Free Trial
+                        </button>
+                    </div>
+                    
+                    <p style="font-size: 0.8rem; color: var(--text-tertiary); margin-top: 1rem;">
+                        14-day free trial • No credit card required • Cancel anytime
+                    </p>
+                </div>
+            `, 'upgrade-modal');
+            
+            // Track upgrade prompt
+            this.trackEvent('upgrade_prompt_shown', { feature });
+        }
+
+        /**
+         * Show generic modal
+         */
+        showModal(content, id = 'generic-modal') {
+            // Remove existing modal
+            this.closeModal(id);
+            
+            const overlay = document.createElement('div');
+            overlay.id = `modal-${id}`;
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(8px);
+                animation: modalFadeIn 0.3s ease;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: var(--surface);
+                border-radius: 16px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                border: 1px solid var(--border);
+            `;
+            
+            modal.innerHTML = content;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    this.closeModal(id);
+                }
+            });
+            
+            // Close on ESC key
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    this.closeModal(id);
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+            
+            this.modals.set(id, { overlay, modal, escHandler });
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            return { overlay, modal };
+        }
+
+        /**
+         * Close modal
+         */
+        closeModal(id = 'generic-modal') {
+            const modalData = this.modals.get(id);
+            if (!modalData) return;
+            
+            const { overlay, escHandler } = modalData;
+            
+            overlay.style.animation = 'modalFadeOut 0.3s ease';
+            modalData.modal.style.animation = 'modalSlideOut 0.3s ease';
+            
+            setTimeout(() => {
+                if (overlay.parentElement) {
+                    overlay.parentElement.removeChild(overlay);
+                }
+                document.removeEventListener('keydown', escHandler);
+                this.modals.delete(id);
+                
+                // Restore body scroll if no modals
+                if (this.modals.size === 0) {
+                    document.body.style.overflow = '';
+                }
+            }, 300);
+        }
+
+        // 🔍 LEAD MANAGEMENT UTILITIES
+
+        /**
+         * Check lead limit and show warnings
+         */
+        checkLeadLimit(currentCount) {
+            const limit = this.limits.leads;
+            const percentage = (currentCount / limit) * 100;
+            
+            return {
+                current: currentCount,
+                limit: limit,
+                percentage: Math.round(percentage),
+                remaining: limit - currentCount,
+                isNearLimit: percentage >= 80,
+                isAtLimit: currentCount >= limit,
+                shouldShowUpgrade: percentage >= 90
+            };
+        }
+
+        /**
+         * Format lead data for display
+         */
+        formatLead(lead) {
+            return {
+                ...lead,
+                displayName: lead.name || 'Unnamed Lead',
+                initials: this.getInitials(lead.name),
+                statusClass: this.getStatusClass(lead.status),
+                statusIcon: this.getStatusIcon(lead.status),
+                contactInfo: this.getLeadContactInfo(lead),
+                timeAgo: this.getTimeAgo(lead.created_at)
+            };
+        }
+
+        /**
+         * Get initials from name
+         */
+        getInitials(name) {
+            if (!name) return '??';
+            return name.split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2);
+        }
+
+        /**
+         * Get status CSS class
+         */
+        getStatusClass(status) {
+            if (!status) return 'status-new';
+            const s = status.toLowerCase();
+            if (s.includes('new')) return 'status-new';
+            if (s.includes('contact')) return 'status-contacted';
+            if (s.includes('qualified')) return 'status-qualified';
+            if (s.includes('closed') || s.includes('won')) return 'status-closed';
+            return 'status-new';
+        }
+
+        /**
+         * Get status icon
+         */
+        getStatusIcon(status) {
+            if (!status) return 'circle-dot';
+            const s = status.toLowerCase();
+            if (s.includes('new')) return 'circle-dot';
+            if (s.includes('contact')) return 'phone';
+            if (s.includes('qualified')) return 'check-circle';
+            if (s.includes('closed') || s.includes('won')) return 'check-circle-2';
+            return 'circle-dot';
+        }
+
+        /**
+         * Get lead contact info for display
+         */
+        getLeadContactInfo(lead) {
+            if (lead.email) {
+                return {
+                    icon: 'mail',
+                    text: lead.email,
+                    type: 'email'
+                };
+            } else if (lead.phone) {
+                return {
+                    icon: 'phone',
+                    text: lead.phone,
+                    type: 'phone'
+                };
+            } else if (lead.company) {
+                return {
+                    icon: 'building',
+                    text: lead.company,
+                    type: 'company'
+                };
+            } else {
+                return {
+                    icon: 'user',
+                    text: 'No contact info',
+                    type: 'none'
+                };
+            }
+        }
+
+        // ⏰ TIME UTILITIES
+
+        /**
+         * Get human-readable time ago
+         */
+        getTimeAgo(dateString) {
+            if (!dateString) return 'Recently';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            
+            const diffMinutes = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffWeeks = Math.floor(diffDays / 7);
+            const diffMonths = Math.floor(diffDays / 30);
+            
+            if (diffMinutes < 1) return 'Just now';
+            if (diffMinutes < 60) return `${diffMinutes}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            if (diffWeeks < 4) return `${diffWeeks}w ago`;
+            if (diffMonths < 12) return `${diffMonths}mo ago`;
+            
+            return date.toLocaleDateString();
+        }
+
+        /**
+         * Format date for display
+         */
+        formatDate(dateString, options = {}) {
+            if (!dateString) return '';
+            
+            const date = new Date(dateString);
+            const defaultOptions = {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                ...options
+            };
+            
+            return date.toLocaleDateString(undefined, defaultOptions);
+        }
+
+        // 🎯 PERFORMANCE UTILITIES
+
+        /**
+         * Debounce function calls
+         */
+        debounce(func, delay, key = 'default') {
+            if (this.debounceTimers.has(key)) {
+                clearTimeout(this.debounceTimers.get(key));
+            }
+            
+            const timeoutId = setTimeout(() => {
+                func();
+                this.debounceTimers.delete(key);
+            }, delay);
+            
+            this.debounceTimers.set(key, timeoutId);
+        }
+
+        /**
+         * Throttle function calls
+         */
+        throttle(func, delay) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, delay);
+                }
+            };
+        }
+
+        // 🔒 SECURITY UTILITIES
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Sanitize input for safe display
+         */
+        sanitizeInput(input) {
+            if (typeof input !== 'string') return input;
+            return input.trim()
+                       .replace(/[<>]/g, '') // Remove basic HTML chars
+                       .slice(0, 500); // Limit length
+        }
+
+        // 📊 ANALYTICS & TRACKING
+
+        /**
+         * Track user events (placeholder for analytics)
+         */
+        trackEvent(eventName, properties = {}) {
+            console.log(`📊 Event: ${eventName}`, properties);
+            
+            // In production, this would send to analytics service
+            // For now, just log for development
+            if (window.gtag) {
+                window.gtag('event', eventName, properties);
+            }
+        }
+
+        /**
+         * Track page view
+         */
+        trackPageView(pageName) {
+            this.trackEvent('page_view', { page: pageName });
+        }
+
+        // 🛠️ SETUP UTILITIES
+
+        /**
+         * Setup keyboard shortcuts
+         */
+        setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + K for quick search (future feature)
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    this.showToast('Quick search coming soon!', 'info');
+                }
+                
+                // Ctrl/Cmd + N for new lead
+                if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                    e.preventDefault();
+                    if (window.DashboardController && window.DashboardController.handleAddLead) {
+                        window.DashboardController.handleAddLead();
                     }
                 }
-            `;
-            document.head.appendChild(style);
+                
+                // Ctrl/Cmd + D for dark mode toggle
+                if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                    e.preventDefault();
+                    this.toggleTheme();
+                }
+            });
         }
-    },
-    
-    // Show achievement (with upgrade hint)
-    showAchievement(title, message) {
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
-        modal.innerHTML = `
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 text-center max-w-md mx-4">
-                <div class="text-4xl mb-3">🎯</div>
-                <h2 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">${title}</h2>
-                <p class="text-gray-600 dark:text-gray-300 mb-4">${message}</p>
-                <div class="bg-blue-50 dark:bg-blue-900 p-3 rounded-lg mb-4">
-                    <p class="text-sm text-blue-800 dark:text-blue-200">
-                        🚀 Pro users get advanced celebrations and insights!
-                    </p>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                    Nice!
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        this.simpleConfetti();
-        soundManager.play('success');
-        
-        setTimeout(() => {
-            modal.remove();
-        }, 4000);
-    }
-};
 
-// 🔧 BASIC UTILITIES
-const BasicUtils = {
-    // Format numbers
-    formatNumber(num) {
-        if (num === null || num === undefined) return '0';
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-        return num.toString();
-    },
-    
-    // Debounce for search
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    },
-    
-    // Simple search
-    searchLeads(leads, query) {
-        if (!query || query.trim() === '') return leads;
-        
-        const searchTerm = query.toLowerCase().trim();
-        return leads.filter(lead => 
-            lead.name?.toLowerCase().includes(searchTerm) ||
-            lead.email?.toLowerCase().includes(searchTerm) ||
-            lead.company?.toLowerCase().includes(searchTerm) ||
-            lead.platform?.toLowerCase().includes(searchTerm)
-        );
-    }
-};
-
-// 🎮 BASIC KEYBOARD SHORTCUTS (Limited)
-const BasicKeyboardShortcuts = {
-    init() {
-        document.addEventListener('keydown', (e) => {
-            // Ctrl+/ for help
-            if (e.ctrlKey && e.key === '/') {
-                e.preventDefault();
-                this.showHelp();
-            }
+        /**
+         * Setup global error handling
+         */
+        setupErrorHandling() {
+            window.addEventListener('error', (e) => {
+                console.error('Global error:', e.error);
+                this.trackEvent('error', {
+                    message: e.message,
+                    filename: e.filename,
+                    lineno: e.lineno
+                });
+            });
             
-            // Ctrl+Shift+T for theme toggle
-            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-                e.preventDefault();
-                themeManager.toggle();
-                ToastUtils.info(`Switched to ${themeManager.getCurrentTheme()} mode`);
+            window.addEventListener('unhandledrejection', (e) => {
+                console.error('Unhandled promise rejection:', e.reason);
+                this.trackEvent('promise_rejection', {
+                    reason: e.reason?.toString()
+                });
+            });
+        }
+
+        /**
+         * Setup performance monitoring
+         */
+        setupPerformanceMonitoring() {
+            // Log performance metrics
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const perfData = performance.getEntriesByType('navigation')[0];
+                    this.trackEvent('page_load_performance', {
+                        loadTime: Math.round(perfData.loadEventEnd - perfData.fetchStart),
+                        domContentLoaded: Math.round(perfData.domContentLoadedEventEnd - perfData.fetchStart)
+                    });
+                }, 0);
+            });
+        }
+
+        // 🎪 EVENT SYSTEM
+
+        /**
+         * Dispatch custom event
+         */
+        dispatchEvent(eventName, detail = {}) {
+            const event = new CustomEvent(`steadymanager:${eventName}`, { detail });
+            document.dispatchEvent(event);
+        }
+
+        /**
+         * Listen for custom events
+         */
+        addEventListener(eventName, callback) {
+            const listener = (e) => callback(e.detail);
+            document.addEventListener(`steadymanager:${eventName}`, listener);
+            
+            // Store for cleanup
+            if (!this.eventListeners.has(eventName)) {
+                this.eventListeners.set(eventName, []);
             }
+            this.eventListeners.get(eventName).push(listener);
+            
+            return listener;
+        }
+
+        /**
+         * Remove event listener
+         */
+        removeEventListener(eventName, listener) {
+            document.removeEventListener(`steadymanager:${eventName}`, listener);
+            
+            const listeners = this.eventListeners.get(eventName);
+            if (listeners) {
+                const index = listeners.indexOf(listener);
+                if (index > -1) {
+                    listeners.splice(index, 1);
+                }
+            }
+        }
+
+        // 🧹 CLEANUP
+
+        /**
+         * Cleanup resources
+         */
+        cleanup() {
+            // Clear all timers
+            this.debounceTimers.forEach(timer => clearTimeout(timer));
+            this.debounceTimers.clear();
+            
+            // Remove all event listeners
+            this.eventListeners.forEach((listeners, eventName) => {
+                listeners.forEach(listener => {
+                    this.removeEventListener(eventName, listener);
+                });
+            });
+            this.eventListeners.clear();
+            
+            // Close all modals
+            this.modals.forEach((_, id) => this.closeModal(id));
+            
+            console.log('🧹 SteadyUtils cleaned up');
+        }
+    }
+
+    // 🚀 INITIALIZE AND EXPORT
+    window.SteadyUtils = new SteadyUtils();
+    
+    // Auto-initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            window.SteadyUtils.init();
         });
-    },
-    
-    showHelp() {
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
-        modal.innerHTML = `
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4">
-                <h2 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">⌨️ Keyboard Shortcuts (Free)</h2>
-                <div class="space-y-2 mb-4">
-                    <div class="flex justify-between">
-                        <kbd class="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">Ctrl+/</kbd>
-                        <span class="text-sm">Show shortcuts</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <kbd class="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">Ctrl+Shift+T</kbd>
-                        <span class="text-sm">Toggle theme</span>
-                    </div>
-                </div>
-                <div class="bg-yellow-50 dark:bg-yellow-900 p-3 rounded-lg mb-4">
-                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
-                        🚀 Pro users get 10+ more shortcuts!
-                    </p>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        class="w-full bg-blue-600 text-white py-2 rounded">
-                    Close
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        soundManager.play('click');
+    } else {
+        window.SteadyUtils.init();
     }
-};
 
-// 🔧 FREE TIER MAIN EXPORT
-const SteadyUtils = {
-    // Basic managers
-    Sound: soundManager,
-    Theme: themeManager,
-    Date: DateUtils,
-    FreeTier: FreeTierUtils,
-    Toast: ToastUtils,
-    Celebration: CelebrationUtils,
-    Basic: BasicUtils,
-    Keyboard: BasicKeyboardShortcuts,
-    
-    // Quick access
-    formatDate: DateUtils.formatDate,
-    formatNumber: BasicUtils.formatNumber,
-    showToast: ToastUtils.show,
-    playSound: (name) => soundManager.play(name),
-    toggleTheme: () => themeManager.toggle(),
-    checkFeature: FreeTierUtils.isFeatureLocked,
-    showUpgrade: FreeTierUtils.showUpgradePrompt,
-    
-    // Initialize
-    init() {
-        console.log('🔧 SteadyManager Utils (FREE TIER) initialized!');
-        console.log('🎵 Web Audio sound system ready');
-        console.log('🎨 Basic theme system ready');
-        console.log('🍞 Toast notifications ready');
-        console.log('🚀 Ready for upgrades!');
+    // Add modal animations CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes modalFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         
-        // Set tier globally
-        window.TIER = 'FREE';
-        window.TIER_LIMITS = {
-            leadLimit: 50,
-            features: ['basic_dashboard', 'add_leads', 'basic_settings'],
-            locked: ['analytics', 'insights', 'export', 'advanced_search']
-        };
+        @keyframes modalFadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
         
-        return this;
-    }
-};
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        @keyframes modalSlideOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(-20px) scale(0.95); }
+        }
+    `;
+    document.head.appendChild(style);
 
-// Make globally available
-window.SteadyUtils = SteadyUtils;
-window.showToast = ToastUtils.show;
-window.playSound = (name) => soundManager.play(name);
-window.FreeTierUtils = FreeTierUtils;
-
-// Initialize keyboard shortcuts
-BasicKeyboardShortcuts.init();
-
-// Auto-initialize
-SteadyUtils.init();
-
-// 🎯 CONSOLE MESSAGE FOR FREE TIER
-console.log(`
-🆓 ====================================================
-   _____ ______________________   _______ ________ 
-  / __  // ___// ____/ ____/   | / /  _  /__  __/
- / /_/ // /   / __/ / __/ / /| |/ /  / / /  / /   
-/ ____// /___/ /___/ /___/ ___ / /__/ /_/  / /    
-\_/ ____\____/_____/_____/_/  |_\\____/   /_/     
-🆓 ====================================================
-
-🎯 FREE TIER UTILS - READY TO GROW!
-
-✅ AVAILABLE FEATURES:
-   🎵 Web Audio Sounds (click, success, error, notification)
-   🎨 Theme Toggle  
-   📅 Date Utils
-   🍞 Toast Notifications
-   🎊 Simple Celebrations
-   ⌨️  Basic Shortcuts (Ctrl+/, Ctrl+Shift+T)
-
-🔒 LOCKED FEATURES (Upgrade to unlock):
-   📊 Advanced Analytics
-   📥 Data Export
-   💡 Smart Insights
-   🔍 Advanced Search
-   🎮 Admin Features
-   ✨ Premium Animations
-
-🚀 READY FOR MORE? Upgrade to Professional!
-`);
-
-console.log('🆓 Free Tier Utils loaded - Ready to convert users to Pro! 💰');
+    console.log('🛠️ SteadyUtils loaded and ready!');
+    
+})();

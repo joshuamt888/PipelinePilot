@@ -341,64 +341,910 @@ function getTableName(baseName) {
   return `${tablePrefix}${baseName}`;
 }
 
-// 🔧 Database initialization (updated schema)
+// 🔧 REPLACE THE ENTIRE initializeDatabase() FUNCTION WITH THIS:
+// (Replace from line ~330 to ~380 in your current server.js)
+
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
-    console.log(`🔧 Initializing ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} database...`);
+    console.log(`🔧 Initializing ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} database with enhanced schema...`);
     
-    // UPDATED: Users table with new subscription structure
+    // 👤 ENHANCED USERS TABLE - Core user management
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('users')} (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        
+        -- Subscription & Access Control
         user_type VARCHAR(50) DEFAULT 'free',
         subscription_tier VARCHAR(50) DEFAULT 'FREE',
         billing_cycle VARCHAR(20),
+        subscription_status VARCHAR(30) DEFAULT 'active',
+        trial_end_date TIMESTAMP,
+        subscription_start_date TIMESTAMP,
+        subscription_end_date TIMESTAMP,
+        
+        -- Admin & Permissions
         is_admin BOOLEAN DEFAULT FALSE,
+        permissions JSONB DEFAULT '["read_own_leads", "write_own_leads"]',
+        
+        -- Lead Limits & Usage
         monthly_lead_limit INTEGER DEFAULT 50,
         current_month_leads INTEGER DEFAULT 0,
-        goals JSONB DEFAULT '{"daily": 5, "monthly": 50}',
-        settings JSONB DEFAULT '{"darkMode": false, "notifications": true}',
-        reset_token TEXT,
+        total_leads_created INTEGER DEFAULT 0,
+        lead_limit_reset_date DATE DEFAULT CURRENT_DATE,
+        
+        -- User Preferences & Settings
+        goals JSONB DEFAULT '{"daily": 5, "monthly": 50, "revenue": 10000}',
+        settings JSONB DEFAULT '{"darkMode": false, "notifications": true, "timezone": "UTC"}',
+        dashboard_config JSONB DEFAULT '{}',
+        
+        -- Authentication & Security
+        last_login TIMESTAMP,
+        login_count INTEGER DEFAULT 0,
+        failed_login_attempts INTEGER DEFAULT 0,
+        account_locked_until TIMESTAMP,
+        remember_token VARCHAR(255),
+        remember_token_expires TIMESTAMP,
+        reset_token VARCHAR(255),
         reset_token_expires TIMESTAMP,
+        email_verified_at TIMESTAMP,
+        email_verification_token VARCHAR(255),
+        
+        -- Stripe Integration
         stripe_customer_id VARCHAR(255),
         stripe_subscription_id VARCHAR(255),
+        stripe_payment_method_id VARCHAR(255),
+        
+        -- Profile Information
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        company_name VARCHAR(255),
+        phone VARCHAR(50),
+        avatar_url TEXT,
+        bio TEXT,
+        website VARCHAR(255),
+        
+        -- Onboarding & Features
+        onboarding_completed BOOLEAN DEFAULT FALSE,
+        onboarding_step INTEGER DEFAULT 0,
+        feature_flags JSONB DEFAULT '{}',
+        beta_features JSONB DEFAULT '[]',
+        
+        -- Analytics & Tracking
+        utm_source VARCHAR(100),
+        utm_medium VARCHAR(100),
+        utm_campaign VARCHAR(100),
+        referrer_url TEXT,
+        signup_ip INET,
+        
+        -- Timestamps
         created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
+        updated_at TIMESTAMP DEFAULT NOW(),
+        deleted_at TIMESTAMP -- Soft delete
       )
     `);
 
-    // Leads table (core fields only)
+    // 🎯 ENHANCED LEADS TABLE - Core lead management
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('leads')} (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Basic Lead Information
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255),
         phone VARCHAR(50),
         company VARCHAR(255),
+        job_title VARCHAR(255),
+        website VARCHAR(255),
+        
+        -- Lead Classification & Scoring
+        status VARCHAR(100) DEFAULT 'new',
+        type VARCHAR(20) DEFAULT 'cold', -- cold, warm, hot, customer, lost
+        source VARCHAR(100), -- facebook, linkedin, referral, website, etc.
         platform VARCHAR(100),
-        status VARCHAR(100) DEFAULT 'New lead',
-        type VARCHAR(20) DEFAULT 'cold',
-        notes TEXT,
         quality_score INTEGER DEFAULT 5 CHECK (quality_score >= 1 AND quality_score <= 10),
+        lead_score INTEGER DEFAULT 0, -- Advanced scoring algorithm result
+        
+        -- Business Information
         potential_value INTEGER DEFAULT 0,
+        estimated_close_date DATE,
+        deal_stage VARCHAR(50) DEFAULT 'prospecting',
+        deal_probability INTEGER DEFAULT 0 CHECK (deal_probability >= 0 AND deal_probability <= 100),
+        
+        -- Communication & Follow-up
+        notes TEXT,
         follow_up_date DATE,
+        last_contact_date DATE,
+        next_action VARCHAR(255),
+        preferred_contact_method VARCHAR(50) DEFAULT 'email',
+        
+        -- Advanced Lead Data
+        lead_magnet VARCHAR(255), -- What attracted them
+        pain_points JSONB DEFAULT '[]',
+        interests JSONB DEFAULT '[]',
+        budget_range VARCHAR(50),
+        decision_maker BOOLEAN DEFAULT FALSE,
+        buying_timeline VARCHAR(50),
+        competitor_info TEXT,
+        
+        -- Social & Additional Info
+        linkedin_url VARCHAR(500),
+        facebook_url VARCHAR(500),
+        twitter_url VARCHAR(500),
+        instagram_url VARCHAR(500),
+        other_social JSONB DEFAULT '{}',
+        
+        -- Engagement Tracking
+        email_opens INTEGER DEFAULT 0,
+        email_clicks INTEGER DEFAULT 0,
+        website_visits INTEGER DEFAULT 0,
+        last_website_visit TIMESTAMP,
+        engagement_score INTEGER DEFAULT 0,
+        
+        -- Custom Fields (tier-specific)
+        custom_fields JSONB DEFAULT '{}',
+        tags JSONB DEFAULT '[]',
+        
+        -- AI & Automation
+        ai_insights JSONB DEFAULT '{}',
+        automation_status VARCHAR(50) DEFAULT 'none',
+        auto_follow_up_enabled BOOLEAN DEFAULT FALSE,
+        
+        -- Geography & Demographics
+        country VARCHAR(100),
+        state VARCHAR(100),
+        city VARCHAR(100),
+        timezone VARCHAR(50),
+        language VARCHAR(10) DEFAULT 'en',
+        
+        -- Lead Lifecycle
+        converted_to_customer BOOLEAN DEFAULT FALSE,
+        conversion_date TIMESTAMP,
+        lost_reason VARCHAR(255),
+        lost_date TIMESTAMP,
+        reactivation_attempts INTEGER DEFAULT 0,
+        
+        -- Timestamps & Tracking
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        deleted_at TIMESTAMP, -- Soft delete
+        
+        -- Indexes for performance
+        CONSTRAINT valid_deal_probability CHECK (deal_probability >= 0 AND deal_probability <= 100),
+        CONSTRAINT valid_quality_score CHECK (quality_score >= 1 AND quality_score <= 10)
+      )
+    `);
+
+    // 📧 COMMUNICATION HISTORY TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('communications')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        lead_id INTEGER REFERENCES ${getTableName('leads')}(id) ON DELETE CASCADE,
+        
+        -- Communication Details
+        type VARCHAR(50) NOT NULL, -- email, call, meeting, note, sms, linkedin_message
+        direction VARCHAR(20) NOT NULL, -- inbound, outbound
+        subject VARCHAR(500),
+        content TEXT,
+        
+        -- Status & Results
+        status VARCHAR(50) DEFAULT 'sent', -- sent, delivered, opened, clicked, replied, failed
+        outcome VARCHAR(100), -- positive, negative, neutral, follow_up_needed
+        sentiment VARCHAR(20), -- positive, negative, neutral
+        
+        -- Email Specific
+        email_message_id VARCHAR(255),
+        email_thread_id VARCHAR(255),
+        email_opened_at TIMESTAMP,
+        email_clicked_at TIMESTAMP,
+        email_replied_at TIMESTAMP,
+        
+        -- Call/Meeting Specific
+        duration_minutes INTEGER,
+        recording_url TEXT,
+        meeting_notes TEXT,
+        
+        -- Automation & AI
+        automated BOOLEAN DEFAULT FALSE,
+        ai_generated BOOLEAN DEFAULT FALSE,
+        template_used VARCHAR(255),
+        
+        -- Scheduling
+        scheduled_for TIMESTAMP,
+        sent_at TIMESTAMP DEFAULT NOW(),
+        
+        -- Attachments & Media
+        attachments JSONB DEFAULT '[]',
+        
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
 
-    console.log(`✅ Database initialized successfully`);
+    // 📈 GOALS & TARGETS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('goals')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Goal Definition
+        goal_type VARCHAR(50) NOT NULL, -- leads, revenue, conversions, calls, meetings
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        
+        -- Target & Progress
+        target_value DECIMAL(12,2) NOT NULL,
+        current_value DECIMAL(12,2) DEFAULT 0,
+        unit VARCHAR(20) DEFAULT 'count', -- count, currency, percentage
+        
+        -- Time Period
+        period_type VARCHAR(20) NOT NULL, -- daily, weekly, monthly, quarterly, yearly
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        
+        -- Status & Achievement
+        status VARCHAR(20) DEFAULT 'active', -- active, completed, paused, cancelled
+        achieved_at TIMESTAMP,
+        achievement_percentage DECIMAL(5,2) DEFAULT 0,
+        
+        -- Visibility & Sharing
+        is_public BOOLEAN DEFAULT FALSE,
+        dashboard_visible BOOLEAN DEFAULT TRUE,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 🏷️ TAGS SYSTEM TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('tags')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Tag Details
+        name VARCHAR(100) NOT NULL,
+        color VARCHAR(7) DEFAULT '#3B82F6', -- Hex color
+        description TEXT,
+        
+        -- Usage & Analytics
+        usage_count INTEGER DEFAULT 0,
+        last_used TIMESTAMP,
+        
+        -- Organization
+        category VARCHAR(50), -- lead_status, source, priority, custom
+        is_system_tag BOOLEAN DEFAULT FALSE,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        
+        UNIQUE(user_id, name)
+      )
+    `);
+
+    // 🔗 LEAD-TAG RELATIONSHIP TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('lead_tags')} (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER REFERENCES ${getTableName('leads')}(id) ON DELETE CASCADE,
+        tag_id INTEGER REFERENCES ${getTableName('tags')}(id) ON DELETE CASCADE,
+        
+        -- When tag was applied
+        created_at TIMESTAMP DEFAULT NOW(),
+        created_by INTEGER REFERENCES ${getTableName('users')}(id),
+        
+        UNIQUE(lead_id, tag_id)
+      )
+    `);
+
+    // 📊 ANALYTICS & METRICS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('analytics')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Metric Information
+        metric_type VARCHAR(50) NOT NULL, -- lead_created, lead_converted, email_sent, call_made, etc.
+        metric_category VARCHAR(50), -- leads, communications, goals, revenue
+        
+        -- Values & Data
+        metric_value DECIMAL(12,2) NOT NULL,
+        metric_unit VARCHAR(20) DEFAULT 'count',
+        additional_data JSONB DEFAULT '{}',
+        
+        -- Time & Context
+        recorded_for_date DATE NOT NULL,
+        context_id INTEGER, -- Related lead_id, goal_id, etc.
+        context_type VARCHAR(50), -- lead, goal, communication
+        
+        -- Source & Attribution
+        source VARCHAR(100), -- dashboard, api, automation, import
+        
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 🎨 DASHBOARD WIDGETS & LAYOUTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('dashboard_widgets')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Widget Configuration
+        widget_type VARCHAR(50) NOT NULL, -- lead_count, revenue_chart, goal_progress, recent_leads
+        widget_title VARCHAR(255),
+        
+        -- Layout & Position
+        dashboard_page VARCHAR(50) DEFAULT 'main', -- main, leads, analytics, goals
+        position_x INTEGER DEFAULT 0,
+        position_y INTEGER DEFAULT 0,
+        width INTEGER DEFAULT 1,
+        height INTEGER DEFAULT 1,
+        
+        -- Widget Settings
+        widget_config JSONB DEFAULT '{}',
+        filters JSONB DEFAULT '{}',
+        
+        -- Visibility & Access
+        is_visible BOOLEAN DEFAULT TRUE,
+        required_tier VARCHAR(50), -- free, professional, business, enterprise
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 🔄 AUTOMATIONS & WORKFLOWS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('automations')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Automation Details
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        automation_type VARCHAR(50) NOT NULL, -- email_sequence, follow_up, lead_scoring, task_creation
+        
+        -- Trigger Configuration
+        trigger_type VARCHAR(50) NOT NULL, -- new_lead, status_change, date_based, manual
+        trigger_conditions JSONB NOT NULL DEFAULT '{}',
+        
+        -- Action Configuration  
+        actions JSONB NOT NULL DEFAULT '[]',
+        
+        -- Status & Control
+        is_active BOOLEAN DEFAULT TRUE,
+        is_paused BOOLEAN DEFAULT FALSE,
+        
+        -- Execution Tracking
+        runs_count INTEGER DEFAULT 0,
+        last_run_at TIMESTAMP,
+        next_run_at TIMESTAMP,
+        
+        -- Performance Metrics
+        success_count INTEGER DEFAULT 0,
+        error_count INTEGER DEFAULT 0,
+        last_error TEXT,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 📋 TASKS & REMINDERS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('tasks')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        lead_id INTEGER REFERENCES ${getTableName('leads')}(id) ON DELETE SET NULL,
+        
+        -- Task Details
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        task_type VARCHAR(50) DEFAULT 'follow_up', -- follow_up, call, email, meeting, research
+        priority VARCHAR(20) DEFAULT 'medium', -- low, medium, high, urgent
+        
+        -- Scheduling
+        due_date DATE,
+        due_time TIME,
+        reminder_date TIMESTAMP,
+        
+        -- Status & Completion
+        status VARCHAR(20) DEFAULT 'pending', -- pending, in_progress, completed, cancelled
+        completed_at TIMESTAMP,
+        completion_notes TEXT,
+        
+        -- Organization
+        category VARCHAR(50),
+        estimated_duration_minutes INTEGER,
+        actual_duration_minutes INTEGER,
+        
+        -- Automation
+        created_by_automation BOOLEAN DEFAULT FALSE,
+        automation_id INTEGER REFERENCES ${getTableName('automations')}(id),
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 📁 FILE UPLOADS & ATTACHMENTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('files')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- File Information
+        original_filename VARCHAR(255) NOT NULL,
+        stored_filename VARCHAR(255) NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type VARCHAR(100) NOT NULL,
+        file_hash VARCHAR(64), -- For deduplication
+        
+        -- Organization & Context
+        category VARCHAR(50) DEFAULT 'general', -- lead_attachment, profile_picture, import_file
+        context_type VARCHAR(50), -- lead, user, communication, task
+        context_id INTEGER,
+        
+        -- Access & Security
+        is_public BOOLEAN DEFAULT FALSE,
+        access_url TEXT,
+        expires_at TIMESTAMP,
+        
+        -- Processing Status
+        processing_status VARCHAR(20) DEFAULT 'uploaded', -- uploaded, processing, processed, error
+        processing_result JSONB DEFAULT '{}',
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 📊 REPORTS & EXPORTS TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('reports')} (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
+        
+        -- Report Configuration
+        report_name VARCHAR(255) NOT NULL,
+        report_type VARCHAR(50) NOT NULL, -- leads_summary, revenue_analysis, performance_metrics
+        
+        -- Filters & Parameters
+        filters JSONB NOT NULL DEFAULT '{}',
+        date_range_start DATE,
+        date_range_end DATE,
+        
+        -- Generation & Status
+        status VARCHAR(20) DEFAULT 'pending', -- pending, generating, completed, error
+        generated_at TIMESTAMP,
+        file_path TEXT,
+        file_size INTEGER,
+        
+        -- Scheduling
+        is_scheduled BOOLEAN DEFAULT FALSE,
+        schedule_frequency VARCHAR(20), -- daily, weekly, monthly
+        next_generation TIMESTAMP,
+        
+        -- Sharing & Access
+        is_shared BOOLEAN DEFAULT FALSE,
+        share_token VARCHAR(255),
+        share_expires_at TIMESTAMP,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 🔧 SYSTEM SETTINGS & CONFIGURATION TABLE
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${getTableName('system_settings')} (
+        id SERIAL PRIMARY KEY,
+        
+        -- Setting Identification
+        setting_key VARCHAR(100) UNIQUE NOT NULL,
+        setting_category VARCHAR(50) NOT NULL, -- email, automation, billing, features
+        
+        -- Setting Value & Metadata
+        setting_value JSONB NOT NULL,
+        default_value JSONB,
+        setting_type VARCHAR(20) NOT NULL, -- string, number, boolean, object, array
+        
+        -- Validation & Constraints
+        validation_rules JSONB DEFAULT '{}',
+        is_required BOOLEAN DEFAULT FALSE,
+        
+        -- Access Control
+        required_permission VARCHAR(100),
+        user_editable BOOLEAN DEFAULT FALSE,
+        tier_restricted VARCHAR(50), -- Which tier can modify this
+        
+        -- Documentation
+        description TEXT,
+        help_text TEXT,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // 📈 Create indexes for better performance
+    await client.query(`
+      -- User indexes
+      CREATE INDEX IF NOT EXISTS idx_users_email ON ${getTableName('users')} (email);
+      CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON ${getTableName('users')} (subscription_tier);
+      CREATE INDEX IF NOT EXISTS idx_users_created_at ON ${getTableName('users')} (created_at);
+      CREATE INDEX IF NOT EXISTS idx_users_remember_token ON ${getTableName('users')} (remember_token);
+      
+      -- Lead indexes
+      CREATE INDEX IF NOT EXISTS idx_leads_user_id ON ${getTableName('leads')} (user_id);
+      CREATE INDEX IF NOT EXISTS idx_leads_status ON ${getTableName('leads')} (status);
+      CREATE INDEX IF NOT EXISTS idx_leads_type ON ${getTableName('leads')} (type);
+      CREATE INDEX IF NOT EXISTS idx_leads_created_at ON ${getTableName('leads')} (created_at);
+      CREATE INDEX IF NOT EXISTS idx_leads_follow_up_date ON ${getTableName('leads')} (follow_up_date);
+      CREATE INDEX IF NOT EXISTS idx_leads_quality_score ON ${getTableName('leads')} (quality_score);
+      CREATE INDEX IF NOT EXISTS idx_leads_email ON ${getTableName('leads')} (email);
+      
+      -- Communication indexes
+      CREATE INDEX IF NOT EXISTS idx_communications_lead_id ON ${getTableName('communications')} (lead_id);
+      CREATE INDEX IF NOT EXISTS idx_communications_user_id ON ${getTableName('communications')} (user_id);
+      CREATE INDEX IF NOT EXISTS idx_communications_type ON ${getTableName('communications')} (type);
+      CREATE INDEX IF NOT EXISTS idx_communications_created_at ON ${getTableName('communications')} (created_at);
+      
+      -- Analytics indexes
+      CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON ${getTableName('analytics')} (user_id);
+      CREATE INDEX IF NOT EXISTS idx_analytics_metric_type ON ${getTableName('analytics')} (metric_type);
+      CREATE INDEX IF NOT EXISTS idx_analytics_recorded_date ON ${getTableName('analytics')} (recorded_for_date);
+      
+      -- Task indexes
+      CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON ${getTableName('tasks')} (user_id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_lead_id ON ${getTableName('tasks')} (lead_id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON ${getTableName('tasks')} (due_date);
+      CREATE INDEX IF NOT EXISTS idx_tasks_status ON ${getTableName('tasks')} (status);
+    `);
+
+    // 🌱 Insert default system settings
+    await client.query(`
+      INSERT INTO ${getTableName('system_settings')} (setting_key, setting_category, setting_value, default_value, setting_type, description)
+      VALUES 
+        ('lead_scoring_algorithm', 'features', '{"enabled": true, "weights": {"email_opens": 10, "website_visits": 15, "form_fills": 25}}', '{"enabled": false}', 'object', 'AI lead scoring configuration'),
+        ('email_automation_enabled', 'automation', 'true', 'false', 'boolean', 'Enable automated email sequences'),
+        ('daily_lead_limit_free', 'billing', '50', '50', 'number', 'Daily lead creation limit for free users'),
+        ('advanced_analytics_enabled', 'features', 'false', 'false', 'boolean', 'Enable advanced analytics features'),
+        ('ai_insights_enabled', 'features', 'false', 'false', 'boolean', 'Enable AI-powered lead insights'),
+        ('white_label_enabled', 'features', 'false', 'false', 'boolean', 'Enable white-label customization'),
+        ('team_collaboration_enabled', 'features', 'false', 'false', 'boolean', 'Enable team collaboration features'),
+        ('api_access_enabled', 'features', 'false', 'false', 'boolean', 'Enable API access for integrations')
+      ON CONFLICT (setting_key) DO NOTHING
+    `);
+
+    console.log(`✅ Enhanced database schema initialized successfully`);
+    console.log(`📊 Created comprehensive lead management tables with tier-based access`);
+    
   } catch (error) {
-    console.error('❌ Database initialization error:', error.message);
+    console.error('❌ Enhanced database initialization error:', error.message);
     throw error;
   } finally {
     client.release();
   }
 }
+
+// 🔄 ADD THESE NEW HELPER FUNCTIONS AFTER THE clearResetToken() FUNCTION:
+// (Add these around line ~600 in your current server.js, after clearResetToken function)
+
+// Helper functions for enhanced authentication with 30-day remember me
+async function incrementFailedLoginAttempts(userId) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET failed_login_attempts = failed_login_attempts + 1,
+           account_locked_until = CASE 
+             WHEN failed_login_attempts >= 4 THEN NOW() + INTERVAL '30 minutes'
+             ELSE account_locked_until
+           END,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING failed_login_attempts`,
+      [userId]
+    );
+    
+    const attempts = result.rows[0]?.failed_login_attempts || 0;
+    if (attempts >= 5) {
+      console.log(`🔒 Account locked after ${attempts} failed attempts for user ${userId}`);
+    }
+  } finally {
+    client.release();
+  }
+}
+
+async function resetFailedLoginAttempts(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET failed_login_attempts = 0, 
+           account_locked_until = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function updateLoginTracking(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET last_login = NOW(), 
+           login_count = login_count + 1,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function saveRememberToken(userId, token) {
+  const client = await pool.connect();
+  try {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+    
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET remember_token = $1, 
+           remember_token_expires = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [token, expiresAt.toISOString(), userId]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function findUserByRememberToken(token) {
+  const client = await pool.connect();
+  try {
+    const now = new Date().toISOString();
+    const result = await client.query(
+      `SELECT * FROM ${getTableName('users')} 
+       WHERE remember_token = $1 AND remember_token_expires > $2`,
+      [token, now]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Database error in findUserByRememberToken:', error.message);
+    throw new Error('Database query failed');
+  } finally {
+    client.release();
+  }
+}
+
+// 🔐 REPLACE YOUR ENTIRE LOGIN ENDPOINT WITH THIS ENHANCED VERSION:
+// (Replace the entire app.post('/api/login', ...) around line ~1000)
+
+app.post('/api/login', 
+  [validateEmail, body('password').notEmpty().withMessage('Password required'), handleValidationErrors],
+  async (req, res) => {
+    try {
+      const { email, password, rememberMe } = req.body;
+      
+      const user = await findUserByEmail(email);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid credentials' });
+      }
+      
+      // Check if account is locked
+      if (user.account_locked_until && new Date() < new Date(user.account_locked_until)) {
+        return res.status(423).json({ 
+          error: 'Account temporarily locked due to too many failed attempts. Try again later.' 
+        });
+      }
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        // Increment failed attempts
+        await incrementFailedLoginAttempts(user.id);
+        return res.status(400).json({ error: 'Invalid credentials' });
+      }
+      
+      // Reset failed attempts on successful login
+      await resetFailedLoginAttempts(user.id);
+      
+      // Set token expiry based on remember me - 30 days if checked, 24 hours if not
+      const tokenExpiry = rememberMe ? '30d' : '24h';
+      const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 days or 24 hours
+      
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email, 
+          userType: user.user_type,
+          rememberMe: rememberMe || false
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: tokenExpiry }
+      );
+      
+      // Generate remember token if needed
+      let rememberToken = null;
+      if (rememberMe) {
+        rememberToken = require('crypto').randomBytes(32).toString('hex');
+        await saveRememberToken(user.id, rememberToken);
+      }
+      
+      // Update login tracking
+      await updateLoginTracking(user.id);
+      
+      const subscriptionTier = user.subscription_tier || 'FREE';
+      
+      console.log(`✅ User login: ${email} (${subscriptionTier}) - Remember: ${rememberMe ? '30 days' : '24 hours'}`);
+      
+      const welcomeMessages = {
+        'ADMIN': 'Welcome back, Admin! 👑',
+        'PROFESSIONAL': 'Welcome back, Professional! 🚀',
+        'PROFESSIONAL_TRIAL': 'Welcome back to your trial! 🎁',
+        'BUSINESS': 'Welcome back, Business! 💼',
+        'ENTERPRISE': 'Welcome back, Enterprise! ⭐',
+        'FREE': 'Welcome back!'
+      };
+      
+      // Set secure cookie with appropriate expiry
+      const cookieConfig = {
+        ...getCookieConfig(),
+        maxAge: cookieMaxAge
+      };
+      
+      res.cookie('authToken', token, cookieConfig);
+      
+      // Set remember token if enabled
+      if (rememberToken) {
+        res.cookie('rememberToken', rememberToken, {
+          ...cookieConfig,
+          maxAge: 30 * 24 * 60 * 60 * 1000 // Always 30 days for remember token
+        });
+      }
+      
+      // Non-httpOnly cookie for client-side checks
+      res.cookie('isLoggedIn', 'true', {
+        ...cookieConfig,
+        httpOnly: false
+      });
+
+      res.json({
+        message: welcomeMessages[subscriptionTier] || 'Welcome back!',
+        success: true,
+        rememberMe: rememberMe || false,
+        sessionDuration: rememberMe ? '30 days' : '24 hours',
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          firstName: user.first_name,
+          lastName: user.last_name,
+          isAdmin: user.is_admin,
+          userType: user.user_type,
+          subscriptionTier,
+          billingCycle: user.billing_cycle,
+          monthlyLeadLimit: user.monthly_lead_limit,
+          currentMonthLeads: user.current_month_leads,
+          goals: user.goals,
+          settings: user.settings,
+          onboardingCompleted: user.onboarding_completed,
+          lastLogin: user.last_login
+        }
+      });
+      
+    } catch (error) {
+      console.error('Login error:', error.message);
+      res.status(500).json({ error: 'Login failed' });
+    }
+  }
+);
+
+// 🔐 ENHANCED LOGOUT - ALSO REPLACE YOUR LOGOUT ENDPOINT:
+// (Replace the existing app.post('/api/logout', ...) around line ~1050)
+
+app.post('/api/logout', (req, res) => {
+  const cookieConfig = getCookieConfig();
+  
+  // Clear all authentication cookies
+  res.clearCookie('authToken', cookieConfig);
+  res.clearCookie('rememberToken', cookieConfig);
+  res.clearCookie('isLoggedIn', cookieConfig);
+  
+  console.log('🚪 User logged out, all authentication cookies cleared');
+  res.json({ message: 'Logged out successfully' });
+});
+
+// 🍪 ENHANCED AUTH CHECK - ALSO REPLACE YOUR /api/auth/check ENDPOINT:
+// (Replace the existing app.get('/api/auth/check', ...) around line ~900)
+
+app.get('/api/auth/check', async (req, res) => {
+  let token = req.cookies.authToken;
+  
+  // If no auth token, try remember token
+  if (!token && req.cookies.rememberToken) {
+    try {
+      const user = await findUserByRememberToken(req.cookies.rememberToken);
+      if (user) {
+        // Generate new auth token from remember token
+        token = jwt.sign(
+          { 
+            userId: user.id, 
+            email: user.email, 
+            userType: user.user_type,
+            rememberMe: true
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '30d' }
+        );
+        
+        // Set new auth token cookie
+        res.cookie('authToken', token, {
+          ...getCookieConfig(),
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
+        
+        console.log(`🔄 Auto-login from remember token for: ${user.email}`);
+      }
+    } catch (error) {
+      console.error('Remember token validation error:', error.message);
+      // Clear invalid remember token
+      res.clearCookie('rememberToken', getCookieConfig());
+    }
+  }
+  
+  if (!token) {
+    return res.json({ authenticated: false });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await findUserById(decoded.userId);
+    
+    if (!user) {
+      res.clearCookie('authToken', getCookieConfig());
+      res.clearCookie('rememberToken', getCookieConfig());
+      return res.json({ authenticated: false });
+    }
+    
+    res.json({ 
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        userType: user.user_type,
+        subscriptionTier: user.subscription_tier,
+        isAdmin: user.is_admin,
+        monthlyLeadLimit: user.monthly_lead_limit,
+        currentMonthLeads: user.current_month_leads,
+        goals: user.goals,
+        settings: user.settings,
+        onboardingCompleted: user.onboarding_completed,
+        lastLogin: user.last_login,
+        rememberMe: decoded.rememberMe || false
+      }
+    });
+  } catch (err) {
+    res.clearCookie('authToken', getCookieConfig());
+    res.clearCookie('rememberToken', getCookieConfig());
+    res.json({ authenticated: false });
+  }
+});
 
 // 🔧 Database helper functions
 async function findUserByEmail(email) {
@@ -2203,12 +3049,16 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Auth routes
-app.get('/login', (req, res) => {
+app.get('/auth/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth', 'login.html'));
 });
 
-app.get('/register', (req, res) => {
+app.get('/auth/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth', 'register.html'));
+});
+
+app.get('/auth/trial', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth', 'trial.html'));
 });
 
 // Static page routes  

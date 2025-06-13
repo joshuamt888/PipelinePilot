@@ -1,680 +1,853 @@
-// 🚀 STEADYMANAGER FREE TIER DASHBOARD.JS - MODULAR CONTROLLER
-// Philosophy: Smart controller that integrates with your beautiful modular architecture!
+/**
+ * SteadyManager - Free Tier Dashboard Controller
+ * Main controller for dashboard navigation, state management, and UI updates
+ * Integrates with utils.js and api.js for complete functionality
+ */
 
-// 🎯 DASHBOARD CONTROLLER - Orchestrates your components
 class DashboardController {
-  constructor() {
-    this.user = null;
-    this.leads = { all: [], cold: [], warm: [], crm: [] };
-    this.stats = {};
-    this.loading = true;
-    this.currentTime = new Date();
-    this.dailyGoal = 3;
-    this.weeklyStreak = 0;
-    
-    // UI State
-    this.showProfileDropdown = false;
-    
-    // Initialize
-    this.init();
-    this.setupEventListeners();
-    this.startTimers();
-  }
-
-  // 🔄 INITIALIZATION - Uses your modular system
-  async init() {
-    try {
-      console.log('🚀 Dashboard Controller initializing...');
-      
-      // Check if your systems are loaded
-      if (!this.checkDependencies()) {
-        console.error('❌ Dependencies not loaded');
-        return;
-      }
-
-      // Play startup sound using your utils
-      window.SteadyUtils?.playSound('click');
-      
-      // Load dashboard data using your API
-      await this.loadDashboardData();
-      
-      // Render the initial UI
-      this.render();
-      
-      // Success sound
-      window.SteadyUtils?.playSound('success');
-      
-      console.log('✅ Dashboard Controller ready!');
-      
-    } catch (error) {
-      console.error('Dashboard initialization error:', error);
-      window.SteadyUtils?.playSound('error');
-      window.SteadyUtils?.Toast?.error('Failed to load dashboard');
-    }
-  }
-
-  // 🔍 CHECK DEPENDENCIES - Verify your modules are loaded
-  checkDependencies() {
-    const required = [
-      'window.authManager',
-      'window.SteadyUtils', 
-      'window.LeadsAPI',
-      'window.FreeTierUtils'
-    ];
-    
-    const missing = required.filter(dep => {
-      const parts = dep.split('.');
-      let obj = window;
-      for (let part of parts.slice(1)) {
-        if (!obj[part]) return true;
-        obj = obj[part];
-      }
-      return false;
-    });
-    
-    if (missing.length > 0) {
-      console.error('❌ Missing dependencies:', missing);
-      return false;
-    }
-    
-    return true;
-  }
-
-  // 📊 LOAD DATA - Uses your secure API system
-  async loadDashboardData() {
-    try {
-      this.loading = true;
-      this.updateLoadingState();
-      
-      // Get user data from your auth system
-      this.user = window.authManager?.getCurrentUser();
-      if (!this.user) {
-        throw new Error('No authenticated user found');
-      }
-      
-      // Get leads using your API
-      const leadsResponse = await window.LeadsAPI?.getLeads();
-      if (leadsResponse?.success) {
-        this.leads = leadsResponse.data;
-        this.calculateWeeklyStreak(this.leads.all);
-      }
-      
-      // Get stats using your API
-      const statsResponse = await window.LeadsAPI?.getStatistics();
-      if (statsResponse?.success) {
-        this.stats = statsResponse.data;
-      }
-      
-      this.loading = false;
-      
-    } catch (error) {
-      console.error('Data loading error:', error);
-      this.loading = false;
-      throw error;
-    }
-  }
-
-  // 📈 CALCULATE STREAK - Business logic
-  calculateWeeklyStreak(allLeads) {
-    const today = new Date();
-    let streak = 0;
-    
-    for (let i = 0; i < 7; i++) {
-      const checkDate = new Date(today.getTime() - (i * 24 * 60 * 60 * 1000));
-      const dayStart = new Date(checkDate.setHours(0, 0, 0, 0));
-      const dayEnd = new Date(checkDate.setHours(23, 59, 59, 999));
-      
-      const hasLeadsThisDay = allLeads.some(lead => {
-        const leadDate = new Date(lead.created_at);
-        return leadDate >= dayStart && leadDate <= dayEnd;
-      });
-      
-      if (hasLeadsThisDay) {
-        streak++;
-      } else if (i === 0) {
-        break; // No leads today breaks the streak
-      }
-    }
-    
-    this.weeklyStreak = streak;
-  }
-
-  // 🎵 EVENT LISTENERS - Wire up your modular components
-  setupEventListeners() {
-    // Add Lead Button - Calls your AddLead.js
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.add-lead-btn, .add-lead-btn *')) {
-        e.preventDefault();
-        this.handleAddLead();
-      }
-    });
-
-    // Settings Button - Calls your Settings.js  
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.settings-btn, .settings-btn *')) {
-        e.preventDefault();
-        this.handleSettings();
-      }
-    });
-
-    // Upgrade Buttons - Uses your FreeTierUtils
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.upgrade-btn, .upgrade-btn *')) {
-        e.preventDefault();
-        const feature = e.target.dataset.feature || 'general';
-        this.handleUpgrade(feature);
-      }
-    });
-
-    // Profile Dropdown
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.profile-btn, .profile-btn *')) {
-        e.preventDefault();
-        this.toggleProfileDropdown();
-      } else if (!e.target.closest('.profile-dropdown')) {
-        this.showProfileDropdown = false;
-        this.updateProfileDropdown();
-      }
-    });
-
-    // Logout
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.logout-btn, .logout-btn *')) {
-        e.preventDefault();
-        this.handleLogout();
-      }
-    });
-
-    // Refresh Data
-    document.addEventListener('click', (e) => {
-      if (e.target.matches('.refresh-btn, .refresh-btn *')) {
-        e.preventDefault();
-        this.refreshData();
-      }
-    });
-  }
-
-  // ⏰ TIMERS - Keep UI fresh
-  startTimers() {
-    // Update time every minute
-    setInterval(() => {
-      this.currentTime = new Date();
-      this.updateTimeDisplay();
-    }, 60000);
-
-    // Check for upgrade hints based on usage
-    setTimeout(() => {
-      this.checkUpgradeHints();
-    }, 30000);
-  }
-
-  // 🎯 ACTION HANDLERS - Call your modular components
-
-  handleAddLead() {
-    const leadCount = this.leads?.all?.length || 0;
-    const leadLimit = this.user?.monthlyLeadLimit || 50;
-    
-    // Use your FreeTierUtils for limit checking
-    if (!window.FreeTierUtils?.checkLeadLimit(leadCount, leadLimit)) {
-      window.SteadyUtils?.playSound('error');
-      return;
-    }
-    
-    window.SteadyUtils?.playSound('click');
-    
-    // Call your AddLead.js component
-    if (window.AddLeadComponent) {
-      window.AddLeadComponent.show();
-      window.SteadyUtils?.Toast?.info('🚀 Opening Add Lead form!');
-    } else {
-      console.error('❌ AddLeadComponent not found');
-      window.SteadyUtils?.Toast?.error('Add Lead component not loaded');
-    }
-  }
-
-  handleSettings() {
-    window.SteadyUtils?.playSound('click');
-    
-    // Call your Settings.js component
-    if (window.SettingsComponent) {
-      window.SettingsComponent.show();
-      this.showProfileDropdown = false;
-      this.updateProfileDropdown();
-      window.SteadyUtils?.Toast?.info('⚙️ Opening Settings panel!');
-    } else {
-      console.error('❌ SettingsComponent not found');
-      window.SteadyUtils?.Toast?.error('Settings component not loaded');
-    }
-  }
-
-  handleUpgrade(feature = 'general') {
-    window.SteadyUtils?.playSound('click');
-    
-    // Use your FreeTierUtils for upgrade prompts
-    if (window.FreeTierUtils) {
-      window.FreeTierUtils.showUpgradePrompt(feature);
-    } else {
-      // Fallback to direct navigation
-      window.location.href = '/login?tab=trial';
-    }
-  }
-
-  handleLogout() {
-    window.SteadyUtils?.playSound('click');
-    
-    // Use your auth system
-    if (window.authManager) {
-      window.authManager.logout();
-    } else {
-      // Fallback
-      window.location.href = '/login';
-    }
-  }
-
-  toggleProfileDropdown() {
-    window.SteadyUtils?.playSound('click');
-    this.showProfileDropdown = !this.showProfileDropdown;
-    this.updateProfileDropdown();
-  }
-
-  async refreshData() {
-    window.SteadyUtils?.playSound('click');
-    window.SteadyUtils?.Toast?.info('🔄 Refreshing your empire data...');
-    
-    try {
-      await this.loadDashboardData();
-      this.render();
-      window.SteadyUtils?.playSound('success');
-      window.SteadyUtils?.Toast?.success('✅ Empire data updated!');
-    } catch (error) {
-      window.SteadyUtils?.playSound('error');
-      window.SteadyUtils?.Toast?.error('Failed to refresh data');
-    }
-  }
-
-  // 🎯 UPGRADE HINTS - Psychology-based prompts
-  checkUpgradeHints() {
-    const leadCount = this.leads?.all?.length || 0;
-    
-    if (leadCount > 25) {
-      this.showUpgradeHint('power_user');
-    } else if (leadCount > 40) {
-      this.showUpgradeHint('almost_full');
-    }
-  }
-
-  showUpgradeHint(feature) {
-    window.SteadyUtils?.playSound('notification');
-    
-    // Use your FreeTierUtils for contextual hints
-    if (window.FreeTierUtils) {
-      window.FreeTierUtils.showUpgradeHint(feature);
-    }
-  }
-
-  // 🎨 RENDER METHODS - Update DOM elements
-
-  render() {
-    this.updateLoadingState();
-    this.updateHeader();
-    this.updateStats();
-    this.updateLeadsList();
-    this.updateProfileDropdown();
-    this.updateTimeDisplay();
-  }
-
-  updateLoadingState() {
-    const loadingEl = document.getElementById('loading-state');
-    const contentEl = document.getElementById('dashboard-content');
-    
-    if (this.loading) {
-      loadingEl?.classList.remove('hidden');
-      contentEl?.classList.add('hidden');
-    } else {
-      loadingEl?.classList.add('hidden');
-      contentEl?.classList.remove('hidden');
-    }
-  }
-
-  updateHeader() {
-    // Update greeting
-    const greetingEl = document.getElementById('greeting');
-    if (greetingEl) {
-      const greeting = this.getGreeting();
-      const userName = this.user?.email?.split('@')[0] || 'Champion';
-      greetingEl.textContent = `${greeting}, ${userName}!`;
+    constructor() {
+        this.currentPage = 'dashboard';
+        this.currentUser = null;
+        this.leads = [];
+        this.stats = {};
+        this.subscription = null;
+        this.initialized = false;
     }
 
-    // Update progress bar
-    this.updateProgressBar();
-
-    // Update streak badge
-    const streakEl = document.getElementById('streak-badge');
-    if (streakEl && this.weeklyStreak > 0) {
-      streakEl.textContent = `🔥 ${this.weeklyStreak} day streak!`;
-      streakEl.classList.remove('hidden');
-    } else if (streakEl) {
-      streakEl.classList.add('hidden');
-    }
-  }
-
-  updateProgressBar() {
-    const leadCount = this.leads?.all?.length || 0;
-    const leadLimit = this.user?.monthlyLeadLimit || 50;
-    const percentage = Math.min((leadCount / leadLimit) * 100, 100);
-
-    // Update progress bar fill
-    const progressFill = document.getElementById('progress-fill');
-    if (progressFill) {
-      progressFill.style.width = `${percentage}%`;
-      
-      // Update color based on usage
-      if (percentage > 80) {
-        progressFill.className = 'progress-fill progress-danger';
-      } else if (percentage > 60) {
-        progressFill.className = 'progress-fill progress-warning';
-      } else {
-        progressFill.className = 'progress-fill progress-normal';
-      }
-    }
-
-    // Update progress text
-    const progressText = document.getElementById('progress-text');
-    if (progressText) {
-      progressText.textContent = `${leadCount} / ${leadLimit} leads`;
-    }
-
-    // Update remaining count
-    const remainingEl = document.getElementById('remaining-count');
-    if (remainingEl) {
-      remainingEl.textContent = `${leadLimit - leadCount} slots left`;
+    /**
+     * Initialize dashboard controller
+     */
+    async init() {
+        if (this.initialized) return;
+        
+        console.log('🎯 Initializing Dashboard Controller...');
+        
+        try {
+            // Wait for dependencies
+            await this.waitForDependencies();
+            
+            // Load initial data
+            await this.loadInitialData();
+            
+            // Setup event listeners
+            this.setupEventListeners();
+            
+            // Initialize UI
+            this.initializeUI();
+            
+            // Setup periodic updates
+            this.setupPeriodicUpdates();
+            
+            this.initialized = true;
+            console.log('✅ Dashboard Controller initialized successfully');
+            
+            // Show welcome message
+            window.SteadyUtils?.showToast(
+                'Welcome to SteadyManager! Start by adding your first lead.', 
+                'success'
+            );
+            
+        } catch (error) {
+            console.error('❌ Failed to initialize dashboard:', error);
+            window.SteadyUtils?.showToast(
+                'Failed to initialize dashboard. Please refresh the page.', 
+                'error'
+            );
+        }
     }
 
-    // Show/hide warning
-    const warningEl = document.getElementById('limit-warning');
-    if (warningEl) {
-      if (percentage > 80) {
-        warningEl.classList.remove('hidden');
-      } else {
-        warningEl.classList.add('hidden');
-      }
-    }
-  }
+    /**
+     * Wait for required dependencies to load
+     */
+    async waitForDependencies() {
+        const maxWait = 10000; // 10 seconds
+        const checkInterval = 100; // 100ms
+        let waited = 0;
 
-  updateStats() {
-    // Total leads
-    const totalEl = document.getElementById('total-leads');
-    if (totalEl) {
-      totalEl.textContent = this.leads?.all?.length || 0;
-    }
+        return new Promise((resolve, reject) => {
+            const check = () => {
+                if (waited >= maxWait) {
+                    reject(new Error('Timeout waiting for dependencies'));
+                    return;
+                }
 
-    // Today's leads
-    const todayLeads = this.getTodayLeads();
-    const todayEl = document.getElementById('today-leads');
-    if (todayEl) {
-      todayEl.textContent = todayLeads;
-    }
+                if (window.SteadyUtils && window.API) {
+                    resolve();
+                    return;
+                }
 
-    // Weekly leads
-    const weeklyLeads = this.getWeeklyLeads();
-    const weeklyEl = document.getElementById('weekly-leads');
-    if (weeklyEl) {
-      weeklyEl.textContent = weeklyLeads;
+                waited += checkInterval;
+                setTimeout(check, checkInterval);
+            };
+
+            check();
+        });
     }
 
-    // Streak
-    const streakEl = document.getElementById('streak-count');
-    if (streakEl) {
-      streakEl.textContent = this.weeklyStreak;
+    /**
+     * Load initial dashboard data
+     */
+    async loadInitialData() {
+        try {
+            // Get current user
+            this.currentUser = window.API.getCurrentUser();
+            
+            // Load subscription info
+            const subscriptionResult = await window.API.getSubscription();
+            this.subscription = subscriptionResult.subscription;
+            
+            // Load leads
+            await this.refreshLeadsData();
+            
+            // Update user info in UI
+            this.updateUserInfo();
+            
+            console.log('✅ Initial data loaded');
+        } catch (error) {
+            console.error('❌ Failed to load initial data:', error);
+            throw error;
+        }
     }
-  }
 
-  updateLeadsList() {
-    const container = document.getElementById('leads-list');
-    if (!container) return;
-
-    const leadCount = this.leads?.all?.length || 0;
-
-    if (leadCount === 0) {
-      this.renderEmptyState(container);
-    } else {
-      this.renderLeadsList(container);
+    /**
+     * Refresh leads data from API
+     */
+    async refreshLeadsData() {
+        try {
+            const leadsResult = await window.API.getLeads();
+            
+            if (leadsResult.success) {
+                this.leads = leadsResult.all;
+                this.stats = leadsResult.stats;
+                
+                // Update global state
+                if (window.dashboardState) {
+                    window.dashboardState.leads = this.leads;
+                }
+                
+                // Update UI
+                this.updateDashboardStats();
+                this.updateRecentLeads();
+                this.updateActivity();
+                
+                // Check for upgrade opportunities
+                this.checkUpgradeOpportunities(leadsResult.limitCheck);
+                
+                console.log(`📊 Refreshed ${this.leads.length} leads`);
+            } else {
+                throw new Error(leadsResult.error || 'Failed to load leads');
+            }
+        } catch (error) {
+            console.error('❌ Failed to refresh leads:', error);
+            window.SteadyUtils?.showToast('Failed to refresh data', 'error');
+        }
     }
-  }
 
-  renderEmptyState(container) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">
-          <div class="empire-icon">⚡</div>
-          <div class="crown">👑</div>
-        </div>
-        <h3>Your Empire Awaits, Conqueror! 🏰</h3>
-        <p>Every empire starts with a single lead. Today, you begin your legendary conquest!</p>
-        <button class="add-lead-btn btn-primary">
-          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Launch Your Empire
-        </button>
-        <button class="upgrade-btn btn-secondary" data-feature="empty_state">
-          Unlock 1,000 lead slots ✨
-        </button>
-      </div>
-    `;
-  }
-
-  renderLeadsList(container) {
-    const recentLeads = this.leads.all.slice(0, 6);
-    const leadCount = this.leads.all.length;
-    
-    let html = '<div class="leads-grid">';
-    
-    recentLeads.forEach(lead => {
-      const typeClass = lead.type === 'warm' ? 'warm' : lead.type === 'crm' ? 'crm' : 'cold';
-      const initial = lead.name?.charAt(0)?.toUpperCase() || '?';
-      const timeAgo = window.SteadyUtils?.Date?.formatRelative(lead.created_at) || 'recently';
-      
-      html += `
-        <div class="lead-card ${typeClass}">
-          <div class="lead-avatar">
-            <span>${initial}</span>
-            <div class="status-dot"></div>
-          </div>
-          <div class="lead-info">
-            <h4>${lead.name || 'Mystery Lead'}</h4>
-            <p class="company">${lead.company || lead.email || 'Awaiting intel...'}</p>
-            <p class="time">Acquired ${timeAgo}</p>
-          </div>
-          <div class="lead-badge">
-            <span class="type-badge ${typeClass}">${lead.type || 'cold'} lead</span>
-            <p class="platform">📍 ${lead.platform || 'Unknown territory'}</p>
-          </div>
-        </div>
-      `;
-    });
-    
-    if (leadCount > 6) {
-      html += `
-        <div class="more-leads">
-          <button class="view-more-btn">
-            View ${leadCount - 6} more empire subjects →
-          </button>
-        </div>
-      `;
+    /**
+     * Update dashboard statistics
+     */
+    updateDashboardStats() {
+        const totalLeads = this.leads.length;
+        const contactedLeads = this.leads.filter(lead => 
+            lead.status && !lead.status.toLowerCase().includes('new')
+        ).length;
+        
+        // Update stat values
+        this.updateElement('totalLeads', totalLeads);
+        this.updateElement('currentLeads', totalLeads);
+        this.updateElement('contactedLeads', contactedLeads);
+        
+        // Update progress bar with animation
+        const progressPercent = (totalLeads / 50) * 100;
+        const progressFill = document.getElementById('leadProgress');
+        
+        if (progressFill) {
+            // Smooth animation
+            setTimeout(() => {
+                progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
+            }, 300);
+        }
+        
+        // Update conversion rate
+        const conversionRate = totalLeads > 0 ? Math.round((contactedLeads / totalLeads) * 100) : 0;
+        this.updateElement('conversionRate', `${conversionRate}%`);
+        
+        // Update trend messages
+        this.updateTrendMessages(totalLeads, contactedLeads);
+        
+        // Update lead limit status
+        this.updateLeadLimitStatus(totalLeads);
     }
-    
-    html += '</div>';
-    container.innerHTML = html;
-  }
 
-  updateProfileDropdown() {
-    const dropdown = document.getElementById('profile-dropdown');
-    if (!dropdown) return;
-    
-    if (this.showProfileDropdown) {
-      dropdown.classList.remove('hidden');
-      dropdown.classList.add('show');
-    } else {
-      dropdown.classList.add('hidden');
-      dropdown.classList.remove('show');
+    /**
+     * Update trend messages based on data
+     */
+    updateTrendMessages(totalLeads, contactedLeads) {
+        // Total leads trend
+        const totalTrendElement = document.querySelector('#totalLeads').parentElement.querySelector('.stat-trend span');
+        if (totalTrendElement) {
+            if (totalLeads === 0) {
+                totalTrendElement.textContent = 'Add your first lead!';
+            } else if (totalLeads < 10) {
+                totalTrendElement.textContent = `+${totalLeads} this month - great start!`;
+            } else {
+                totalTrendElement.textContent = `+${totalLeads} this month - you're growing!`;
+            }
+        }
+
+        // Contacted leads trend
+        const contactedTrendElement = document.querySelector('#contactedLeads').parentElement.querySelector('.stat-trend span');
+        if (contactedTrendElement) {
+            if (contactedLeads === 0) {
+                contactedTrendElement.textContent = 'Start reaching out!';
+            } else {
+                contactedTrendElement.textContent = `Great progress!`;
+            }
+        }
+
+        // Conversion rate trend
+        const conversionTrendElement = document.querySelector('#conversionRate').parentElement.querySelector('.stat-trend span');
+        if (conversionTrendElement) {
+            if (totalLeads === 0) {
+                conversionTrendElement.textContent = 'Add leads to track conversion';
+            } else if (contactedLeads === 0) {
+                conversionTrendElement.textContent = 'Contact your leads to improve this';
+            } else {
+                const rate = Math.round((contactedLeads / totalLeads) * 100);
+                if (rate >= 70) {
+                    conversionTrendElement.textContent = 'Excellent conversion rate!';
+                } else if (rate >= 50) {
+                    conversionTrendElement.textContent = 'Good conversion rate!';
+                } else {
+                    conversionTrendElement.textContent = 'Room for improvement!';
+                }
+            }
+        }
     }
-  }
 
-  updateTimeDisplay() {
-    const timeEl = document.getElementById('current-time');
-    if (timeEl) {
-      timeEl.textContent = this.currentTime.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
+    /**
+     * Update lead limit status and warnings
+     */
+    updateLeadLimitStatus(totalLeads) {
+        const limitCheck = window.SteadyUtils?.checkLeadLimit(totalLeads);
+        
+        if (!limitCheck) return;
+
+        // Update progress bar color based on usage
+        const progressFill = document.getElementById('leadProgress');
+        if (progressFill) {
+            if (limitCheck.percentage >= 90) {
+                progressFill.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+            } else if (limitCheck.percentage >= 80) {
+                progressFill.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+            } else {
+                progressFill.style.background = 'linear-gradient(90deg, #667eea, #764ba2)';
+            }
+        }
+
+        // Show warnings at specific thresholds
+        if (totalLeads === 40 && !sessionStorage.getItem('warned_40')) {
+            window.SteadyUtils?.showToast(
+                'You have 10 leads remaining. Consider upgrading for unlimited leads!', 
+                'upgrade'
+            );
+            sessionStorage.setItem('warned_40', 'true');
+        } else if (totalLeads === 45 && !sessionStorage.getItem('warned_45')) {
+            window.SteadyUtils?.showToast(
+                'Only 5 leads left! Upgrade to Professional for 1,000 leads.', 
+                'upgrade'
+            );
+            sessionStorage.setItem('warned_45', 'true');
+        } else if (totalLeads === 49 && !sessionStorage.getItem('warned_49')) {
+            window.SteadyUtils?.showToast(
+                'Last lead remaining! Upgrade now to continue growing.', 
+                'upgrade'
+            );
+            sessionStorage.setItem('warned_49', 'true');
+        }
     }
-  }
 
-  // 🧮 UTILITY METHODS
+    /**
+     * Update recent leads list
+     */
+    updateRecentLeads() {
+        const recentLeads = this.leads.slice(-5).reverse(); // Most recent first
+        const leadsContainer = document.getElementById('recentLeadsList');
+        const emptyState = document.getElementById('emptyState');
+        
+        if (!leadsContainer) return;
 
-  getGreeting() {
-    const hour = this.currentTime.getHours();
-    if (hour < 12) return '🌅 Good morning';
-    if (hour < 17) return '☀️ Good afternoon';
-    return '🌙 Good evening';
-  }
-
-  getTodayLeads() {
-    return this.leads?.all?.filter(lead => {
-      const leadDate = new Date(lead.created_at);
-      const today = new Date();
-      return leadDate.toDateString() === today.toDateString();
-    })?.length || 0;
-  }
-
-  getWeeklyLeads() {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return this.leads?.all?.filter(lead => {
-      const leadDate = new Date(lead.created_at);
-      return leadDate > weekAgo;
-    })?.length || 0;
-  }
-
-  getUserColor(email) {
-    if (!email) return 'from-indigo-500 to-purple-600';
-    
-    const colors = [
-      'from-blue-500 to-cyan-500',
-      'from-purple-500 to-pink-500', 
-      'from-green-500 to-emerald-500',
-      'from-pink-500 to-rose-500',
-      'from-indigo-500 to-blue-500',
-      'from-red-500 to-pink-500',
-      'from-yellow-500 to-orange-500',
-      'from-teal-500 to-cyan-500'
-    ];
-    
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-      hash = email.charCodeAt(i) + ((hash << 5) - hash);
+        if (recentLeads.length === 0) {
+            if (emptyState) {
+                emptyState.style.display = 'block';
+            }
+            return;
+        }
+        
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Create leads HTML
+        const leadsHTML = recentLeads.map((lead, index) => `
+            <div class="lead-item fade-in" style="animation-delay: ${index * 0.1}s;">
+                <div class="lead-avatar">${this.getInitials(lead.name)}</div>
+                <div class="lead-info">
+                    <div class="lead-name">${this.escapeHtml(lead.name)}</div>
+                    <div class="lead-details">
+                        ${this.getLeadContactInfo(lead)}
+                    </div>
+                </div>
+                <div class="lead-status ${this.getStatusClass(lead.status)}">
+                    <i data-lucide="${this.getStatusIcon(lead.status)}" class="status-icon"></i>
+                    ${lead.status || 'New'}
+                </div>
+            </div>
+        `).join('');
+        
+        leadsContainer.innerHTML = leadsHTML;
+        
+        // Re-initialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
     }
-    return colors[Math.abs(hash) % colors.length];
-  }
+
+    /**
+     * Update recent activity feed
+     */
+    updateActivity() {
+        const activityContainer = document.getElementById('recentActivity');
+        if (!activityContainer) return;
+
+        if (this.leads.length === 0) {
+            // Show default activity
+            activityContainer.innerHTML = `
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-text">Welcome to SteadyManager!</div>
+                        <div class="activity-time">Just now</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-text">Account verified successfully</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Show recent lead activities
+        const recentLeads = this.leads.slice(-3).reverse();
+        const activityHTML = recentLeads.map((lead, index) => `
+            <div class="activity-item fade-in" style="animation-delay: ${index * 0.1}s;">
+                <div class="activity-content">
+                    <div class="activity-text">Added ${this.escapeHtml(lead.name)} as a new lead</div>
+                    <div class="activity-time">${this.getTimeAgo(lead.created_at)}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        activityContainer.innerHTML = activityHTML;
+    }
+
+    /**
+     * Update user information in UI
+     */
+    updateUserInfo() {
+        if (!this.currentUser) return;
+
+        // Update user name
+        const userNameElement = document.querySelector('[data-user-name]');
+        if (userNameElement) {
+            userNameElement.textContent = this.currentUser.name || 'User';
+        }
+
+        // Update user initials
+        const userInitialsElement = document.querySelector('[data-user-initials]');
+        if (userInitialsElement) {
+            userInitialsElement.textContent = this.getInitials(this.currentUser.name || 'User');
+        }
+
+        // Update subscription status
+        const subscriptionElement = document.querySelector('[data-subscription-status]');
+        if (subscriptionElement) {
+            const tier = this.subscription?.tier || 'FREE';
+            subscriptionElement.innerHTML = `
+                <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
+                ${tier === 'FREE' ? 'Free Plan' : tier + ' Plan'}
+            `;
+        }
+
+        // Update sidebar tier badge
+        const tierElement = document.querySelector('[data-user-tier]');
+        if (tierElement) {
+            tierElement.textContent = this.subscription?.tier === 'FREE' ? 'Free Tier' : this.subscription?.tier + ' Tier';
+        }
+    }
+
+    /**
+     * Check for upgrade opportunities and show appropriate prompts
+     */
+    checkUpgradeOpportunities(limitCheck) {
+        if (!limitCheck) return;
+
+        // Show upgrade prompts based on usage patterns
+        const totalLeads = this.leads.length;
+        
+        // Success-based upgrades
+        if (totalLeads >= 25 && !sessionStorage.getItem('success_upgrade_shown')) {
+            setTimeout(() => {
+                window.SteadyUtils?.showToast(
+                    'You\'re doing great with 25+ leads! Ready for advanced analytics?', 
+                    'upgrade'
+                );
+            }, 3000);
+            sessionStorage.setItem('success_upgrade_shown', 'true');
+        }
+
+        // Engagement-based upgrades
+        const contactedLeads = this.leads.filter(lead => 
+            lead.status && !lead.status.toLowerCase().includes('new')
+        ).length;
+        
+        if (contactedLeads >= 10 && totalLeads >= 20 && !sessionStorage.getItem('engagement_upgrade_shown')) {
+            setTimeout(() => {
+                window.SteadyUtils?.showToast(
+                    'High engagement detected! Unlock AI insights to optimize further.', 
+                    'upgrade'
+                );
+            }, 5000);
+            sessionStorage.setItem('engagement_upgrade_shown', 'true');
+        }
+    }
+
+    /**
+     * Navigate to different pages/sections
+     */
+    navigateTo(page) {
+        // Update active nav state
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        const activeLink = document.querySelector(`[data-page="${page}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+
+        // Handle page-specific logic
+        switch (page) {
+            case 'dashboard':
+                this.showDashboard();
+                break;
+            case 'leads':
+                this.showLeads();
+                break;
+            case 'settings':
+                this.showSettings();
+                break;
+            default:
+                console.warn(`Unknown page: ${page}`);
+        }
+
+        this.currentPage = page;
+        
+        // Track navigation
+        window.SteadyUtils?.trackEvent('page_navigation', { page });
+    }
+
+    /**
+     * Show dashboard page
+     */
+    showDashboard() {
+        // Dashboard is always visible in free tier
+        // Just refresh the data
+        this.refreshLeadsData();
+    }
+
+    /**
+     * Show leads page (placeholder for future implementation)
+     */
+    showLeads() {
+        // For now, just show a message
+        window.SteadyUtils?.showToast(
+            'Full leads management coming soon! For now, use the dashboard.', 
+            'success'
+        );
+    }
+
+    /**
+     * Show settings page (placeholder for future implementation)
+     */
+    showSettings() {
+        // For now, just show a message
+        window.SteadyUtils?.showToast(
+            'Settings panel coming soon! Basic account info is in the top right.', 
+            'success'
+        );
+    }
+
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        // Navigation links
+        document.querySelectorAll('[data-page]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = e.currentTarget.dataset.page;
+                this.navigateTo(page);
+            });
+        });
+
+        // Locked feature links
+        document.querySelectorAll('[data-feature]').forEach(element => {
+            element.addEventListener('click', (e) => {
+                e.preventDefault();
+                const feature = e.currentTarget.dataset.feature;
+                window.SteadyUtils?.showUpgradeModal(feature);
+            });
+        });
+
+        // Add lead buttons
+        document.getElementById('addLeadBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleAddLead();
+        });
+
+        document.getElementById('addFirstLeadBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.handleAddLead();
+        });
+
+        // User menu (future implementation)
+        document.getElementById('userMenu')?.addEventListener('click', (e) => {
+            // Placeholder for user menu dropdown
+            console.log('User menu clicked - dropdown coming soon!');
+        });
+
+        // Window events
+        window.addEventListener('focus', () => {
+            // Refresh data when window regains focus
+            if (this.initialized) {
+                this.refreshLeadsData();
+            }
+        });
+
+        // Handle online/offline status
+        window.addEventListener('online', () => {
+            window.SteadyUtils?.showToast('Connection restored!', 'success');
+            this.refreshLeadsData();
+        });
+
+        window.addEventListener('offline', () => {
+            window.SteadyUtils?.showToast('You\'re offline. Some features may not work.', 'warning');
+        });
+    }
+
+    /**
+     * Handle add lead action
+     */
+    handleAddLead() {
+        // Check lead limit
+        const currentLeads = this.leads.length;
+        if (currentLeads >= 50) {
+            window.SteadyUtils?.showUpgradeModal('lead_limit');
+            return;
+        }
+
+        // Open add lead modal (handled by existing code)
+        const event = new CustomEvent('openAddLeadModal');
+        document.dispatchEvent(event);
+        
+        // Or directly call the function if it's global
+        if (typeof openAddLeadModal === 'function') {
+            openAddLeadModal();
+        }
+    }
+
+    /**
+     * Initialize UI elements
+     */
+    initializeUI() {
+        // Add loading states
+        this.addLoadingStates();
+        
+        // Initialize animations
+        this.initializeAnimations();
+        
+        // Setup responsive handlers
+        this.setupResponsiveHandlers();
+    }
+
+    /**
+     * Add loading states to elements
+     */
+    addLoadingStates() {
+        const loadingElements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
+        loadingElements.forEach(el => {
+            el.classList.add('loading');
+            setTimeout(() => {
+                el.classList.remove('loading');
+            }, 1000 + Math.random() * 500); // Staggered loading
+        });
+    }
+
+    /**
+     * Initialize animations
+     */
+    initializeAnimations() {
+        // Animate stat cards
+        const statCards = document.querySelectorAll('.stat-card');
+        statCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('fade-in');
+            }, index * 150);
+        });
+
+        // Animate action buttons
+        const actionBtns = document.querySelectorAll('.action-btn');
+        actionBtns.forEach((btn, index) => {
+            setTimeout(() => {
+                btn.classList.add('scale-in');
+            }, 500 + (index * 100));
+        });
+    }
+
+    /**
+     * Setup responsive handlers
+     */
+    setupResponsiveHandlers() {
+        // Handle mobile sidebar
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        if (mobileOverlay) {
+            mobileOverlay.addEventListener('click', () => {
+                this.closeMobileSidebar();
+            });
+        }
+
+        // Handle resize events
+        window.addEventListener('resize', this.debounce(() => {
+            this.handleResize();
+        }, 250));
+    }
+
+    /**
+     * Close mobile sidebar
+     */
+    closeMobileSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        
+        if (sidebar) sidebar.classList.remove('mobile-open');
+        if (overlay) overlay.classList.remove('active');
+    }
+
+    /**
+     * Handle window resize
+     */
+    handleResize() {
+        // Close mobile sidebar on desktop
+        if (window.innerWidth > 768) {
+            this.closeMobileSidebar();
+        }
+    }
+
+    /**
+     * Setup periodic updates
+     */
+    setupPeriodicUpdates() {
+        // Refresh data every 5 minutes
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                this.refreshLeadsData();
+            }
+        }, 5 * 60 * 1000);
+
+        // Update time stamps every minute
+        setInterval(() => {
+            this.updateTimeStamps();
+        }, 60 * 1000);
+    }
+
+    /**
+     * Update time stamps in activity feed
+     */
+    updateTimeStamps() {
+        const timeElements = document.querySelectorAll('.activity-time');
+        timeElements.forEach(el => {
+            const text = el.textContent;
+            if (text.includes('minute')) {
+                const minutes = parseInt(text) + 1;
+                el.textContent = `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+            } else if (text === 'Just now') {
+                el.textContent = '1 minute ago';
+            }
+        });
+    }
+
+    /**
+     * Utility: Update element text content safely
+     */
+    updateElement(id, content) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = content;
+        }
+    }
+
+    /**
+     * Utility: Get initials from name
+     */
+    getInitials(name) {
+        return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+    }
+
+    /**
+     * Utility: Get lead contact info HTML
+     */
+    getLeadContactInfo(lead) {
+        if (lead.email) {
+            return `<i data-lucide="mail" class="lead-details-icon"></i>${this.escapeHtml(lead.email)}`;
+        } else if (lead.phone) {
+            return `<i data-lucide="phone" class="lead-details-icon"></i>${this.escapeHtml(lead.phone)}`;
+        } else if (lead.company) {
+            return `<i data-lucide="building" class="lead-details-icon"></i>${this.escapeHtml(lead.company)}`;
+        } else {
+            return '<i data-lucide="user" class="lead-details-icon"></i>No contact info';
+        }
+    }
+
+    /**
+     * Utility: Get status CSS class
+     */
+    getStatusClass(status) {
+        if (!status) return 'status-new';
+        const s = status.toLowerCase();
+        if (s.includes('new')) return 'status-new';
+        if (s.includes('contact')) return 'status-contacted';
+        if (s.includes('qualified')) return 'status-qualified';
+        return 'status-new';
+    }
+
+    /**
+     * Utility: Get status icon
+     */
+    getStatusIcon(status) {
+        if (!status) return 'circle-dot';
+        const s = status.toLowerCase();
+        if (s.includes('new')) return 'circle-dot';
+        if (s.includes('contact')) return 'phone';
+        if (s.includes('qualified')) return 'check-circle';
+        return 'circle-dot';
+    }
+
+    /**
+     * Utility: Get time ago string
+     */
+    getTimeAgo(dateString) {
+        if (!dateString) return 'Recently';
+        
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffDays > 0) {
+            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        } else if (diffHours > 0) {
+            return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        } else {
+            return 'Just now';
+        }
+    }
+
+    /**
+     * Utility: Escape HTML to prevent XSS
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Utility: Debounce function
+     */
+    debounce(func, delay) {
+        let timeoutId;
+        return function (...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    /**
+     * Get current dashboard state
+     */
+    getState() {
+        return {
+            currentPage: this.currentPage,
+            currentUser: this.currentUser,
+            leads: this.leads,
+            stats: this.stats,
+            subscription: this.subscription,
+            initialized: this.initialized
+        };
+    }
+
+    /**
+     * Handle lead creation success (called by AddLead.js)
+     */
+    onLeadCreated(lead) {
+        // Refresh data to show new lead
+        this.refreshLeadsData();
+        
+        // Show success with upgrade hints
+        const limitCheck = window.SteadyUtils?.checkLeadLimit(this.leads.length + 1);
+        if (limitCheck?.shouldShowUpgrade) {
+            setTimeout(() => {
+                window.SteadyUtils?.showToast(
+                    `Great job! You now have ${this.leads.length + 1} leads. Consider upgrading for advanced features!`,
+                    'upgrade'
+                );
+            }, 2000);
+        }
+    }
+
+    /**
+     * Handle lead update success
+     */
+    onLeadUpdated(lead) {
+        this.refreshLeadsData();
+    }
+
+    /**
+     * Handle lead deletion success
+     */
+    onLeadDeleted(leadId) {
+        this.refreshLeadsData();
+    }
 }
 
-// 🎯 COMPONENT INTEGRATION HELPERS
-// These help your AddLead.js and Settings.js integrate with the dashboard
+// Initialize and export
+window.DashboardController = new DashboardController();
 
-window.DashboardAPI = {
-  // Called by AddLead.js when a lead is successfully added
-  onLeadAdded: (newLead) => {
-    if (window.dashboardController) {
-      console.log('🎯 New lead added, refreshing dashboard...');
-      window.dashboardController.refreshData();
-      window.SteadyUtils?.playSound('success');
-      window.SteadyUtils?.Toast?.success(`🚀 ${newLead.name} added to your empire!`);
-    }
-  },
-
-  // Called by Settings.js when settings are updated
-  onSettingsUpdated: (newSettings) => {
-    if (window.dashboardController) {
-      console.log('⚙️ Settings updated, refreshing dashboard...');
-      window.dashboardController.user = { ...window.dashboardController.user, ...newSettings };
-      window.dashboardController.render();
-      window.SteadyUtils?.playSound('success');
-      window.SteadyUtils?.Toast?.success('⚙️ Settings updated successfully!');
-    }
-  },
-
-  // Called by any component to refresh dashboard data
-  refresh: () => {
-    if (window.dashboardController) {
-      window.dashboardController.refreshData();
-    }
-  },
-
-  // Get current dashboard state (for other components)
-  getState: () => {
-    if (window.dashboardController) {
-      return {
-        user: window.dashboardController.user,
-        leads: window.dashboardController.leads,
-        stats: window.dashboardController.stats,
-        loading: window.dashboardController.loading
-      };
-    }
-    return null;
-  }
-};
-
-// 🚀 INITIALIZE DASHBOARD CONTROLLER
-function initializeDashboard() {
-  console.log('🚀 Initializing Dashboard Controller...');
-  
-  // Check authentication using your auth system
-  if (!window.authManager?.isAuthenticated()) {
-    console.error('❌ User not authenticated! Redirecting to login...');
-    window.location.href = '/login';
-    return;
-  }
-  
-  // Create global dashboard controller instance
-  window.dashboardController = new DashboardController();
-  
-  console.log('✅ Dashboard Controller initialized!');
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DashboardController;
 }
 
-// 🔥 AUTO-INITIALIZE
+// Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeDashboard);
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialization will be handled by the main script in index.html
+    });
 } else {
-  initializeDashboard();
+    // DOM already loaded
+    // Initialization will be handled by the main script in index.html
 }
-
-// 💫 CONSOLE MESSAGE
-console.log(`
-🚀 ====================================================
-   ____ ___  _   _ _____ ____   ___  _     _     _____ ____  
-  / ___/ _ \\| \\ | |_   _|  _ \\ / _ \\| |   | |   | ____|  _ \\ 
- | |  | | | |  \\| | | | | |_) | | | | |   | |   |  _| | |_) |
- | |__| |_| | |\\  | | | |  _ <| |_| | |___| |___| |___|  _ < 
-  \\____\\___/|_| \\_| |_| |_| \\_\\\\___/|_____|_____|_____|_| \\_\\
-                                                            
-    MODULAR DASHBOARD CONTROLLER! 🎯
-🚀 ====================================================
-
-✅ PERFECT INTEGRATION:
-   🔐 Uses window.authManager for auth
-   🎵 Uses window.SteadyUtils for sounds/toasts  
-   📡 Uses window.LeadsAPI for data
-   🎯 Uses window.FreeTierUtils for upgrades
-   🧩 Calls window.AddLeadComponent.show()
-   ⚙️ Calls window.SettingsComponent.show()
-
-🎯 COMPONENT COMMUNICATION:
-   📤 window.DashboardAPI.onLeadAdded()
-   ⚙️ window.DashboardAPI.onSettingsUpdated()
-   🔄 window.DashboardAPI.refresh()
-   📊 window.DashboardAPI.getState()
-
-🔥 READY FOR YOUR MODULAR ARCHITECTURE! 💪
-`);
-
-console.log('🎯 Modular Dashboard Controller loaded - Ready to orchestrate! 🔥');
