@@ -1284,8 +1284,8 @@ async function createUser(userData) {
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('users')} 
-       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings, stripe_customer_id, stripe_subscription_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings, stripe_customer_id, stripe_subscription_id, trial_used, trial_used_date) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
       [
         userData.email.toLowerCase(),
         userData.password,
@@ -1683,6 +1683,12 @@ app.post('/api/start-trial',
       const { email, password } = req.body;
       
       const existingUser = await findUserByEmail(email);
+      if (existingUser && existingUser.trial_used) {
+  return res.status(400).json({ 
+    error: 'Free trial already used on this account. Please upgrade to a paid plan.',
+    trialUsedDate: existingUser.trial_used_date
+  });
+}
       
       // 🎯 SMART HANDLING: If user exists and is pending, allow trial conversion
       if (existingUser) {
@@ -1821,6 +1827,56 @@ app.post('/api/start-trial',
     } catch (error) {
       console.error('Start trial error:', error.message);
       res.status(500).json({ error: 'Failed to start trial' });
+    }
+  }
+);
+
+// 🔍 ADD THIS TO YOUR SERVER.JS (around line 1800, after other lead endpoints)
+app.post('/api/leads/search', 
+  authenticateFromCookie,
+  [
+    body('query').notEmpty().trim().withMessage('Search query required'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { query } = req.body;
+      const client = await pool.connect();
+      
+      try {
+        const searchQuery = `
+          SELECT * FROM ${getTableName('leads')} 
+          WHERE user_id = $1 
+          AND (
+            name ILIKE $2 OR 
+            email ILIKE $2 OR 
+            company ILIKE $2 OR 
+            notes ILIKE $2
+          )
+          ORDER BY created_at DESC
+          LIMIT 50
+        `;
+        
+        const searchPattern = `%${query}%`;
+        const result = await client.query(searchQuery, [req.user.userId, searchPattern]);
+        
+        res.json({ 
+          success: true, 
+          results: result.rows,
+          query: query,
+          count: result.rows.length 
+        });
+        
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Search leads error:', error.message);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Search failed',
+        results: [] 
+      });
     }
   }
 );
@@ -2873,7 +2929,9 @@ app.post('/api/admin/create-test-trial', authenticateFromCookie, async (req, res
         isTestAccount: true
       },
       stripeCustomerId: null,
-      stripeSubscriptionId: null
+      stripeSubscriptionId: null,
+      trialUsed: true,
+      trialUsedDate: new Date()
     };
 
     const newUser = await createUser(userData);

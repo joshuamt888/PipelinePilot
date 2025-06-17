@@ -3,64 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - SteadyManager</title>
-    <meta name="description" content="Your SteadyManager dashboard - manage leads, track progress, and grow your business.">
-    
-    <!-- Performance & Security -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
+    <title>🚀 SteadyManager - Dashboard</title>
     
     <!-- CDN Resources -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    
-    <!-- Shared Dashboard Auth -->
-    <script src="/dashboard/shared/js/auth.js"></script>
     
     <style>
-        /* 🎨 CSS VARIABLES - THEME SYSTEM */
+        /* 🎨 CLEAN DESIGN SYSTEM */
         :root {
-            /* Light Theme */
             --primary: #667eea;
             --primary-dark: #4f46e5;
             --primary-light: #dbeafe;
-            --primary-accent: #764ba2;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            --info: #06b6d4;
+            
             --background: #f8fafc;
             --surface: #ffffff;
-            --surface-hover: #f1f5f9;
-            --text-primary: #1a202c;
-            --text-secondary: #6b7280;
-            --text-tertiary: #9ca3af;
-            --border: #e5e7eb;
-            --border-light: #f1f5f9;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.12);
+            --surface-hover: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #64748b;
+            --border: #e2e8f0;
+            
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            
+            --radius: 8px;
+            --radius-lg: 16px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* 🌙 Dark Theme */
+        /* 🌙 DARK MODE */
         [data-theme="dark"] {
-            --primary: #60a5fa;
-            --primary-dark: #3b82f6;
-            --primary-light: #1e3a8a;
-            --primary-accent: #2563eb;
-            --success: #34d399;
-            --warning: #fbbf24;
-            --danger: #f87171;
             --background: #0f172a;
             --surface: #1e293b;
             --surface-hover: #334155;
             --text-primary: #f8fafc;
             --text-secondary: #cbd5e1;
-            --text-tertiary: #64748b;
+            --text-tertiary: #94a3b8;
             --border: #334155;
-            --border-light: #475569;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-            --shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.3);
         }
 
         * {
@@ -74,59 +60,102 @@
             background: var(--background);
             color: var(--text-primary);
             line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            transition: all 0.3s ease;
+            overflow-x: hidden;
+            transition: var(--transition);
         }
 
-        /* 📱 SIDEBAR */
+        /* 🗂️ SIDEBAR */
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
             bottom: 0;
             width: 280px;
-            background: linear-gradient(180deg, var(--primary) 0%, var(--primary-accent) 100%);
+            background: var(--gradient-primary);
             color: white;
-            padding: 2rem 0;
             z-index: 1000;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
-            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-xl);
+            transition: var(--transition);
+        }
+
+        [data-theme="dark"] .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, 
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(0, 0, 0, 0.1) 100%
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .sidebar::before {
+            display: none;
+        }
+
+        .sidebar-content {
+            position: relative;
+            z-index: 10;
+            padding: 2rem 0;
         }
 
         .sidebar-header {
-            padding: 0 2rem 2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0 1.5rem 2rem;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
             margin-bottom: 2rem;
         }
 
+        [data-theme="dark"] .sidebar-header {
+            border-bottom-color: rgba(102, 126, 234, 0.3);
+        }
+
         .sidebar-logo {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 900;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            gap: 0.75rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            text-align: center;
         }
 
-        .sidebar-tier {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* 🌙 Dark mode sidebar logo - calm dark blue */
+        [data-theme="dark"] .sidebar-logo {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
         }
 
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        [data-theme="dark"] .logo-icon {
+            color: var(--primary-light);
+        }
+
+        /* 🧭 NAVIGATION */
         .sidebar-nav {
             list-style: none;
             padding: 0;
+            margin-bottom: 2rem;
         }
 
         .nav-item {
@@ -136,40 +165,79 @@
         .nav-link {
             display: flex;
             align-items: center;
-            gap: 0.875rem;
-            padding: 0.875rem 2rem;
+            gap: 1rem;
+            padding: 0.875rem 1.5rem;
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: var(--transition);
             position: relative;
             font-weight: 500;
-            border-radius: 0;
             cursor: pointer;
+            margin: 0 0.75rem;
+        }
+
+        [data-theme="dark"] .nav-link {
+            color: var(--text-secondary);
+        }
+
+        .nav-link.disabled {
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+        }
+
+        [data-theme="dark"] .nav-link.disabled {
+            color: var(--text-tertiary);
         }
 
         .nav-link::before {
             content: '';
             position: absolute;
-            left: 2rem;
-            right: 2rem;
+            left: 0.75rem;
+            right: 0.75rem;
             top: 0;
             bottom: 0;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            border-radius: var(--radius);
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(0.95);
+            transition: var(--transition);
             z-index: -1;
+        }
+
+        [data-theme="dark"] .nav-link::before {
+            background: var(--surface-hover);
         }
 
         .nav-link:hover::before,
         .nav-link.active::before {
             opacity: 1;
+            transform: scale(1);
+        }
+
+        .nav-link.disabled:hover::before {
+            opacity: 0;
         }
 
         .nav-link:hover,
         .nav-link.active {
             color: white;
-            transform: translateX(4px);
+            transform: translateX(8px);
+        }
+
+        .nav-link.disabled:hover {
+            color: rgba(255, 255, 255, 0.4);
+            transform: none;
+        }
+
+        [data-theme="dark"] .nav-link:hover,
+        [data-theme="dark"] .nav-link.active {
+            color: var(--text-primary);
+            transform: translateX(8px);
+        }
+
+        [data-theme="dark"] .nav-link.disabled:hover {
+            color: var(--text-tertiary);
+            transform: none;
         }
 
         .nav-link.active {
@@ -182,106 +250,318 @@
             left: 0;
             top: 50%;
             transform: translateY(-50%);
-            width: 3px;
-            height: 20px;
+            width: 4px;
+            height: 24px;
             background: white;
-            border-radius: 0 2px 2px 0;
+            border-radius: 0 var(--radius) var(--radius) 0;
         }
 
-        .nav-link.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
+        [data-theme="dark"] .nav-link.active::after {
+            background: var(--primary);
         }
 
-        .nav-link.locked:hover {
-            transform: none;
-        }
-
-        .nav-icon {
-            width: 18px;
-            height: 18px;
-            stroke-width: 2;
-        }
-
-        .upgrade-prompt {
-            margin: 2rem;
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .upgrade-prompt h3 {
+        .nav-emoji {
             font-size: 1.1rem;
+            margin-right: 0.5rem;
+        }
+
+        .pro-badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 9999px;
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        /* 🌟 UPGRADE SECTION */
+        .upgrade-section {
+            margin: 2rem 1rem 1rem;
+            padding: 1.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .upgrade-section {
+            background: var(--surface-hover);
+            border-color: var(--border);
+        }
+
+        .upgrade-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: rotate 8s linear infinite;
+            z-index: 1;
+        }
+
+        [data-theme="dark"] .upgrade-section::before {
+            display: none;
+        }
+
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        .upgrade-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .upgrade-title {
+            font-size: 1rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            letter-spacing: -0.01em;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
-        .upgrade-prompt p {
-            font-size: 0.9rem;
+        [data-theme="dark"] .upgrade-title {
+            color: var(--text-primary);
+        }
+
+        .upgrade-desc {
+            font-size: 0.875rem;
             margin-bottom: 1rem;
-            opacity: 0.9;
-            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.4;
+        }
+
+        [data-theme="dark"] .upgrade-desc {
+            color: var(--text-secondary);
         }
 
         .upgrade-btn {
             background: white;
             color: var(--primary);
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
             text-decoration: none;
             font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-block;
+            font-size: 0.875rem;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             border: none;
             cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: relative;
+            z-index: 10;
+        }
+
+        [data-theme="dark"] .upgrade-btn {
+            background: var(--primary);
+            color: white;
         }
 
         .upgrade-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
+            background: var(--primary-dark);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
         }
 
-        /* 🎯 MAIN CONTENT */
+        [data-theme="dark"] .upgrade-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* 📊 MAIN CONTENT */
         .main-content {
             margin-left: 280px;
             min-height: 100vh;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--background);
+            transition: var(--transition);
         }
 
-        /* 📊 HEADER */
+        /* 📋 HEADER */
         .header {
             background: var(--surface);
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--border);
+            padding: 1.35rem 1.5rem 1.35rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
             backdrop-filter: blur(20px);
+            transition: var(--transition);
+            min-height: 87px;
         }
 
-        .header-left h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.02em;
-        }
-
-        .header-left p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .header-right {
+        .header-left {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        .header-title {
+            font-size: 1.375rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: var(--transition);
+            margin-left: -0.25rem; /* Align with sidebar logo */
+        }
+
+        /* 📊 LEADS PROGRESS BAR */
+        .leads-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            min-width: 180px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 0.75rem 0.875rem;
+            border-radius: var(--radius);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            box-shadow: 
+                0 6px 24px rgba(102, 126, 234, 0.1), 
+                0 2px 6px rgba(0, 0, 0, 0.05),
+                0 0 0 1px rgba(102, 126, 234, 0.2),
+                0 0 15px rgba(102, 126, 234, 0.12);
+            transition: var(--transition);
+        }
+
+        [data-theme="dark"] .leads-progress {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid var(--border);
+            box-shadow: 
+                0 6px 24px rgba(0, 0, 0, 0.2), 
+                0 2px 6px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(102, 126, 234, 0.3),
+                0 0 12px rgba(102, 126, 234, 0.18);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-count {
+            font-weight: 800;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: var(--transition);
+        }
+
+        /* 🌙 Dark mode progress count override */
+        [data-theme="dark"] .progress-count {
+            background: none;
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: unset;
+            background-clip: unset;
+            color: white;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(226, 232, 240, 0.5);
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .progress-bar {
+            background: rgba(51, 65, 85, 0.6);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 9999px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+        }
+
+        .progress-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0) 0%, 
+                rgba(255, 255, 255, 0.6) 50%, 
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.8) 50%, 
+                transparent 100%
+            );
+            animation: shimmer 3s infinite;
+            transform: translateX(-100%);
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* 🌙 Dark mode header title override */
+        [data-theme="dark"] .header-title {
+            background: none;
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: unset;
+            background-clip: unset;
+            color: white;
+        }
+
+        /* 👤 USER MENU */
+        .user-menu-container {
+            position: relative;
+            z-index: 200;
         }
 
         .user-menu {
@@ -289,30 +569,29 @@
             align-items: center;
             gap: 0.75rem;
             background: var(--surface-hover);
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: var(--transition);
             border: 1px solid var(--border);
         }
 
         .user-menu:hover {
-            background: var(--border);
-            border-color: var(--border-light);
-            transform: translateY(-1px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
         }
 
         .user-avatar {
             width: 32px;
             height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
+            border-radius: var(--radius);
+            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
         }
 
         .user-info {
@@ -322,498 +601,290 @@
 
         .user-name {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             color: var(--text-primary);
         }
 
         .user-tier {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--success);
             font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
         }
 
-        /* 📈 DASHBOARD CONTENT */
-        .dashboard-content {
-            padding: 1.5rem;
-        }
-
-        /* 📊 STATS GRID */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: var(--surface);
-            padding: 1.25rem;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .stat-card::before {
-            content: '';
+        /* 📋 PROFILE DROPDOWN */
+        .profile-dropdown {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: calc(100% + 8px);
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--primary-accent));
-        }
-
-        .stat-card:hover {
-            transform: translateY(-4px);
+            width: 220px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
             box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px) scale(0.95);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .stat-header {
+        .profile-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .dropdown-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .stat-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--primary);
-            stroke-width: 2;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 900;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
             color: var(--text-primary);
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.02em;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .stat-trend {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
             font-size: 0.875rem;
-            font-weight: 500;
-            margin-top: 0.5rem;
         }
 
-        .trend-up {
-            color: var(--success);
+        .dropdown-item:hover {
+            background: var(--surface-hover);
+            color: var(--primary);
         }
 
-        .trend-down {
+        .logout-item {
+            color: var(--danger);
+            border-top: 1px solid var(--border);
+        }
+
+        .logout-item:hover {
+            background: rgba(239, 68, 68, 0.1);
             color: var(--danger);
         }
 
-        .trend-neutral {
-            color: var(--text-secondary);
-        }
-
-        /* 📊 PROGRESS BAR */
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: var(--surface-hover);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 0.75rem;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--primary-accent));
-            border-radius: 3px;
-            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* 🚀 QUICK ACTIONS */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .action-btn {
-            background: var(--surface);
-            padding: 1rem;
-            border-radius: 12px;
-            border: 2px solid var(--border);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            text-decoration: none;
-            color: inherit;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .action-btn:hover::before {
-            left: 100%;
-        }
-
-        .action-btn:hover {
-            border-color: var(--primary);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
-        }
-
-        .action-btn.primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
-            color: white;
-            border-color: transparent;
-        }
-
-        .action-btn.primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
-        }
-
-        .action-icon {
-            width: 20px;
-            height: 20px;
-            margin: 0 auto 0.5rem;
-            color: var(--primary);
-            stroke-width: 2;
-        }
-
-        .action-btn.primary .action-icon {
-            color: white;
-        }
-
-        .action-btn.locked .action-icon {
-            color: var(--text-tertiary);
-        }
-
-        .action-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            color: var(--text-primary);
-        }
-
-        .action-btn.primary .action-title {
-            color: white;
-        }
-
-        .action-desc {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .action-btn.primary .action-desc {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .action-btn.locked {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .action-btn.locked:hover {
-            transform: none;
-            box-shadow: none;
-            border-color: var(--border);
-        }
-
-        /* 📋 MAIN GRID */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
-        }
-
-        /* 📝 LEADS SECTION */
-        .leads-section {
-            background: var(--surface);
-            border-radius: 12px;
-            padding: 0;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
-            overflow: hidden;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0;
-            padding: 1.25rem;
-            border-bottom: 1px solid var(--border-light);
-            background: var(--surface-hover);
-        }
-
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-title-icon {
-            width: 20px;
-            height: 20px;
-            color: var(--primary);
-            stroke-width: 2;
-        }
-
-        .section-action {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            cursor: pointer;
-        }
-
-        .section-action:hover {
-            color: var(--primary-dark);
-            transform: translateX(2px);
-        }
-
-        .section-action-icon {
+        .dropdown-icon {
             width: 16px;
             height: 16px;
             stroke-width: 2;
         }
 
-        .leads-list {
-            padding: 0;
+        .dropdown-toggle {
+            margin-left: auto;
         }
 
-        .lead-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border-light);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 18px;
+            background: var(--border);
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: var(--transition);
         }
 
-        .lead-item:last-child {
-            border-bottom: none;
-        }
-
-        .lead-item:hover {
-            background: var(--surface-hover);
-            transform: translateX(4px);
-        }
-
-        .lead-avatar {
-            width: 40px;
-            height: 40px;
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background: var(--surface);
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
+            transition: var(--transition);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .toggle-switch {
+            background: var(--primary);
+        }
+
+        [data-theme="dark"] .toggle-slider {
+            transform: translateX(18px);
+        }
+
+        /* 📱 CONTENT AREA */
+        .dashboard-content {
+            padding: 2rem;
+            min-height: calc(100vh - 70px);
+            transition: var(--transition);
+        }
+
+        .content-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 🎪 PRO UPGRADE MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.875rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 1rem;
         }
 
-        .lead-info {
-            flex: 1;
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
         }
 
-        .lead-name {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .lead-details {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .lead-details-icon {
-            width: 14px;
-            height: 14px;
-            stroke-width: 2;
-        }
-
-        .lead-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .status-icon {
-            width: 12px;
-            height: 12px;
-            stroke-width: 2;
-        }
-
-        .status-new {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .status-contacted {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .status-qualified {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-        }
-
-        /* 🚫 EMPTY STATE */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1.5rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 1rem;
-            color: var(--text-tertiary);
-            stroke-width: 1.5;
-        }
-
-        .empty-state h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .empty-state p {
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-
-        /* 📋 SIDEBAR PANEL */
-        .sidebar-panel {
+        .modal-content {
             background: var(--surface);
-            border-radius: 12px;
-            padding: 0;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
-            height: fit-content;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            max-width: 480px;
+            width: 100%;
+            max-height: 85vh;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
         }
 
-        .upgrade-panel {
-            background: linear-gradient(135deg, var(--primary), var(--primary-accent));
-            color: white;
-            margin-bottom: 1.25rem;
-            padding: 1.25rem;
+        .modal-overlay.show .modal-content {
+            transform: scale(1) translateY(0);
         }
 
-        .upgrade-panel h3 {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+        .modal-header {
+            padding: 1.5rem;
+            text-align: center;
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
         }
 
-        .upgrade-panel-icon {
-            width: 20px;
-            height: 20px;
-            stroke-width: 2;
-        }
-
-        .upgrade-panel p {
-            font-size: 0.875rem;
-            margin-bottom: 0.75rem;
+        .modal-header p {
             opacity: 0.9;
+            font-size: 0.875rem;
         }
 
-        .upgrade-panel .upgrade-btn {
-            background: white;
-            color: var(--primary);
+        .modal-body {
+            padding: 1.5rem;
+            max-height: 50vh;
+            overflow-y: auto;
         }
 
-        /* 🔔 ACTIVITY FEED */
-        .activity-item {
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-item {
             display: flex;
             align-items: center;
-            padding: 0.75rem 1.25rem;
-            border-bottom: 1px solid var(--border-light);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-
-        .activity-item:hover {
+            gap: 0.5rem;
+            padding: 0.75rem;
             background: var(--surface-hover);
-        }
-
-        .activity-content {
-            flex: 1;
-        }
-
-        .activity-text {
+            border-radius: var(--radius);
             font-size: 0.875rem;
+        }
+
+        .feature-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .feature-text {
+            font-weight: 500;
             color: var(--text-primary);
-            margin-bottom: 0.25rem;
+        }
+
+        .capacity-highlight {
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .capacity-highlight {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .capacity-highlight .number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0.25rem;
+        }
+
+        .transfer-notice {
+            background: var(--success);
+            color: white;
+            border-radius: var(--radius);
+            padding: 0.75rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            text-align: center;
             font-weight: 500;
         }
 
-        .activity-time {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .modal-btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.875rem;
+            flex: 1;
+            max-width: 140px;
+        }
+
+        .modal-btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .modal-btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .modal-btn-secondary:hover {
+            background: var(--surface-hover);
         }
 
         /* 📱 MOBILE RESPONSIVE */
         @media (max-width: 1024px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
+                transition: transform 0.3s ease;
             }
 
             .sidebar.mobile-open {
@@ -824,14 +895,6 @@
                 margin-left: 0;
             }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
-
             .header {
                 padding: 1rem;
             }
@@ -839,796 +902,557 @@
             .dashboard-content {
                 padding: 1rem;
             }
+
+            .user-info {
+                display: none;
+            }
+
+            .modal-content {
+                margin: 1rem;
+                width: calc(100% - 2rem);
+            }
+
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 1.5rem;
+            }
         }
 
-        /* 🎉 ANIMATIONS */
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .loading::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 20px;
-            height: 20px;
-            margin: -10px 0 0 -10px;
-            border: 2px solid var(--border);
-            border-top: 2px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
+        /* 🎪 ANIMATIONS */
         .fade-in {
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.6s ease;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-
-        .scale-in {
-            animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* 🔒 LOCKED FEATURE OVERLAY */
-        .locked-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            border-radius: inherit;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(8px);
-        }
-
-        [data-theme="dark"] .locked-overlay {
-            background: rgba(15, 23, 42, 0.95);
-        }
-
-        .locked-overlay:hover {
-            background: rgba(255, 255, 255, 0.98);
-        }
-
-        [data-theme="dark"] .locked-overlay:hover {
-            background: rgba(15, 23, 42, 0.98);
-        }
-
-        .locked-overlay .lock-icon {
-            width: 32px;
-            height: 32px;
-            color: var(--text-tertiary);
-            margin-bottom: 0.5rem;
-            stroke-width: 2;
-        }
-
-        .locked-overlay .lock-text {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .locked-overlay .lock-desc {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        /* 📱 MOBILE OVERLAY */
-        .mobile-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-overlay.active {
-                display: block;
-            }
         }
     </style>
 </head>
 <body data-theme="light">
-    <!-- 📱 SIDEBAR -->
+    <!-- 🗂️ SIDEBAR -->
     <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">
-                <i data-lucide="rocket"></i>
-                SteadyManager
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    SteadyManager
+                </div>
             </div>
-            <div class="sidebar-tier" data-user-tier>
-                <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
-                FREE PLAN • <span id="leadCount">0</span>/50 leads
+
+            <nav>
+                <ul class="sidebar-nav">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-page="dashboard">
+                            <span class="nav-emoji">📊</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="leads">
+                            <span class="nav-emoji">👥</span>
+                            <span>Leads</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="pipeline">
+                            <span class="nav-emoji">🌿</span>
+                            <span>Pipeline</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link disabled" data-page="analytics">
+                            <span class="nav-emoji">📈</span>
+                            <span>Analytics</span>
+                            <span class="pro-badge">PRO</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link disabled" data-page="export">
+                            <span class="nav-emoji">📥</span>
+                            <span>Export</span>
+                            <span class="pro-badge">PRO</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="settings">
+                            <span class="nav-emoji">⚙️</span>
+                            <span>Settings</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="upgrade-section">
+                <div class="upgrade-content">
+                    <h3 class="upgrade-title">
+                        ⚡ Unlock Pro Features
+                    </h3>
+                    <p class="upgrade-desc">Get advanced analytics, automation, and 1,000 leads!</p>
+                    <button class="upgrade-btn" id="upgradeBtn">
+                        🚀 Start Free Trial
+                    </button>
+                </div>
             </div>
-        </div>
-
-        <nav>
-            <ul class="sidebar-nav">
-                <li class="nav-item">
-                    <a href="#" class="nav-link active" data-page="dashboard">
-                        <i data-lucide="layout-dashboard" class="nav-icon"></i>
-                        <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="leads">
-                        <i data-lucide="users" class="nav-icon"></i>
-                        <span>Leads</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="analytics">
-                        <i data-lucide="bar-chart-3" class="nav-icon"></i>
-                        <span>Analytics</span>
-                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="insights">
-                        <i data-lucide="lightbulb" class="nav-icon"></i>
-                        <span>Insights</span>
-                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link locked" data-feature="schedule">
-                        <i data-lucide="calendar" class="nav-icon"></i>
-                        <span>Schedule</span>
-                        <i data-lucide="crown" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.7;"></i>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="settings">
-                        <i data-lucide="settings" class="nav-icon"></i>
-                        <span>Settings</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-
-        <div class="upgrade-prompt">
-            <h3>🚀 Unlock More Power</h3>
-            <p>Upgrade to Professional for advanced analytics and 1,000 leads!</p>
-            <a href="/auth/trial.html" class="upgrade-btn">Start Free Trial</a>
         </div>
     </div>
 
-    <!-- 🎯 MAIN CONTENT -->
+    <!-- 📊 MAIN CONTENT -->
     <div class="main-content">
-        <!-- 📊 HEADER -->
+        <!-- 📋 HEADER -->
         <header class="header">
             <div class="header-left">
-                <h1>Welcome back!</h1>
-                <p>Here's what's happening with your leads today.</p>
+                <h1 class="header-title" id="pageTitle">Dashboard</h1>
+                
+                <!-- 📊 LEADS PROGRESS -->
+                <div class="leads-progress">
+                    <div class="progress-label">
+                        <span>Leads</span>
+                        <span class="progress-count"><span id="leadCount">0</span>/50</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
             </div>
-            <div class="header-right">
+            
+            <!-- 👤 USER MENU -->
+            <div class="user-menu-container">
                 <div class="user-menu" id="userMenu">
-                    <div class="user-avatar" data-user-initials>JS</div>
+                    <div class="user-avatar" id="userAvatar">JS</div>
                     <div class="user-info">
-                        <div class="user-name" data-user-name>Loading...</div>
-                        <div class="user-tier" data-subscription-status>
-                            <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
-                            Free Plan
-                        </div>
+                        <div class="user-name" id="userName">John Smith</div>
+                        <div class="user-tier" id="userTier">Free Plan</div>
                     </div>
                     <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5;"></i>
+                </div>
+                
+                <!-- 📋 PROFILE DROPDOWN -->
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="dropdown-item" id="darkModeToggle">
+                        <i data-lucide="moon" class="dropdown-icon"></i>
+                        <span>Dark Mode</span>
+                        <div class="dropdown-toggle">
+                            <div class="toggle-switch">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dropdown-item" data-page="settings">
+                        <i data-lucide="settings" class="dropdown-icon"></i>
+                        <span>Settings</span>
+                    </div>
+                    <div class="dropdown-item logout-item" id="logoutBtn">
+                        <i data-lucide="log-out" class="dropdown-icon"></i>
+                        <span>Logout</span>
+                    </div>
                 </div>
             </div>
         </header>
 
-        <!-- 📈 DASHBOARD CONTENT -->
+        <!-- 📊 CONTENT AREA -->
         <main class="dashboard-content">
-            <!-- 📊 STATS GRID -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <i data-lucide="users" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-value" id="totalLeads">0</div>
-                    <div class="stat-label">Total Leads</div>
-                    <div class="stat-trend trend-neutral">
-                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
-                        <span>Add your first lead!</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <i data-lucide="target" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-value">
-                        <span id="currentLeads">0</span>/<span id="leadLimit">50</span>
-                    </div>
-                    <div class="stat-label">Monthly Lead Limit</div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="leadProgress" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <i data-lucide="phone-call" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-value" id="contactedLeads">0</div>
-                    <div class="stat-label">Contacted This Week</div>
-                    <div class="stat-trend trend-up">
-                        <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
-                        <span>Start reaching out!</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <i data-lucide="trophy" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-value" id="conversionRate">0%</div>
-                    <div class="stat-label">Conversion Rate</div>
-                    <div class="stat-trend trend-neutral">
-                        <i data-lucide="target" style="width: 14px; height: 14px;"></i>
-                        <span>Add leads to track conversion</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🚀 QUICK ACTIONS -->
-            <div class="quick-actions">
-                <a href="#" class="action-btn primary" id="addLeadBtn">
-                    <i data-lucide="plus" class="action-icon"></i>
-                    <div class="action-title">Add Lead</div>
-                    <div class="action-desc">Capture a new prospect</div>
-                </a>
-
-                <a href="#" class="action-btn" data-page="leads">
-                    <i data-lucide="list" class="action-icon"></i>
-                    <div class="action-title">View All Leads</div>
-                    <div class="action-desc">Manage your pipeline</div>
-                </a>
-
-                <a href="#" class="action-btn locked" data-feature="analytics">
-                    <i data-lucide="bar-chart" class="action-icon"></i>
-                    <div class="action-title">
-                        View Analytics
-                        <i data-lucide="crown" style="width: 16px; height: 16px; margin-left: auto; opacity: 0.6;"></i>
-                    </div>
-                    <div class="action-desc">Track performance</div>
-                </a>
-
-                <a href="#" class="action-btn locked" data-feature="insights">
-                    <i data-lucide="lightbulb" class="action-icon"></i>
-                    <div class="action-title">
-                        Get Insights
-                        <i data-lucide="crown" style="width: 16px; height: 16px; margin-left: auto; opacity: 0.6;"></i>
-                    </div>
-                    <div class="action-desc">AI-powered tips</div>
-                </a>
-            </div>
-
-            <!-- 📋 MAIN GRID -->
-            <div class="main-grid">
-                <!-- 📝 RECENT LEADS -->
-                <div class="leads-section">
-                    <div class="section-header">
-                        <h2 class="section-title">
-                            <i data-lucide="clock" class="section-title-icon"></i>
-                            Recent Leads
-                        </h2>
-                        <a href="#" class="section-action" data-page="leads">
-                            View All
-                            <i data-lucide="arrow-right" class="section-action-icon"></i>
-                        </a>
-                    </div>
-                    
-                    <div class="leads-list" id="recentLeadsList">
-                        <!-- Empty State -->
-                        <div class="empty-state" id="emptyState">
-                            <i data-lucide="user-plus" class="empty-icon"></i>
-                            <h3>No leads yet</h3>
-                            <p>Add your first lead to get started tracking your prospects and growing your business!</p>
-                            <button class="upgrade-btn" id="addFirstLeadBtn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
-                                <i data-lucide="rocket" style="width: 16px; height: 16px; margin-right: 0.5rem;"></i>
-                                Add Your First Lead
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 📋 SIDEBAR PANEL -->
-                <div class="sidebar-panel">
-                    <!-- 🌟 UPGRADE PANEL -->
-                    <div class="upgrade-panel">
-                        <h3>
-                            <i data-lucide="zap" class="upgrade-panel-icon"></i>
-                            Upgrade to Professional
-                        </h3>
-                        <p>Unlock advanced analytics, 1,000 leads, and priority support!</p>
-                        <a href="/auth/trial.html" class="upgrade-btn">Start Free Trial</a>
-                    </div>
-
-                    <!-- 🔔 RECENT ACTIVITY -->
-                    <div>
-                        <div class="section-header">
-                            <h3 class="section-title" style="font-size: 1rem;">
-                                <i data-lucide="activity" class="section-title-icon"></i>
-                                Recent Activity
-                            </h3>
-                        </div>
-                        <div id="recentActivity">
-                            <div class="activity-item">
-                                <div class="activity-content">
-                                    <div class="activity-text">Welcome to SteadyManager!</div>
-                                    <div class="activity-time">Just now</div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-content">
-                                    <div class="activity-text">Account verified successfully</div>
-                                    <div class="activity-time">2 minutes ago</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="content-container" id="mainContent">
+                <!-- Module content loads here -->
+                <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
+                    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                        SteadyManager Ready
+                    </h2>
+                    <p>Select a page from the sidebar to get started!</p>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- 📱 MOBILE OVERLAY -->
-    <div class="mobile-overlay" id="mobileOverlay"></div>
+    <!-- 🎪 PRO UPGRADE MODAL -->
+    <div class="modal-overlay" id="proModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚡ Upgrade to Professional</h3>
+                <p>Unlock powerful features to supercharge your sales</p>
+            </div>
+            <div class="modal-body">
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">Advanced Analytics</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📥</span>
+                        <span class="feature-text">Data Export</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔍</span>
+                        <span class="feature-text">Advanced Search</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🤖</span>
+                        <span class="feature-text">Automation</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">Enhanced Dashboard</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">👥</span>
+                        <span class="feature-text">Team Collaboration</span>
+                    </div>
+                </div>
 
-    <!-- 🔥 SCRIPTS - LOAD IN CORRECT ORDER -->
-    <script src="/dashboard/shared/js/auth.js"></script>
-    <script src="scripts/utils.js"></script>
-    <script src="scripts/api.js"></script>
-    <script src="scripts/dashboard.js"></script>
-    <script src="scripts/AddLead.js"></script>
-    <script src="scripts/Settings.js"></script>
+                <div class="capacity-highlight">
+                    <div>Upgrade from <span class="number">50</span> to <span class="number">1,000</span> leads!</div>
+                </div>
 
+                <div class="transfer-notice">
+                    🔄 All your existing leads will automatically transfer - zero downtime!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-primary" id="startTrialBtn">
+                    🚀 Start Free Trial
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="closeModalBtn">
+                    Maybe Later
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚀 SIMPLE NAVIGATION SYSTEM -->
     <script>
-        // 🚀 Initialize Lucide icons
-        lucide.createIcons();
-
-        // 🎯 Global Dashboard State that works with DashboardController
-        window.dashboardState = {
-            currentUser: null,
-            leads: [],
-            currentPage: 'dashboard',
-            loading: false
-        };
-
-        // 🔥 Wait for everything to load properly
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🎯 SteadyManager Free Tier Loading...');
+        // 🎬 INITIALIZE
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 SteadyManager Shell loading...');
             
-            try {
-                // Wait for dependencies to load
-                await waitForDependencies();
-                
-                // Check authentication with AuthManager
-                const authResult = await window.AuthManager.checkAuth();
-                if (!authResult.authenticated) {
-                    console.log('❌ User not authenticated, redirecting...');
-                    window.location.href = '/auth/login.html';
-                    return;
-                }
-                
-                // Store user data
-                window.dashboardState.currentUser = authResult.user;
-                
-                // Update user info in UI immediately
-                updateUserInfo(authResult.user);
-                
-                // Initialize the beast DashboardController
-                if (window.DashboardController) {
-                    console.log('🎯 Initializing DashboardController...');
-                    await window.DashboardController.init();
-                } else {
-                    console.log('⚠️ DashboardController not found, using fallback...');
-                    await loadDashboardData();
-                }
-                
-                // Setup event listeners
-                setupEventListeners();
-                
-                // Animate in cards with stagger
-                animateCards();
-                
-                console.log('✅ Dashboard initialized successfully');
-                
-            } catch (error) {
-                console.error('❌ Dashboard initialization failed:', error);
-                window.location.href = '/auth/login.html';
+            // Initialize icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
             }
+            
+            // Apply saved theme
+            applySavedTheme();
+            
+            // Setup navigation
+            setupNavigation();
+            
+            // Setup user menu
+            setupUserMenu();
+            
+            // Setup pro modal
+            setupProModal();
+            
+            console.log('✅ Shell ready!');
         });
 
-        // 🔄 Wait for dependencies
-        async function waitForDependencies() {
-            const maxWait = 10000; // 10 seconds
-            const checkInterval = 100; // 100ms
-            let waited = 0;
-
-            return new Promise((resolve, reject) => {
-                const check = () => {
-                    if (waited >= maxWait) {
-                        reject(new Error('Timeout waiting for dependencies'));
-                        return;
-                    }
-
-                    if (window.AuthManager && window.SteadyUtils && window.API) {
-                        resolve();
-                        return;
-                    }
-
-                    waited += checkInterval;
-                    setTimeout(check, checkInterval);
-                };
-
-                check();
-            });
-        }
-
-        // 👤 Update user info in UI
-        function updateUserInfo(user) {
-            if (!user) return;
-            
-            // Update user name
-            const userName = user.firstName && user.lastName 
-                ? `${user.firstName} ${user.lastName}` 
-                : user.email.split('@')[0];
-            
-            document.querySelector('[data-user-name]').textContent = userName;
-            
-            // Update user initials
-            const initials = user.firstName && user.lastName
-                ? `${user.firstName[0]}${user.lastName[0]}`
-                : user.email.slice(0, 2).toUpperCase();
-            
-            document.querySelector('[data-user-initials]').textContent = initials;
-            
-            // Update lead count
-            document.getElementById('leadCount').textContent = user.currentMonthLeads || 0;
-        }
-
-        // 📊 Load dashboard data (fallback if DashboardController fails)
-        async function loadDashboardData() {
-            try {
-                showLoading(true);
+        // 🎨 THEME MANAGEMENT
+        function applySavedTheme() {
+            // Use utils if available, fallback to localStorage
+            const savedTheme = window.SteadyUtils ? 
+                SteadyUtils.storage.get('dashboard-theme', 'light') : 
+                localStorage.getItem('dashboard-theme') || 'light';
                 
-                if (window.API && window.API.getLeads) {
-                    const leadsResult = await window.API.getLeads();
-                    
-                    if (leadsResult.success) {
-                        window.dashboardState.leads = leadsResult.all || [];
-                        
-                        // Update UI
-                        updateDashboardStats();
-                        updateRecentLeads();
-                        updateActivity();
-                    }
-                }
-                
-                showLoading(false);
-                console.log('✅ Dashboard data loaded successfully');
-            } catch (error) {
-                console.error('❌ Failed to load dashboard data:', error);
-                showLoading(false);
-                
-                if (window.SteadyUtils && window.SteadyUtils.showToast) {
-                    window.SteadyUtils.showToast('Failed to load dashboard data', 'error');
-                }
-            }
+            document.documentElement.setAttribute('data-theme', savedTheme);
         }
 
-        // 📈 Update dashboard statistics
-        function updateDashboardStats() {
-            const leads = window.dashboardState.leads;
-            const totalLeads = leads.length;
-            const contactedLeads = leads.filter(lead => 
-                lead.status && !lead.status.toLowerCase().includes('new')
-            ).length;
-            
-            // Update DOM elements
-            document.getElementById('totalLeads').textContent = totalLeads;
-            document.getElementById('currentLeads').textContent = totalLeads;
-            document.getElementById('contactedLeads').textContent = contactedLeads;
-            
-            // Update progress bar with smooth animation
-            const progressPercent = (totalLeads / 50) * 100;
-            const progressFill = document.getElementById('leadProgress');
-            
-            setTimeout(() => {
-                progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
-            }, 500);
-            
-            // Update conversion rate
-            const conversionRate = totalLeads > 0 ? Math.round((contactedLeads / totalLeads) * 100) : 0;
-            document.getElementById('conversionRate').textContent = `${conversionRate}%`;
-            
-            // Update trend messages
-            updateTrendMessages(totalLeads, contactedLeads);
-        }
-
-        // 📊 Update trend messages
-        function updateTrendMessages(totalLeads, contactedLeads) {
-            const trends = document.querySelectorAll('.stat-trend span');
-            
-            if (trends[0]) {
-                trends[0].textContent = totalLeads === 0 ? 'Add your first lead!' : `+${totalLeads} this month`;
-            }
-            
-            if (trends[1]) {
-                trends[1].textContent = contactedLeads === 0 ? 'Start reaching out!' : 'Great progress!';
-            }
-            
-            if (trends[2]) {
-                trends[2].textContent = totalLeads === 0 ? 'Add leads to track conversion' : 
-                    contactedLeads === 0 ? 'Contact your leads!' : 'Keep it up!';
-            }
-        }
-
-        // 📝 Update recent leads list
-        function updateRecentLeads() {
-            const leads = window.dashboardState.leads;
-            const recentLeads = leads.slice(-5).reverse(); // Most recent first
-            const leadsContainer = document.getElementById('recentLeadsList');
-            const emptyState = document.getElementById('emptyState');
-            
-            if (recentLeads.length === 0) {
-                emptyState.style.display = 'block';
+        function toggleTheme() {
+            // Use SteadyUtils if available
+            if (window.SteadyUtils && SteadyUtils.theme) {
+                SteadyUtils.theme.toggle();
                 return;
             }
             
-            emptyState.style.display = 'none';
+            // Fallback method
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
             
-            const leadsHTML = recentLeads.map((lead, index) => `
-                <div class="lead-item fade-in" style="animation-delay: ${index * 0.1}s;">
-                    <div class="lead-avatar">${getInitials(lead.name)}</div>
-                    <div class="lead-info">
-                        <div class="lead-name">${escapeHtml(lead.name)}</div>
-                        <div class="lead-details">
-                            ${getLeadContactInfo(lead)}
-                        </div>
-                    </div>
-                    <div class="lead-status ${getStatusClass(lead.status)}">
-                        <i data-lucide="${getStatusIcon(lead.status)}" class="status-icon"></i>
-                        ${lead.status || 'New'}
-                    </div>
-                </div>
-            `).join('');
+            document.documentElement.setAttribute('data-theme', newTheme);
             
-            leadsContainer.innerHTML = leadsHTML;
-            lucide.createIcons(); // Re-initialize icons
+            try {
+                localStorage.setItem('dashboard-theme', newTheme);
+            } catch (error) {
+                console.warn('Failed to save theme:', error);
+            }
         }
 
-        // 🔔 Update recent activity
-        function updateActivity() {
-            const activityContainer = document.getElementById('recentActivity');
-            const leads = window.dashboardState.leads;
-            
-            if (leads.length === 0) return;
-            
-            const recentActivity = leads.slice(-3).reverse().map((lead, index) => `
-                <div class="activity-item fade-in" style="animation-delay: ${index * 0.1}s;">
-                    <div class="activity-content">
-                        <div class="activity-text">Added ${escapeHtml(lead.name)} as a new lead</div>
-                        <div class="activity-time">${getTimeAgo(lead.created_at)}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            activityContainer.innerHTML = recentActivity;
-        }
-
-        // 🎪 Setup event listeners
-        function setupEventListeners() {
-            // Mobile menu toggle
-            document.getElementById('mobileOverlay')?.addEventListener('click', () => {
-                document.getElementById('sidebar').classList.remove('mobile-open');
-                document.getElementById('mobileOverlay').classList.remove('active');
-            });
-
-            // Navigation - delegate to DashboardController if available
-            document.querySelectorAll('[data-page]').forEach(link => {
+        // 🧭 NAVIGATION SYSTEM
+        function setupNavigation() {
+            document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const page = link.dataset.page;
+                    const page = link.getAttribute('data-page');
                     
-                    if (window.DashboardController && window.DashboardController.navigateTo) {
-                        window.DashboardController.navigateTo(page);
-                    } else {
-                        console.log(`Navigate to: ${page}`);
-                        // Fallback navigation logic here
+                    // Check if it's a pro feature
+                    if (link.classList.contains('disabled')) {
+                        showProModal();
+                        return;
+                    }
+                    
+                    if (page) {
+                        loadPage(page);
                     }
                 });
             });
-
-            // Add lead buttons
-            document.getElementById('addLeadBtn')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                handleAddLead();
-            });
-
-            document.getElementById('addFirstLeadBtn')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                handleAddLead();
-            });
-
-            // Locked features
-            document.querySelectorAll('[data-feature]').forEach(element => {
-                element.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const feature = element.dataset.feature;
-                    
-                    if (window.SteadyUtils && window.SteadyUtils.showUpgradeModal) {
-                        window.SteadyUtils.showUpgradeModal(feature);
-                    } else {
-                        alert(`${feature} is available in Professional! Upgrade to unlock this feature.`);
-                    }
-                });
-            });
-
-            // User menu (placeholder)
-            document.getElementById('userMenu')?.addEventListener('click', (e) => {
-                console.log('User menu clicked - dropdown coming soon!');
-            });
         }
 
-        // ➕ Handle add lead
-        function handleAddLead() {
-            // Check lead limit
-            const currentLeads = window.dashboardState.leads.length;
-            if (currentLeads >= 50) {
-                if (window.SteadyUtils && window.SteadyUtils.showUpgradeModal) {
-                    window.SteadyUtils.showUpgradeModal('lead_limit');
-                } else {
-                    alert('You\'ve reached your monthly limit of 50 leads! Upgrade to Professional for 1,000 leads.');
-                }
-                return;
-            }
-
-            // Use DashboardController if available, otherwise fallback
-            if (window.DashboardController && window.DashboardController.handleAddLead) {
-                window.DashboardController.handleAddLead();
-            } else if (window.openAddLeadModal) {
-                window.openAddLeadModal();
-            } else {
-                // Simple fallback modal
-                const name = prompt('Enter lead name:');
-                if (name) {
-                    addLeadSimple({ name });
-                }
-            }
-        }
-
-        // 🎬 Animate cards on load
-        function animateCards() {
-            const cards = document.querySelectorAll('.stat-card, .action-btn');
-            cards.forEach((card, index) => {
-                setTimeout(() => {
-                    card.classList.add('fade-in');
-                }, index * 100);
-            });
-        }
-
-        // 🔄 Show loading states
-        function showLoading(loading) {
-            window.dashboardState.loading = loading;
-            const elements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
-            elements.forEach(el => {
-                if (loading) {
-                    el.classList.add('loading');
-                } else {
-                    el.classList.remove('loading');
-                }
-            });
-        }
-
-        // 🛠️ Helper functions
-        function getInitials(name) {
-            return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
-        }
-
-        function getLeadContactInfo(lead) {
-            if (lead.email) {
-                return `<i data-lucide="mail" class="lead-details-icon"></i>${escapeHtml(lead.email)}`;
-            } else if (lead.phone) {
-                return `<i data-lucide="phone" class="lead-details-icon"></i>${escapeHtml(lead.phone)}`;
-            } else if (lead.company) {
-                return `<i data-lucide="building" class="lead-details-icon"></i>${escapeHtml(lead.company)}`;
-            } else {
-                return '<i data-lucide="user" class="lead-details-icon"></i>No contact info';
-            }
-        }
-
-        function getStatusClass(status) {
-            if (!status) return 'status-new';
-            const s = status.toLowerCase();
-            if (s.includes('new')) return 'status-new';
-            if (s.includes('contact')) return 'status-contacted';
-            if (s.includes('qualified')) return 'status-qualified';
-            return 'status-new';
-        }
-
-        function getStatusIcon(status) {
-            if (!status) return 'circle-dot';
-            const s = status.toLowerCase();
-            if (s.includes('new')) return 'circle-dot';
-            if (s.includes('contact')) return 'phone';
-            if (s.includes('qualified')) return 'check-circle';
-            return 'circle-dot';
-        }
-
-        function getTimeAgo(dateString) {
-            if (!dateString) return 'Recently';
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffHours / 24);
+        function loadPage(pageName) {
+            console.log(`🧭 Loading page: ${pageName}`);
             
-            if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-            if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-            return 'Just now';
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // 🚀 Simple fallback add lead function
-        async function addLeadSimple(leadData) {
-            try {
-                if (window.API && window.API.createLead) {
-                    const result = await window.API.createLead(leadData);
-                    if (result.success) {
-                        // Refresh data
-                        await loadDashboardData();
-                        alert('Lead added successfully!');
-                    }
+            // Update active nav state
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+            
+            // Page titles with emojis
+            const pageTitles = {
+                dashboard: 'Dashboard',
+                leads: 'Leads', 
+                pipeline: 'Pipeline',
+                analytics: 'Analytics',
+                export: 'Export',
+                settings: 'Settings'
+            };
+            
+            // Update page title
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) {
+                pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
+            }
+            
+            // Try to load module from window object
+            const moduleNames = {
+                dashboard: 'DashboardController',
+                leads: 'AddLeadModule', 
+                pipeline: 'PipelineModule',
+                settings: 'SettingsModule'
+            };
+            
+            const moduleName = moduleNames[pageName];
+            const module = window[moduleName];
+            
+            if (module && typeof module.init === 'function') {
+                console.log(`✅ Loading ${moduleName}...`);
+                module.init();
+                
+                // Animate content if utils available
+                if (window.SteadyUtils && SteadyUtils.animateInStagger) {
+                    setTimeout(() => {
+                        SteadyUtils.animateInStagger('.fade-in', {
+                            staggerDelay: 150,
+                            duration: 600
+                        });
+                    }, 100);
                 }
-            } catch (error) {
-                console.error('Failed to add lead:', error);
-                alert('Failed to add lead. Please try again.');
+            } else {
+                console.warn(`⚠️ Module ${moduleName} not found`);
+                showModuleNotFound(pageName);
             }
         }
 
-        // 🎯 Export for DashboardController callbacks
-        window.dashboardCallbacks = {
-            onLeadCreated: () => loadDashboardData(),
-            onLeadUpdated: () => loadDashboardData(),
-            onLeadDeleted: () => loadDashboardData(),
-            updateStats: updateDashboardStats,
-            updateLeads: updateRecentLeads,
-            updateActivity: updateActivity
+        function showModuleNotFound(pageName) {
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                const emoji = {
+                    dashboard: '📊',
+                    leads: '👥', 
+                    pipeline: '🌿',
+                    analytics: '📈',
+                    export: '📥',
+                    settings: '⚙️'
+                }[pageName] || '📦';
+                
+                mainContent.innerHTML = `
+                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                            ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
+                        </h2>
+                        <p>Module not loaded yet. Check that the script is included.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 👤 USER MENU SETUP
+        function setupUserMenu() {
+            const userMenu = document.getElementById('userMenu');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            
+            // Toggle dropdown
+            userMenu?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown?.classList.toggle('show');
+            });
+            
+            // Close on outside click
+            document.addEventListener('click', () => {
+                profileDropdown?.classList.remove('show');
+            });
+            
+            // Dark mode toggle
+            darkModeToggle?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleTheme();
+            });
+            
+            // Settings from dropdown
+            profileDropdown?.querySelector('[data-page="settings"]')?.addEventListener('click', () => {
+                loadPage('settings');
+                profileDropdown.classList.remove('show');
+            });
+
+            // Logout
+            const logoutBtn = document.getElementById('logoutBtn');
+            logoutBtn?.addEventListener('click', () => {
+                window.location.href = '/login';
+                profileDropdown.classList.remove('show');
+            });
+        }
+
+        // 🎪 PRO MODAL SETUP
+        function setupProModal() {
+            const proModal = document.getElementById('proModal');
+            const upgradeBtn = document.getElementById('upgradeBtn');
+            const startTrialBtn = document.getElementById('startTrialBtn');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            
+            // Show modal
+            upgradeBtn?.addEventListener('click', showProModal);
+            startTrialBtn?.addEventListener('click', startTrial);
+            
+            // Close modal
+            closeModalBtn?.addEventListener('click', hideProModal);
+            proModal?.addEventListener('click', (e) => {
+                if (e.target === proModal) hideProModal();
+            });
+            
+            // Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && proModal?.classList.contains('show')) {
+                    hideProModal();
+                }
+            });
+        }
+
+        function showProModal() {
+            const proModal = document.getElementById('proModal');
+            proModal?.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideProModal() {
+            const proModal = document.getElementById('proModal');
+            proModal?.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function startTrial() {
+            // Redirect to trial signup
+            window.location.href = '/upgrade/professional';
+        }
+
+        // 🌐 GLOBAL HELPERS FOR MODULES
+        window.loadPage = loadPage;
+        window.updatePageTitle = (title) => {
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) pageTitle.textContent = title;
+        };
+        
+        window.updateUserInfo = (user) => {
+            const userName = document.getElementById('userName');
+            const userAvatar = document.getElementById('userAvatar');
+            const userTier = document.getElementById('userTier');
+            
+            if (user.name && userName) userName.textContent = user.name;
+            if (user.initials && userAvatar) userAvatar.textContent = user.initials;
+            if (user.tier && userTier) userTier.textContent = user.tier;
         };
 
-        console.log('🎯 SteadyManager Free Tier Dashboard Ready!');
-        console.log('🚀 Compatible with DashboardController and enhanced database!');
+        window.updateLeadsProgress = (current, max = 50) => {
+            const leadCount = document.getElementById('leadCount');
+            const progressFill = document.getElementById('progressFill');
+            
+            if (leadCount) leadCount.textContent = current;
+            if (progressFill) {
+                const percentage = (current / max) * 100;
+                progressFill.style.width = `${Math.min(percentage, 100)}%`;
+            }
+        };
+
+        console.log('🔥 SteadyManager Shell ready for modules!');
     </script>
+
+    <!-- 🔧 MODULE LOADER -->
+     <script src="/dashboard/shared/js/utils.js"></script>
+    <script src="/dashboard/shared/js/api.js"></script>
+    <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
+    <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
+
+<!-- 🚀 SHELL DATA LOADER -->
+    <script>
+        // 🚀 SIMPLE SHELL DATA LOADER
+        async function loadShellData() {
+            try {
+                console.log('🔄 Loading shell data...');
+                
+                // 👤 Get user profile for header
+                const profile = await API.getProfile();
+                if (profile.success && profile.user) {
+                    const user = profile.user;
+                    
+                    // Update profile display
+                    const userName = document.getElementById('userName');
+                    const userAvatar = document.getElementById('userAvatar');
+                    
+                    if (userName && user.email) {
+                        // Use first name if available, otherwise email username
+                        const displayName = user.firstName || user.email.split('@')[0];
+                        userName.textContent = displayName;
+                    }
+                    
+                    if (userAvatar && user.email) {
+                        // Create initials from name or email
+                        const initials = user.firstName && user.lastName ? 
+                            `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() :
+                            user.email.charAt(0).toUpperCase();
+                        userAvatar.textContent = initials;
+                    }
+                }
+
+                // 📊 Get lead count for progress bar
+                const stats = await API.getBasicStats();
+                if (stats.success && typeof stats.totalLeads === 'number') {
+                    const leadCount = document.getElementById('leadCount');
+                    const progressFill = document.getElementById('progressFill');
+                    
+                    if (leadCount) {
+                        leadCount.textContent = stats.totalLeads;
+                    }
+                    
+                    if (progressFill) {
+                        const percentage = (stats.totalLeads / 50) * 100;
+                        progressFill.style.width = `${Math.min(percentage, 100)}%`;
+                    }
+                }
+
+                console.log('✅ Shell data loaded!');
+                
+            } catch (error) {
+                console.warn('⚠️ Shell data loading failed:', error.message);
+                // Fail silently - shell still works with default values
+            }
+        }
+
+        // 🔄 Load when page is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for API to be available
+            setTimeout(loadShellData, 300);
+        });
+    </script>
+
 </body>
-</html>
+</html><!DOCTYPE html>

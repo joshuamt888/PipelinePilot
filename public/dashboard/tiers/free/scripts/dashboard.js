@@ -1,853 +1,1241 @@
 /**
- * SteadyManager - Free Tier Dashboard Controller
- * Main controller for dashboard navigation, state management, and UI updates
- * Integrates with utils.js and api.js for complete functionality
+ * 🎯 CLEAN DASHBOARD CONTROLLER - ICONS FIXED
+ * 
+ * Clean, intentional design focused on data visualization
+ * Animations ONLY on user interaction - no annoying auto-animations
+ * 
+ * @version 3.0.0 - CLEAN EDITION WITH WORKING ICONS
  */
 
 class DashboardController {
     constructor() {
-        this.currentPage = 'dashboard';
-        this.currentUser = null;
-        this.leads = [];
-        this.stats = {};
-        this.subscription = null;
-        this.initialized = false;
+        this.state = {
+            user: null,
+            leads: [],
+            statistics: {},
+            refreshing: false
+        };
+        
+        // Debounced refresh function using SteadyUtils
+        this.debouncedRefresh = SteadyUtils.debounce(() => this.refresh(), 1000);
+        
+        // Real-time update listeners
+        this.setupAPIListeners();
     }
 
-    /**
-     * Initialize dashboard controller
-     */
+    // 🚀 MAIN INITIALIZATION
     async init() {
-        if (this.initialized) return;
-        
-        console.log('🎯 Initializing Dashboard Controller...');
-        
         try {
-            // Wait for dependencies
-            await this.waitForDependencies();
+            console.log('🚀 Dashboard loading...');
             
-            // Load initial data
-            await this.loadInitialData();
+            // 1. Build the clean UI
+            this.buildUI();
             
-            // Setup event listeners
-            this.setupEventListeners();
+            // 2. Load data from API
+            await this.loadData();
             
-            // Initialize UI
-            this.initializeUI();
+            // 3. Update components
+            this.updateComponents();
             
-            // Setup periodic updates
-            this.setupPeriodicUpdates();
+            // 4. Setup interaction events
+            this.setupEvents();
             
-            this.initialized = true;
-            console.log('✅ Dashboard Controller initialized successfully');
+            // 5. Simple entrance - just fade in
+            this.showDashboard();
             
-            // Show welcome message
-            window.SteadyUtils?.showToast(
-                'Welcome to SteadyManager! Start by adding your first lead.', 
-                'success'
-            );
+            // 6. Success notification
+            SteadyUtils.showToast('Dashboard loaded', 'success', { duration: 2000 });
+            
+            console.log('✅ Dashboard ready');
             
         } catch (error) {
-            console.error('❌ Failed to initialize dashboard:', error);
-            window.SteadyUtils?.showToast(
-                'Failed to initialize dashboard. Please refresh the page.', 
-                'error'
-            );
+            console.error('❌ Dashboard failed:', error);
+            this.showError();
+            SteadyUtils.showToast('Dashboard failed to load', 'error');
         }
     }
 
-    /**
-     * Wait for required dependencies to load
-     */
-    async waitForDependencies() {
-        const maxWait = 10000; // 10 seconds
-        const checkInterval = 100; // 100ms
-        let waited = 0;
+    // 🎯 SETUP API REAL-TIME LISTENERS
+    setupAPIListeners() {
+        API.on('lead:created', (lead) => {
+            this.state.leads.push(lead);
+            this.updateComponents();
+            SteadyUtils.showToast(`New lead: ${lead.name}`, 'success', { duration: 3000 });
+        });
 
-        return new Promise((resolve, reject) => {
-            const check = () => {
-                if (waited >= maxWait) {
-                    reject(new Error('Timeout waiting for dependencies'));
-                    return;
-                }
+        API.on('lead:updated', (lead) => {
+            const index = this.state.leads.findIndex(l => l.id === lead.id);
+            if (index !== -1) {
+                this.state.leads[index] = lead;
+                this.updateComponents();
+            }
+        });
 
-                if (window.SteadyUtils && window.API) {
-                    resolve();
-                    return;
-                }
+        API.on('lead:deleted', (leadId) => {
+            this.state.leads = this.state.leads.filter(l => l.id !== leadId);
+            this.updateComponents();
+        });
 
-                waited += checkInterval;
-                setTimeout(check, checkInterval);
-            };
+        API.on('connection:lost', () => {
+            SteadyUtils.showToast('Working offline', 'warning', { duration: 4000 });
+        });
 
-            check();
+        API.on('connection:restored', () => {
+            SteadyUtils.showToast('Back online', 'success');
+            this.debouncedRefresh();
         });
     }
 
-    /**
-     * Load initial dashboard data
-     */
-    async loadInitialData() {
+    // 🎨 BUILD CLEAN UI - NO BULLSHIT
+    buildUI() {
+        const container = document.getElementById('mainContent');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="dashboard-container">
+                <!-- 📊 STATS ROW -->
+                <section class="stats-section">
+                    <div class="stats-grid">
+                        <div class="stat-card" data-stat="total">
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalLeads">0</div>
+                                <div class="stat-label">Total Leads</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i data-lucide="users"></i>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" data-stat="contacted">
+                            <div class="stat-content">
+                                <div class="stat-number" id="contactedLeads">0</div>
+                                <div class="stat-label">Contacted</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i data-lucide="phone"></i>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" data-stat="conversion">
+                            <div class="stat-content">
+                                <div class="stat-number" id="conversionRate">0%</div>
+                                <div class="stat-label">Conversion</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i data-lucide="trending-up"></i>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" data-stat="quality">
+                            <div class="stat-content">
+                                <div class="stat-number" id="avgQuality">0</div>
+                                <div class="stat-label">Avg Quality</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i data-lucide="star"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 🎯 ACTIONS ROW -->
+                <section class="actions-section">
+                    <div class="actions-row">
+                        <button class="action-btn primary" id="addLeadBtn">
+                            <i data-lucide="plus"></i>
+                            <span>Add Lead</span>
+                        </button>
+                        
+                        <button class="action-btn secondary" id="pipelineBtn">
+                            <i data-lucide="git-branch"></i>
+                            <span>Pipeline</span>
+                        </button>
+                        
+                        <button class="action-btn secondary" id="refreshBtn">
+                            <i data-lucide="refresh-cw"></i>
+                            <span>Refresh</span>
+                        </button>
+                        
+                        <button class="action-btn secondary" id="settingsBtn">
+                            <i data-lucide="settings"></i>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 📊 MAIN CONTENT -->
+                <section class="content-section">
+                    <div class="content-grid">
+                        <!-- PIPELINE OVERVIEW -->
+                        <div class="dashboard-card pipeline-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Pipeline Overview</h3>
+                                <button class="card-btn" id="pipelineFullBtn">
+                                    <i data-lucide="external-link"></i>
+                                </button>
+                            </div>
+                            <div class="card-content">
+                                <div class="pipeline-grid">
+                                    <div class="pipeline-column" data-status="cold">
+                                        <div class="column-header">
+                                            <span class="column-title">Cold</span>
+                                            <span class="column-count" id="coldCount">0</span>
+                                        </div>
+                                        <div class="column-leads" id="coldLeads">
+                                            <div class="empty-state">No leads</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pipeline-column" data-status="warm">
+                                        <div class="column-header">
+                                            <span class="column-title">Warm</span>
+                                            <span class="column-count" id="warmCount">0</span>
+                                        </div>
+                                        <div class="column-leads" id="warmLeads">
+                                            <div class="empty-state">No leads</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pipeline-column" data-status="contacted">
+                                        <div class="column-header">
+                                            <span class="column-title">Contacted</span>
+                                            <span class="column-count" id="contactedCount">0</span>
+                                        </div>
+                                        <div class="column-leads" id="contactedPipelineLeads">
+                                            <div class="empty-state">No leads</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pipeline-column" data-status="qualified">
+                                        <div class="column-header">
+                                            <span class="column-title">Qualified</span>
+                                            <span class="column-count" id="qualifiedCount">0</span>
+                                        </div>
+                                        <div class="column-leads" id="qualifiedLeads">
+                                            <div class="empty-state">No leads</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ACTIVITY FEED -->
+                        <div class="dashboard-card activity-card">
+                            <div class="card-header">
+                                <h3 class="card-title">Recent Activity</h3>
+                                <button class="card-btn" id="activityRefreshBtn">
+                                    <i data-lucide="refresh-cw"></i>
+                                </button>
+                            </div>
+                            <div class="card-content">
+                                <div class="activity-feed" id="activityFeed">
+                                    <div class="activity-empty">No recent activity</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 💡 INSIGHTS -->
+                <section class="insights-section">
+                    <div class="dashboard-card insights-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Insights</h3>
+                            <button class="card-btn" id="insightsRefreshBtn">
+                                <i data-lucide="zap"></i>
+                            </button>
+                        </div>
+                        <div class="card-content">
+                            <div class="insights-list" id="insightsGrid">
+                                <div class="insight-item">
+                                    <div class="insight-content">
+                                        <div class="insight-title">Loading insights...</div>
+                                        <div class="insight-text">Analyzing your data...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        `;
+
+        // Add clean styles
+        this.addCleanStyles();
+        
+        // Initialize icons PROPERLY
+        this.initializeIcons();
+    }
+
+    // 🎯 PROPERLY INITIALIZE LUCIDE ICONS
+    initializeIcons() {
+        if (window.lucide) {
+            // Create icons immediately
+            window.lucide.createIcons();
+            
+            // Also reinitialize after a small delay to catch any late renders
+            setTimeout(() => {
+                window.lucide.createIcons();
+                console.log('🎨 Icons initialized');
+            }, 100);
+        } else {
+            console.warn('Lucide not loaded - adding fallback icons');
+            
+            // Fallback: add text icons
+            this.addFallbackIcons();
+        }
+    }
+
+    // 🔄 FALLBACK ICONS IF LUCIDE FAILS
+    addFallbackIcons() {
+        const iconMappings = {
+            'users': '👥',
+            'phone': '📞', 
+            'trending-up': '📈',
+            'star': '⭐',
+            'plus': '+',
+            'git-branch': '🌿',
+            'refresh-cw': '🔄',
+            'settings': '⚙️',
+            'external-link': '↗️',
+            'zap': '⚡'
+        };
+
+        document.querySelectorAll('[data-lucide]').forEach(element => {
+            const iconName = element.getAttribute('data-lucide');
+            if (iconMappings[iconName]) {
+                element.innerHTML = iconMappings[iconName];
+                element.style.fontSize = '18px';
+                element.style.display = 'flex';
+                element.style.alignItems = 'center';
+                element.style.justifyContent = 'center';
+            }
+        });
+        
+        console.log('🎨 Fallback icons added');
+    }
+
+    // 📊 LOAD DATA FROM API
+    async loadData() {
         try {
-            // Get current user
-            this.currentUser = window.API.getCurrentUser();
+            const dashboardData = await API.getDashboardData();
             
-            // Load subscription info
-            const subscriptionResult = await window.API.getSubscription();
-            this.subscription = subscriptionResult.subscription;
+            if (dashboardData.success) {
+                this.state.leads = dashboardData.leads || [];
+                this.state.statistics = dashboardData.statistics || {};
+                this.state.user = dashboardData.user || null;
+                
+                console.log(`📊 Loaded ${this.state.leads.length} leads`);
+            } else {
+                throw new Error('Failed to load dashboard data');
+            }
             
-            // Load leads
-            await this.refreshLeadsData();
-            
-            // Update user info in UI
-            this.updateUserInfo();
-            
-            console.log('✅ Initial data loaded');
         } catch (error) {
-            console.error('❌ Failed to load initial data:', error);
+            console.error('Failed to load data:', error);
+            SteadyUtils.showToast(API.formatError(error), 'error', { duration: 5000 });
             throw error;
         }
     }
 
-    /**
-     * Refresh leads data from API
-     */
-    async refreshLeadsData() {
-        try {
-            const leadsResult = await window.API.getLeads();
+    // 🔄 UPDATE COMPONENTS
+    updateComponents() {
+        this.updateStats();
+        this.updatePipeline();
+        this.updateActivity();
+        this.updateInsights();
+    }
+
+    // 📊 UPDATE STATS - SIMPLE COUNTERS
+    updateStats() {
+        const stats = this.calculateStats();
+        
+        // Simple counter animations - no fancy easing
+        SteadyUtils.animateCounter('#totalLeads', stats.totalLeads, { duration: 800 });
+        SteadyUtils.animateCounter('#contactedLeads', stats.contactedLeads, { duration: 800 });
+        SteadyUtils.animateCounter('#conversionRate', stats.conversionRate, { suffix: '%', duration: 800 });
+        SteadyUtils.animateCounter('#avgQuality', stats.avgQuality, { decimals: 1, duration: 800 });
+    }
+
+    // 🎯 UPDATE PIPELINE - CLEAN AND SIMPLE
+    updatePipeline() {
+        const grouped = this.groupLeadsByStatus();
+        
+        // Update counts
+        Object.keys(grouped).forEach(status => {
+            const countEl = document.getElementById(`${status}Count`);
+            if (countEl) {
+                countEl.textContent = grouped[status].length;
+            }
+        });
+
+        // Update lead lists
+        Object.keys(grouped).forEach(status => {
+            const containerEl = document.getElementById(`${status}Leads`);
+            if (!containerEl) return;
+
+            const leads = grouped[status];
             
-            if (leadsResult.success) {
-                this.leads = leadsResult.all;
-                this.stats = leadsResult.stats;
-                
-                // Update global state
-                if (window.dashboardState) {
-                    window.dashboardState.leads = this.leads;
-                }
-                
-                // Update UI
-                this.updateDashboardStats();
-                this.updateRecentLeads();
-                this.updateActivity();
-                
-                // Check for upgrade opportunities
-                this.checkUpgradeOpportunities(leadsResult.limitCheck);
-                
-                console.log(`📊 Refreshed ${this.leads.length} leads`);
-            } else {
-                throw new Error(leadsResult.error || 'Failed to load leads');
+            if (leads.length === 0) {
+                containerEl.innerHTML = '<div class="empty-state">No leads</div>';
+                return;
             }
+
+            // Show first 3 leads - simple and clean
+            const leadsHTML = leads.slice(0, 3).map(lead => `
+                <div class="lead-card" data-lead-id="${lead.id}">
+                    <div class="lead-name">${SteadyUtils.escapeHtml(lead.name)}</div>
+                    ${lead.company ? `<div class="lead-company">${SteadyUtils.escapeHtml(lead.company)}</div>` : ''}
+                </div>
+            `).join('');
+
+            containerEl.innerHTML = leadsHTML;
+            
+            // Re-initialize icons for new content
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        });
+    }
+
+    // 📊 UPDATE ACTIVITY - NO ANIMATIONS
+    async updateActivity() {
+        const activityFeed = document.getElementById('activityFeed');
+        if (!activityFeed) return;
+
+        try {
+            const activityData = await API.getActivity(5);
+            const activities = activityData.activities || this.generateActivities();
+            
+            if (activities.length === 0) {
+                activityFeed.innerHTML = '<div class="activity-empty">No recent activity</div>';
+                return;
+            }
+
+            const activitiesHTML = activities.slice(0, 5).map(activity => `
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-text">${SteadyUtils.escapeHtml(activity.text || activity.description)}</div>
+                        <div class="activity-time">${SteadyUtils.formatDate(activity.timestamp || activity.created_at, 'relative')}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            activityFeed.innerHTML = activitiesHTML;
+            
+            // Re-initialize icons
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+
         } catch (error) {
-            console.error('❌ Failed to refresh leads:', error);
-            window.SteadyUtils?.showToast('Failed to refresh data', 'error');
+            const activities = this.generateActivities();
+            this.renderActivities(activities);
         }
     }
 
-    /**
-     * Update dashboard statistics
-     */
-    updateDashboardStats() {
-        const totalLeads = this.leads.length;
-        const contactedLeads = this.leads.filter(lead => 
-            lead.status && !lead.status.toLowerCase().includes('new')
+    // 💡 UPDATE INSIGHTS - CLEAN LIST
+    updateInsights() {
+        const insights = this.generateInsights();
+        const insightsGrid = document.getElementById('insightsGrid');
+        
+        if (!insightsGrid) return;
+
+        const insightsHTML = insights.map(insight => `
+            <div class="insight-item">
+                <div class="insight-content">
+                    <div class="insight-title">${insight.title}</div>
+                    <div class="insight-text">${SteadyUtils.escapeHtml(insight.text)}</div>
+                </div>
+            </div>
+        `).join('');
+
+        insightsGrid.innerHTML = insightsHTML;
+    }
+
+    // 🎯 SIMPLE ENTRANCE - JUST FADE IN
+    showDashboard() {
+        const container = document.querySelector('.dashboard-container');
+        if (container) {
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(10px)';
+            
+            requestAnimationFrame(() => {
+                container.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            });
+        }
+    }
+
+    // 🎛️ SETUP INTERACTION EVENTS
+    setupEvents() {
+        // Add Lead Button
+        const addLeadBtn = document.getElementById('addLeadBtn');
+        if (addLeadBtn) {
+            addLeadBtn.addEventListener('click', () => {
+                window.loadPage && window.loadPage('leads');
+            });
+        }
+
+        // Pipeline Button
+        const pipelineBtn = document.getElementById('pipelineBtn');
+        if (pipelineBtn) {
+            pipelineBtn.addEventListener('click', () => {
+                window.loadPage && window.loadPage('pipeline');
+            });
+        }
+
+        // Settings Button
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                window.loadPage && window.loadPage('settings');
+            });
+        }
+
+        // Refresh Button
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.debouncedRefresh();
+            });
+        }
+
+        // Card interactions - simple clicks
+        document.querySelectorAll('.stat-card').forEach((card, index) => {
+            card.addEventListener('click', () => {
+                const pages = ['leads', 'leads', 'pipeline', 'leads'];
+                window.loadPage && window.loadPage(pages[index]);
+            });
+        });
+
+        // Pipeline full view
+        const pipelineFullBtn = document.getElementById('pipelineFullBtn');
+        if (pipelineFullBtn) {
+            pipelineFullBtn.addEventListener('click', () => {
+                window.loadPage && window.loadPage('pipeline');
+            });
+        }
+
+        // Activity refresh
+        const activityRefreshBtn = document.getElementById('activityRefreshBtn');
+        if (activityRefreshBtn) {
+            activityRefreshBtn.addEventListener('click', () => {
+                this.updateActivity();
+            });
+        }
+
+        // Insights refresh
+        const insightsRefreshBtn = document.getElementById('insightsRefreshBtn');
+        if (insightsRefreshBtn) {
+            insightsRefreshBtn.addEventListener('click', () => {
+                this.updateInsights();
+            });
+        }
+    }
+
+    // 🔄 REFRESH
+    async refresh() {
+        if (this.state.refreshing) return;
+        
+        try {
+            this.state.refreshing = true;
+            
+            await this.loadData();
+            this.updateComponents();
+            
+            SteadyUtils.showToast('Dashboard refreshed', 'success', { duration: 2000 });
+            
+        } catch (error) {
+            console.error('❌ Refresh failed:', error);
+            SteadyUtils.showToast(API.formatError(error), 'error');
+        } finally {
+            this.state.refreshing = false;
+        }
+    }
+
+    // 📊 CALCULATE STATS
+    calculateStats() {
+        const totalLeads = this.state.leads.length;
+        const contactedLeads = this.state.leads.filter(lead => 
+            lead.type === 'contacted' || lead.type === 'qualified' || 
+            lead.status === 'contacted' || lead.status === 'qualified'
         ).length;
         
-        // Update stat values
-        this.updateElement('totalLeads', totalLeads);
-        this.updateElement('currentLeads', totalLeads);
-        this.updateElement('contactedLeads', contactedLeads);
-        
-        // Update progress bar with animation
-        const progressPercent = (totalLeads / 50) * 100;
-        const progressFill = document.getElementById('leadProgress');
-        
-        if (progressFill) {
-            // Smooth animation
-            setTimeout(() => {
-                progressFill.style.width = `${Math.min(progressPercent, 100)}%`;
-            }, 300);
-        }
-        
-        // Update conversion rate
         const conversionRate = totalLeads > 0 ? Math.round((contactedLeads / totalLeads) * 100) : 0;
-        this.updateElement('conversionRate', `${conversionRate}%`);
-        
-        // Update trend messages
-        this.updateTrendMessages(totalLeads, contactedLeads);
-        
-        // Update lead limit status
-        this.updateLeadLimitStatus(totalLeads);
+        const avgQuality = totalLeads > 0
+            ? (this.state.leads.reduce((sum, lead) => sum + (lead.quality_score || lead.qualityScore || 5), 0) / totalLeads)
+            : 5.0;
+
+        return {
+            totalLeads,
+            contactedLeads,
+            conversionRate,
+            avgQuality: parseFloat(avgQuality.toFixed(1))
+        };
     }
 
-    /**
-     * Update trend messages based on data
-     */
-    updateTrendMessages(totalLeads, contactedLeads) {
-        // Total leads trend
-        const totalTrendElement = document.querySelector('#totalLeads').parentElement.querySelector('.stat-trend span');
-        if (totalTrendElement) {
-            if (totalLeads === 0) {
-                totalTrendElement.textContent = 'Add your first lead!';
-            } else if (totalLeads < 10) {
-                totalTrendElement.textContent = `+${totalLeads} this month - great start!`;
+    // 🎯 GROUP LEADS
+    groupLeadsByStatus() {
+        const groups = { cold: [], warm: [], contacted: [], qualified: [] };
+
+        this.state.leads.forEach(lead => {
+            const status = lead.type || lead.status || 'cold';
+            if (groups[status]) {
+                groups[status].push(lead);
             } else {
-                totalTrendElement.textContent = `+${totalLeads} this month - you're growing!`;
+                groups.cold.push(lead);
             }
+        });
+
+        return groups;
+    }
+
+    // 📊 GENERATE ACTIVITIES
+    generateActivities() {
+        return this.state.leads
+            .slice(0, 10)
+            .map(lead => ({
+                text: `Added ${lead.name}${lead.company ? ` from ${lead.company}` : ''} as ${lead.type || lead.status || 'new'} lead`,
+                timestamp: lead.created_at || new Date().toISOString()
+            }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+
+    // 💡 GENERATE INSIGHTS
+    generateInsights() {
+        const stats = this.calculateStats();
+        const insights = [];
+
+        if (stats.totalLeads > 0) {
+            if (stats.conversionRate > 20) {
+                insights.push({
+                    title: 'Excellent Conversion',
+                    text: `Your ${stats.conversionRate}% conversion rate is outstanding! Keep focusing on quality leads.`
+                });
+            } else if (stats.conversionRate > 10) {
+                insights.push({
+                    title: 'Good Progress',
+                    text: `Your ${stats.conversionRate}% conversion rate is solid. Try following up more frequently.`
+                });
+            } else {
+                insights.push({
+                    title: 'Improve Follow-ups',
+                    text: 'Consider reaching out to your leads more consistently to boost conversions.'
+                });
+            }
+
+            if (stats.avgQuality > 7) {
+                insights.push({
+                    title: 'High Quality Leads',
+                    text: `Your leads average ${stats.avgQuality}/10 quality score. Great work on qualification!`
+                });
+            }
+
+            const goal = this.state.user?.subscriptionTier === 'FREE' ? 50 : 1000;
+            const progress = Math.round((stats.totalLeads / goal) * 100);
+            
+            insights.push({
+                title: 'Monthly Progress',
+                text: `You're ${progress}% toward your goal of ${goal} leads this month.`
+            });
+
+        } else {
+            insights.push({
+                title: 'Get Started',
+                text: 'Add your first lead to start tracking your sales pipeline and unlock insights!'
+            });
         }
 
-        // Contacted leads trend
-        const contactedTrendElement = document.querySelector('#contactedLeads').parentElement.querySelector('.stat-trend span');
-        if (contactedTrendElement) {
-            if (contactedLeads === 0) {
-                contactedTrendElement.textContent = 'Start reaching out!';
-            } else {
-                contactedTrendElement.textContent = `Great progress!`;
-            }
-        }
+        return insights;
+    }
 
-        // Conversion rate trend
-        const conversionTrendElement = document.querySelector('#conversionRate').parentElement.querySelector('.stat-trend span');
-        if (conversionTrendElement) {
-            if (totalLeads === 0) {
-                conversionTrendElement.textContent = 'Add leads to track conversion';
-            } else if (contactedLeads === 0) {
-                conversionTrendElement.textContent = 'Contact your leads to improve this';
-            } else {
-                const rate = Math.round((contactedLeads / totalLeads) * 100);
-                if (rate >= 70) {
-                    conversionTrendElement.textContent = 'Excellent conversion rate!';
-                } else if (rate >= 50) {
-                    conversionTrendElement.textContent = 'Good conversion rate!';
-                } else {
-                    conversionTrendElement.textContent = 'Room for improvement!';
+    showError() {
+        const container = document.getElementById('mainContent');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="error-container">
+                <h2>Dashboard Error</h2>
+                <p>Failed to load dashboard. Please try refreshing.</p>
+                <button onclick="location.reload()" class="btn btn-primary">Refresh Page</button>
+            </div>
+        `;
+    }
+
+    // 🎨 CLEAN STYLES - NO BULLSHIT
+    addCleanStyles() {
+        if (document.getElementById('dashboardStyles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'dashboardStyles';
+        style.textContent = `
+            /* 🎯 CLEAN DASHBOARD STYLES - NO ANIMATIONS */
+            .dashboard-container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 2rem;
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            /* 📊 STATS SECTION */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+
+            .stat-card {
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                padding: 1.5rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                transition: all 0.2s ease;
+                cursor: pointer;
+            }
+
+            .stat-card:hover {
+                border-color: #667eea;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .stat-content {
+                flex: 1;
+            }
+
+            .stat-number {
+                font-size: 2.5rem;
+                font-weight: 700;
+                color: #1a202c;
+                margin-bottom: 0.25rem;
+                line-height: 1;
+            }
+
+            .stat-label {
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .stat-icon {
+                width: 48px;
+                height: 48px;
+                background: rgba(102, 126, 234, 0.1);
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #667eea;
+                border: 1px solid rgba(102, 126, 234, 0.2);
+            }
+
+            .stat-icon i {
+                width: 24px;
+                height: 24px;
+            }
+
+            /* 🎯 ACTIONS SECTION */
+            .actions-row {
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .action-btn {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.75rem 1.25rem;
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                color: #374151;
+                font-weight: 500;
+                font-size: 0.875rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-decoration: none;
+            }
+
+            .action-btn:hover {
+                border-color: #667eea;
+                background: #f8fafc;
+                transform: translateY(-1px);
+            }
+
+            .action-btn.primary {
+                background: #667eea;
+                border-color: #667eea;
+                color: white;
+            }
+
+            .action-btn.primary:hover {
+                background: #5a67d8;
+                transform: translateY(-1px);
+            }
+
+            .action-btn i {
+                width: 16px;
+                height: 16px;
+            }
+
+            /* 📊 CONTENT GRID */
+            .content-grid {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 2rem;
+            }
+
+            @media (max-width: 1024px) {
+                .content-grid {
+                    grid-template-columns: 1fr;
                 }
             }
-        }
-    }
 
-    /**
-     * Update lead limit status and warnings
-     */
-    updateLeadLimitStatus(totalLeads) {
-        const limitCheck = window.SteadyUtils?.checkLeadLimit(totalLeads);
-        
-        if (!limitCheck) return;
-
-        // Update progress bar color based on usage
-        const progressFill = document.getElementById('leadProgress');
-        if (progressFill) {
-            if (limitCheck.percentage >= 90) {
-                progressFill.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
-            } else if (limitCheck.percentage >= 80) {
-                progressFill.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
-            } else {
-                progressFill.style.background = 'linear-gradient(90deg, #667eea, #764ba2)';
+            /* 📋 CARDS */
+            .dashboard-card {
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                overflow: hidden;
             }
-        }
 
-        // Show warnings at specific thresholds
-        if (totalLeads === 40 && !sessionStorage.getItem('warned_40')) {
-            window.SteadyUtils?.showToast(
-                'You have 10 leads remaining. Consider upgrading for unlimited leads!', 
-                'upgrade'
-            );
-            sessionStorage.setItem('warned_40', 'true');
-        } else if (totalLeads === 45 && !sessionStorage.getItem('warned_45')) {
-            window.SteadyUtils?.showToast(
-                'Only 5 leads left! Upgrade to Professional for 1,000 leads.', 
-                'upgrade'
-            );
-            sessionStorage.setItem('warned_45', 'true');
-        } else if (totalLeads === 49 && !sessionStorage.getItem('warned_49')) {
-            window.SteadyUtils?.showToast(
-                'Last lead remaining! Upgrade now to continue growing.', 
-                'upgrade'
-            );
-            sessionStorage.setItem('warned_49', 'true');
-        }
-    }
-
-    /**
-     * Update recent leads list
-     */
-    updateRecentLeads() {
-        const recentLeads = this.leads.slice(-5).reverse(); // Most recent first
-        const leadsContainer = document.getElementById('recentLeadsList');
-        const emptyState = document.getElementById('emptyState');
-        
-        if (!leadsContainer) return;
-
-        if (recentLeads.length === 0) {
-            if (emptyState) {
-                emptyState.style.display = 'block';
+            .card-header {
+                padding: 1.5rem;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }
-            return;
-        }
-        
-        if (emptyState) {
-            emptyState.style.display = 'none';
-        }
-        
-        // Create leads HTML
-        const leadsHTML = recentLeads.map((lead, index) => `
-            <div class="lead-item fade-in" style="animation-delay: ${index * 0.1}s;">
-                <div class="lead-avatar">${this.getInitials(lead.name)}</div>
-                <div class="lead-info">
-                    <div class="lead-name">${this.escapeHtml(lead.name)}</div>
-                    <div class="lead-details">
-                        ${this.getLeadContactInfo(lead)}
-                    </div>
-                </div>
-                <div class="lead-status ${this.getStatusClass(lead.status)}">
-                    <i data-lucide="${this.getStatusIcon(lead.status)}" class="status-icon"></i>
-                    ${lead.status || 'New'}
-                </div>
-            </div>
-        `).join('');
-        
-        leadsContainer.innerHTML = leadsHTML;
-        
-        // Re-initialize Lucide icons
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    }
 
-    /**
-     * Update recent activity feed
-     */
-    updateActivity() {
-        const activityContainer = document.getElementById('recentActivity');
-        if (!activityContainer) return;
-
-        if (this.leads.length === 0) {
-            // Show default activity
-            activityContainer.innerHTML = `
-                <div class="activity-item">
-                    <div class="activity-content">
-                        <div class="activity-text">Welcome to SteadyManager!</div>
-                        <div class="activity-time">Just now</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="activity-content">
-                        <div class="activity-text">Account verified successfully</div>
-                        <div class="activity-time">2 minutes ago</div>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        // Show recent lead activities
-        const recentLeads = this.leads.slice(-3).reverse();
-        const activityHTML = recentLeads.map((lead, index) => `
-            <div class="activity-item fade-in" style="animation-delay: ${index * 0.1}s;">
-                <div class="activity-content">
-                    <div class="activity-text">Added ${this.escapeHtml(lead.name)} as a new lead</div>
-                    <div class="activity-time">${this.getTimeAgo(lead.created_at)}</div>
-                </div>
-            </div>
-        `).join('');
-        
-        activityContainer.innerHTML = activityHTML;
-    }
-
-    /**
-     * Update user information in UI
-     */
-    updateUserInfo() {
-        if (!this.currentUser) return;
-
-        // Update user name
-        const userNameElement = document.querySelector('[data-user-name]');
-        if (userNameElement) {
-            userNameElement.textContent = this.currentUser.name || 'User';
-        }
-
-        // Update user initials
-        const userInitialsElement = document.querySelector('[data-user-initials]');
-        if (userInitialsElement) {
-            userInitialsElement.textContent = this.getInitials(this.currentUser.name || 'User');
-        }
-
-        // Update subscription status
-        const subscriptionElement = document.querySelector('[data-subscription-status]');
-        if (subscriptionElement) {
-            const tier = this.subscription?.tier || 'FREE';
-            subscriptionElement.innerHTML = `
-                <i data-lucide="circle" style="width: 8px; height: 8px; fill: currentColor;"></i>
-                ${tier === 'FREE' ? 'Free Plan' : tier + ' Plan'}
-            `;
-        }
-
-        // Update sidebar tier badge
-        const tierElement = document.querySelector('[data-user-tier]');
-        if (tierElement) {
-            tierElement.textContent = this.subscription?.tier === 'FREE' ? 'Free Tier' : this.subscription?.tier + ' Tier';
-        }
-    }
-
-    /**
-     * Check for upgrade opportunities and show appropriate prompts
-     */
-    checkUpgradeOpportunities(limitCheck) {
-        if (!limitCheck) return;
-
-        // Show upgrade prompts based on usage patterns
-        const totalLeads = this.leads.length;
-        
-        // Success-based upgrades
-        if (totalLeads >= 25 && !sessionStorage.getItem('success_upgrade_shown')) {
-            setTimeout(() => {
-                window.SteadyUtils?.showToast(
-                    'You\'re doing great with 25+ leads! Ready for advanced analytics?', 
-                    'upgrade'
-                );
-            }, 3000);
-            sessionStorage.setItem('success_upgrade_shown', 'true');
-        }
-
-        // Engagement-based upgrades
-        const contactedLeads = this.leads.filter(lead => 
-            lead.status && !lead.status.toLowerCase().includes('new')
-        ).length;
-        
-        if (contactedLeads >= 10 && totalLeads >= 20 && !sessionStorage.getItem('engagement_upgrade_shown')) {
-            setTimeout(() => {
-                window.SteadyUtils?.showToast(
-                    'High engagement detected! Unlock AI insights to optimize further.', 
-                    'upgrade'
-                );
-            }, 5000);
-            sessionStorage.setItem('engagement_upgrade_shown', 'true');
-        }
-    }
-
-    /**
-     * Navigate to different pages/sections
-     */
-    navigateTo(page) {
-        // Update active nav state
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        const activeLink = document.querySelector(`[data-page="${page}"]`);
-        if (activeLink) {
-            activeLink.classList.add('active');
-        }
-
-        // Handle page-specific logic
-        switch (page) {
-            case 'dashboard':
-                this.showDashboard();
-                break;
-            case 'leads':
-                this.showLeads();
-                break;
-            case 'settings':
-                this.showSettings();
-                break;
-            default:
-                console.warn(`Unknown page: ${page}`);
-        }
-
-        this.currentPage = page;
-        
-        // Track navigation
-        window.SteadyUtils?.trackEvent('page_navigation', { page });
-    }
-
-    /**
-     * Show dashboard page
-     */
-    showDashboard() {
-        // Dashboard is always visible in free tier
-        // Just refresh the data
-        this.refreshLeadsData();
-    }
-
-    /**
-     * Show leads page (placeholder for future implementation)
-     */
-    showLeads() {
-        // For now, just show a message
-        window.SteadyUtils?.showToast(
-            'Full leads management coming soon! For now, use the dashboard.', 
-            'success'
-        );
-    }
-
-    /**
-     * Show settings page (placeholder for future implementation)
-     */
-    showSettings() {
-        // For now, just show a message
-        window.SteadyUtils?.showToast(
-            'Settings panel coming soon! Basic account info is in the top right.', 
-            'success'
-        );
-    }
-
-    /**
-     * Setup event listeners
-     */
-    setupEventListeners() {
-        // Navigation links
-        document.querySelectorAll('[data-page]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = e.currentTarget.dataset.page;
-                this.navigateTo(page);
-            });
-        });
-
-        // Locked feature links
-        document.querySelectorAll('[data-feature]').forEach(element => {
-            element.addEventListener('click', (e) => {
-                e.preventDefault();
-                const feature = e.currentTarget.dataset.feature;
-                window.SteadyUtils?.showUpgradeModal(feature);
-            });
-        });
-
-        // Add lead buttons
-        document.getElementById('addLeadBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.handleAddLead();
-        });
-
-        document.getElementById('addFirstLeadBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.handleAddLead();
-        });
-
-        // User menu (future implementation)
-        document.getElementById('userMenu')?.addEventListener('click', (e) => {
-            // Placeholder for user menu dropdown
-            console.log('User menu clicked - dropdown coming soon!');
-        });
-
-        // Window events
-        window.addEventListener('focus', () => {
-            // Refresh data when window regains focus
-            if (this.initialized) {
-                this.refreshLeadsData();
+            .card-title {
+                font-size: 1.125rem;
+                font-weight: 600;
+                color: #1a202c;
+                margin: 0;
             }
-        });
 
-        // Handle online/offline status
-        window.addEventListener('online', () => {
-            window.SteadyUtils?.showToast('Connection restored!', 'success');
-            this.refreshLeadsData();
-        });
-
-        window.addEventListener('offline', () => {
-            window.SteadyUtils?.showToast('You\'re offline. Some features may not work.', 'warning');
-        });
-    }
-
-    /**
-     * Handle add lead action
-     */
-    handleAddLead() {
-        // Check lead limit
-        const currentLeads = this.leads.length;
-        if (currentLeads >= 50) {
-            window.SteadyUtils?.showUpgradeModal('lead_limit');
-            return;
-        }
-
-        // Open add lead modal (handled by existing code)
-        const event = new CustomEvent('openAddLeadModal');
-        document.dispatchEvent(event);
-        
-        // Or directly call the function if it's global
-        if (typeof openAddLeadModal === 'function') {
-            openAddLeadModal();
-        }
-    }
-
-    /**
-     * Initialize UI elements
-     */
-    initializeUI() {
-        // Add loading states
-        this.addLoadingStates();
-        
-        // Initialize animations
-        this.initializeAnimations();
-        
-        // Setup responsive handlers
-        this.setupResponsiveHandlers();
-    }
-
-    /**
-     * Add loading states to elements
-     */
-    addLoadingStates() {
-        const loadingElements = document.querySelectorAll('.stat-card, .leads-section, .sidebar-panel');
-        loadingElements.forEach(el => {
-            el.classList.add('loading');
-            setTimeout(() => {
-                el.classList.remove('loading');
-            }, 1000 + Math.random() * 500); // Staggered loading
-        });
-    }
-
-    /**
-     * Initialize animations
-     */
-    initializeAnimations() {
-        // Animate stat cards
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach((card, index) => {
-            setTimeout(() => {
-                card.classList.add('fade-in');
-            }, index * 150);
-        });
-
-        // Animate action buttons
-        const actionBtns = document.querySelectorAll('.action-btn');
-        actionBtns.forEach((btn, index) => {
-            setTimeout(() => {
-                btn.classList.add('scale-in');
-            }, 500 + (index * 100));
-        });
-    }
-
-    /**
-     * Setup responsive handlers
-     */
-    setupResponsiveHandlers() {
-        // Handle mobile sidebar
-        const mobileOverlay = document.getElementById('mobileOverlay');
-        if (mobileOverlay) {
-            mobileOverlay.addEventListener('click', () => {
-                this.closeMobileSidebar();
-            });
-        }
-
-        // Handle resize events
-        window.addEventListener('resize', this.debounce(() => {
-            this.handleResize();
-        }, 250));
-    }
-
-    /**
-     * Close mobile sidebar
-     */
-    closeMobileSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('mobileOverlay');
-        
-        if (sidebar) sidebar.classList.remove('mobile-open');
-        if (overlay) overlay.classList.remove('active');
-    }
-
-    /**
-     * Handle window resize
-     */
-    handleResize() {
-        // Close mobile sidebar on desktop
-        if (window.innerWidth > 768) {
-            this.closeMobileSidebar();
-        }
-    }
-
-    /**
-     * Setup periodic updates
-     */
-    setupPeriodicUpdates() {
-        // Refresh data every 5 minutes
-        setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                this.refreshLeadsData();
+            .card-btn {
+                width: 32px;
+                height: 32px;
+                border: none;
+                background: #f8fafc;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: #64748b;
+                transition: all 0.2s ease;
             }
-        }, 5 * 60 * 1000);
 
-        // Update time stamps every minute
-        setInterval(() => {
-            this.updateTimeStamps();
-        }, 60 * 1000);
-    }
-
-    /**
-     * Update time stamps in activity feed
-     */
-    updateTimeStamps() {
-        const timeElements = document.querySelectorAll('.activity-time');
-        timeElements.forEach(el => {
-            const text = el.textContent;
-            if (text.includes('minute')) {
-                const minutes = parseInt(text) + 1;
-                el.textContent = `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-            } else if (text === 'Just now') {
-                el.textContent = '1 minute ago';
+            .card-btn:hover {
+                background: #667eea;
+                color: white;
             }
-        });
+
+            .card-btn i {
+                width: 16px;
+                height: 16px;
+            }
+
+            .card-content {
+                padding: 1.5rem;
+            }
+
+            /* 🏗️ PIPELINE */
+            .pipeline-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+            }
+
+            .pipeline-column {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                min-height: 200px;
+            }
+
+            .column-header {
+                padding: 1rem;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: white;
+            }
+
+            .column-title {
+                font-weight: 600;
+                font-size: 0.875rem;
+                color: #374151;
+            }
+
+            .column-count {
+                background: #667eea;
+                color: white;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            .column-leads {
+                padding: 1rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .empty-state {
+                color: #9ca3af;
+                font-size: 0.875rem;
+                text-align: center;
+                padding: 2rem 0;
+            }
+
+            .lead-card {
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 0.75rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .lead-card:hover {
+                border-color: #667eea;
+                transform: translateY(-1px);
+            }
+
+            .lead-name {
+                font-weight: 600;
+                font-size: 0.875rem;
+                color: #1a202c;
+                margin-bottom: 0.25rem;
+            }
+
+            .lead-company {
+                font-size: 0.75rem;
+                color: #64748b;
+            }
+
+            /* 📊 ACTIVITY FEED */
+            .activity-feed {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .activity-item {
+                padding: 1rem 0;
+                border-bottom: 1px solid #f1f5f9;
+            }
+
+            .activity-item:last-child {
+                border-bottom: none;
+            }
+
+            .activity-content {
+                flex: 1;
+            }
+
+            .activity-text {
+                font-weight: 500;
+                color: #374151;
+                margin-bottom: 0.25rem;
+                font-size: 0.875rem;
+            }
+
+            .activity-time {
+                font-size: 0.75rem;
+                color: #9ca3af;
+            }
+
+            .activity-empty {
+                color: #9ca3af;
+                font-size: 0.875rem;
+                text-align: center;
+                padding: 3rem 0;
+            }
+
+            /* 💡 INSIGHTS */
+            .insights-list {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .insight-item {
+                padding: 1.25rem;
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                border-left: 4px solid #667eea;
+            }
+
+            .insight-content {
+                flex: 1;
+            }
+
+            .insight-title {
+                font-weight: 600;
+                color: #1a202c;
+                margin-bottom: 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            .insight-text {
+                color: #64748b;
+                font-size: 0.875rem;
+                line-height: 1.5;
+            }
+
+            /* 📱 RESPONSIVE */
+            @media (max-width: 768px) {
+                .dashboard-container {
+                    padding: 1rem;
+                    gap: 1.5rem;
+                }
+
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                    gap: 1rem;
+                }
+
+                .actions-row {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.75rem;
+                }
+
+                .pipeline-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.75rem;
+                }
+
+                .card-header {
+                    padding: 1rem;
+                }
+
+                .card-content {
+                    padding: 1rem;
+                }
+
+                .stat-card {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 1rem;
+                }
+            }
+
+            /* 🎯 ERROR STATE */
+            .error-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 400px;
+                text-align: center;
+                padding: 2rem;
+            }
+
+            .error-container h2 {
+                color: #ef4444;
+                margin-bottom: 1rem;
+            }
+
+            .error-container p {
+                color: #64748b;
+                margin-bottom: 2rem;
+                max-width: 400px;
+            }
+
+            .btn {
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 600;
+                text-decoration: none;
+                cursor: pointer;
+                border: none;
+                transition: all 0.2s ease;
+            }
+
+            .btn-primary {
+                background: #667eea;
+                color: white;
+            }
+
+            .btn-primary:hover {
+                background: #5a67d8;
+                transform: translateY(-1px);
+            }
+
+            /* 🎨 DARK THEME SUPPORT */
+            [data-theme="dark"] .dashboard-container {
+                color: #e2e8f0;
+            }
+
+            [data-theme="dark"] .stat-card,
+            [data-theme="dark"] .dashboard-card,
+            [data-theme="dark"] .action-btn {
+                background: #1e293b;
+                border-color: #334155;
+                color: #e2e8f0;
+            }
+
+            [data-theme="dark"] .stat-card:hover,
+            [data-theme="dark"] .action-btn:hover {
+                border-color: #667eea;
+                background: #334155;
+            }
+
+            [data-theme="dark"] .stat-icon {
+                background: rgba(102, 126, 234, 0.15);
+                border-color: rgba(102, 126, 234, 0.3);
+                color: #94a3b8;
+            }
+
+            [data-theme="dark"] .pipeline-column {
+                background: #334155;
+                border-color: #475569;
+            }
+
+            [data-theme="dark"] .column-header {
+                background: #1e293b;
+                border-color: #475569;
+            }
+
+            [data-theme="dark"] .lead-card {
+                background: #1e293b;
+                border-color: #475569;
+            }
+
+            [data-theme="dark"] .insight-item {
+                background: #334155;
+                border-color: #475569;
+            }
+
+            [data-theme="dark"] .card-btn {
+                background: #334155;
+                color: #94a3b8;
+            }
+
+            [data-theme="dark"] .card-btn:hover {
+                background: #667eea;
+                color: white;
+            }
+
+            [data-theme="dark"] .empty-state,
+            [data-theme="dark"] .activity-empty {
+                color: #64748b;
+            }
+
+            [data-theme="dark"] .stat-number,
+            [data-theme="dark"] .card-title,
+            [data-theme="dark"] .insight-title,
+            [data-theme="dark"] .lead-name {
+                color: #f1f5f9;
+            }
+
+            [data-theme="dark"] .stat-label,
+            [data-theme="dark"] .column-title,
+            [data-theme="dark"] .activity-text {
+                color: #cbd5e1;
+            }
+
+            [data-theme="dark"] .lead-company,
+            [data-theme="dark"] .activity-time,
+            [data-theme="dark"] .insight-text {
+                color: #94a3b8;
+            }
+        `;
+
+        document.head.appendChild(style);
     }
 
-    /**
-     * Utility: Update element text content safely
-     */
-    updateElement(id, content) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = content;
+    // 🧹 CLEANUP
+    destroy() {
+        const styles = document.getElementById('dashboardStyles');
+        if (styles) {
+            styles.remove();
         }
-    }
 
-    /**
-     * Utility: Get initials from name
-     */
-    getInitials(name) {
-        return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
-    }
-
-    /**
-     * Utility: Get lead contact info HTML
-     */
-    getLeadContactInfo(lead) {
-        if (lead.email) {
-            return `<i data-lucide="mail" class="lead-details-icon"></i>${this.escapeHtml(lead.email)}`;
-        } else if (lead.phone) {
-            return `<i data-lucide="phone" class="lead-details-icon"></i>${this.escapeHtml(lead.phone)}`;
-        } else if (lead.company) {
-            return `<i data-lucide="building" class="lead-details-icon"></i>${this.escapeHtml(lead.company)}`;
-        } else {
-            return '<i data-lucide="user" class="lead-details-icon"></i>No contact info';
+        if (this.debouncedRefresh && this.debouncedRefresh.cancel) {
+            this.debouncedRefresh.cancel();
         }
+
+        console.log('✅ Dashboard cleaned up');
     }
 
-    /**
-     * Utility: Get status CSS class
-     */
-    getStatusClass(status) {
-        if (!status) return 'status-new';
-        const s = status.toLowerCase();
-        if (s.includes('new')) return 'status-new';
-        if (s.includes('contact')) return 'status-contacted';
-        if (s.includes('qualified')) return 'status-qualified';
-        return 'status-new';
+    // 🌍 PUBLIC API METHODS
+    async forceRefresh() {
+        return this.refresh();
     }
 
-    /**
-     * Utility: Get status icon
-     */
-    getStatusIcon(status) {
-        if (!status) return 'circle-dot';
-        const s = status.toLowerCase();
-        if (s.includes('new')) return 'circle-dot';
-        if (s.includes('contact')) return 'phone';
-        if (s.includes('qualified')) return 'check-circle';
-        return 'circle-dot';
+    getStats() {
+        return this.calculateStats();
     }
 
-    /**
-     * Utility: Get time ago string
-     */
-    getTimeAgo(dateString) {
-        if (!dateString) return 'Recently';
-        
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-        
-        if (diffDays > 0) {
-            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-        } else if (diffHours > 0) {
-            return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-        } else {
-            return 'Just now';
-        }
+    getLeads() {
+        return [...this.state.leads];
     }
 
-    /**
-     * Utility: Escape HTML to prevent XSS
-     */
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /**
-     * Utility: Debounce function
-     */
-    debounce(func, delay) {
-        let timeoutId;
-        return function (...args) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
-
-    /**
-     * Get current dashboard state
-     */
     getState() {
-        return {
-            currentPage: this.currentPage,
-            currentUser: this.currentUser,
-            leads: this.leads,
-            stats: this.stats,
-            subscription: this.subscription,
-            initialized: this.initialized
-        };
+        return { ...this.state };
     }
+}
 
-    /**
-     * Handle lead creation success (called by AddLead.js)
-     */
-    onLeadCreated(lead) {
-        // Refresh data to show new lead
-        this.refreshLeadsData();
+// 🌍 EXPORT FOR ORCHESTRATOR
+window.DashboardController = {
+    init: async function() {
+        console.log('🚀 Clean Dashboard Controller loading...');
+        const dashboard = new DashboardController();
+        await dashboard.init();
         
-        // Show success with upgrade hints
-        const limitCheck = window.SteadyUtils?.checkLeadLimit(this.leads.length + 1);
-        if (limitCheck?.shouldShowUpgrade) {
-            setTimeout(() => {
-                window.SteadyUtils?.showToast(
-                    `Great job! You now have ${this.leads.length + 1} leads. Consider upgrading for advanced features!`,
-                    'upgrade'
-                );
-            }, 2000);
-        }
+        window.dashboardInstance = dashboard;
+        return dashboard;
     }
+};
 
-    /**
-     * Handle lead update success
-     */
-    onLeadUpdated(lead) {
-        this.refreshLeadsData();
-    }
-
-    /**
-     * Handle lead deletion success
-     */
-    onLeadDeleted(leadId) {
-        this.refreshLeadsData();
-    }
+// 🎯 DEBUG HELPERS (development only)
+if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
+    window.dashboardDebug = {
+        refresh: () => window.dashboardInstance?.refresh(),
+        state: () => window.dashboardInstance?.getState(),
+        stats: () => window.dashboardInstance?.getStats(),
+        leads: () => window.dashboardInstance?.getLeads()
+    };
 }
 
-// Initialize and export
-window.DashboardController = new DashboardController();
+console.log('🎯 CLEAN DASHBOARD CONTROLLER LOADED - ICONS FIXED');
+console.log('✨ Icons will show: 👥📞📈⭐ or Lucide equivalents');
 
-// Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DashboardController;
-}
-
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialization will be handled by the main script in index.html
-    });
-} else {
-    // DOM already loaded
-    // Initialization will be handled by the main script in index.html
-}
+/**
+ * 🎯 WHAT'S FIXED:
+ * 
+ * ✅ Proper icon initialization with initializeIcons()
+ * ✅ Fallback emoji icons if Lucide fails to load
+ * ✅ Re-initialization of icons when content updates
+ * ✅ Better icon styling with subtle backgrounds
+ * ✅ Console logging to show what's happening
+ * 
+ * Icons you'll see:
+ * 👥 Users icon → Total Leads
+ * 📞 Phone icon → Contacted  
+ * 📈 Trending up → Conversion
+ * ⭐ Star icon → Avg Quality
+ * + Plus → Add Lead
+ * 🌿 Branch → Pipeline
+ * 🔄 Refresh → Refresh
+ * ⚙️ Settings → Settings
+ * ↗️ External → External links
+ * ⚡ Zap → Insights
+ */
