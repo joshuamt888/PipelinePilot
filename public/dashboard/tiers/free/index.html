@@ -928,6 +928,21 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* 🔄 LOADING STATE */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -1008,7 +1023,11 @@
                 <div class="leads-progress">
                     <div class="progress-label">
                         <span>Leads</span>
-                        <span class="progress-count"><span id="leadCount">0</span>/50</span>
+                        <span class="progress-count">
+                            <span id="leadCount">
+                                <div class="loading-spinner"></div>
+                            </span>/50
+                        </span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill"></div>
@@ -1019,9 +1038,11 @@
             <!-- 👤 USER MENU -->
             <div class="user-menu-container">
                 <div class="user-menu" id="userMenu">
-                    <div class="user-avatar" id="userAvatar">JS</div>
+                    <div class="user-avatar" id="userAvatar">
+                        <div class="loading-spinner"></div>
+                    </div>
                     <div class="user-info">
-                        <div class="user-name" id="userName">John Smith</div>
+                        <div class="user-name" id="userName">Loading...</div>
                         <div class="user-tier" id="userTier">Free Plan</div>
                     </div>
                     <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5;"></i>
@@ -1119,7 +1140,7 @@
         </div>
     </div>
 
-    <!-- 🚀 SIMPLE NAVIGATION SYSTEM -->
+    <!-- 🚀 DYNAMIC NAVIGATION SYSTEM -->
     <script>
         // 🎬 INITIALIZE
         document.addEventListener('DOMContentLoaded', function() {
@@ -1142,8 +1163,243 @@
             // Setup pro modal
             setupProModal();
             
+            // Initialize shell with real data
+            initializeShell();
+            
             console.log('✅ Shell ready!');
         });
+
+        // 🔐 INITIALIZE SHELL WITH REAL DATA
+        async function initializeShell() {
+            try {
+                console.log('🔐 Initializing shell...');
+                
+                // Wait for authManager to be ready
+                if (!window.authManager) {
+                    console.log('⏳ Waiting for auth manager...');
+                    await waitForAuthManager();
+                }
+                
+                // If authManager handled auth and we have a user, proceed
+                if (window.authManager.authenticated && window.authManager.user) {
+                    console.log('✅ Using auth manager user data');
+                    
+                    // Use the user data from auth manager
+                    const user = window.authManager.user;
+                    await loadUserDataFromAuth(user);
+                    
+                    // Load lead statistics
+                    await loadLeadStatistics();
+                    
+                    console.log('✅ Shell initialized with auth manager data');
+                } else {
+                    // Fallback to direct API calls if auth manager isn't working
+                    console.log('🔄 Fallback: Direct API initialization');
+                    await initializeDirectly();
+                }
+                
+            } catch (error) {
+                console.error('❌ Shell initialization failed:', error);
+                showInitializationError(error.message);
+            }
+        }
+
+        // ⏳ WAIT FOR AUTH MANAGER TO BE READY
+        function waitForAuthManager() {
+            return new Promise((resolve) => {
+                const checkAuthManager = () => {
+                    if (window.authManager) {
+                        resolve();
+                    } else {
+                        setTimeout(checkAuthManager, 50);
+                    }
+                };
+                checkAuthManager();
+            });
+        }
+
+        // 👤 LOAD USER DATA FROM AUTH MANAGER
+        async function loadUserDataFromAuth(user) {
+            try {
+                // Generate user initials from email
+                const email = user.email || 'User';
+                const initials = generateInitials(email);
+                
+                // Extract display name
+                // Extract display name - USE FULL EMAIL!
+                const displayName = user.firstName && user.lastName 
+                      ? `${user.firstName} ${user.lastName}`
+                      : email;  // ← BOOM! FULL EMAIL NOW!
+                
+                // Map subscription tiers to display names
+                const tierDisplayNames = {
+                    'FREE': 'Free Plan',
+                    'PROFESSIONAL': 'Professional',
+                    'PROFESSIONAL_TRIAL': 'Trial',
+                    'BUSINESS': 'Business',
+                    'ENTERPRISE': 'Enterprise',
+                    'ADMIN': 'Admin'
+                };
+                
+                const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
+                
+                // Update UI elements
+                updateUserInfo({
+                    name: displayName,
+                    initials: initials,
+                    tier: tierDisplay,
+                    email: email
+                });
+                
+                console.log(`👤 User loaded from auth: ${displayName} (${tierDisplay})`);
+                
+            } catch (error) {
+                console.error('❌ Failed to load user data from auth:', error);
+                // Set fallback values
+                updateUserInfo({
+                    name: 'User',
+                    initials: 'U',
+                    tier: 'Free Plan'
+                });
+            }
+        }
+
+        // 🔄 FALLBACK: DIRECT API INITIALIZATION
+        async function initializeDirectly() {
+            const authResponse = await API.checkAuth();
+            
+            if (!authResponse.authenticated) {
+                console.log('❌ Not authenticated, redirecting to login');
+                window.location.href = '/auth/login?error=session_required';
+                return;
+            }
+            
+            console.log('✅ Direct auth verified');
+            
+            // Load user profile and stats
+            await loadUserProfile();
+            await loadLeadStatistics();
+        }
+
+        // 👤 LOAD USER PROFILE AND UPDATE UI
+        async function loadUserProfile() {
+            try {
+                const profile = await API.getProfile();
+                
+                // Generate user initials from email
+                const email = profile.email || 'User';
+                const initials = generateInitials(email);
+                
+                // Extract first/last name if available, otherwise use email
+                const displayName = profile.firstName && profile.lastName 
+                    ? `${profile.firstName} ${profile.lastName}`
+                    : email;  // ← SHOW FULL EMAIL!
+                
+                // Map subscription tiers to display names
+                const tierDisplayNames = {
+                    'FREE': 'Free Plan',
+                    'PROFESSIONAL': 'Professional',
+                    'PROFESSIONAL_TRIAL': 'Trial',
+                    'BUSINESS': 'Business',
+                    'ENTERPRISE': 'Enterprise',
+                    'ADMIN': 'Admin'
+                };
+                
+                const tierDisplay = tierDisplayNames[profile.subscriptionTier] || 'Free Plan';
+                
+                // Update UI elements
+                updateUserInfo({
+                    name: displayName,
+                    initials: initials,
+                    tier: tierDisplay,
+                    email: email
+                });
+                
+                console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
+                
+            } catch (error) {
+                console.error('❌ Failed to load user profile:', error);
+                // Set fallback values
+                updateUserInfo({
+                    name: 'User',
+                    initials: 'U',
+                    tier: 'Free Plan'
+                });
+            }
+        }
+
+        // 📊 LOAD LEAD STATISTICS AND UPDATE PROGRESS
+        // 📊 LOAD LEAD STATISTICS AND UPDATE PROGRESS
+async function loadLeadStatistics() {
+    try {
+        const monthStats = await API.getCurrentMonthStats();
+        const leadCount = monthStats.currentMonthLeads || 0;
+        const limit = monthStats.monthlyLeadLimit || 50;
+        
+        // Update progress bar with real user limit (handles all tiers)
+        updateLeadsProgress(leadCount, limit);
+        
+        console.log(`📊 Month stats loaded: ${leadCount}/${limit} leads (${monthStats.percentageUsed}%)`);
+        
+    } catch (error) {
+        console.error('❌ Failed to load month statistics:', error);
+        // Fallback to auth manager data if available
+        if (window.authManager && window.authManager.user) {
+            const fallbackCount = window.authManager.user.currentMonthLeads || 0;
+            const fallbackLimit = window.authManager.user.monthlyLeadLimit || 50;
+            updateLeadsProgress(fallbackCount, fallbackLimit);
+            console.log(`📊 Using auth manager fallback: ${fallbackCount}/${fallbackLimit} leads`);
+        } else {
+            // Final fallback
+            updateLeadsProgress(0, 50);
+        }
+    }
+}
+
+        // 🔤 GENERATE INITIALS FROM EMAIL
+        function generateInitials(email) {
+            if (!email) return 'U';
+            
+            // Try to get initials from the name part of email
+            const namePart = email.split('@')[0];
+            
+            // Split by common separators
+            const parts = namePart.split(/[._-]/);
+            
+            if (parts.length >= 2) {
+                // Use first letter of first two parts
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            } else {
+                // Use first two letters of the name part
+                return namePart.substring(0, 2).toUpperCase();
+            }
+        }
+
+        // ❌ SHOW INITIALIZATION ERROR
+        function showInitializationError(errorMessage) {
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) {
+                mainContent.innerHTML = `
+                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                            Connection Error
+                        </h2>
+                        <p>Unable to load dashboard data. Please check your connection and try refreshing.</p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 1rem; 
+                            padding: 0.75rem 1.5rem; 
+                            background: var(--primary); 
+                            color: white; 
+                            border: none; 
+                            border-radius: var(--radius); 
+                            cursor: pointer;
+                            font-weight: 600;
+                        ">Retry</button>
+                    </div>
+                `;
+            }
+        }
 
         // 🎨 THEME MANAGEMENT
         function applySavedTheme() {
@@ -1305,8 +1561,20 @@
 
             // Logout
             const logoutBtn = document.getElementById('logoutBtn');
-            logoutBtn?.addEventListener('click', () => {
-                window.location.href = '/login';
+            logoutBtn?.addEventListener('click', async () => {
+                // Use auth manager if available, otherwise fallback to API
+                if (window.authManager) {
+                    await window.authManager.logout();
+                } else {
+                    try {
+                        await API.logout();
+                        console.log('🚪 Logged out successfully');
+                        window.location.href = '/auth/login';
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        window.location.href = '/auth/login';
+                    }
+                }
                 profileDropdown.classList.remove('show');
             });
         }
@@ -1350,7 +1618,7 @@
 
         function startTrial() {
             // Redirect to trial signup
-            window.location.href = '/upgrade/professional';
+            window.location.href = '/auth/trial';
         }
 
         // 🌐 GLOBAL HELPERS FOR MODULES
@@ -1385,74 +1653,13 @@
     </script>
 
     <!-- 🔧 MODULE LOADER -->
-     <script src="/dashboard/shared/js/utils.js"></script>
+    <script src="/dashboard/shared/js/auth.js"></script>
+    <script src="/dashboard/shared/js/utils.js"></script>
     <script src="/dashboard/shared/js/api.js"></script>
     <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
     <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
     <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
     <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
 
-<!-- 🚀 SHELL DATA LOADER -->
-    <script>
-        // 🚀 SIMPLE SHELL DATA LOADER
-        async function loadShellData() {
-            try {
-                console.log('🔄 Loading shell data...');
-                
-                // 👤 Get user profile for header
-                const profile = await API.getProfile();
-                if (profile.success && profile.user) {
-                    const user = profile.user;
-                    
-                    // Update profile display
-                    const userName = document.getElementById('userName');
-                    const userAvatar = document.getElementById('userAvatar');
-                    
-                    if (userName && user.email) {
-                        // Use first name if available, otherwise email username
-                        const displayName = user.firstName || user.email.split('@')[0];
-                        userName.textContent = displayName;
-                    }
-                    
-                    if (userAvatar && user.email) {
-                        // Create initials from name or email
-                        const initials = user.firstName && user.lastName ? 
-                            `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() :
-                            user.email.charAt(0).toUpperCase();
-                        userAvatar.textContent = initials;
-                    }
-                }
-
-                // 📊 Get lead count for progress bar
-                const stats = await API.getBasicStats();
-                if (stats.success && typeof stats.totalLeads === 'number') {
-                    const leadCount = document.getElementById('leadCount');
-                    const progressFill = document.getElementById('progressFill');
-                    
-                    if (leadCount) {
-                        leadCount.textContent = stats.totalLeads;
-                    }
-                    
-                    if (progressFill) {
-                        const percentage = (stats.totalLeads / 50) * 100;
-                        progressFill.style.width = `${Math.min(percentage, 100)}%`;
-                    }
-                }
-
-                console.log('✅ Shell data loaded!');
-                
-            } catch (error) {
-                console.warn('⚠️ Shell data loading failed:', error.message);
-                // Fail silently - shell still works with default values
-            }
-        }
-
-        // 🔄 Load when page is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Wait for API to be available
-            setTimeout(loadShellData, 300);
-        });
-    </script>
-
 </body>
-</html><!DOCTYPE html>
+</html>

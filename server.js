@@ -200,6 +200,93 @@ function initializeEmailTransporter() {
   }
 }
 
+// Generate verification token
+function generateVerificationToken() {
+  return require('crypto').randomBytes(32).toString('hex');
+}
+
+// 📧 ACCOUNT VERIFICATION EMAIL FUNCTION
+async function sendAccountVerificationEmail(email, token, origin, planType = 'free') {
+  const verificationLink = `${origin}/verify-account?token=${token}`;
+  
+  if (!emailTransporter) {
+    console.log(`🔗 Account verification for ${email}: ${verificationLink}`);
+    return true;
+  }
+  
+  const planMessages = {
+    'free': 'Welcome to SteadyManager! Verify your email to activate your free account.',
+    'professional': 'Welcome to SteadyManager! Verify your email to complete your Professional upgrade.',
+    'business': 'Welcome to SteadyManager! Verify your email to complete your Business upgrade.',
+    'enterprise': 'Welcome to SteadyManager! Verify your email to complete your Enterprise upgrade.'
+  };
+  
+  const subject = planType === 'free' ? 
+    'Verify Your SteadyManager Account' : 
+    `Complete Your ${planType.charAt(0).toUpperCase() + planType.slice(1)} Upgrade`;
+  
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'noreply@steadyscaling.com',
+      to: email,
+      subject: subject,
+      html: `
+        <div style="text-align: center; padding: 2rem; font-family: Arial, sans-serif;">
+          <h1 style="color: #16a34a;">✅ Verify Your Email</h1>
+          <p>${planMessages[planType]}</p>
+          <a href="${verificationLink}" style="display: inline-block; background: #16a34a; color: white; padding: 1rem 2rem; text-decoration: none; border-radius: 8px; margin: 1rem 0; font-weight: bold;">
+            Verify Email →
+          </a>
+          <p style="color: #666; font-size: 0.9rem;">This link expires in 24 hours.</p>
+          <p style="color: #666; font-size: 0.8rem;">If you didn't create this account, you can safely ignore this email.</p>
+        </div>
+      `
+    });
+    
+    incrementEmailCount();
+    recordEmailRequest(email);
+    return true;
+  } catch (error) {
+    console.error('Account verification email error:', error.message);
+    return false;
+  }
+}
+
+// Trial verification email function
+async function sendTrialVerificationEmail(email, token, origin) {
+  const verificationLink = `${origin}/verify-trial?token=${token}`;
+  
+  if (!emailTransporter) {
+    console.log(`🔗 Trial verification for ${email}: ${verificationLink}`);
+    return true;
+  }
+  
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'noreply@steadyscaling.com',
+      to: email,
+      subject: 'Activate Your SteadyManager Trial - Verify Email',
+      html: `
+        <div style="text-align: center; padding: 2rem; font-family: Arial, sans-serif;">
+          <h1 style="color: #16a34a;">🎉 Activate Your Trial</h1>
+          <p>Click below to start your 14-day Professional trial:</p>
+          <a href="${verificationLink}" style="display: inline-block; background: #16a34a; color: white; padding: 1rem 2rem; text-decoration: none; border-radius: 8px; margin: 1rem 0; font-weight: bold;">
+            Activate Trial →
+          </a>
+          <p style="color: #666; font-size: 0.9rem;">This link expires in 24 hours.</p>
+        </div>
+      `
+    });
+    
+    incrementEmailCount();
+    recordEmailRequest(email);
+    return true;
+  } catch (error) {
+    console.error('Trial email error:', error.message);
+    return false;
+  }
+}
+
 async function sendPasswordResetEmail(email, resetToken, origin) {
   const resetLink = `${origin}/reset-password?token=${resetToken}`;
   
@@ -295,6 +382,8 @@ const apiLimiter = rateLimit({
   message: { error: 'API rate limit exceeded' }
 });
 
+const validator = require('validator');
+
 // 🔒 Input validation (essential fields only)
 const validateEmail = body('email').isEmail().normalizeEmail().withMessage('Valid email required');
 const validatePassword = body('password')
@@ -341,9 +430,51 @@ function getTableName(baseName) {
   return `${tablePrefix}${baseName}`;
 }
 
-// 🔧 REPLACE THE ENTIRE initializeDatabase() FUNCTION WITH THIS:
-// (Replace from line ~330 to ~380 in your current server.js)
+// 🎯 UPGRADE PATH VALIDATION & TIER MANAGEMENT
+function validateUpgradePath(currentTier, newTier) {
+  const tierHierarchy = {
+    'free': 0,
+    'professional_trial': 0, // Same as free for upgrade purposes
+    'professional': 1,
+    'business': 2,
+    'enterprise': 3,
+    'admin': 4 // Can't upgrade admin
+  };
+  
+  const currentLevel = tierHierarchy[currentTier] ?? 0;
+  const newLevel = tierHierarchy[newTier] ?? 0;
+  
+  // Admin can't upgrade
+  if (currentTier === 'admin') {
+    return { valid: false, message: 'Admin accounts cannot be upgraded via checkout.' };
+  }
+  
+  // Must be an actual upgrade
+  if (newLevel <= currentLevel) {
+    return { 
+      valid: false, 
+      message: `You already have ${currentTier}. Contact support to change plans.` 
+    };
+  }
+  
+  // Valid upgrade
+  return { valid: true };
+}
 
+function getAvailableUpgradesForTier(currentTier) {
+  const upgradeMap = {
+    'free': ['professional_monthly', 'professional_yearly'],
+    'professional_trial': ['professional_monthly', 'professional_yearly'],
+    'professional': ['business_monthly', 'business_yearly'],
+    'business': ['enterprise_monthly', 'enterprise_yearly'],
+    'enterprise': [], // No upgrades available
+    'admin': [] // No upgrades available
+  };
+  
+  return upgradeMap[currentTier] || [];
+}
+
+// 🔧 DATABASE INITIALIZATION
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
@@ -518,223 +649,6 @@ async function initializeDatabase() {
       )
     `);
 
-    // 📧 COMMUNICATION HISTORY TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('communications')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        lead_id INTEGER REFERENCES ${getTableName('leads')}(id) ON DELETE CASCADE,
-        
-        -- Communication Details
-        type VARCHAR(50) NOT NULL, -- email, call, meeting, note, sms, linkedin_message
-        direction VARCHAR(20) NOT NULL, -- inbound, outbound
-        subject VARCHAR(500),
-        content TEXT,
-        
-        -- Status & Results
-        status VARCHAR(50) DEFAULT 'sent', -- sent, delivered, opened, clicked, replied, failed
-        outcome VARCHAR(100), -- positive, negative, neutral, follow_up_needed
-        sentiment VARCHAR(20), -- positive, negative, neutral
-        
-        -- Email Specific
-        email_message_id VARCHAR(255),
-        email_thread_id VARCHAR(255),
-        email_opened_at TIMESTAMP,
-        email_clicked_at TIMESTAMP,
-        email_replied_at TIMESTAMP,
-        
-        -- Call/Meeting Specific
-        duration_minutes INTEGER,
-        recording_url TEXT,
-        meeting_notes TEXT,
-        
-        -- Automation & AI
-        automated BOOLEAN DEFAULT FALSE,
-        ai_generated BOOLEAN DEFAULT FALSE,
-        template_used VARCHAR(255),
-        
-        -- Scheduling
-        scheduled_for TIMESTAMP,
-        sent_at TIMESTAMP DEFAULT NOW(),
-        
-        -- Attachments & Media
-        attachments JSONB DEFAULT '[]',
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 📈 GOALS & TARGETS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('goals')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Goal Definition
-        goal_type VARCHAR(50) NOT NULL, -- leads, revenue, conversions, calls, meetings
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        
-        -- Target & Progress
-        target_value DECIMAL(12,2) NOT NULL,
-        current_value DECIMAL(12,2) DEFAULT 0,
-        unit VARCHAR(20) DEFAULT 'count', -- count, currency, percentage
-        
-        -- Time Period
-        period_type VARCHAR(20) NOT NULL, -- daily, weekly, monthly, quarterly, yearly
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        
-        -- Status & Achievement
-        status VARCHAR(20) DEFAULT 'active', -- active, completed, paused, cancelled
-        achieved_at TIMESTAMP,
-        achievement_percentage DECIMAL(5,2) DEFAULT 0,
-        
-        -- Visibility & Sharing
-        is_public BOOLEAN DEFAULT FALSE,
-        dashboard_visible BOOLEAN DEFAULT TRUE,
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 🏷️ TAGS SYSTEM TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('tags')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Tag Details
-        name VARCHAR(100) NOT NULL,
-        color VARCHAR(7) DEFAULT '#3B82F6', -- Hex color
-        description TEXT,
-        
-        -- Usage & Analytics
-        usage_count INTEGER DEFAULT 0,
-        last_used TIMESTAMP,
-        
-        -- Organization
-        category VARCHAR(50), -- lead_status, source, priority, custom
-        is_system_tag BOOLEAN DEFAULT FALSE,
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        
-        UNIQUE(user_id, name)
-      )
-    `);
-
-    // 🔗 LEAD-TAG RELATIONSHIP TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('lead_tags')} (
-        id SERIAL PRIMARY KEY,
-        lead_id INTEGER REFERENCES ${getTableName('leads')}(id) ON DELETE CASCADE,
-        tag_id INTEGER REFERENCES ${getTableName('tags')}(id) ON DELETE CASCADE,
-        
-        -- When tag was applied
-        created_at TIMESTAMP DEFAULT NOW(),
-        created_by INTEGER REFERENCES ${getTableName('users')}(id),
-        
-        UNIQUE(lead_id, tag_id)
-      )
-    `);
-
-    // 📊 ANALYTICS & METRICS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('analytics')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Metric Information
-        metric_type VARCHAR(50) NOT NULL, -- lead_created, lead_converted, email_sent, call_made, etc.
-        metric_category VARCHAR(50), -- leads, communications, goals, revenue
-        
-        -- Values & Data
-        metric_value DECIMAL(12,2) NOT NULL,
-        metric_unit VARCHAR(20) DEFAULT 'count',
-        additional_data JSONB DEFAULT '{}',
-        
-        -- Time & Context
-        recorded_for_date DATE NOT NULL,
-        context_id INTEGER, -- Related lead_id, goal_id, etc.
-        context_type VARCHAR(50), -- lead, goal, communication
-        
-        -- Source & Attribution
-        source VARCHAR(100), -- dashboard, api, automation, import
-        
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 🎨 DASHBOARD WIDGETS & LAYOUTS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('dashboard_widgets')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Widget Configuration
-        widget_type VARCHAR(50) NOT NULL, -- lead_count, revenue_chart, goal_progress, recent_leads
-        widget_title VARCHAR(255),
-        
-        -- Layout & Position
-        dashboard_page VARCHAR(50) DEFAULT 'main', -- main, leads, analytics, goals
-        position_x INTEGER DEFAULT 0,
-        position_y INTEGER DEFAULT 0,
-        width INTEGER DEFAULT 1,
-        height INTEGER DEFAULT 1,
-        
-        -- Widget Settings
-        widget_config JSONB DEFAULT '{}',
-        filters JSONB DEFAULT '{}',
-        
-        -- Visibility & Access
-        is_visible BOOLEAN DEFAULT TRUE,
-        required_tier VARCHAR(50), -- free, professional, business, enterprise
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 🔄 AUTOMATIONS & WORKFLOWS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('automations')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Automation Details
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        automation_type VARCHAR(50) NOT NULL, -- email_sequence, follow_up, lead_scoring, task_creation
-        
-        -- Trigger Configuration
-        trigger_type VARCHAR(50) NOT NULL, -- new_lead, status_change, date_based, manual
-        trigger_conditions JSONB NOT NULL DEFAULT '{}',
-        
-        -- Action Configuration  
-        actions JSONB NOT NULL DEFAULT '[]',
-        
-        -- Status & Control
-        is_active BOOLEAN DEFAULT TRUE,
-        is_paused BOOLEAN DEFAULT FALSE,
-        
-        -- Execution Tracking
-        runs_count INTEGER DEFAULT 0,
-        last_run_at TIMESTAMP,
-        next_run_at TIMESTAMP,
-        
-        -- Performance Metrics
-        success_count INTEGER DEFAULT 0,
-        error_count INTEGER DEFAULT 0,
-        last_error TEXT,
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
     // 📋 TASKS & REMINDERS TABLE
     await client.query(`
       CREATE TABLE IF NOT EXISTS ${getTableName('tasks')} (
@@ -763,111 +677,6 @@ async function initializeDatabase() {
         estimated_duration_minutes INTEGER,
         actual_duration_minutes INTEGER,
         
-        -- Automation
-        created_by_automation BOOLEAN DEFAULT FALSE,
-        automation_id INTEGER REFERENCES ${getTableName('automations')}(id),
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 📁 FILE UPLOADS & ATTACHMENTS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('files')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- File Information
-        original_filename VARCHAR(255) NOT NULL,
-        stored_filename VARCHAR(255) NOT NULL,
-        file_path TEXT NOT NULL,
-        file_size INTEGER NOT NULL,
-        mime_type VARCHAR(100) NOT NULL,
-        file_hash VARCHAR(64), -- For deduplication
-        
-        -- Organization & Context
-        category VARCHAR(50) DEFAULT 'general', -- lead_attachment, profile_picture, import_file
-        context_type VARCHAR(50), -- lead, user, communication, task
-        context_id INTEGER,
-        
-        -- Access & Security
-        is_public BOOLEAN DEFAULT FALSE,
-        access_url TEXT,
-        expires_at TIMESTAMP,
-        
-        -- Processing Status
-        processing_status VARCHAR(20) DEFAULT 'uploaded', -- uploaded, processing, processed, error
-        processing_result JSONB DEFAULT '{}',
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 📊 REPORTS & EXPORTS TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('reports')} (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES ${getTableName('users')}(id) ON DELETE CASCADE,
-        
-        -- Report Configuration
-        report_name VARCHAR(255) NOT NULL,
-        report_type VARCHAR(50) NOT NULL, -- leads_summary, revenue_analysis, performance_metrics
-        
-        -- Filters & Parameters
-        filters JSONB NOT NULL DEFAULT '{}',
-        date_range_start DATE,
-        date_range_end DATE,
-        
-        -- Generation & Status
-        status VARCHAR(20) DEFAULT 'pending', -- pending, generating, completed, error
-        generated_at TIMESTAMP,
-        file_path TEXT,
-        file_size INTEGER,
-        
-        -- Scheduling
-        is_scheduled BOOLEAN DEFAULT FALSE,
-        schedule_frequency VARCHAR(20), -- daily, weekly, monthly
-        next_generation TIMESTAMP,
-        
-        -- Sharing & Access
-        is_shared BOOLEAN DEFAULT FALSE,
-        share_token VARCHAR(255),
-        share_expires_at TIMESTAMP,
-        
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // 🔧 SYSTEM SETTINGS & CONFIGURATION TABLE
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${getTableName('system_settings')} (
-        id SERIAL PRIMARY KEY,
-        
-        -- Setting Identification
-        setting_key VARCHAR(100) UNIQUE NOT NULL,
-        setting_category VARCHAR(50) NOT NULL, -- email, automation, billing, features
-        
-        -- Setting Value & Metadata
-        setting_value JSONB NOT NULL,
-        default_value JSONB,
-        setting_type VARCHAR(20) NOT NULL, -- string, number, boolean, object, array
-        
-        -- Validation & Constraints
-        validation_rules JSONB DEFAULT '{}',
-        is_required BOOLEAN DEFAULT FALSE,
-        
-        -- Access Control
-        required_permission VARCHAR(100),
-        user_editable BOOLEAN DEFAULT FALSE,
-        tier_restricted VARCHAR(50), -- Which tier can modify this
-        
-        -- Documentation
-        description TEXT,
-        help_text TEXT,
-        
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -879,7 +688,7 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_users_email ON ${getTableName('users')} (email);
       CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON ${getTableName('users')} (subscription_tier);
       CREATE INDEX IF NOT EXISTS idx_users_created_at ON ${getTableName('users')} (created_at);
-      CREATE INDEX IF NOT EXISTS idx_users_remember_token ON ${getTableName('users')} (remember_token);
+      CREATE INDEX IF NOT EXISTS idx_users_email_verification_token ON ${getTableName('users')} (email_verification_token);
       
       -- Lead indexes
       CREATE INDEX IF NOT EXISTS idx_leads_user_id ON ${getTableName('leads')} (user_id);
@@ -890,37 +699,11 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_leads_quality_score ON ${getTableName('leads')} (quality_score);
       CREATE INDEX IF NOT EXISTS idx_leads_email ON ${getTableName('leads')} (email);
       
-      -- Communication indexes
-      CREATE INDEX IF NOT EXISTS idx_communications_lead_id ON ${getTableName('communications')} (lead_id);
-      CREATE INDEX IF NOT EXISTS idx_communications_user_id ON ${getTableName('communications')} (user_id);
-      CREATE INDEX IF NOT EXISTS idx_communications_type ON ${getTableName('communications')} (type);
-      CREATE INDEX IF NOT EXISTS idx_communications_created_at ON ${getTableName('communications')} (created_at);
-      
-      -- Analytics indexes
-      CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON ${getTableName('analytics')} (user_id);
-      CREATE INDEX IF NOT EXISTS idx_analytics_metric_type ON ${getTableName('analytics')} (metric_type);
-      CREATE INDEX IF NOT EXISTS idx_analytics_recorded_date ON ${getTableName('analytics')} (recorded_for_date);
-      
       -- Task indexes
       CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON ${getTableName('tasks')} (user_id);
       CREATE INDEX IF NOT EXISTS idx_tasks_lead_id ON ${getTableName('tasks')} (lead_id);
       CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON ${getTableName('tasks')} (due_date);
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON ${getTableName('tasks')} (status);
-    `);
-
-    // 🌱 Insert default system settings
-    await client.query(`
-      INSERT INTO ${getTableName('system_settings')} (setting_key, setting_category, setting_value, default_value, setting_type, description)
-      VALUES 
-        ('lead_scoring_algorithm', 'features', '{"enabled": true, "weights": {"email_opens": 10, "website_visits": 15, "form_fills": 25}}', '{"enabled": false}', 'object', 'AI lead scoring configuration'),
-        ('email_automation_enabled', 'automation', 'true', 'false', 'boolean', 'Enable automated email sequences'),
-        ('daily_lead_limit_free', 'billing', '50', '50', 'number', 'Daily lead creation limit for free users'),
-        ('advanced_analytics_enabled', 'features', 'false', 'false', 'boolean', 'Enable advanced analytics features'),
-        ('ai_insights_enabled', 'features', 'false', 'false', 'boolean', 'Enable AI-powered lead insights'),
-        ('white_label_enabled', 'features', 'false', 'false', 'boolean', 'Enable white-label customization'),
-        ('team_collaboration_enabled', 'features', 'false', 'false', 'boolean', 'Enable team collaboration features'),
-        ('api_access_enabled', 'features', 'false', 'false', 'boolean', 'Enable API access for integrations')
-      ON CONFLICT (setting_key) DO NOTHING
     `);
 
     console.log(`✅ Enhanced database schema initialized successfully`);
@@ -933,318 +716,6 @@ async function initializeDatabase() {
     client.release();
   }
 }
-
-// 🔄 ADD THESE NEW HELPER FUNCTIONS AFTER THE clearResetToken() FUNCTION:
-// (Add these around line ~600 in your current server.js, after clearResetToken function)
-
-// Helper functions for enhanced authentication with 30-day remember me
-async function incrementFailedLoginAttempts(userId) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      `UPDATE ${getTableName('users')} 
-       SET failed_login_attempts = failed_login_attempts + 1,
-           account_locked_until = CASE 
-             WHEN failed_login_attempts >= 4 THEN NOW() + INTERVAL '30 minutes'
-             ELSE account_locked_until
-           END,
-           updated_at = NOW()
-       WHERE id = $1
-       RETURNING failed_login_attempts`,
-      [userId]
-    );
-    
-    const attempts = result.rows[0]?.failed_login_attempts || 0;
-    if (attempts >= 5) {
-      console.log(`🔒 Account locked after ${attempts} failed attempts for user ${userId}`);
-    }
-  } finally {
-    client.release();
-  }
-}
-
-async function resetFailedLoginAttempts(userId) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      `UPDATE ${getTableName('users')} 
-       SET failed_login_attempts = 0, 
-           account_locked_until = NULL,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [userId]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-async function updateLoginTracking(userId) {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      `UPDATE ${getTableName('users')} 
-       SET last_login = NOW(), 
-           login_count = login_count + 1,
-           updated_at = NOW()
-       WHERE id = $1`,
-      [userId]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-async function saveRememberToken(userId, token) {
-  const client = await pool.connect();
-  try {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
-    
-    await client.query(
-      `UPDATE ${getTableName('users')} 
-       SET remember_token = $1, 
-           remember_token_expires = $2,
-           updated_at = NOW()
-       WHERE id = $3`,
-      [token, expiresAt.toISOString(), userId]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-async function findUserByRememberToken(token) {
-  const client = await pool.connect();
-  try {
-    const now = new Date().toISOString();
-    const result = await client.query(
-      `SELECT * FROM ${getTableName('users')} 
-       WHERE remember_token = $1 AND remember_token_expires > $2`,
-      [token, now]
-    );
-    return result.rows[0];
-  } catch (error) {
-    console.error('Database error in findUserByRememberToken:', error.message);
-    throw new Error('Database query failed');
-  } finally {
-    client.release();
-  }
-}
-
-// 🔐 REPLACE YOUR ENTIRE LOGIN ENDPOINT WITH THIS ENHANCED VERSION:
-// (Replace the entire app.post('/api/login', ...) around line ~1000)
-
-app.post('/api/login', 
-  [validateEmail, body('password').notEmpty().withMessage('Password required'), handleValidationErrors],
-  async (req, res) => {
-    try {
-      const { email, password, rememberMe } = req.body;
-      
-      const user = await findUserByEmail(email);
-      if (!user) {
-        return res.status(400).json({ error: 'Invalid credentials' });
-      }
-      
-      // Check if account is locked
-      if (user.account_locked_until && new Date() < new Date(user.account_locked_until)) {
-        return res.status(423).json({ 
-          error: 'Account temporarily locked due to too many failed attempts. Try again later.' 
-        });
-      }
-      
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        // Increment failed attempts
-        await incrementFailedLoginAttempts(user.id);
-        return res.status(400).json({ error: 'Invalid credentials' });
-      }
-      
-      // Reset failed attempts on successful login
-      await resetFailedLoginAttempts(user.id);
-      
-      // Set token expiry based on remember me - 30 days if checked, 24 hours if not
-      const tokenExpiry = rememberMe ? '30d' : '24h';
-      const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 days or 24 hours
-      
-      const token = jwt.sign(
-        { 
-          userId: user.id, 
-          email: user.email, 
-          userType: user.user_type,
-          rememberMe: rememberMe || false
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: tokenExpiry }
-      );
-      
-      // Generate remember token if needed
-      let rememberToken = null;
-      if (rememberMe) {
-        rememberToken = require('crypto').randomBytes(32).toString('hex');
-        await saveRememberToken(user.id, rememberToken);
-      }
-      
-      // Update login tracking
-      await updateLoginTracking(user.id);
-      
-      const subscriptionTier = user.subscription_tier || 'FREE';
-      
-      console.log(`✅ User login: ${email} (${subscriptionTier}) - Remember: ${rememberMe ? '30 days' : '24 hours'}`);
-      
-      const welcomeMessages = {
-        'ADMIN': 'Welcome back, Admin! 👑',
-        'PROFESSIONAL': 'Welcome back, Professional! 🚀',
-        'PROFESSIONAL_TRIAL': 'Welcome back to your trial! 🎁',
-        'BUSINESS': 'Welcome back, Business! 💼',
-        'ENTERPRISE': 'Welcome back, Enterprise! ⭐',
-        'FREE': 'Welcome back!'
-      };
-      
-      // Set secure cookie with appropriate expiry
-      const cookieConfig = {
-        ...getCookieConfig(),
-        maxAge: cookieMaxAge
-      };
-      
-      res.cookie('authToken', token, cookieConfig);
-      
-      // Set remember token if enabled
-      if (rememberToken) {
-        res.cookie('rememberToken', rememberToken, {
-          ...cookieConfig,
-          maxAge: 30 * 24 * 60 * 60 * 1000 // Always 30 days for remember token
-        });
-      }
-      
-      // Non-httpOnly cookie for client-side checks
-      res.cookie('isLoggedIn', 'true', {
-        ...cookieConfig,
-        httpOnly: false
-      });
-
-      res.json({
-        message: welcomeMessages[subscriptionTier] || 'Welcome back!',
-        success: true,
-        rememberMe: rememberMe || false,
-        sessionDuration: rememberMe ? '30 days' : '24 hours',
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          firstName: user.first_name,
-          lastName: user.last_name,
-          isAdmin: user.is_admin,
-          userType: user.user_type,
-          subscriptionTier,
-          billingCycle: user.billing_cycle,
-          monthlyLeadLimit: user.monthly_lead_limit,
-          currentMonthLeads: user.current_month_leads,
-          goals: user.goals,
-          settings: user.settings,
-          onboardingCompleted: user.onboarding_completed,
-          lastLogin: user.last_login
-        }
-      });
-      
-    } catch (error) {
-      console.error('Login error:', error.message);
-      res.status(500).json({ error: 'Login failed' });
-    }
-  }
-);
-
-// 🔐 ENHANCED LOGOUT - ALSO REPLACE YOUR LOGOUT ENDPOINT:
-// (Replace the existing app.post('/api/logout', ...) around line ~1050)
-
-app.post('/api/logout', (req, res) => {
-  const cookieConfig = getCookieConfig();
-  
-  // Clear all authentication cookies
-  res.clearCookie('authToken', cookieConfig);
-  res.clearCookie('rememberToken', cookieConfig);
-  res.clearCookie('isLoggedIn', cookieConfig);
-  
-  console.log('🚪 User logged out, all authentication cookies cleared');
-  res.json({ message: 'Logged out successfully' });
-});
-
-// 🍪 ENHANCED AUTH CHECK - ALSO REPLACE YOUR /api/auth/check ENDPOINT:
-// (Replace the existing app.get('/api/auth/check', ...) around line ~900)
-
-app.get('/api/auth/check', async (req, res) => {
-  let token = req.cookies.authToken;
-  
-  // If no auth token, try remember token
-  if (!token && req.cookies.rememberToken) {
-    try {
-      const user = await findUserByRememberToken(req.cookies.rememberToken);
-      if (user) {
-        // Generate new auth token from remember token
-        token = jwt.sign(
-          { 
-            userId: user.id, 
-            email: user.email, 
-            userType: user.user_type,
-            rememberMe: true
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: '30d' }
-        );
-        
-        // Set new auth token cookie
-        res.cookie('authToken', token, {
-          ...getCookieConfig(),
-          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-        });
-        
-        console.log(`🔄 Auto-login from remember token for: ${user.email}`);
-      }
-    } catch (error) {
-      console.error('Remember token validation error:', error.message);
-      // Clear invalid remember token
-      res.clearCookie('rememberToken', getCookieConfig());
-    }
-  }
-  
-  if (!token) {
-    return res.json({ authenticated: false });
-  }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await findUserById(decoded.userId);
-    
-    if (!user) {
-      res.clearCookie('authToken', getCookieConfig());
-      res.clearCookie('rememberToken', getCookieConfig());
-      return res.json({ authenticated: false });
-    }
-    
-    res.json({ 
-      authenticated: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        userType: user.user_type,
-        subscriptionTier: user.subscription_tier,
-        isAdmin: user.is_admin,
-        monthlyLeadLimit: user.monthly_lead_limit,
-        currentMonthLeads: user.current_month_leads,
-        goals: user.goals,
-        settings: user.settings,
-        onboardingCompleted: user.onboarding_completed,
-        lastLogin: user.last_login,
-        rememberMe: decoded.rememberMe || false
-      }
-    });
-  } catch (err) {
-    res.clearCookie('authToken', getCookieConfig());
-    res.clearCookie('rememberToken', getCookieConfig());
-    res.json({ authenticated: false });
-  }
-});
 
 // 🔧 Database helper functions
 async function findUserByEmail(email) {
@@ -1284,10 +755,10 @@ async function createUser(userData) {
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('users')} 
-       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings, stripe_customer_id, stripe_subscription_id, trial_used, trial_used_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
-        userData.email.toLowerCase(),
+        userData.email,
         userData.password,
         userData.userType,
         userData.subscriptionTier,
@@ -1296,15 +767,12 @@ async function createUser(userData) {
         userData.monthlyLeadLimit,
         userData.currentMonthLeads,
         JSON.stringify(userData.goals),
-        JSON.stringify(userData.settings),
-        userData.stripeCustomerId,
-        userData.stripeSubscriptionId
+        JSON.stringify(userData.settings)
       ]
     );
     return result.rows[0];
   } catch (error) {
     console.error('Database error in createUser:', error.message);
-    // Handle unique constraint violation (duplicate email)
     if (error.code === '23505') {
       throw new Error('User with this email already exists');
     }
@@ -1458,6 +926,36 @@ async function clearResetToken(userId) {
   }
 }
 
+// 📧 EMAIL VERIFICATION HELPER FUNCTIONS
+async function saveAccountVerificationToken(email, token) {
+  const client = await pool.connect();
+  try {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
+    
+    await client.query(
+      `UPDATE ${getTableName('users')} 
+       SET email_verification_token = $1, 
+           settings = settings || $2
+       WHERE email = $3`,
+      [
+        token, 
+        JSON.stringify({ verificationTokenExpires: expiresAt.toISOString() }),
+        email.toLowerCase()
+      ]
+    );
+  } catch (error) {
+    console.error('Database error in saveAccountVerificationToken:', error.message);
+  } finally {
+    client.release();
+  }
+}
+
+async function saveTrialVerificationToken(email, token) {
+  // For trials, we use the same function but with different naming for clarity
+  return await saveAccountVerificationToken(email, token);
+}
+
 // 🎯 Helper function to map subscription tiers to folder paths
 function getTierPath(subscriptionTier) {
   const tierMap = {
@@ -1524,8 +1022,82 @@ const csrfProtection = (req, res, next) => {
   next();
 };
 
+// Helper function 
+function getAllowedTiers(userTier) {
+  const tierHierarchy = {
+    'free': ['free'],
+    'professional_trial': ['free', 'professional'], 
+    'professional': ['free', 'professional'],
+    'business': ['free', 'professional', 'business'],
+    'enterprise': ['free', 'professional', 'business', 'enterprise'],
+    'admin': ['free', 'professional', 'business', 'enterprise', 'admin']
+  };
+  
+  return tierHierarchy[userTier] || ['free'];
+}
+
 // 📁 Static files and dashboard routing
-app.use(express.static(path.join(__dirname, 'public')));
+// 🔧 MIME Type Fix for Dashboard Assets
+app.use('/dashboard', (req, res, next) => {
+  if (req.path.endsWith('.js')) {
+    res.type('application/javascript');
+  } else if (req.path.endsWith('.css')) {
+    res.type('text/css');
+  }
+  next();
+});
+
+// 🔒 PROTECT TIER-SPECIFIC DIRECT ACCESS
+app.get('/dashboard/tiers/:tier/*', async (req, res, next) => {
+  try {
+    const requestedTier = req.params.tier;
+    const token = req.cookies.authToken;
+    
+    console.log(`🔍 Direct tier access attempt: ${requestedTier}`);
+    
+    if (!token) {
+      console.log('❌ No token for direct tier access');
+      return res.redirect('/login?error=auth_required');
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await findUserById(decoded.userId);
+    
+    if (!user) {
+      console.log('❌ Invalid user for direct tier access');
+      res.clearCookie('authToken', getCookieConfig());
+      return res.redirect('/login?error=user_not_found');
+    }
+    
+    // Check if user's tier allows access to requested tier
+    const userTierPath = getTierPath(user.subscription_tier);
+    const allowedTiers = getAllowedTiers(user.subscription_tier);
+    
+    if (!allowedTiers.includes(requestedTier)) {
+      console.log(`🚫 TIER VIOLATION: ${user.email} (${user.subscription_tier}) tried to access ${requestedTier}`);
+      return res.redirect(`/dashboard?error=tier_access_denied`);
+    }
+    
+    console.log(`✅ Direct tier access granted: ${user.email} → ${requestedTier}`);
+    next(); // Allow the static file to be served
+    
+  } catch (error) {
+    console.error('Direct tier access error:', error.message);
+    return res.redirect('/login?error=session_invalid');
+  }
+});
+
+// 📁 Static files and dashboard routing
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    } else if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
 
 // 🔐 UPDATED: Dashboard routing with cookie authentication
 app.get('/dashboard', async (req, res) => {
@@ -1614,6 +1186,7 @@ app.use('/api/register', registerLimiter);      // 5 attempts per 15 minutes
 app.use('/api/start-trial', registerLimiter);   // 5 attempts per 15 minutes
 app.use('/api/forgot-password', passwordResetLimiter); // 5 attempts per 5 minutes
 app.use('/api/reset-password', passwordResetLimiter);  // 5 attempts per 5 minutes
+app.use('/api/resend-verification', passwordResetLimiter); // 5 attempts per 5 minutes
 app.use('/api', apiLimiter);
 
 // Apply CSRF protection to sensitive routes
@@ -1658,230 +1231,28 @@ app.get('/api/auth/check', async (req, res) => {
   }
 });
 
-// 🎁 UPDATED: Trial endpoint with pending user retry logic and debugging
-app.post('/api/start-trial',
-  [
-    validateEmail,
-    validatePassword,
-    body('confirmPassword').custom((value, { req }) => {
-      if (value !== req.body.password) {
-        throw new Error('Passwords do not match');
-      }
-      return true;
-    }),
-    handleValidationErrors
-  ],
-  async (req, res) => {
-    try {
-      console.log('🔍 Trial request received:', { 
-        email: req.body.email, 
-        hasPassword: !!req.body.password,
-        hasConfirmPassword: !!req.body.confirmPassword,
-        bodyKeys: Object.keys(req.body)
-      });
-      
-      const { email, password } = req.body;
-      
-      const existingUser = await findUserByEmail(email);
-      if (existingUser && existingUser.trial_used) {
-  return res.status(400).json({ 
-    error: 'Free trial already used on this account. Please upgrade to a paid plan.',
-    trialUsedDate: existingUser.trial_used_date
-  });
-}
-      
-      // 🎯 SMART HANDLING: If user exists and is pending, allow trial conversion
-      if (existingUser) {
-        // Check if they're a pending user wanting to try trial instead
-        if (existingUser.user_type.includes('_pending')) {
-          
-          console.log(`🔄 Converting pending user to trial: ${email}`);
-          
-          // Convert pending user to trial
-          const trialEndDate = new Date();
-          trialEndDate.setDate(trialEndDate.getDate() + 14);
-          
-          const client = await pool.connect();
-          try {
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = $1, subscription_tier = $2, monthly_lead_limit = $3, 
-                   settings = $4, updated_at = NOW()
-               WHERE email = $5`,
-              [
-                'professional_trial',
-                'PROFESSIONAL_TRIAL', 
-                1000,
-                JSON.stringify({
-                  ...existingUser.settings,
-                  subscriptionTier: 'PROFESSIONAL_TRIAL',
-                  trialStartDate: new Date().toISOString(),
-                  trialEndDate: trialEndDate.toISOString(),
-                  convertedFromPending: true
-                }),
-                email.toLowerCase()
-              ]
-            );
-          } finally {
-            client.release();
-          }
-          
-          const token = jwt.sign(
-            { userId: existingUser.id, email: existingUser.email, userType: 'professional_trial' },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-          );
-
-          // Set secure cookie
-          const cookieConfig = getCookieConfig();
-          res.cookie('authToken', token, cookieConfig);
-          res.cookie('isLoggedIn', 'true', {
-            ...cookieConfig,
-            httpOnly: false
-          });
-
-          return res.status(200).json({
-            message: 'Trial started! Converted from pending account. Welcome to Professional! 🚀',
-            success: true,
-            user: { 
-              id: existingUser.id, 
-              email: existingUser.email, 
-              isAdmin: existingUser.is_admin,
-              userType: 'professional_trial',
-              subscriptionTier: 'PROFESSIONAL_TRIAL',
-              monthlyLeadLimit: 1000,
-              currentMonthLeads: existingUser.current_month_leads
-            },
-            trialEndDate: trialEndDate.toISOString()
-          });
-        }
-        
-        // Regular user already exists error (not pending)
-        return res.status(400).json({ 
-          error: 'User already exists with this email. Try signing in instead.',
-          shouldSignIn: true
-        });
-      }
-
-      // 🆕 NEW TRIAL USER CREATION
-      const hashedPassword = await bcrypt.hash(password, 12);
-      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-      
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 14);
-      
-      const userData = {
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        userType: 'professional_trial',
-        subscriptionTier: 'PROFESSIONAL_TRIAL',
-        billingCycle: null,
-        isAdmin,
-        monthlyLeadLimit: 1000,
-        currentMonthLeads: 0,
-        goals: { daily: 33, monthly: 1000 },
-        settings: {
-          darkMode: false,
-          notifications: true,
-          subscriptionTier: 'PROFESSIONAL_TRIAL',
-          trialStartDate: new Date().toISOString(),
-          trialEndDate: trialEndDate.toISOString()
-        },
-        stripeCustomerId: null,
-        stripeSubscriptionId: null
-      };
-
-      const newUser = await createUser(userData);
-
-      const token = jwt.sign(
-        { userId: newUser.id, email: newUser.email, userType: 'professional_trial' },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      // Set secure cookie
-      const cookieConfig = getCookieConfig();
-      res.cookie('authToken', token, cookieConfig);
-      res.cookie('isLoggedIn', 'true', {
-        ...cookieConfig,
-        httpOnly: false
-      });
-
-      console.log(`🎁 Trial user created: ${email} - Expires: ${trialEndDate}`);
-
-      res.status(201).json({
-        message: 'Free trial started successfully! Welcome to Professional! 🚀',
-        success: true,
-        user: { 
-          id: newUser.id, 
-          email: newUser.email, 
-          isAdmin,
-          userType: 'professional_trial',
-          subscriptionTier: 'PROFESSIONAL_TRIAL',
-          monthlyLeadLimit: 1000,
-          currentMonthLeads: 0
-        },
-        trialEndDate: trialEndDate.toISOString()
-      });
-
-    } catch (error) {
-      console.error('Start trial error:', error.message);
-      res.status(500).json({ error: 'Failed to start trial' });
+// 📊 Current month statistics
+app.get('/api/current-month-stats', authenticateFromCookie, async (req, res) => {
+  try {
+    const user = await findUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+    
+    res.json({
+      currentMonthLeads: user.current_month_leads,
+      monthlyLeadLimit: user.monthly_lead_limit,
+      leadsRemaining: Math.max(0, user.monthly_lead_limit - user.current_month_leads),
+      percentageUsed: Math.round((user.current_month_leads / user.monthly_lead_limit) * 100),
+      limitResetDate: user.lead_limit_reset_date
+    });
+  } catch (error) {
+    console.error('Get current month stats error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch current month statistics' });
   }
-);
+});
 
-// 🔍 ADD THIS TO YOUR SERVER.JS (around line 1800, after other lead endpoints)
-app.post('/api/leads/search', 
-  authenticateFromCookie,
-  [
-    body('query').notEmpty().trim().withMessage('Search query required'),
-    handleValidationErrors
-  ],
-  async (req, res) => {
-    try {
-      const { query } = req.body;
-      const client = await pool.connect();
-      
-      try {
-        const searchQuery = `
-          SELECT * FROM ${getTableName('leads')} 
-          WHERE user_id = $1 
-          AND (
-            name ILIKE $2 OR 
-            email ILIKE $2 OR 
-            company ILIKE $2 OR 
-            notes ILIKE $2
-          )
-          ORDER BY created_at DESC
-          LIMIT 50
-        `;
-        
-        const searchPattern = `%${query}%`;
-        const result = await client.query(searchQuery, [req.user.userId, searchPattern]);
-        
-        res.json({ 
-          success: true, 
-          results: result.rows,
-          query: query,
-          count: result.rows.length 
-        });
-        
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('Search leads error:', error.message);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Search failed',
-        results: [] 
-      });
-    }
-  }
-);
-
-// 🔥 UPDATED: Register endpoint with pending user retry logic
+// 🔥 REGISTER ENDPOINT WITH EMAIL VERIFICATION
 app.post('/api/register', 
   [
     validateEmail,
@@ -1899,111 +1270,58 @@ app.post('/api/register',
       const { email, password, pendingUpgrade, plan } = req.body;
       
       const existingUser = await findUserByEmail(email);
-      
-      // 🎯 SMART HANDLING: If user exists and is pending, allow retry
       if (existingUser) {
-        // Check if they're a pending user trying to pay again
-        if (existingUser.user_type.includes('_pending') && pendingUpgrade) {
-          
-          // 🛡️ Rate limiting: Check retry attempts in last hour
-          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-          const retryAttempts = existingUser.settings?.retryAttempts || [];
-          const recentAttempts = retryAttempts.filter(attempt => new Date(attempt) > oneHourAgo);
-          
-          if (recentAttempts.length >= 3) {
-            return res.status(429).json({ 
-              error: 'Too many payment attempts. Please wait 1 hour before trying again.',
-              isPendingUser: true,
-              retryAfter: 3600 // 1 hour in seconds
-            });
-          }
-          
-          // 🔄 Log this retry attempt
-          const updatedAttempts = [...recentAttempts, new Date().toISOString()];
-          const client = await pool.connect();
-          try {
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET settings = settings || $1, updated_at = NOW()
-               WHERE email = $2`,
-              [
-                JSON.stringify({ retryAttempts: updatedAttempts }),
-                email.toLowerCase()
-              ]
-            );
-          } finally {
-            client.release();
-          }
-          
-          console.log(`🔄 Pending user retry: ${email} (${recentAttempts.length + 1}/3 attempts this hour)`);
-          
-          // ✅ Return existing user data for Stripe checkout
-          const token = jwt.sign(
-            { userId: existingUser.id, email: existingUser.email, userType: existingUser.user_type },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-          );
-
-          // Set secure cookie
-          const cookieConfig = getCookieConfig();
-          res.cookie('authToken', token, cookieConfig);
-          res.cookie('isLoggedIn', 'true', {
-            ...cookieConfig,
-            httpOnly: false
-          });
-
-          return res.status(200).json({
-            message: 'Redirecting to payment for existing pending account...',
-            success: true,
-            user: { 
-              id: existingUser.id, 
-              email: existingUser.email, 
-              isAdmin: existingUser.is_admin,
-              userType: existingUser.user_type,
-              subscriptionTier: existingUser.subscription_tier,
-              monthlyLeadLimit: existingUser.monthly_lead_limit,
-              currentMonthLeads: existingUser.current_month_leads,
-              pendingUpgrade: true,
-              isRetry: true
-            }
-          });
-        } 
-        
-        // Regular user already exists error
         return res.status(400).json({ 
           error: 'User already exists with this email. Try signing in instead.',
           shouldSignIn: true
         });
       }
 
-      // 🆕 NEW USER CREATION (existing logic)
+      // Check email rate limiting
+      if (!canSendEmailToAddress(email)) {
+        return res.status(429).json({ 
+          error: 'Too many verification emails sent. Please wait before requesting again.' 
+        });
+      }
+
+      if (!canSendEmail()) {
+        return res.status(429).json({ 
+          error: "We've reached our daily email limit. Please try again tomorrow." 
+        });
+      }
+
+      // Create pending user (always needs verification now)
       const hashedPassword = await bcrypt.hash(password, 12);
+      const verificationToken = generateVerificationToken();
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
-      let userType = 'free';
-      let subscriptionTier = 'FREE';
-      let monthlyLeadLimit = 50;
-      let goals = { daily: 5, monthly: 50 };
-      let billingCycle = null;
+      let userType, subscriptionTier, monthlyLeadLimit, goals, billingCycle, planName;
       
       if (pendingUpgrade && plan) {
         const planConfig = PRICING_PLANS[plan];
-        if (planConfig) {
-          userType = `${planConfig.userType}_pending`;
-          subscriptionTier = planConfig.name.toUpperCase();
-          monthlyLeadLimit = planConfig.leadLimit;
-          billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
-          goals = { daily: Math.floor(planConfig.leadLimit / 30), monthly: planConfig.leadLimit };
-        }
+        userType = `${planConfig.userType}_pending_verification`;
+        subscriptionTier = `${planConfig.name.toUpperCase()}_PENDING`;
+        monthlyLeadLimit = planConfig.leadLimit;
+        billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
+        goals = { daily: Math.floor(planConfig.leadLimit / 30), monthly: planConfig.leadLimit };
+        planName = planConfig.userType; // for email template
+      } else {
+        userType = 'free_pending_verification';
+        subscriptionTier = 'FREE_PENDING';
+        monthlyLeadLimit = 50;
+        goals = { daily: 5, monthly: 50 };
+        billingCycle = null;
+        planName = 'free';
       }
-      
+
+      // Admin accounts skip verification
       if (isAdmin) {
         userType = 'admin';
         subscriptionTier = 'ADMIN';
         monthlyLeadLimit = 999999;
         goals = { daily: 999999, monthly: 999999 };
       }
-      
+
       const userData = {
         email: email.toLowerCase(),
         password: hashedPassword,
@@ -2015,55 +1333,389 @@ app.post('/api/register',
         currentMonthLeads: 0,
         goals,
         settings: {
-          darkMode: false,
-          notifications: true,
+          pendingVerification: !isAdmin,
           pendingUpgrade: pendingUpgrade || false,
           plan: plan || null,
-          retryAttempts: []
+          verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         },
         stripeCustomerId: null,
         stripeSubscriptionId: null
       };
 
       const newUser = await createUser(userData);
+      
+      // Save verification token and send email (skip for admins)
+      if (!isAdmin) {
+        await saveAccountVerificationToken(email, verificationToken);
 
-      const token = jwt.sign(
-        { userId: newUser.id, email: newUser.email, userType: newUser.user_type },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+        const origin = req.headers.origin || 'http://localhost:3000';
+        const emailSent = await sendAccountVerificationEmail(email, verificationToken, origin, planName);
 
-      // Set secure cookie
-      const cookieConfig = getCookieConfig();
-      res.cookie('authToken', token, cookieConfig);
-      res.cookie('isLoggedIn', 'true', {
-        ...cookieConfig,
-        httpOnly: false
-      });
+        if (!emailSent) {
+          console.error(`Failed to send verification email to: ${email}`);
+        }
 
-      console.log(`✅ New user registered: ${email} ${isAdmin ? '(ADMIN)' : pendingUpgrade ? `(PENDING ${subscriptionTier})` : '(FREE)'}`);
+        console.log(`📧 Account verification email sent to: ${email} (${planName} plan)`);
+      }
+
+      console.log(`${isAdmin ? '👑 Admin' : '📧 User'} account created: ${email} ${isAdmin ? '(ADMIN - NO VERIFICATION)' : '(PENDING VERIFICATION)'}`);
 
       res.status(201).json({
-        message: pendingUpgrade ? `Account created! Complete payment to activate ${subscriptionTier}.` : 
-                 isAdmin ? 'Admin account created! 👑' : 'Free account created!',
+        message: isAdmin ? 
+          'Admin account created! Welcome!' : 
+          'Account created! Check your email to verify and activate your account.',
         success: true,
+        requiresVerification: !isAdmin,
         user: { 
           id: newUser.id, 
-          email: newUser.email, 
-          isAdmin,
+          email: newUser.email,
           userType: newUser.user_type,
           subscriptionTier: newUser.subscription_tier,
-          monthlyLeadLimit: newUser.monthly_lead_limit,
-          currentMonthLeads: newUser.current_month_leads,
-          pendingUpgrade: pendingUpgrade || false
+          pendingVerification: !isAdmin,
+          isAdmin
         }
       });
+
     } catch (error) {
       console.error('Register error:', error.message);
       res.status(500).json({ error: 'Registration failed' });
     }
   }
 );
+
+// 🎯 START TRIAL ENDPOINT WITH EMAIL VERIFICATION
+app.post('/api/start-trial', 
+  [
+    validateEmail,
+    validatePassword,
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await findUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ 
+          error: 'User already exists with this email. Try signing in instead.',
+          shouldSignIn: true
+        });
+      }
+
+      // Check email rate limiting
+      if (!canSendEmailToAddress(email)) {
+        return res.status(429).json({ 
+          error: 'Too many verification emails sent to this address. Please wait before requesting again.' 
+        });
+      }
+
+      // Check global email limits
+      if (!canSendEmail()) {
+        return res.status(429).json({ 
+          error: "We've reached our daily email limit. Please try again tomorrow or contact support." 
+        });
+      }
+
+      // Create pending trial user
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const verificationToken = generateVerificationToken();
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 14); // 14 days from now
+
+      const userData = {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        userType: 'professional_trial_pending', // New status for pending verification
+        subscriptionTier: 'PROFESSIONAL_TRIAL_PENDING',
+        billingCycle: null,
+        isAdmin: false,
+        monthlyLeadLimit: 1000,
+        currentMonthLeads: 0,
+        goals: { daily: 33, monthly: 1000 },
+        settings: {
+          subscriptionTier: 'PROFESSIONAL_TRIAL_PENDING',
+          trialStartDate: new Date().toISOString(),
+          trialEndDate: trialEndDate.toISOString(),
+          pendingVerification: true,
+          verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        },
+        stripeCustomerId: null,
+        stripeSubscriptionId: null
+      };
+
+      const newUser = await createUser(userData);
+      
+      // Save verification token
+      await saveTrialVerificationToken(email, verificationToken);
+
+      // Send verification email
+      const origin = req.headers.origin || 'http://localhost:3000';
+      const emailSent = await sendTrialVerificationEmail(email, verificationToken, origin);
+
+      if (!emailSent) {
+        console.error(`Failed to send verification email to: ${email}`);
+      }
+
+      console.log(`📧 Trial verification email sent to: ${email}`);
+      console.log(`🆔 User created with pending verification: ${newUser.id}`);
+
+      res.status(201).json({
+        message: 'Account created! Check your email to activate your 14-day trial.',
+        success: true,
+        requiresVerification: true,
+        user: { 
+          id: newUser.id, 
+          email: newUser.email,
+          userType: newUser.user_type,
+          subscriptionTier: newUser.subscription_tier,
+          pendingVerification: true
+        }
+      });
+
+    } catch (error) {
+      console.error('Start trial error:', error.message);
+      if (error.message.includes('already exists')) {
+        res.status(400).json({ 
+          error: 'User already exists with this email. Try signing in instead.',
+          shouldSignIn: true
+        });
+      } else {
+        res.status(500).json({ error: 'Failed to start trial' });
+      }
+    }
+  }
+);
+
+// 🔄 RESEND VERIFICATION ENDPOINT
+app.post('/api/resend-verification',
+  [validateEmail, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      // Check email rate limiting
+      if (!canSendEmailToAddress(email)) {
+        return res.status(429).json({ 
+          error: 'Too many verification emails sent. Please wait before requesting again.' 
+        });
+      }
+
+      if (!canSendEmail()) {
+        return res.status(429).json({ 
+          error: "We've reached our daily email limit. Please try again tomorrow." 
+        });
+      }
+
+      // Find pending user
+      const user = await findUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'No account found for this email.' });
+      }
+
+      // Check if user is in pending verification state
+      if (!user.user_type.includes('pending') || !user.settings?.pendingVerification) {
+        return res.status(400).json({ error: 'This account is not pending verification.' });
+      }
+
+      // Generate new verification token
+      const newToken = generateVerificationToken();
+      await saveAccountVerificationToken(email, newToken);
+
+      // Determine plan type for email template
+      const planType = user.settings?.plan ? 
+        PRICING_PLANS[user.settings.plan]?.userType || 'free' : 
+        'free';
+
+      // Send new verification email
+      const origin = req.headers.origin || 'http://localhost:3000';
+      const emailSent = user.user_type.includes('trial') ?
+        await sendTrialVerificationEmail(email, newToken, origin) :
+        await sendAccountVerificationEmail(email, newToken, origin, planType);
+
+      if (emailSent) {
+        console.log(`📧 Resent verification email to: ${email}`);
+        res.json({ message: 'Verification email resent! Check your inbox.' });
+      } else {
+        res.status(500).json({ error: 'Failed to send verification email' });
+      }
+
+    } catch (error) {
+      console.error('Resend verification error:', error.message);
+      res.status(500).json({ error: 'Failed to resend verification email' });
+    }
+  }
+);
+
+// 🔐 GENERAL ACCOUNT VERIFICATION
+app.get('/verify-account', async (req, res) => {
+  try {
+    const { token } = req.query;
+    
+    if (!token) {
+      return res.status(400).send(`
+        <html><body style="text-align: center; padding: 2rem; font-family: Arial;">
+          <h1 style="color: #dc2626;">❌ Invalid Link</h1>
+          <p>This verification link is missing required information.</p>
+          <a href="/register" style="color: #16a34a; text-decoration: none; font-weight: bold;">Try again</a>
+        </body></html>
+      `);
+    }
+    
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT * FROM ${getTableName('users')} 
+         WHERE email_verification_token = $1 
+         AND email_verified_at IS NULL 
+         AND user_type LIKE '%pending%'`,
+        [token]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(400).send(`
+          <html><body style="text-align: center; padding: 2rem; font-family: Arial;">
+            <h1 style="color: #dc2626;">❌ Invalid or Expired Link</h1>
+            <p>This verification link has expired or already been used.</p>
+            <a href="/register" style="color: #16a34a; text-decoration: none; font-weight: bold;">Create new account</a>
+          </body></html>
+        `);
+      }
+      
+      const user = result.rows[0];
+      
+      // Check if verification token has expired
+      const tokenExpiry = user.settings?.verificationTokenExpires;
+      if (tokenExpiry && new Date() > new Date(tokenExpiry)) {
+        return res.status(400).send(`
+          <html><body style="text-align: center; padding: 2rem; font-family: Arial;">
+            <h1 style="color: #dc2626;">⏰ Link Expired</h1>
+            <p>This verification link has expired. Please create a new account.</p>
+            <a href="/register" style="color: #16a34a; text-decoration: none; font-weight: bold;">Create new account</a>
+          </body></html>
+        `);
+      }
+      
+      // ACTIVATE THE ACCOUNT
+      let newUserType, newSubscriptionTier;
+      
+      if (user.user_type === 'free_pending_verification') {
+        newUserType = 'free';
+        newSubscriptionTier = 'FREE';
+      } else if (user.user_type === 'professional_pending_verification') {
+        newUserType = 'professional_pending';
+        newSubscriptionTier = 'PROFESSIONAL_PENDING';
+      } else if (user.user_type === 'business_pending_verification') {
+        newUserType = 'business_pending';
+        newSubscriptionTier = 'BUSINESS_PENDING';
+      } else if (user.user_type === 'enterprise_pending_verification') {
+        newUserType = 'enterprise_pending';
+        newSubscriptionTier = 'ENTERPRISE_PENDING';
+      } else if (user.user_type === 'professional_trial_pending') {
+        newUserType = 'professional_trial';
+        newSubscriptionTier = 'PROFESSIONAL_TRIAL';
+      } else {
+        // Fallback for any other pending types
+        newUserType = 'free';
+        newSubscriptionTier = 'FREE';
+      }
+      
+      await client.query(
+        `UPDATE ${getTableName('users')} 
+         SET user_type = $1,
+             subscription_tier = $2,
+             email_verified_at = NOW(), 
+             email_verification_token = NULL,
+             settings = settings || $3,
+             updated_at = NOW()
+         WHERE id = $4`,
+        [
+          newUserType,
+          newSubscriptionTier,
+          JSON.stringify({ 
+            verificationCompleted: true,
+            pendingVerification: false
+          }),
+          user.id
+        ]
+      );
+      
+      // Create JWT and set cookie for automatic login
+      const authToken = jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email, 
+          userType: newUserType
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      const cookieConfig = getCookieConfig();
+      res.cookie('authToken', authToken, cookieConfig);
+      res.cookie('isLoggedIn', 'true', { ...cookieConfig, httpOnly: false });
+      
+      console.log(`✅ Account verified and activated: ${user.email}`);
+      
+      // Success page with redirect
+      const isPaidPlan = newUserType.includes('_pending');
+      const isTrial = newUserType === 'professional_trial';
+      let message;
+      
+      if (isTrial) {
+        message = 'Welcome to your 14-day Professional trial! Your account is now active.';
+      } else if (isPaidPlan) {
+        message = 'Email verified! Complete your upgrade in the dashboard.';
+      } else {
+        message = 'Welcome to SteadyManager! Your account is now active.';
+      }
+      
+      res.send(`
+        <html><body style="text-align: center; padding: 2rem; font-family: Arial; background: #f0fdf4;">
+          <h1 style="color: #16a34a;">✅ Email Verified!</h1>
+          <p style="font-size: 1.1rem; margin-bottom: 2rem;">${message}</p>
+          <p>Redirecting to dashboard in <span id="countdown">3</span> seconds...</p>
+          <a href="/dashboard" style="display: inline-block; background: #16a34a; color: white; padding: 1rem 2rem; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 1rem;">
+            Go to Dashboard →
+          </a>
+          <script>
+            let count = 3;
+            setInterval(() => {
+              count--;
+              document.getElementById('countdown').textContent = count;
+              if (count === 0) window.location.href = '/dashboard';
+            }, 1000);
+          </script>
+        </body></html>
+      `);
+      
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('Account verification error:', error.message);
+    res.status(500).send(`
+      <html><body style="text-align: center; padding: 2rem; font-family: Arial;">
+        <h1 style="color: #dc2626;">❌ Verification Failed</h1>
+        <p>Something went wrong. Please try again.</p>
+        <a href="/register">Create new account</a>
+      </body></html>
+    `);
+  }
+});
+
+// 🔐 TRIAL-SPECIFIC VERIFICATION (for backward compatibility)
+app.get('/verify-trial', async (req, res) => {
+  // Redirect to the main verification endpoint
+  return res.redirect(`/verify-account?token=${req.query.token}`);
+});
 
 // 🔐 UPDATED: Login endpoint with secure cookie
 app.post('/api/login', 
@@ -2075,6 +1727,14 @@ app.post('/api/login',
       const user = await findUserByEmail(email);
       if (!user) {
         return res.status(400).json({ error: 'Invalid credentials' });
+      }
+      
+      // Check if account is still pending verification
+      if (user.user_type.includes('pending') && user.settings?.pendingVerification) {
+        return res.status(400).json({ 
+          error: 'Please verify your email address before logging in. Check your inbox for the verification link.',
+          requiresVerification: true
+        });
       }
       
       const isMatch = await bcrypt.compare(password, user.password);
@@ -2272,56 +1932,100 @@ app.post('/api/reset-password',
   }
 );
 
-// 💳 UPDATED: Multi-tier Stripe checkout
+// 💳 STRIPE CHECKOUT SESSION
 app.post('/api/create-checkout-session', 
+  authenticateFromCookie,
   [
     body('plan').isIn([
       'professional_monthly', 'professional_yearly',
       'business_monthly', 'business_yearly', 
       'enterprise_monthly', 'enterprise_yearly'
     ]).withMessage('Invalid plan'),
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
     handleValidationErrors
   ],
   async (req, res) => {
     try {
-      const { plan, email } = req.body;
+      const { plan } = req.body;
+      
+      const user = await findUserById(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
       
       const planConfig = PRICING_PLANS[plan];
       if (!planConfig || !planConfig.priceId) {
         return res.status(400).json({ error: 'Invalid plan configuration' });
       }
       
+      const upgradeValidation = validateUpgradePath(user.user_type, planConfig.userType);
+      if (!upgradeValidation.valid) {
+        return res.status(400).json({ 
+          error: upgradeValidation.message,
+          currentTier: user.subscription_tier,
+          availableUpgrades: getAvailableUpgradesForTier(user.user_type)
+        });
+      }
+      
+      let customerId = user.stripe_customer_id;
+      
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id.toString() }
+        });
+        customerId = customer.id;
+        
+        const client = await pool.connect();
+        try {
+          await client.query(
+            `UPDATE ${getTableName('users')} SET stripe_customer_id = $1 WHERE id = $2`,
+            [customerId, user.id]
+          );
+        } finally {
+          client.release();
+        }
+        
+        console.log(`💳 Created Stripe customer for ${user.email}: ${customerId}`);
+      }
+      
       const baseUrl = isDevelopment 
-        ? process.env.DEV_BASE_URL || req.headers.origin
+        ? process.env.DEV_BASE_URL || 'http://localhost:3000'
         : 'https://steadymanager.com';
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
+        customer: customerId,
         line_items: [{ price: planConfig.priceId, quantity: 1 }],
         mode: 'subscription',
-        customer_email: email,
         success_url: `${baseUrl}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/login?cancelled=true`,
+        cancel_url: `${baseUrl}/dashboard?cancelled=true`,
         metadata: { 
           plan, 
-          email, 
+          email: user.email, 
+          userId: user.id.toString(),
+          previousTier: user.user_type,
           tier: planConfig.userType,
           environment: isDevelopment ? 'development' : 'production' 
+        },
+        subscription_data: {
+          metadata: {
+            userId: user.id.toString(),
+            previousSubscription: user.stripe_subscription_id || 'none'
+          }
         }
       });
       
-      console.log(`💳 Checkout session created for ${email} (${planConfig.name})`);
+      console.log(`💳 Checkout created: ${user.email} (${user.user_type} → ${planConfig.userType})`);
       res.json({ sessionId: session.id, url: session.url });
       
     } catch (error) {
-      console.error('Stripe checkout error:', error.message);
+      console.error('Checkout creation error:', error.message);
       res.status(500).json({ error: 'Failed to create checkout session' });
     }
   }
 );
 
-// 🔥 UPDATED: Stripe webhook with multi-tier support
+// 🔥 Stripe webhook handler
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -2338,124 +2042,115 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       case 'checkout.session.completed':
         const session = event.data.object;
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
-        const email = session.metadata.email || session.customer_email;
+        const email = session.metadata.email;
         const plan = session.metadata.plan;
-        const planConfig = PRICING_PLANS[plan];
+        const userId = session.metadata.userId;
+        const previousTier = session.metadata.previousTier;
         
+        const planConfig = PRICING_PLANS[plan];
         if (!planConfig) {
           console.error(`❌ Unknown plan in webhook: ${plan}`);
           break;
         }
         
-        console.log(`💰 Payment successful for ${email} - Plan: ${planConfig.name}`);
+        console.log(`💰 Payment successful: ${email} (${previousTier} → ${planConfig.userType})`);
         
-        const existingUser = await findUserByEmail(email);
-        if (existingUser) {
-          const client = await pool.connect();
-          try {
-            const billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
-            
-            await client.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = $1, subscription_tier = $2, billing_cycle = $3, monthly_lead_limit = $4, 
-                   stripe_customer_id = $5, stripe_subscription_id = $6, settings = $7, updated_at = NOW()
-               WHERE email = $8`,
-              [
-                planConfig.userType, 
-                planConfig.name.toUpperCase(),
-                billingCycle,
-                planConfig.leadLimit, 
-                session.customer,
-                subscription.id,
-                JSON.stringify({
-                  ...existingUser.settings,
-                  plan: plan,
-                  subscriptionTier: planConfig.name.toUpperCase(),
-                  upgradeDate: new Date().toISOString(),
-                  pendingUpgrade: false
-                }),
-                email.toLowerCase()
-              ]
-            );
-            console.log(`✅ User upgraded to ${planConfig.name}: ${email}`);
-          } finally {
-            client.release();
-          }
+        const checkoutClient = await pool.connect();
+        try {
+          await checkoutClient.query(
+            `UPDATE ${getTableName('users')} 
+             SET user_type = $1, 
+                 subscription_tier = $2, 
+                 billing_cycle = $3, 
+                 monthly_lead_limit = $4, 
+                 stripe_customer_id = $5, 
+                 stripe_subscription_id = $6,
+                 subscription_start_date = NOW(),
+                 settings = settings || $7,
+                 updated_at = NOW()
+             WHERE id = $8`,
+            [
+              planConfig.userType, 
+              planConfig.name.toUpperCase(),
+              plan.includes('yearly') ? 'yearly' : 'monthly',
+              planConfig.leadLimit, 
+              session.customer,
+              subscription.id,
+              JSON.stringify({
+                upgradeDate: new Date().toISOString(),
+                previousTier: previousTier,
+                plan: plan,
+                subscriptionTier: planConfig.name.toUpperCase()
+              }),
+              userId
+            ]
+          );
+          
+          console.log(`✅ User upgraded: ${email} (${previousTier} → ${planConfig.userType})`);
+          
+        } finally {
+          checkoutClient.release();
         }
         break;
 
       case 'customer.subscription.updated':
         const updatedSubscription = event.data.object;
         
-        // Only act on status changes that require downgrade
         if (updatedSubscription.status === 'unpaid' || updatedSubscription.status === 'canceled') {
           const customer = await stripe.customers.retrieve(updatedSubscription.customer);
           
           console.log(`⬇️ Downgrading ${customer.email} - Status: ${updatedSubscription.status}`);
           
-          const client = await pool.connect();
+          const updateClient = await pool.connect();
           try {
-            await client.query(
+            await updateClient.query(
               `UPDATE ${getTableName('users')} 
-               SET user_type = $1, subscription_tier = $2, billing_cycle = NULL, monthly_lead_limit = $3, 
-                   settings = settings || $4, updated_at = NOW()
-               WHERE email = $5`,
+               SET user_type = 'free', subscription_tier = 'FREE', 
+                   billing_cycle = NULL, monthly_lead_limit = 50, 
+                   settings = settings || $1, updated_at = NOW()
+               WHERE stripe_customer_id = $2`,
               [
-                'free', 
-                'FREE',
-                50,
                 JSON.stringify({ 
-                  subscriptionTier: 'FREE', 
                   downgradedDate: new Date().toISOString(),
                   reason: updatedSubscription.status 
                 }),
-                customer.email.toLowerCase()
+                customer.id
               ]
             );
           } finally {
-            client.release();
+            updateClient.release();
           }
         }
         break;
         
       case 'customer.subscription.deleted':
         const cancelledSubscription = event.data.object;
-        const customer = await stripe.customers.retrieve(cancelledSubscription.customer);
+        const cancelCustomer = await stripe.customers.retrieve(cancelledSubscription.customer);
         
-        console.log(`🗑️ Subscription cancelled for ${customer.email}`);
+        console.log(`🗑️ Subscription cancelled: ${cancelCustomer.email}`);
         
-        const client = await pool.connect();
+        const deleteClient = await pool.connect();
         try {
-          await client.query(
+          await deleteClient.query(
             `UPDATE ${getTableName('users')} 
-             SET user_type = $1, subscription_tier = $2, billing_cycle = NULL, monthly_lead_limit = $3, 
-                 settings = settings || $4, updated_at = NOW()
-             WHERE email = $5`,
+             SET user_type = 'free', subscription_tier = 'FREE', 
+                 billing_cycle = NULL, monthly_lead_limit = 50,
+                 stripe_subscription_id = NULL,
+                 settings = settings || $1, updated_at = NOW()
+             WHERE stripe_customer_id = $2`,
             [
-              'free', 
-              'FREE',
-              50,
               JSON.stringify({ 
-                subscriptionTier: 'FREE', 
                 downgradedDate: new Date().toISOString(),
                 reason: 'cancelled' 
               }),
-              customer.email.toLowerCase()
+              cancelCustomer.id
             ]
           );
-          console.log(`⬇️ User downgraded to free: ${customer.email}`);
         } finally {
-          client.release();
+          deleteClient.release();
         }
         break;
 
-      case 'invoice.payment_failed':
-        const failedInvoice = event.data.object;
-        console.log(`💳 Payment failed for invoice: ${failedInvoice.id}`);
-        // Don't downgrade immediately - Stripe will retry
-        // Just log for monitoring
-        break;
-        
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
@@ -2467,72 +2162,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
-
-// 🔄 UPDATED: Auto-downgrade trials with new pricing structure
-let lastTrialCheckTime = null;
-let dailyDowngradeCount = 0;
-
-async function checkExpiredTrials() {
-  const checkTime = new Date().toISOString();
-  console.log(`🕐 [${checkTime}] Checking for expired trials...`);
-  
-  const client = await pool.connect();
-  try {
-    const now = new Date().toISOString();
-    
-    const result = await client.query(
-      `SELECT id, email, settings FROM ${getTableName('users')} 
-       WHERE user_type = 'professional_trial' 
-       AND settings->>'trialEndDate' < $1`,
-      [now]
-    );
-
-    for (const user of result.rows) {
-      const updatedSettings = {
-        ...user.settings,
-        subscriptionTier: 'FREE',
-        trialEndedDate: now,
-        downgradedFromTrial: true
-      };
-
-      await client.query(
-        `UPDATE ${getTableName('users')} 
-         SET user_type = $1, subscription_tier = $2, monthly_lead_limit = $3, settings = $4, updated_at = NOW()
-         WHERE id = $5`,
-        ['free', 'FREE', 50, JSON.stringify(updatedSettings), user.id]
-      );
-
-      console.log(`⬇️ Trial expired - downgraded user: ${user.email}`);
-      dailyDowngradeCount++;
-    }
-
-    if (result.rows.length > 0) {
-      console.log(`✅ Processed ${result.rows.length} expired trials`);
-    } else {
-      console.log(`ℹ️  No expired trials found`);
-    }
-    
-    lastTrialCheckTime = checkTime;
-
-  } catch (error) {
-    console.error('Check expired trials error:', error.message);
-  } finally {
-    client.release();
-  }
-}
-
-// Run trial check every hour
-setInterval(checkExpiredTrials, 60 * 60 * 1000);
-setTimeout(checkExpiredTrials, 5000); // Run 5 seconds after startup
-
-// Reset daily counter at midnight
-setInterval(() => {
-  const now = new Date();
-  if (now.getHours() === 0 && now.getMinutes() === 0) {
-    dailyDowngradeCount = 0;
-    console.log('🔄 Daily downgrade counter reset');
-  }
-}, 60000); // Check every minute
 
 // Get Stripe config
 app.get('/api/stripe-config', (req, res) => {
@@ -2639,7 +2268,6 @@ app.put('/api/leads/:id',
       const client = await pool.connect();
       
       try {
-        // Get current lead
         const leadResult = await client.query(
           `SELECT * FROM ${getTableName('leads')} WHERE id = $1`,
           [leadId]
@@ -2651,12 +2279,10 @@ app.put('/api/leads/:id',
         
         const currentLead = leadResult.rows[0];
         
-        // Check permissions
         if (!req.user.isAdmin && currentLead.user_id !== req.user.userId) {
           return res.status(403).json({ error: 'Unauthorized' });
         }
 
-        // Build update query
         const updateFields = [];
         const updateValues = [];
         let paramCount = 1;
@@ -2727,7 +2353,6 @@ app.delete('/api/leads/:id',
         
         const lead = leadResult.rows[0];
         
-        // Check permissions
         if (!req.user.isAdmin && lead.user_id !== req.user.userId) {
           return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -2789,168 +2414,35 @@ app.get('/api/statistics', authenticateFromCookie, async (req, res) => {
   }
 });
 
-// 👑 UPDATED: Admin stats with new pricing structure
-app.get('/api/admin/stats', authenticateFromCookie, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
+// 👤 User profile endpoint
+app.get('/api/user/profile', authenticateFromCookie, async (req, res) => {
   try {
-    const client = await pool.connect();
-    try {
-      const usersResult = await client.query(`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN is_admin THEN 1 ELSE 0 END) as admin_count,
-          SUM(CASE WHEN subscription_tier = 'FREE' THEN 1 ELSE 0 END) as free_count,
-          SUM(CASE WHEN subscription_tier = 'PROFESSIONAL' THEN 1 ELSE 0 END) as professional_count,
-          SUM(CASE WHEN subscription_tier = 'PROFESSIONAL_TRIAL' THEN 1 ELSE 0 END) as trial_count,
-          SUM(CASE WHEN subscription_tier = 'BUSINESS' THEN 1 ELSE 0 END) as business_count,
-          SUM(CASE WHEN subscription_tier = 'ENTERPRISE' THEN 1 ELSE 0 END) as enterprise_count
-        FROM ${getTableName('users')}
-      `);
-      
-      const leadsResult = await client.query(`SELECT COUNT(*) FROM ${getTableName('leads')}`);
-      
-      const stats = usersResult.rows[0];
-      const totalUsers = parseInt(stats.total);
-      const totalLeads = parseInt(leadsResult.rows[0].count);
-      
-      // Calculate estimated revenue (you'll need to set actual prices)
-      const estimatedMonthlyRevenue = 
-        (parseInt(stats.professional_count) * 6.99) +
-        (parseInt(stats.business_count) * 19.99) +
-        (parseInt(stats.enterprise_count) * 49.99);
-      
-      res.json({
-        users: {
-          total: totalUsers,
-          admins: parseInt(stats.admin_count),
-          free: parseInt(stats.free_count),
-          professional: parseInt(stats.professional_count),
-          trials: parseInt(stats.trial_count),
-          business: parseInt(stats.business_count),
-          enterprise: parseInt(stats.enterprise_count)
-        },
-        leads: { total: totalLeads },
-        revenue: { 
-          estimatedMonthly: estimatedMonthlyRevenue, 
-          estimatedAnnual: estimatedMonthlyRevenue * 12 
-        },
-        subscriptionBreakdown: {
-          free: parseInt(stats.free_count),
-          paid: parseInt(stats.professional_count) + parseInt(stats.business_count) + parseInt(stats.enterprise_count)
-        }
-      });
-    } finally {
-      client.release();
+    const user = await findUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  } catch (error) {
-    console.error('Admin stats error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch admin statistics' });
-  }
-});
-
-// 🎛️ Admin endpoint to manually check trials
-app.post('/api/admin/check-trials', authenticateFromCookie, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  console.log(`🔧 Manual trial check triggered by admin: ${req.user.email}`);
-  await checkExpiredTrials();
-  res.json({ 
-    message: 'Trial check completed - check server logs for details',
-    lastCheckTime: lastTrialCheckTime,
-    dailyDowngrades: dailyDowngradeCount
-  });
-});
-
-// 📊 Admin trial status dashboard
-app.get('/api/admin/trial-status', authenticateFromCookie, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  try {
-    const client = await pool.connect();
-    try {
-      const trialUsers = await client.query(
-        `SELECT id, email, settings->>'trialEndDate' as trial_end_date, 
-         settings->>'trialStartDate' as trial_start_date, created_at
-         FROM ${getTableName('users')} 
-         WHERE user_type = 'professional_trial' 
-         ORDER BY settings->>'trialEndDate' ASC`
-      );
-      
-      res.json({
-        activeTrials: trialUsers.rows,
-        lastTrialCheckTime,
-        dailyDowngradeCount,
-        nextCheckIn: 'Next automatic check in less than 1 hour'
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Trial status error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch trial status' });
-  }
-});
-
-// 🧪 Create test trial (expires in 2 minutes)
-app.post('/api/admin/create-test-trial', authenticateFromCookie, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  try {
-    const testEmail = `test-trial-${Date.now()}@example.com`;
-    const testTrialEnd = new Date();
-    testTrialEnd.setMinutes(testTrialEnd.getMinutes() + 2); // Expires in 2 minutes
-    
-    const hashedPassword = await bcrypt.hash('TestPassword123!', 12);
-    
-    const userData = {
-      email: testEmail,
-      password: hashedPassword,
-      userType: 'professional_trial',
-      subscriptionTier: 'PROFESSIONAL_TRIAL',
-      billingCycle: null,
-      isAdmin: false,
-      monthlyLeadLimit: 1000,
-      currentMonthLeads: 0,
-      goals: { daily: 33, monthly: 1000 },
-      settings: {
-        subscriptionTier: 'PROFESSIONAL_TRIAL',
-        trialStartDate: new Date().toISOString(),
-        trialEndDate: testTrialEnd.toISOString(),
-        name: 'Test Trial User',
-        isTestAccount: true
-      },
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      trialUsed: true,
-      trialUsedDate: new Date()
-    };
-
-    const newUser = await createUser(userData);
-    
-    console.log(`🧪 Test trial user created: ${testEmail} - Expires in 2 minutes`);
     
     res.json({
-      message: 'Test trial user created! Will be downgraded in 2 minutes.',
-      testUser: {
-        id: newUser.id,
-        email: testEmail,
-        trialEndDate: testTrialEnd.toISOString()
-      },
-      instructions: 'Wait 2 minutes, then check trial status or run manual trial check to see the downgrade.'
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      userType: user.user_type,
+      subscriptionTier: user.subscription_tier,
+      billingCycle: user.billing_cycle,
+      isAdmin: user.is_admin,
+      monthlyLeadLimit: user.monthly_lead_limit,
+      currentMonthLeads: user.current_month_leads,
+      goals: user.goals,
+      settings: user.settings,
+      onboardingCompleted: user.onboarding_completed,
+      lastLogin: user.last_login,
+      createdAt: user.created_at
     });
     
   } catch (error) {
-    console.error('Create test trial error:', error.message);
-    res.status(500).json({ error: 'Failed to create test trial' });
+    console.error('Get user profile error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 });
 
@@ -3021,26 +2513,200 @@ app.put('/api/user/settings',
   }
 );
 
-// 📧 Enhanced Email stats endpoint
-app.get('/api/email-stats', authenticateFromCookie, async (req, res) => {
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  
-  resetDailyCountIfNeeded();
-  res.json({
-    daily: { count: dailyEmailCount, limit: 90 },
-    canSend: canSendEmail(),
-    lastResetDate,
-    emailConfigured: !!emailTransporter,
-    perEmailTracking: {
-      totalEmailsTracked: emailRequestTracker.size,
-      description: 'Max 5 emails per hour per email address'
+// 📅 TASKS/REMINDERS
+app.post('/api/tasks', 
+  authenticateFromCookie,
+  [
+    body('title').notEmpty().withMessage('Title required'),
+    body('leadId').optional().isInt().withMessage('Valid lead ID required'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const client = await pool.connect();
+      try {
+        const result = await client.query(
+          `INSERT INTO ${getTableName('tasks')} 
+           (user_id, lead_id, title, description, due_date, task_type, status) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          [
+            req.user.userId,
+            req.body.leadId || null,
+            req.body.title,
+            req.body.description || req.body.notes || '',
+            req.body.dueDate || req.body.date,
+            req.body.type || 'follow_up',
+            'pending'
+          ]
+        );
+        
+        console.log(`✅ Task created: ${req.body.title} by user ${req.user.userId}`);
+        res.status(201).json(result.rows[0]);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Create task error:', error.message);
+      res.status(500).json({ error: 'Failed to create task' });
     }
-  });
+  }
+);
+
+app.get('/api/tasks', authenticateFromCookie, async (req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      let query = `SELECT * FROM ${getTableName('tasks')} WHERE user_id = $1`;
+      const params = [req.user.userId];
+      
+      if (req.query.status) {
+        query += ` AND status = $2`;
+        params.push(req.query.status);
+      }
+      if (req.query.type) {
+        query += ` AND task_type = ${params.length + 1}`;
+        params.push(req.query.type);
+      }
+      
+      query += ` ORDER BY due_date ASC, created_at DESC`;
+      
+      const result = await client.query(query, params);
+      res.json(result.rows);
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get tasks error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
 });
 
-// 🏥 UPDATED: Enhanced Health check with new pricing info
+// 🎯 GET SINGLE LEAD
+app.get('/api/leads/:id', 
+  authenticateFromCookie,
+  [validateNumericId, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const client = await pool.connect();
+      
+      try {
+        const result = await client.query(
+          `SELECT * FROM ${getTableName('leads')} WHERE id = $1 AND user_id = $2`,
+          [leadId, req.user.userId]
+        );
+        
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        res.json(result.rows[0]);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Get lead error:', error.message);
+      res.status(500).json({ error: 'Failed to fetch lead' });
+    }
+  }
+);
+
+// 🔍 Search leads
+app.post('/api/leads/search', 
+  authenticateFromCookie,
+  [
+    body('query').notEmpty().trim().withMessage('Search query required'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { query } = req.body;
+      const client = await pool.connect();
+      
+      try {
+        const searchQuery = `
+          SELECT * FROM ${getTableName('leads')} 
+          WHERE user_id = $1 
+          AND (
+            name ILIKE $2 OR 
+            email ILIKE $2 OR 
+            company ILIKE $2 OR 
+            notes ILIKE $2
+          )
+          ORDER BY created_at DESC
+          LIMIT 50
+        `;
+        
+        const searchPattern = `%${query}%`;
+        const result = await client.query(searchQuery, [req.user.userId, searchPattern]);
+        
+        res.json({ 
+          success: true, 
+          results: result.rows,
+          query: query,
+          count: result.rows.length 
+        });
+        
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Search leads error:', error.message);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Search failed',
+        results: [] 
+      });
+    }
+  }
+);
+
+// 🎯 GET AVAILABLE UPGRADES FOR CURRENT USER
+app.get('/api/available-upgrades', authenticateFromCookie, async (req, res) => {
+  try {
+    const user = await findUserById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const availablePlans = getAvailableUpgradesForTier(user.user_type);
+    
+    if (availablePlans.length === 0) {
+      return res.json({
+        hasUpgrades: false,
+        currentTier: user.subscription_tier,
+        message: user.user_type === 'enterprise' ? 
+          'You have the highest tier available!' : 
+          'No upgrades available for your account type.'
+      });
+    }
+    
+    const upgradeOptions = availablePlans.map(planId => {
+      const plan = PRICING_PLANS[planId];
+      return {
+        id: planId,
+        name: plan.name,
+        userType: plan.userType,
+        leadLimit: plan.leadLimit,
+        features: plan.features,
+        isYearly: planId.includes('yearly')
+      };
+    });
+    
+    res.json({
+      hasUpgrades: true,
+      currentTier: user.subscription_tier,
+      currentUserType: user.user_type,
+      availableUpgrades: upgradeOptions
+    });
+    
+  } catch (error) {
+    console.error('Get available upgrades error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch available upgrades' });
+  }
+});
+
+// 🏥 Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
     const client = await pool.connect();
@@ -3056,13 +2722,10 @@ app.get('/api/health', async (req, res) => {
           'postgresql-storage', 
           'authentication', 
           'lead-management', 
-          'admin-mode', 
+          'email-verification',
           'stripe-billing',
           'multi-tier-pricing',
           'password-reset',
-          'email-sending',
-          'enhanced-email-rate-limiting',
-          'professional-business-enterprise-tiers',
           'secure-cookie-authentication',
           'csrf-protection'
         ],
@@ -3090,7 +2753,8 @@ app.get('/api/health', async (req, res) => {
           cookieAuth: true,
           csrfProtection: true,
           securityHeaders: true,
-          rateLimit: true
+          rateLimit: true,
+          emailVerification: true
         }
       });
     } finally {
@@ -3107,15 +2771,15 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Auth routes
-app.get('/auth/login', (req, res) => {
+app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth', 'login.html'));
 });
 
-app.get('/auth/register', (req, res) => {
+app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth', 'register.html'));
 });
 
-app.get('/auth/trial', (req, res) => {
+app.get('/trial', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth', 'trial.html'));
 });
 
@@ -3153,14 +2817,16 @@ async function startServer() {
       console.log(`🔧 Environment: ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
       console.log(`🔒 ENHANCED SECURITY FEATURES:`);
       console.log(`   ✅ Secure cookie-based authentication`);
+      console.log(`   ✅ Email verification for all new accounts`);
       console.log(`   ✅ HTTP-only cookies prevent XSS`);
       console.log(`   ✅ CSRF protection on state-changing operations`);
       console.log(`   ✅ Security headers (XSS, clickjacking, etc.)`);
       console.log(`   ✅ Content Security Policy for dashboard`);
       console.log(`   ✅ Flexible rate limiting:`);
       console.log(`      • Login: 10 attempts per minute`);
+      console.log(`      • Registration: 5 attempts per 15 minutes`);
       console.log(`      • Password reset: 5 attempts per 5 minutes`);
-      console.log(`      • Email reset: 5 per hour per email`);
+      console.log(`      • Email verification: 5 per hour per email`);
       console.log(`   ✅ All dashboard routes require authentication`);
       console.log(`   ✅ Tier-based file serving works properly`);
       console.log(`🎯 Dashboard serves tier-specific content from: /tiers/{tier}/`);
@@ -3174,6 +2840,11 @@ async function startServer() {
       console.log(`   • Per-email hourly limit: 5 max`);
       console.log(`   • Currently tracking: ${emailRequestTracker.size} unique emails`);
       console.log(`   • Auto-cleanup running every hour`);
+      console.log(`📧 EMAIL VERIFICATION SYSTEM:`);
+      console.log(`   • All new accounts require email verification`);
+      console.log(`   • Separate verification flows for trials and regular accounts`);
+      console.log(`   • Automatic login after successful verification`);
+      console.log(`   • Rate limiting prevents spam`);
       
       // Check pricing configuration
       const configuredPlans = Object.values(PRICING_PLANS).filter(p => p.priceId).length;
@@ -3188,16 +2859,20 @@ async function startServer() {
       
       if (ADMIN_EMAILS.length === 0) {
         console.warn(`⚠️  WARNING: No admin emails configured! Set ADMIN_EMAILS environment variable.`);
+      } else {
+        console.log(`👑 Admin emails configured: ${ADMIN_EMAILS.length}`);
       }
       
       if (!emailTransporter) {
-        console.warn(`⚠️  WARNING: Email not configured! Password reset links will be logged to console.`);
+        console.warn(`⚠️  WARNING: Email not configured! Verification links will be logged to console.`);
         console.warn(`   To enable emails, add these to your .env file:`);
         console.warn(`   EMAIL_HOST=smtp.sendgrid.net`);
         console.warn(`   EMAIL_PORT=587`);
         console.warn(`   EMAIL_USER=apikey`);
         console.warn(`   EMAIL_PASS=your-sendgrid-api-key`);
         console.warn(`   EMAIL_FROM=josh@steadyscaling.com`);
+      } else {
+        console.log(`✅ Email system configured and ready!`);
       }
       
       console.log(`🍪 COOKIE CONFIGURATION:`);
@@ -3210,8 +2885,10 @@ async function startServer() {
       console.log(`   • POST /api/login - Login with secure cookies`);
       console.log(`   • POST /api/logout - Clear authentication cookies`);
       console.log(`   • GET /api/auth/check - Verify authentication status`);
-      console.log(`   • POST /api/register - Register new account`);
-      console.log(`   • POST /api/start-trial - Start free trial`);
+      console.log(`   • POST /api/register - Register new account (with email verification)`);
+      console.log(`   • POST /api/start-trial - Start free trial (with email verification)`);
+      console.log(`   • POST /api/resend-verification - Resend verification email`);
+      console.log(`   • GET /verify-account - Verify email address`);
       console.log(`   • POST /api/forgot-password - Request password reset`);
       console.log(`   • POST /api/reset-password - Reset password with token`);
     });

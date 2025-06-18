@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - SteadyManager</title>
-    <meta name="description" content="Create your free SteadyManager account and start organizing your leads today. Choose from Free, Professional, or Business tiers.">
+    <meta name="description" content="Create your SteadyManager account and choose from Free, Professional, Business, or Enterprise tiers.">
     
     <!-- CDN Resources -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,7 +33,7 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             padding: 3rem;
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             position: relative;
             overflow: hidden;
         }
@@ -110,6 +110,62 @@
             font-size: 1rem;
         }
 
+        .trial-cta {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .trial-cta-title {
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .trial-cta-text {
+            color: #166534;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .trial-cta-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trial-cta-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .trial-cta-btn:hover::before {
+            left: 100%;
+        }
+
+        .trial-cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
         .plan-selector {
             background: #f8fafc;
             padding: 1.5rem;
@@ -127,7 +183,8 @@
             font-weight: 600;
             color: #374151;
             margin-bottom: 1rem;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            text-align: center;
         }
 
         .plan-options {
@@ -145,6 +202,7 @@
             transition: all 0.3s ease;
             text-align: center;
             background: white;
+            position: relative;
         }
 
         .plan-option:hover {
@@ -362,6 +420,7 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
         }
 
         .success-message {
@@ -373,6 +432,7 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
         }
 
         .auth-links {
@@ -426,6 +486,38 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .action-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.secondary {
+            background: #6b7280;
+        }
+
+        .action-btn.secondary:hover {
+            background: #4b5563;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 768px) {
             body {
@@ -475,6 +567,14 @@
             .plan-features {
                 font-size: 0.7rem;
             }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                text-align: center;
+            }
         }
 
         @media (max-width: 480px) {
@@ -497,6 +597,11 @@
 
             .plan-features {
                 font-size: 0.75rem;
+            }
+
+            .billing-toggle {
+                flex-direction: column;
+                gap: 0.5rem;
             }
         }
 
@@ -540,6 +645,15 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
 
+        <!-- Trial CTA -->
+        <div class="trial-cta">
+            <div class="trial-cta-title">🎁 Want to try before you buy?</div>
+            <div class="trial-cta-text">
+                Get a 14-day free trial of Professional with 1,000 leads and all advanced features. No credit card required!
+            </div>
+            <a href="/trial" class="trial-cta-btn">Start Free Trial →</a>
+        </div>
+
         <!-- Plan Selector -->
         <div class="plan-selector" id="planSelector">
             <div class="plan-label">Choose Your Plan</div>
@@ -570,7 +684,7 @@
                 </div>
             </div>
 
-            <div class="billing-toggle">
+            <div class="billing-toggle" id="billingToggle" style="display: none;">
                 <span class="billing-label active">Monthly</span>
                 <div class="billing-switch" id="billingSwitch"></div>
                 <span class="billing-label">Yearly</span>
@@ -621,7 +735,7 @@
 
             <button type="submit" class="submit-btn" id="submitBtn">
                 <div class="loading-spinner" id="loadingSpinner"></div>
-                <span id="submitText">Create Account</span>
+                <span id="submitText">Create Free Account</span>
             </button>
         </form>
 
@@ -630,6 +744,10 @@
                 Already have an account? 
                 <a href="/login" class="auth-link">Sign in</a>
             </p>
+            <p style="margin-top: 0.5rem;">
+                Want to try first? 
+                <a href="/trial" class="auth-link">Start 14-day free trial</a>
+            </p>
         </div>
     </div>
 
@@ -637,7 +755,7 @@
         let selectedPlan = 'free';
         let isYearly = false;
 
-        // Pricing data
+        // Pricing data that matches your backend
         const pricing = {
             professional: { monthly: 6.99, yearly: 69.99 },
             business: { monthly: 19.99, yearly: 199.99 },
@@ -649,7 +767,6 @@
             const cycle = isYearly ? 'yearly' : 'monthly';
             const suffix = isYearly ? '/yr' : '/mo';
             
-            // Update all paid plan prices
             document.getElementById('professionalPrice').textContent = `$${pricing.professional[cycle]}${suffix}`;
             document.getElementById('businessPrice').textContent = `$${pricing.business[cycle]}${suffix}`;
             document.getElementById('enterprisePrice').textContent = `$${pricing.enterprise[cycle]}${suffix}`;
@@ -661,36 +778,32 @@
             const billingSwitch = document.getElementById('billingSwitch');
             const labels = document.querySelectorAll('.billing-label');
             
-            // Update switch visual
             billingSwitch.classList.toggle('yearly', isYearly);
             
-            // Update active label
             labels.forEach((label, index) => {
                 label.classList.toggle('active', isYearly ? index === 1 : index === 0);
             });
             
-            // Update ALL pricing immediately
             updateAllPricing();
         });
 
         // Plan selection logic
         document.querySelectorAll('.plan-option').forEach(option => {
             option.addEventListener('click', () => {
-                // Remove selected class from all options
                 document.querySelectorAll('.plan-option').forEach(opt => opt.classList.remove('selected'));
-                
-                // Add selected class to clicked option
                 option.classList.add('selected');
                 
                 selectedPlan = option.dataset.plan;
                 
-                // Update visual styling for paid plans
                 const planSelector = document.getElementById('planSelector');
+                const billingToggle = document.getElementById('billingToggle');
                 
                 if (selectedPlan !== 'free') {
                     planSelector.classList.add('pro-selected');
+                    billingToggle.style.display = 'flex';
                 } else {
                     planSelector.classList.remove('pro-selected');
+                    billingToggle.style.display = 'none';
                 }
                 
                 updateSubmitButton();
@@ -703,7 +816,8 @@
             if (selectedPlan === 'free') {
                 submitText.textContent = 'Create Free Account';
             } else {
-                submitText.textContent = 'Continue to Payment';
+                const planName = selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1);
+                submitText.textContent = `Create ${planName} Account`;
             }
         }
 
@@ -750,27 +864,41 @@
             }
         }
 
-        // Error/Success message functions
+        // Enhanced message functions
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
+            
+            if (message.includes('<')) {
+                errorDiv.innerHTML = message;
+            } else {
+                errorDiv.textContent = message;
+            }
+            
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
             
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 8000);
+            if (!message.includes('<')) {
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 8000);
+            }
         }
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMessage');
-            successDiv.textContent = message;
+            
+            if (message.includes('<')) {
+                successDiv.innerHTML = message;
+            } else {
+                successDiv.textContent = message;
+            }
+            
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
             
             setTimeout(() => {
                 successDiv.style.display = 'none';
-            }, 5000);
+            }, 10000);
         }
 
         function clearMessages() {
@@ -785,7 +913,7 @@
             
             if (isLoading) {
                 submitBtn.disabled = true;
-                submitText.textContent = selectedPlan === 'free' ? 'Creating Account...' : 'Processing...';
+                submitText.textContent = selectedPlan === 'free' ? 'Creating Account...' : 'Creating Account...';
                 loadingSpinner.style.display = 'inline-block';
             } else {
                 submitBtn.disabled = false;
@@ -807,7 +935,100 @@
             }
         }
 
-        // Form submission
+        // Validation function
+        function validateForm(data) {
+            if (!data.email || !data.password || !data.confirmPassword) {
+                showError('Please fill in all fields.');
+                if (!data.email) setFieldError('email');
+                if (!data.password) setFieldError('password');
+                if (!data.confirmPassword) setFieldError('confirmPassword');
+                return false;
+            }
+            
+            if (!data.email.includes('@')) {
+                showError('Please enter a valid email address.');
+                setFieldError('email');
+                return false;
+            }
+            
+            if (data.password !== data.confirmPassword) {
+                showError('Passwords do not match.');
+                setFieldError('password');
+                setFieldError('confirmPassword');
+                return false;
+            }
+            
+            if (data.password.length < 8) {
+                showError('Password must be at least 8 characters long.');
+                setFieldError('password');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Handle existing user with retry scenario
+        function handleExistingUserRetry(data) {
+            showSuccess('🔄 Account found! Redirecting to complete your upgrade...');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+        }
+
+        // Handle user already exists scenario
+        function handleUserExists(data) {
+            const errorMessage = `
+                <div style="margin-bottom: 1rem;">
+                    ${data.error}
+                </div>
+                <div class="action-buttons">
+                    <a href="/login" class="action-btn">Sign In Instead</a>
+                    <a href="/trial" class="action-btn secondary">Try Free Trial</a>
+                </div>
+            `;
+            
+            showError(errorMessage);
+            setFieldError('email');
+        }
+
+        // Handle registration error scenarios
+        function handleRegistrationError(response, data) {
+            if (response.status === 429) {
+                showError(data.error || 'Too many registration attempts. Please wait and try again.');
+            } 
+            else if (response.status === 400) {
+                if (data.shouldSignIn) {
+                    handleUserExists(data);
+                } 
+                else if (data.isPendingUser && data.isRetry) {
+                    handleExistingUserRetry(data);
+                }
+                else if (data.trialUsedDate) {
+                    const trialDate = new Date(data.trialUsedDate).toLocaleDateString();
+                    const errorMessage = `
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Trial Already Used</strong><br>
+                            You used your free trial on ${trialDate}. You can still create a paid account!
+                        </div>
+                        <div class="action-buttons">
+                            <a href="/login" class="action-btn secondary">Sign In Instead</a>
+                        </div>
+                    `;
+                    showError(errorMessage);
+                }
+                else {
+                    showError(data.error || 'Registration failed.');
+                    if (data.error && data.error.toLowerCase().includes('email')) {
+                        setFieldError('email');
+                    }
+                }
+            } 
+            else {
+                showError(data.error || 'Registration failed. Please try again.');
+            }
+        }
+
+        // Main form submission handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -825,33 +1046,7 @@
             };
             
             // Client-side validation
-            if (!registerData.email || !registerData.password || !registerData.confirmPassword) {
-                showError('Please fill in all fields.');
-                setLoading(false);
-                if (!registerData.email) setFieldError('email');
-                if (!registerData.password) setFieldError('password');
-                if (!registerData.confirmPassword) setFieldError('confirmPassword');
-                return;
-            }
-            
-            if (!registerData.email.includes('@')) {
-                showError('Please enter a valid email address.');
-                setFieldError('email');
-                setLoading(false);
-                return;
-            }
-            
-            if (registerData.password !== registerData.confirmPassword) {
-                showError('Passwords do not match.');
-                setFieldError('password');
-                setFieldError('confirmPassword');
-                setLoading(false);
-                return;
-            }
-            
-            if (registerData.password.length < 8) {
-                showError('Password must be at least 8 characters long.');
-                setFieldError('password');
+            if (!validateForm(registerData)) {
                 setLoading(false);
                 return;
             }
@@ -869,81 +1064,22 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    showSuccess(data.message || 'Account created successfully!');
+                    // Success! Show message and redirect to dashboard
+                    let successMessage = data.message || 'Account created successfully!';
                     
-                    if (selectedPlan === 'free') {
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 1500);
-                    } else {
-                        setTimeout(async () => {
-                            try {
-                                const checkoutResponse = await fetch('/api/create-checkout-session', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        plan: registerData.plan,
-                                        email: registerData.email
-                                    }),
-                                    credentials: 'include'
-                                });
-                                
-                                const checkoutData = await checkoutResponse.json();
-                                
-                                if (checkoutResponse.ok && checkoutData.url) {
-                                    window.location.href = checkoutData.url;
-                                } else {
-                                    showError('Payment setup failed. Please try again.');
-                                }
-                            } catch (error) {
-                                showError('Payment setup failed. Please try again.');
-                            }
-                        }, 1500);
+                    if (selectedPlan !== 'free') {
+                        successMessage += ' You can upgrade to your selected plan from the dashboard.';
                     }
+                    
+                    showSuccess(successMessage);
+                    
+                    // Always redirect to dashboard - let dashboard handle upgrade flow
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                    
                 } else {
-                    if (response.status === 429) {
-                        showError(data.error || 'Too many registration attempts. Please wait and try again.');
-                    } else if (response.status === 400) {
-                        if (data.shouldSignIn) {
-                            showError(data.error + ' Click here to sign in instead.');
-                        } else if (data.isPendingUser && data.isRetry) {
-                            showSuccess('Redirecting to payment...');
-                            setTimeout(async () => {
-                                try {
-                                    const checkoutResponse = await fetch('/api/create-checkout-session', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            plan: registerData.plan,
-                                            email: registerData.email
-                                        }),
-                                        credentials: 'include'
-                                    });
-                                    
-                                    const checkoutData = await checkoutResponse.json();
-                                    
-                                    if (checkoutResponse.ok && checkoutData.url) {
-                                        window.location.href = checkoutData.url;
-                                    } else {
-                                        showError('Payment setup failed. Please try again.');
-                                    }
-                                } catch (error) {
-                                    showError('Payment setup failed. Please try again.');
-                                }
-                            }, 1000);
-                        } else {
-                            showError(data.error || 'Registration failed.');
-                            if (data.error.toLowerCase().includes('email')) {
-                                setFieldError('email');
-                            }
-                        }
-                    } else {
-                        showError(data.error || 'Registration failed. Please try again.');
-                    }
+                    handleRegistrationError(response, data);
                 }
             } catch (error) {
                 console.error('Registration error:', error);
@@ -963,12 +1099,12 @@
         // Initialize everything on page load
         document.addEventListener('DOMContentLoaded', () => {
             updateSubmitButton();
-            updateAllPricing(); // Initialize pricing display
+            updateAllPricing();
             document.getElementById('email').focus();
         });
 
         console.log('🚀 SteadyManager Registration Page Loaded');
-        console.log('💰 Conversion machine ready!');
+        console.log('💰 Conversion machine ready with trial integration!');
     </script>
 </body>
 </html>

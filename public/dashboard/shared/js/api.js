@@ -1,248 +1,91 @@
 /**
- * 🚀 COMPLETE SECURE API.JS - TIER-SCALING SAAS EDITION
+ * 🧰 TIER-SCALING API TOOLBOX - ORGANIZED EDITION
  * 
- * The ultimate backend communication layer that scales from free to admin!
- * Every method is a secure gateway to your bulletproof server.js endpoints.
+ * Clean, organized tools that scale with your subscription tier.
+ * Your server.js handles security - this handles convenience!
  * 
- * SECURITY PRINCIPLES:
- * ✅ All security handled server-side (your server.js is the fortress)
- * ✅ JWT token authentication on every request
- * ✅ Automatic token refresh and error handling
- * ✅ CSRF protection headers
- * ✅ Graceful permission denied handling
- * ✅ Rate limiting respected
- * ✅ Input sanitization before sending
+ * TIER PROGRESSION:
+ * 🆓 FREE: Core tools for individual users
+ * 💼 PRO: FREE + Advanced analytics & automation  
+ * 🏢 BUSINESS: PRO + Team collaboration & workflows
+ * ⭐ ENTERPRISE: BUSINESS + Custom reports & integrations
+ * 👑 ADMIN: ENTERPRISE + System control & god mode
  * 
- * TIER PROGRESSION (Cascading Access):
- * 🆓 FREE: Basic lead management, simple stats, core functionality
- * 💼 PRO: FREE + Advanced analytics, bulk operations, email tracking
- * 🏢 BUSINESS: PRO + Team management, automation, collaboration
- * ⭐ ENTERPRISE: BUSINESS + Custom reports, integrations, white-label
- * 👑 ADMIN: ENTERPRISE + System control, user management, god mode
- * 
- * @version 6.0.0 - COMPLETE IMPLEMENTATION EDITION
- * @author SteadyManager Team - The Security Masters
+ * @version 2.0.0 - Tier-Scaling Edition
  */
 
-class SecureSaaSAPI {
-  constructor() {
-    this.version = '6.0.0 - Complete Implementation';
-    this.baseURL = this.getBaseURL();
-    this.retryCount = 0;
-    this.maxRetries = 3;
-    
-    // Request interceptors for additional security
-    this.requestInterceptors = [];
-    this.responseInterceptors = [];
-    
-    console.log('🚀 Secure SaaS API v6.0.0 - Complete Implementation loaded!');
-    console.log('🔒 All requests secured through your bulletproof server.js');
-  }
-
-  // 🔧 CORE INFRASTRUCTURE & SECURITY
-  getBaseURL() {
-    // Auto-detect environment
-    if (typeof window !== 'undefined') {
-      const { protocol, hostname, port } = window.location;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return `${protocol}//${hostname}:${port || 3000}`;
-      }
-      return `${protocol}//${hostname}`;
-    }
-    return 'http://localhost:3000';
-  }
-
-  // 🛡️ ULTRA-SECURE REQUEST HANDLER
-  static async request(endpoint, method = 'GET', data = null, options = {}) {
-    const config = {
-      timeout: 30000,
-      retries: 3,
-      requireAuth: true,
-      ...options
-    };
-
+class TierScalingAPI {
+  // 🔧 CORE REQUEST METHOD - Simple & Clean
+  static async request(endpoint, method = 'GET', data = null) {
     try {
-      // 🔒 Build secure headers
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest', // CSRF protection
-        'Accept': 'application/json',
-        ...config.headers
-      };
-
-      // 🔑 Add authentication if required
-      if (config.requireAuth) {
-        const token = SecureSaaSAPI.getTokenFromCookie() || localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('Authentication required');
-        }
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      // 🧹 Sanitize data before sending
-      const sanitizedData = data ? this.sanitizeRequestData(data) : null;
-
-      // 🚀 Make the request
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-
       const response = await fetch(endpoint, {
         method,
-        headers,
-        body: sanitizedData ? JSON.stringify(sanitizedData) : null,
-        credentials: 'include', // Include cookies for session management
-        signal: controller.signal
+        headers: { 'Content-Type': 'application/json' },
+        body: data ? JSON.stringify(data) : null,
+        credentials: 'include' // Trust server's secure cookies
       });
 
-      clearTimeout(timeoutId);
-
-      // 🛡️ Handle security responses
-      await this.handleSecurityResponse(response);
-
-      // 📊 Parse response
-      const responseData = await this.parseResponse(response);
-      
-      // ✅ Success logging (non-sensitive data only)
-      console.log(`✅ API Success: ${method} ${endpoint}`);
-      
-      return responseData;
-
-    } catch (error) {
-      return this.handleRequestError(error, endpoint, method, data, config);
-    }
-  }
-
-  static async handleSecurityResponse(response) {
-    // 🔐 Authentication errors
-    if (response.status === 401) {
-      console.warn('🔐 Authentication failed - redirecting to login');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('rememberToken');
-      window.location.href = '/login?error=session_expired';
-      throw new Error('Authentication failed');
-    }
-
-    // 🚫 Permission denied
-    if (response.status === 403) {
-      console.warn('🚫 Access denied - insufficient permissions');
-      throw new Error('Access denied - insufficient permissions');
-    }
-
-    // 🔒 Account locked/suspended
-    if (response.status === 423) {
-      console.warn('🔒 Account locked');
-      throw new Error('Account temporarily locked');
-    }
-
-    // 📈 Rate limiting
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After') || 60;
-      console.warn(`🚦 Rate limited - retry after ${retryAfter}s`);
-      throw new Error(`Rate limited - try again in ${retryAfter} seconds`);
-    }
-
-    // 🔧 Server errors
-    if (response.status >= 500) {
-      console.error('🔧 Server error detected');
-      throw new Error('Server temporarily unavailable');
-    }
-
-    // ❌ Client errors
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(errorData.error || `Request failed with status ${response.status}`);
-    }
-  }
-
-  static async parseResponse(response) {
-    const contentType = response.headers.get('content-type');
-    
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
-    }
-    
-    if (contentType && contentType.includes('text/')) {
-      return await response.text();
-    }
-    
-    return await response.blob();
-  }
-
-  static async handleRequestError(error, endpoint, method, data, config) {
-    console.error(`❌ API Error: ${method} ${endpoint}`, error.message);
-
-    // 🔄 Retry logic for network errors
-    if (config.retries > 0 && this.isRetryableError(error)) {
-      console.log(`🔄 Retrying request... (${config.retries} attempts left)`);
-      await this.delay(1000 * (4 - config.retries)); // Exponential backoff
-      
-      return this.request(endpoint, method, data, {
-        ...config,
-        retries: config.retries - 1
-      });
-    }
-
-    // 🎯 User-friendly error handling
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out - please check your connection');
-    }
-
-    if (!navigator.onLine) {
-      throw new Error('You appear to be offline - please check your connection');
-    }
-
-    throw error;
-  }
-
-  static isRetryableError(error) {
-    const retryableErrors = [
-      'NetworkError',
-      'TypeError', // Network issues
-      'AbortError' // Timeout
-    ];
-    return retryableErrors.includes(error.name) || error.message.includes('fetch');
-  }
-
-  static getTokenFromCookie() {
-  if (typeof document === 'undefined') return null; // Server-side check
-  
-  const cookies = document.cookie.split(';');
-  for (let cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'authToken') {
-      return value;
-    }
-  }
-  return null;
-}
-
-  static sanitizeRequestData(data) {
-    if (typeof data !== 'object' || data === null) return data;
-    
-    const sanitized = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (typeof value === 'string') {
-        // Basic XSS prevention
-        sanitized[key] = value.trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-      } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = this.sanitizeRequestData(value);
-      } else {
-        sanitized[key] = value;
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
       }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`API Error: ${method} ${endpoint}`, error.message);
+      throw error;
     }
-    return sanitized;
-  }
-
-  static delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // =============================================
-  // FREE TIER - FOUNDATION API METHODS
+  // 🆓 FREE TIER - FOUNDATION TOOLS
   // =============================================
 
-  // 👤 USER MANAGEMENT (Free Tier Foundation)
+  // 🔐 AUTHENTICATION (All Tiers)
+  static async login(email, password, rememberMe = false) {
+    return await this.request('/api/login', 'POST', { email, password, rememberMe });
+  }
+
+  static async logout() {
+    return await this.request('/api/logout', 'POST');
+  }
+
+  static async checkAuth() {
+    return await this.request('/api/auth/check');
+  }
+
+  static async register(email, password, confirmPassword, pendingUpgrade = false, plan = null) {
+    return await this.request('/api/register', 'POST', {
+      email, password, confirmPassword, pendingUpgrade, plan
+    });
+  }
+
+  static async startTrial(email, password, confirmPassword) {
+    return await this.request('/api/start-trial', 'POST', {
+      email, password, confirmPassword
+    });
+  }
+
+  static async forgotPassword(email) {
+    return await this.request('/api/forgot-password', 'POST', { email });
+  }
+
+  static async resetPassword(token, password, confirmPassword) {
+    return await this.request('/api/reset-password', 'POST', {
+      token, password, confirmPassword
+    });
+  }
+
+  // 👤 USER MANAGEMENT (Free Tier)
   static async getProfile() {
+    return await this.request('/api/user/profile');
+  }
+
+  static async getUserProfile() {
+    return await this.request('/api/user/profile');
+  }
+
+  static async getSettings() {
     return await this.request('/api/user/settings');
   }
 
@@ -254,58 +97,21 @@ class SecureSaaSAPI {
     return await this.request('/api/user/settings', 'PUT', { settings });
   }
 
-  static async deleteAccount() {
-    return await this.request('/api/user/delete', 'DELETE');
+  static async updateUserGoals(goals) {
+    return await this.request('/api/user/settings', 'PUT', { goals });
   }
 
-  // 🔐 AUTHENTICATION (All Tiers)
-  static async login(email, password, rememberMe = false) {
-    return await this.request('/api/login', 'POST', { 
-      email, 
-      password, 
-      rememberMe 
-    }, { requireAuth: false });
+  static async getUserSubscriptionInfo() {
+    const profile = await this.getUserProfile();
+    return {
+      tier: profile.subscriptionTier,
+      leadLimit: profile.monthlyLeadLimit,
+      currentLeads: profile.currentMonthLeads,
+      isAdmin: profile.isAdmin
+    };
   }
 
-  static async logout() {
-    return await this.request('/api/logout', 'POST');
-  }
-
-  static async checkAuth() {
-    return await this.request('/api/auth/check', 'GET', null, { requireAuth: false });
-  }
-
-  static async register(email, password, confirmPassword, pendingUpgrade = false, plan = null) {
-    return await this.request('/api/register', 'POST', {
-      email,
-      password,
-      confirmPassword,
-      pendingUpgrade,
-      plan
-    }, { requireAuth: false });
-  }
-
-  static async startTrial(email, password, confirmPassword) {
-    return await this.request('/api/start-trial', 'POST', {
-      email,
-      password,
-      confirmPassword
-    }, { requireAuth: false });
-  }
-
-  static async forgotPassword(email) {
-    return await this.request('/api/forgot-password', 'POST', { email }, { requireAuth: false });
-  }
-
-  static async resetPassword(token, password, confirmPassword) {
-    return await this.request('/api/reset-password', 'POST', {
-      token,
-      password,
-      confirmPassword
-    }, { requireAuth: false });
-  }
-
-  // 🎯 BASIC LEAD MANAGEMENT (Free Tier Foundation)
+  // 🎯 LEAD MANAGEMENT (Free Tier)
   static async getLeads() {
     return await this.request('/api/leads');
   }
@@ -326,30 +132,91 @@ class SecureSaaSAPI {
     return await this.request(`/api/leads/${leadId}`);
   }
 
-  // 📊 BASIC STATISTICS (Free Tier Foundation)  
+  static async searchLeads(query) {
+    return await this.request('/api/leads/search', 'POST', { query });
+  }
+
+  // 🎯 SMART LEAD HELPERS (Perfect for Pipeline.js)
+  static async getLeadsByType(type = 'all') {
+    const leads = await this.getLeads();
+    if (type === 'all') return leads.all || [];
+    return leads[type] || [];
+  }
+
+  static async getLeadsByStatus(status) {
+    const leads = await this.getLeads();
+    return leads.all.filter(lead => lead.status === status);
+  }
+
+  static async updateLeadStatus(leadId, status, notes = '') {
+    return await this.updateLead(leadId, { 
+      status: status,
+      notes: notes,
+      last_contact_date: new Date().toISOString().split('T')[0]
+    });
+  }
+
+  static async setLeadFollowUp(leadId, date, notes = '') {
+    return await this.updateLead(leadId, { 
+      follow_up_date: date,
+      notes: notes
+    });
+  }
+
+  static async getRecentLeads(limit = 5) {
+    const leads = await this.getLeads();
+    return leads.all
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, limit);
+  }
+
+  // 📊 ENHANCED STATISTICS (Perfect for Dashboard.js)
   static async getBasicStats() {
     return await this.request('/api/statistics');
   }
 
-  static async getLeadsByType() {
-    const leads = await this.getLeads();
-    return {
-      cold: leads.cold || [],
-      warm: leads.warm || [],
-      crm: leads.crm || []
-    };
+  static async getCurrentMonthStats() {
+    return await this.request('/api/current-month-stats');
   }
 
-  static async getMonthlyProgress() {
+  static async getDetailedStats() {
     const stats = await this.getBasicStats();
+    const monthStats = await this.getCurrentMonthStats();
+    
     return {
-      current: stats.totalLeads || 0,
-      target: 50, // Basic target for free tier
-      percentage: Math.min(((stats.totalLeads || 0) / 50) * 100, 100)
+      ...stats,
+      monthlyProgress: {
+        current: monthStats.currentMonthLeads,
+        limit: monthStats.monthlyLeadLimit,
+        remaining: monthStats.leadsRemaining,
+        percentage: monthStats.percentageUsed
+      }
     };
   }
 
-  // 📅 BASIC SCHEDULING (Free Tier Foundation)
+  static async getLeadCountByPlatform() {
+    const stats = await this.getBasicStats();
+    return stats.platformStats || {};
+  }
+
+  static async getProgressTowardGoal(goalType = 'monthly') {
+    const profile = await this.getUserProfile();
+    const stats = await this.getDetailedStats();
+    
+    const goals = profile.goals || {};
+    const target = goals[goalType] || 50;
+    const current = stats.totalLeads || 0;
+    
+    return {
+      current: current,
+      target: target,
+      percentage: Math.min((current / target) * 100, 100),
+      remaining: Math.max(target - current, 0),
+      isComplete: current >= target
+    };
+  }
+
+  // 📅 ENHANCED TASK MANAGEMENT (Perfect for Scheduling.js)
   static async addBasicReminder(leadId, date, notes = '') {
     return await this.request('/api/tasks', 'POST', {
       leadId,
@@ -360,8 +227,43 @@ class SecureSaaSAPI {
     });
   }
 
+  static async createTask(taskData) {
+    return await this.request('/api/tasks', 'POST', taskData);
+  }
+
+  static async getTasks(filters = {}) {
+    let query = '/api/tasks';
+    const params = new URLSearchParams();
+    
+    if (filters.status) params.append('status', filters.status);
+    if (filters.type) params.append('type', filters.type);
+    
+    if (params.toString()) {
+      query += '?' + params.toString();
+    }
+    
+    return await this.request(query);
+  }
+
   static async getUpcomingReminders() {
-    return await this.request('/api/tasks?status=pending&type=follow_up');
+    return await this.getTasks({ status: 'pending', type: 'follow_up' });
+  }
+
+  static async getTodaysTasks() {
+    const today = new Date().toISOString().split('T')[0];
+    const allTasks = await this.getTasks({ status: 'pending' });
+    return allTasks.filter(task => task.due_date === today);
+  }
+
+  static async getOverdueTasks() {
+    const today = new Date().toISOString().split('T')[0];
+    const allTasks = await this.getTasks({ status: 'pending' });
+    return allTasks.filter(task => task.due_date && task.due_date < today);
+  }
+
+  static async getTasksForLead(leadId) {
+    const allTasks = await this.getTasks();
+    return allTasks.filter(task => task.lead_id === leadId);
   }
 
   static async markReminderComplete(reminderId, notes = '') {
@@ -371,8 +273,28 @@ class SecureSaaSAPI {
     });
   }
 
+  static async completeTask(taskId, notes = '') {
+    return await this.request(`/api/tasks/${taskId}`, 'PUT', {
+      status: 'completed',
+      completionNotes: notes
+    });
+  }
+
+  // 💳 BILLING & STRIPE (All Tiers)
+  static async getStripeConfig() {
+    return await this.request('/api/stripe-config');
+  }
+
+  static async getPricingPlans() {
+    return await this.request('/api/pricing-plans');
+  }
+
+  static async createCheckoutSession(plan, email) {
+    return await this.request('/api/create-checkout-session', 'POST', { plan, email });
+  }
+
   // =============================================
-  // PRO TIER - FREE + ENHANCED API METHODS
+  // 💼 PRO TIER - FREE + ENHANCED TOOLS
   // =============================================
 
   // 🎯 ADVANCED LEAD MANAGEMENT (Pro Tier+)
@@ -382,10 +304,6 @@ class SecureSaaSAPI {
 
   static async exportLeads(format = 'csv') {
     return await this.request(`/api/leads/export?format=${format}`);
-  }
-
-  static async searchLeads(query) {
-    return await this.request('/api/leads/search', 'POST', { query });
   }
 
   static async duplicateLeadCheck() {
@@ -415,9 +333,7 @@ class SecureSaaSAPI {
 
   static async sendEmailFromTemplate(templateId, leadId, customData = {}) {
     return await this.request('/api/email-templates/send', 'POST', {
-      templateId,
-      leadId,
-      customData
+      templateId, leadId, customData
     });
   }
 
@@ -492,67 +408,8 @@ class SecureSaaSAPI {
     return await this.request('/api/lead-tags/bulk', 'POST', { leadIds, tagId });
   }
 
-  // 📅 ADVANCED SCHEDULING (Pro Tier+)
-  static async createTask(taskData) {
-    return await this.request('/api/tasks', 'POST', taskData);
-  }
-
-  static async getCalendarTasks() {
-    return await this.request('/api/tasks/calendar');
-  }
-
-  static async scheduleTask(taskData) {
-    return await this.request('/api/tasks/schedule', 'POST', taskData);
-  }
-
-  static async updateTaskStatus(taskId, status) {
-    return await this.request(`/api/tasks/${taskId}`, 'PUT', { status });
-  }
-
-  static async getOverdueTasks() {
-    return await this.request('/api/tasks?status=overdue');
-  }
-
-  static async createRecurringTask(taskData) {
-    return await this.request('/api/tasks/recurring', 'POST', taskData);
-  }
-
-  // 📁 FILE MANAGEMENT (Pro Tier+)
-  static async uploadFile(file, leadId = null, category = 'general') {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (leadId) formData.append('leadId', leadId);
-    formData.append('category', category);
-
-    // Special handling for file uploads
-    const response = await fetch('/api/files/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData,
-      credentials: 'include'
-    });
-
-    await this.handleSecurityResponse(response);
-    return await this.parseResponse(response);
-  }
-
-  static async getLeadAttachments(leadId) {
-    return await this.request(`/api/files?leadId=${leadId}`);
-  }
-
-  static async downloadFile(fileId) {
-    return await this.request(`/api/files/${fileId}/download`);
-  }
-
-  static async deleteAttachment(fileId) {
-    return await this.request(`/api/files/${fileId}`, 'DELETE');
-  }
-
   // =============================================
-  // BUSINESS TIER - PRO + TEAM & AUTOMATION API METHODS
+  // 🏢 BUSINESS TIER - PRO + TEAM TOOLS
   // =============================================
 
   // 👥 TEAM MANAGEMENT (Business Tier+)
@@ -647,79 +504,8 @@ class SecureSaaSAPI {
     return await this.request('/api/goals/team', 'POST', goalData);
   }
 
-  // 📅 TEAM SCHEDULING (Business Tier+)
-  static async getTeamCalendar() {
-    return await this.request('/api/calendar/team');
-  }
-
-  static async createTeamTask(taskData) {
-    return await this.request('/api/tasks/team', 'POST', taskData);
-  }
-
-  static async assignTask(taskId, userId) {
-    return await this.request(`/api/tasks/${taskId}/assign`, 'PUT', { userId });
-  }
-
-  static async getTeamWorkload() {
-    return await this.request('/api/team/workload');
-  }
-
-  // 🔔 NOTIFICATIONS & ALERTS (Business Tier+)
-  static async getNotifications() {
-    return await this.request('/api/notifications');
-  }
-
-  static async markNotificationRead(notificationId) {
-    return await this.request(`/api/notifications/${notificationId}/read`, 'PUT');
-  }
-
-  static async createAlert(alertConfig) {
-    return await this.request('/api/alerts', 'POST', alertConfig);
-  }
-
-  static async getTeamNotifications() {
-    return await this.request('/api/notifications?team=true');
-  }
-
-  static async subscribeToAlert(alertType) {
-    return await this.request('/api/alerts/subscribe', 'POST', { alertType });
-  }
-
-  // 📁 ADVANCED FILE MANAGEMENT (Business Tier+)
-  static async bulkUploadFiles(files) {
-    const formData = new FormData();
-    files.forEach((file, index) => {
-      formData.append(`file${index}`, file);
-    });
-
-    const response = await fetch('/api/files/bulk-upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData,
-      credentials: 'include'
-    });
-
-    await this.handleSecurityResponse(response);
-    return await this.parseResponse(response);
-  }
-
-  static async shareFileWithTeam(fileId, teamIds) {
-    return await this.request(`/api/files/${fileId}/share`, 'POST', { teamIds });
-  }
-
-  static async getTeamFiles() {
-    return await this.request('/api/files?team=true');
-  }
-
-  static async createFileFolder(folderData) {
-    return await this.request('/api/files/folders', 'POST', folderData);
-  }
-
   // =============================================
-  // ENTERPRISE TIER - BUSINESS + ADVANCED & CUSTOM API METHODS
+  // ⭐ ENTERPRISE TIER - BUSINESS + ADVANCED TOOLS
   // =============================================
 
   // 📊 ADVANCED REPORTING (Enterprise Tier+)
@@ -745,31 +531,6 @@ class SecureSaaSAPI {
 
   static async getReportHistory() {
     return await this.request('/api/reports/history');
-  }
-
-  // 📈 EXECUTIVE ANALYTICS (Enterprise Tier+)
-  static async getExecutiveMetrics() {
-    return await this.request('/api/analytics/executive');
-  }
-
-  static async getFunnelAnalysis() {
-    return await this.request('/api/analytics/funnel');
-  }
-
-  static async getCohortAnalysis() {
-    return await this.request('/api/analytics/cohort');
-  }
-
-  static async getAttributionData() {
-    return await this.request('/api/analytics/attribution');
-  }
-
-  static async getROIAnalysis() {
-    return await this.request('/api/analytics/roi');
-  }
-
-  static async getPredictiveAnalytics() {
-    return await this.request('/api/analytics/predictive');
   }
 
   // 🔗 INTEGRATIONS & API (Enterprise Tier+)
@@ -806,24 +567,6 @@ class SecureSaaSAPI {
     return await this.request('/api/white-label/customize', 'POST', brandData);
   }
 
-  static async uploadLogo(logoFile) {
-    const formData = new FormData();
-    formData.append('logo', logoFile);
-
-    const response = await fetch('/api/white-label/logo', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData,
-      credentials: 'include'
-    });
-
-    await this.handleSecurityResponse(response);
-    return await this.parseResponse(response);
-  }
-
   static async updateBrandColors(colors) {
     return await this.request('/api/white-label/colors', 'PUT', { colors });
   }
@@ -834,23 +577,6 @@ class SecureSaaSAPI {
 
   static async updateCustomFields(fieldId, updates) {
     return await this.request(`/api/custom-fields/${fieldId}`, 'PUT', updates);
-  }
-
-  // 🏢 MULTI-TENANT OPERATIONS (Enterprise Tier+)
-  static async createTenant(tenantData) {
-    return await this.request('/api/tenants', 'POST', tenantData);
-  }
-
-  static async getTenants() {
-    return await this.request('/api/tenants');
-  }
-
-  static async switchTenant(tenantId) {
-    return await this.request(`/api/tenants/${tenantId}/switch`, 'POST');
-  }
-
-  static async getTenantAnalytics(tenantId) {
-    return await this.request(`/api/tenants/${tenantId}/analytics`);
   }
 
   // 🎭 AI & MACHINE LEARNING (Enterprise Tier+)
@@ -874,29 +600,8 @@ class SecureSaaSAPI {
     return await this.request('/api/ai/performance');
   }
 
-  // 🎨 DASHBOARD CUSTOMIZATION (Enterprise Tier+)
-  static async createCustomWidget(widgetConfig) {
-    return await this.request('/api/dashboard/widgets', 'POST', widgetConfig);
-  }
-
-  static async updateWidgetLayout(layoutData) {
-    return await this.request('/api/dashboard/layout', 'PUT', layoutData);
-  }
-
-  static async getWidgetData(widgetType) {
-    return await this.request(`/api/dashboard/widgets/${widgetType}/data`);
-  }
-
-  static async shareWidget(widgetId, teamId) {
-    return await this.request(`/api/dashboard/widgets/${widgetId}/share`, 'POST', { teamId });
-  }
-
-  static async duplicateWidget(widgetId) {
-    return await this.request(`/api/dashboard/widgets/${widgetId}/duplicate`, 'POST');
-  }
-
   // =============================================
-  // ADMIN TIER - ENTERPRISE + SYSTEM CONTROL API METHODS
+  // 👑 ADMIN TIER - ENTERPRISE + SYSTEM CONTROL
   // =============================================
 
   // 👤 USER MANAGEMENT (Admin Tier Only)
@@ -970,28 +675,7 @@ class SecureSaaSAPI {
     return await this.request('/api/admin/billing/churn');
   }
 
-  // 🎧 SUPPORT & MODERATION (Admin Tier Only)
-  static async getSupportTickets() {
-    return await this.request('/api/admin/support/tickets');
-  }
-
-  static async createSupportTicket(ticketData) {
-    return await this.request('/api/admin/support/tickets', 'POST', ticketData);
-  }
-
-  static async updateTicketStatus(ticketId, status) {
-    return await this.request(`/api/admin/support/tickets/${ticketId}/status`, 'PUT', { status });
-  }
-
-  static async moderateContent(contentId, action) {
-    return await this.request(`/api/admin/moderation/${contentId}`, 'POST', { action });
-  }
-
-  static async getUserReports(userId) {
-    return await this.request(`/api/admin/users/${userId}/reports`);
-  }
-
-  // 🔄 TIER SWITCHING (Admin Tier - Your Bomb Feature!)
+  // 🔄 TIER SWITCHING (Admin Tier - Your BOMB Feature!)
   static async switchViewToTier(tier) {
     return await this.request('/api/admin/tier-switch', 'POST', { tier });
   }
@@ -1004,7 +688,7 @@ class SecureSaaSAPI {
     return await this.request('/api/admin/tier-switch/available');
   }
 
-  // 🎛️ ADMIN SPECIAL ENDPOINTS (From your server.js)
+  // 🎛️ ADMIN SPECIAL ENDPOINTS
   static async getAdminStats() {
     return await this.request('/api/admin/stats');
   }
@@ -1013,9 +697,31 @@ class SecureSaaSAPI {
     return await this.request('/api/admin/check-trials', 'POST');
   }
 
-  static async getTrialStatus() {
-    return await this.request('/api/admin/trial-status');
+// 🎯 TRIAL STATUS HELPER
+static async getTrialStatus() {
+  const profile = await this.getUserProfile();
+  
+  // Check current subscription
+  const isOnTrial = profile.subscriptionTier === 'PROFESSIONAL_TRIAL';
+  const hasUsedTrial = profile.trialUsed || false;
+  
+  // Determine trial state
+  let trialState = 'available';  // Default for new users
+  
+  if (isOnTrial) {
+    trialState = 'active';
+  } else if (hasUsedTrial) {
+    trialState = 'used';
   }
+  
+  return {
+    state: trialState,          // 'available', 'active', 'used'
+    hasUsedTrial,
+    isCurrentlyOnTrial: isOnTrial,
+    canStartTrial: !hasUsedTrial && !isOnTrial,
+    subscriptionTier: profile.subscriptionTier
+  };
+}
 
   static async createTestTrial() {
     return await this.request('/api/admin/create-test-trial', 'POST');
@@ -1026,421 +732,180 @@ class SecureSaaSAPI {
   }
 
   // =============================================
-  // STRIPE & BILLING INTEGRATION (All Tiers)
+  // 🔧 UTILITY HELPERS
   // =============================================
 
-  static async getStripeConfig() {
-    return await this.request('/api/stripe-config', 'GET', null, { requireAuth: false });
-  }
-
-  static async getPricingPlans() {
-    return await this.request('/api/pricing-plans', 'GET', null, { requireAuth: false });
-  }
-
-  static async createCheckoutSession(plan, email) {
-    return await this.request('/api/create-checkout-session', 'POST', { plan, email });
-  }
-
-  // =============================================
-  // UTILITY & HELPER METHODS
-  // =============================================
-
-  // 🔍 SEARCH & FILTERING HELPERS
-  static async searchAll(query, filters = {}) {
-    return await this.request('/api/search', 'POST', { query, filters });
-  }
-
-  static async getFilterOptions(entity) {
-    return await this.request(`/api/filters/${entity}`);
-  }
-
-  // 📊 DASHBOARD HELPERS
-  static async getDashboardData(tier = 'basic') {
-    return await this.request(`/api/dashboard?tier=${tier}`);
-  }
-
-  static async getQuickStats() {
-    return await this.request('/api/dashboard/quick-stats');
-  }
-
-  // 🔔 NOTIFICATION HELPERS
-  static async markAllNotificationsRead() {
-    return await this.request('/api/notifications/mark-all-read', 'POST');
-  }
-
-  static async getNotificationSettings() {
-    return await this.request('/api/notifications/settings');
-  }
-
-  static async updateNotificationSettings(settings) {
-    return await this.request('/api/notifications/settings', 'PUT', settings);
-  }
-
-  // 📱 MOBILE & PWA HELPERS
-  static async registerPushNotifications(subscription) {
-    return await this.request('/api/push/register', 'POST', { subscription });
-  }
-
-  static async unregisterPushNotifications() {
-    return await this.request('/api/push/unregister', 'POST');
-  }
-
-  // 🎯 ONBOARDING HELPERS
-  static async getOnboardingStatus() {
-    return await this.request('/api/onboarding/status');
-  }
-
-  static async updateOnboardingStep(step) {
-    return await this.request('/api/onboarding/step', 'PUT', { step });
-  }
-
-  static async completeOnboarding() {
-    return await this.request('/api/onboarding/complete', 'POST');
-  }
-
-  // =============================================
-  // BATCH & BULK OPERATION HELPERS
-  // =============================================
-
-  // 🔄 BULK OPERATIONS
-  static async bulkUpdateLeads(leadIds, updates) {
-    return await this.request('/api/leads/bulk-update', 'POST', { leadIds, updates });
-  }
-
-  static async bulkDeleteLeads(leadIds) {
-    return await this.request('/api/leads/bulk-delete', 'POST', { leadIds });
-  }
-
-  static async bulkExportData(dataTypes, filters = {}) {
-    return await this.request('/api/bulk-export', 'POST', { dataTypes, filters });
-  }
-
-  // 📊 BATCH ANALYTICS
-  static async getBatchAnalytics(requests) {
-    return await this.request('/api/analytics/batch', 'POST', { requests });
-  }
-
-  // =============================================
-  // ENHANCED ERROR HANDLING & RECOVERY
-  // =============================================
-
-  // 🔄 RETRY MECHANISMS
-  static async retryFailedRequests() {
-    // Implementation for retry logic
-    console.log('🔄 Retrying failed requests...');
-  }
-
-  // 🏥 HEALTH CHECKS
-  static async pingServer() {
-    try {
-      const response = await this.request('/api/health', 'GET', null, { 
-        requireAuth: false, 
-        timeout: 5000,
-        retries: 0 
-      });
-      return { status: 'healthy', ...response };
-    } catch (error) {
-      return { status: 'unhealthy', error: error.message };
-    }
-  }
-
-  // =============================================
-  // DEVELOPMENT & DEBUG HELPERS
-  // =============================================
-
-  // 🔧 DEBUG METHODS (Only available in development)
-  static async getAPIDebugInfo() {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return {
-        version: this.version,
-        baseURL: this.baseURL,
-        tokenPresent: !!localStorage.getItem('authToken'),
-        requestCount: this.requestCount || 0,
-        lastRequest: this.lastRequestTime || null
-      };
-    }
-    return { error: 'Debug info only available in development' };
-  }
-
-  static enableRequestLogging() {
-    if (window.location.hostname === 'localhost') {
-      this.loggingEnabled = true;
-      console.log('🔍 API request logging enabled');
-    }
-  }
-
-  static disableRequestLogging() {
-    this.loggingEnabled = false;
-    console.log('🔇 API request logging disabled');
-  }
-
-  // =============================================
-  // CACHE MANAGEMENT
-  // =============================================
-
-  static cache = new Map();
-  static cacheTimeout = 5 * 60 * 1000; // 5 minutes
-
-  static async getCached(key, fetchFunction, timeout = this.cacheTimeout) {
-    const cached = this.cache.get(key);
+  // 🔧 VALIDATION & UTILITY HELPERS
+  static async validateLeadData(leadData) {
+    const errors = [];
     
-    if (cached && (Date.now() - cached.timestamp) < timeout) {
-      console.log(`📋 Cache hit: ${key}`);
-      return cached.data;
+    if (!leadData.name || leadData.name.trim().length === 0) {
+      errors.push('Name is required');
     }
-
-    console.log(`🔄 Cache miss: ${key} - fetching fresh data`);
-    const data = await fetchFunction();
     
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
-
-    return data;
-  }
-
-  static clearCache() {
-    this.cache.clear();
-    console.log('🧹 API cache cleared');
-  }
-
-  static removeCacheKey(key) {
-    this.cache.delete(key);
-    console.log(`🗑️ Removed cache key: ${key}`);
-  }
-
-  // =============================================
-  // PERFORMANCE MONITORING
-  // =============================================
-
-  static performanceMetrics = {
-    requestCount: 0,
-    totalResponseTime: 0,
-    errors: 0,
-    lastRequestTime: null
-  };
-
-  static recordRequest(startTime, success = true) {
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
-    this.performanceMetrics.requestCount++;
-    this.performanceMetrics.totalResponseTime += duration;
-    this.performanceMetrics.lastRequestTime = new Date();
-
-    if (!success) {
-      this.performanceMetrics.errors++;
+    if (leadData.email && !this.isValidEmail(leadData.email)) {
+      errors.push('Invalid email format');
     }
-
-    // Log slow requests
-    if (duration > 3000) {
-      console.warn(`⚠️ Slow API request detected: ${duration.toFixed(2)}ms`);
+    
+    if (leadData.qualityScore && (leadData.qualityScore < 1 || leadData.qualityScore > 10)) {
+      errors.push('Quality score must be between 1 and 10');
     }
-  }
-
-  static getPerformanceStats() {
-    const { requestCount, totalResponseTime, errors } = this.performanceMetrics;
     
     return {
-      totalRequests: requestCount,
-      averageResponseTime: requestCount > 0 ? Math.round(totalResponseTime / requestCount) : 0,
-      errorRate: requestCount > 0 ? ((errors / requestCount) * 100).toFixed(2) + '%' : '0%',
-      totalErrors: errors,
-      lastRequest: this.performanceMetrics.lastRequestTime
+      isValid: errors.length === 0,
+      errors: errors
     };
   }
 
-  // =============================================
-  // CLEANUP & LIFECYCLE
-  // =============================================
+  static isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
 
-  static cleanup() {
-    this.clearCache();
-    this.performanceMetrics = {
-      requestCount: 0,
-      totalResponseTime: 0,
-      errors: 0,
-      lastRequestTime: null
+  static formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  }
+
+  static formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '';
+    const date = new Date(dateTimeString);
+    return date.toLocaleString();
+  }
+
+  static calculateDaysUntil(dateString) {
+    if (!dateString) return null;
+    const targetDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = targetDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
+
+  // 🎨 UI HELPER METHODS (For consistent styling)
+  static getStatusColor(status) {
+    const statusColors = {
+      'new': '#3B82F6',          // Blue
+      'contacted': '#F59E0B',     // Yellow  
+      'qualified': '#10B981',     // Green
+      'proposal': '#8B5CF6',      // Purple
+      'negotiation': '#F97316',   // Orange
+      'closed': '#059669',        // Emerald
+      'lost': '#EF4444'          // Red
     };
-    console.log('🧹 API instance cleaned up');
+    return statusColors[status?.toLowerCase()] || '#6B7280';
+  }
+
+  static getTypeIcon(type) {
+    const typeIcons = {
+      'cold': '❄️',
+      'warm': '🔥',
+      'crm': '📊',
+      'hot': '🌟'
+    };
+    return typeIcons[type?.toLowerCase()] || '📋';
+  }
+
+  static getPriorityColor(priority) {
+    const priorityColors = {
+      'low': '#10B981',      // Green
+      'medium': '#F59E0B',   // Yellow
+      'high': '#F97316',     // Orange
+      'urgent': '#EF4444'    // Red
+    };
+    return priorityColors[priority?.toLowerCase()] || '#6B7280';
+  }
+
+  // 🚨 ERROR HANDLING
+  static handleAPIError(error, context = '') {
+    console.error(`API Error in ${context}:`, error);
+    
+    if (error.message.includes('Authentication')) {
+      return 'Please log in again to continue.';
+    }
+    
+    if (error.message.includes('limit reached')) {
+      return 'You\'ve reached your monthly lead limit. Upgrade to add more leads!';
+    }
+    
+    if (error.message.includes('Rate limited')) {
+      return 'Too many requests. Please wait a moment and try again.';
+    }
+    
+    if (error.message.includes('offline')) {
+      return 'You appear to be offline. Please check your connection.';
+    }
+    
+    return error.message || 'Something went wrong. Please try again.';
   }
 }
 
-// 🚀 CREATE AND EXPORT THE API INSTANCE
-const API = SecureSaaSAPI;
+// 🌍 GLOBAL EXPORT
+const API = TierScalingAPI;
 
-// 🌍 GLOBAL EXPORTS
 if (typeof window !== 'undefined') {
   window.API = API;
-  
-  // Development helpers
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    window.apiDebug = API.getAPIDebugInfo.bind(API);
-    window.apiPerf = API.getPerformanceStats.bind(API);
-    window.apiCache = {
-      clear: API.clearCache.bind(API),
-      get: (key) => API.cache.get(key),
-      size: () => API.cache.size
-    };
-    console.log('🛠️ API debug available: apiDebug(), apiPerf(), apiCache');
-  }
 }
 
-console.log('🚀 COMPLETE SECURE API v6.0.0 - FULL IMPLEMENTATION LOADED!');
-console.log('🔒 All requests secured through your bulletproof server.js');
-console.log('🏆 Features scale perfectly: FREE → PRO → BUSINESS → ENTERPRISE → ADMIN');
-console.log('🎯 Available globally as: API, window.API');
-console.log('✨ Every endpoint mapped to your real server.js routes!');
+console.log('🧰 Tier-Scaling API Toolbox v2.0 loaded!');
+console.log('🆓 FREE: Core lead management, stats, tasks');
+console.log('💼 PRO: + Analytics, goals, tags, bulk operations');
+console.log('🏢 BUSINESS: + Team management, automation, workflows');
+console.log('⭐ ENTERPRISE: + Custom reports, integrations, AI');
+console.log('👑 ADMIN: + System control, user management, tier switching');
+console.log('🔒 Security handled by server.js - this just makes clean calls!');
 
 /**
- * 🎯 COMPLETE SECURE API USAGE EXAMPLES:
+ * 🎯 TIER-BASED USAGE EXAMPLES:
  * 
- * // 🔐 AUTHENTICATION (All Tiers)
- * await API.login('user@example.com', 'password', true); // Remember me
- * await API.logout();
- * await API.checkAuth();
- * await API.register('email', 'pass', 'pass', true, 'professional_monthly');
- * await API.startTrial('email', 'pass', 'pass');
+ * // 🆓 FREE TIER - Core Foundation
+ * const leads = await API.getLeadsByType('warm');
+ * const progress = await API.getProgressTowardGoal('monthly');
+ * await API.addBasicReminder(leadId, '2024-12-25', 'Holiday follow-up');
+ * const todaysTasks = await API.getTodaysTasks();
  * 
- * // 🆓 FREE TIER - Foundation API Methods
- * const profile = await API.getProfile();
- * await API.updateProfile({ firstName: 'John' });
- * 
- * const leads = await API.getLeads();
- * await API.createLead({ name: 'John Doe', email: 'john@example.com' });
- * await API.updateLead(123, { status: 'qualified' });
- * await API.deleteLead(123);
- * 
- * const stats = await API.getBasicStats();
- * const progress = await API.getMonthlyProgress();
- * 
- * await API.addBasicReminder(leadId, '2024-12-25', 'Follow up after holidays');
- * const reminders = await API.getUpcomingReminders();
- * 
- * // 💼 PRO TIER - FREE + Enhanced Methods
+ * // 💼 PRO TIER - FREE + Enhanced Features
  * await API.bulkImportLeads(csvData);
- * const exportData = await API.exportLeads('csv');
- * const searchResults = await API.searchLeads('tech company');
- * 
- * await API.logCommunication({
- *   leadId: 123,
- *   type: 'email',
- *   content: 'Sent proposal',
- *   status: 'sent'
- * });
- * 
- * const emailHistory = await API.getCommunicationHistory(123);
  * const analytics = await API.getConversionAnalytics();
- * 
- * await API.createGoal({
- *   title: 'Monthly Leads',
- *   target: 100,
- *   period: 'monthly'
- * });
- * 
- * await API.createTag({ name: 'VIP', color: '#gold' });
+ * await API.createGoal({ title: 'Monthly Target', target: 100 });
  * await API.addTagToLead(leadId, tagId);
  * 
- * await API.uploadFile(fileBlob, leadId, 'contract');
- * 
- * // 🏢 BUSINESS TIER - PRO + Team & Automation
- * const teamMembers = await API.getTeamMembers();
- * await API.inviteTeamMember('new@example.com', 'sales_rep');
+ * // 🏢 BUSINESS TIER - PRO + Team Collaboration
+ * await API.inviteTeamMember('colleague@company.com', 'sales_rep');
  * await API.assignLeadToTeamMember(leadId, userId);
- * 
- * await API.createAutomation({
- *   name: 'Welcome Sequence',
- *   trigger: 'new_lead',
- *   actions: [{ type: 'send_email', templateId: 123 }]
- * });
- * 
- * const teamPerformance = await API.getTeamPerformance();
  * const leaderboard = await API.getTeamLeaderboard();
+ * await API.createAutomation(workflowConfig);
  * 
- * await API.bulkUploadFiles([file1, file2, file3]);
- * 
- * // ⭐ ENTERPRISE TIER - BUSINESS + Advanced & Custom
- * const customReport = await API.generateCustomReport({
- *   dateRange: ['2024-01-01', '2024-12-31'],
- *   metrics: ['conversion_rate', 'revenue'],
- *   groupBy: 'source'
- * });
- * 
- * const execMetrics = await API.getExecutiveMetrics();
- * const funnelData = await API.getFunnelAnalysis();
- * const roiAnalysis = await API.getROIAnalysis();
- * 
- * await API.createAPIKey({ name: 'External Integration', permissions: ['read_leads'] });
- * await API.connectCRM({ type: 'salesforce', credentials: {...} });
- * 
- * await API.customizeWhiteLabel({
- *   logo: logoFile,
- *   colors: { primary: '#FF6B35' },
- *   companyName: 'Acme Corp'
- * });
- * 
+ * // ⭐ ENTERPRISE TIER - BUSINESS + Advanced Features
+ * const report = await API.generateCustomReport(filters);
+ * await API.connectCRM({ type: 'salesforce', config: {...} });
  * const leadScore = await API.getLeadScore(leadId);
- * const aiInsights = await API.getAIInsights(leadId);
+ * await API.customizeWhiteLabel({ colors: { primary: '#FF6B35' } });
  * 
  * // 👑 ADMIN TIER - ENTERPRISE + System Control
  * const allUsers = await API.getAllUsers();
  * await API.updateUserTier(userId, 'enterprise');
- * await API.suspendUser(userId, 'Violation of terms');
- * 
  * const systemHealth = await API.getSystemHealth();
- * const adminStats = await API.getAdminStats();
- * const billingData = await API.getBillingData();
+ * await API.switchViewToTier('professional'); // BOMB FEATURE!
  * 
- * // 🔄 Your BOMB FEATURE - Tier Switching!
- * await API.switchViewToTier('professional');
- * await API.resetViewToAdmin();
+ * // 🔧 UTILITY METHODS (All Tiers)
+ * const validation = await API.validateLeadData(formData);
+ * const statusColor = API.getStatusColor('qualified');
+ * const daysLeft = API.calculateDaysUntil('2024-12-31');
+ * const userFriendlyError = API.handleAPIError(error, 'Dashboard');
  * 
- * // 🔧 UTILITY METHODS
- * const healthCheck = await API.pingServer();
- * API.clearCache();
- * const perfStats = API.getPerformanceStats();
+ * 🎯 PERFECT FOR SCRIPTS:
+ * Each tier gets progressively more powerful tools, but all use the same
+ * clean, simple syntax. Your server.js bouncer handles all the security,
+ * permissions, and business logic. This just provides beautiful, organized
+ * methods to interact with your fortress backend!
  * 
- * // 🎯 CACHED REQUESTS (For performance)
- * const cachedStats = await API.getCached('dashboard-stats', 
- *   () => API.getBasicStats(), 
- *   300000 // 5 minutes
- * );
- * 
- * // 🔍 BATCH OPERATIONS
- * await API.bulkUpdateLeads([1,2,3], { status: 'qualified' });
- * await API.bulkDeleteLeads([4,5,6]);
- * 
- * // 📊 STRIPE INTEGRATION
- * const stripeConfig = await API.getStripeConfig();
- * const pricingPlans = await API.getPricingPlans();
- * const checkoutSession = await API.createCheckoutSession('professional_monthly', 'user@example.com');
- * 
- * // 🚨 ERROR HANDLING (Automatic)
- * try {
- *   await API.someMethod();
- * } catch (error) {
- *   // Errors automatically handled:
- *   // - 401: Redirects to login
- *   // - 403: Permission denied message
- *   // - 429: Rate limit message
- *   // - Network errors: Automatic retry
- *   console.error('API Error:', error.message);
- * }
- * 
- * 🔑 KEY SECURITY FEATURES:
- * ✅ JWT token on every request
- * ✅ Automatic token refresh
- * ✅ CSRF protection headers
- * ✅ Input sanitization
- * ✅ Automatic error handling
- * ✅ Rate limiting respect
- * ✅ Secure file uploads
- * ✅ Request/response logging (dev only)
- * ✅ Performance monitoring
- * ✅ Cache management
- * 
- * 🎯 REMEMBER: This API is just a messenger!
- * Your server.js handles ALL security, permissions, and business logic.
- * This just provides a beautiful, organized interface to your secure backend!
+ * 🚀 TIER SCALING BENEFITS:
+ * ✅ Free users get sophisticated tools that show platform value
+ * ✅ Each upgrade unlocks genuinely useful new capabilities  
+ * ✅ Script-friendly methods make building components easy
+ * ✅ Consistent API patterns across all tiers
+ * ✅ Server.js maintains security - API.js provides convenience
+ * ✅ Clear upgrade path from individual → team → enterprise → admin
  */
