@@ -16,26 +16,30 @@
 
 class TierScalingAPI {
   // 🔧 CORE REQUEST METHOD - Simple & Clean
-  static async request(endpoint, method = 'GET', data = null) {
+ static async request(endpoint, method = 'GET', data = null) {
     try {
-      const response = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: data ? JSON.stringify(data) : null,
-        credentials: 'include' // Trust server's secure cookies
-      });
+        const response = await fetch(endpoint, {
+            method,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Referer': window.location.href,        // Add this
+                'Origin': window.location.origin        // Add this too
+            },
+            body: data ? JSON.stringify(data) : null,
+            credentials: 'include'
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
-      }
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error);
+        }
 
-      return await response.json();
+        return await response.json();
     } catch (error) {
-      console.error(`API Error: ${method} ${endpoint}`, error.message);
-      throw error;
+        console.error(`API Error: ${method} ${endpoint}`, error.message);
+        throw error;
     }
-  }
+}
 
   // =============================================
   // 🆓 FREE TIER - FOUNDATION TOOLS
@@ -113,16 +117,56 @@ class TierScalingAPI {
 
   // 🎯 LEAD MANAGEMENT (Free Tier)
   static async getLeads() {
-    return await this.request('/api/leads');
-  }
+  const response = await this.request('/api/leads');
+  
+  // Map database fields to frontend fields
+  const mapLeadFields = (lead) => ({
+    ...lead,
+    qualityScore: lead.quality_score,           // Map underscore to camelCase
+    potentialValue: lead.potential_value,       // Map this too for consistency
+    lostReason: lead.lost_reason                // And this one
+  });
+  
+  // Map all lead arrays
+  return {
+    cold: response.cold?.map(mapLeadFields) || [],
+    warm: response.warm?.map(mapLeadFields) || [],
+    crm: response.crm?.map(mapLeadFields) || [],
+    all: response.all?.map(mapLeadFields) || []
+  };
+}
 
   static async createLead(leadData) {
     return await this.request('/api/leads', 'POST', leadData);
   }
 
   static async updateLead(leadId, data) {
-    return await this.request(`/api/leads/${leadId}`, 'PUT', data);
-  }
+    // Map camelCase frontend fields to snake_case database fields
+    const mappedData = { ...data };
+    
+    // Field mappings for consistency with database
+    if (data.qualityScore !== undefined) {
+        mappedData.quality_score = data.qualityScore;
+        delete mappedData.qualityScore;
+    }
+    
+    if (data.potentialValue !== undefined) {
+        mappedData.potential_value = data.potentialValue;
+        delete mappedData.potentialValue;
+    }
+    
+    if (data.followUpDate !== undefined) {
+        mappedData.follow_up_date = data.followUpDate;
+        delete mappedData.followUpDate;
+    }
+    
+    if (data.lostReason !== undefined) {
+        mappedData.lost_reason = data.lostReason;
+        delete mappedData.lostReason;
+    }
+    
+    return await this.request(`/api/leads/${leadId}`, 'PUT', mappedData);
+}
 
   static async deleteLead(leadId) {
     return await this.request(`/api/leads/${leadId}`, 'DELETE');
@@ -153,13 +197,6 @@ class TierScalingAPI {
       status: status,
       notes: notes,
       last_contact_date: new Date().toISOString().split('T')[0]
-    });
-  }
-
-  static async setLeadFollowUp(leadId, date, notes = '') {
-    return await this.updateLead(leadId, { 
-      follow_up_date: date,
-      notes: notes
     });
   }
 
@@ -261,10 +298,24 @@ class TierScalingAPI {
     return allTasks.filter(task => task.due_date && task.due_date < today);
   }
 
-  static async getTasksForLead(leadId) {
-    const allTasks = await this.getTasks();
-    return allTasks.filter(task => task.lead_id === leadId);
-  }
+  static async getTasksForDateRange(startDate, endDate) {
+  const allTasks = await this.getTasks({ status: 'pending' });
+  return allTasks.filter(task => {
+    if (!task.due_date) return false;
+    return task.due_date >= startDate && task.due_date <= endDate;
+  });
+}
+
+static async getUpcomingWeek() {
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+  
+  return await this.getTasksForDateRange(
+    today.toISOString().split('T')[0],
+    nextWeek.toISOString().split('T')[0]
+  );
+}
 
   static async markReminderComplete(reminderId, notes = '') {
     return await this.request(`/api/tasks/${reminderId}`, 'PUT', {
@@ -274,11 +325,16 @@ class TierScalingAPI {
   }
 
   static async completeTask(taskId, notes = '') {
-    return await this.request(`/api/tasks/${taskId}`, 'PUT', {
-      status: 'completed',
-      completionNotes: notes
-    });
-  }
+  return await this.request(`/api/tasks/${taskId}`, 'PUT', {
+    status: 'completed',
+    completed_at: new Date().toISOString(),
+    completion_notes: notes || 'Completed from scheduling module'
+  });
+}
+
+static async updateTask(taskId, data) {
+    return await this.request(`/api/tasks/${taskId}`, 'PUT', data);
+}
 
   // 💳 BILLING & STRIPE (All Tiers)
   static async getStripeConfig() {
@@ -804,7 +860,7 @@ static async getTrialStatus() {
       'crm': '📊',
       'hot': '🌟'
     };
-    return typeIcons[type?.toLowerCase()] || '📋';
+    return typeIcons[type?.toLowerCase()] || '';
   }
 
   static getPriorityColor(priority) {

@@ -7,7 +7,6 @@
     <meta name="description" content="Sign in to your SteadyManager account and access your lead management dashboard.">
     
     <!-- CDN Resources -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     
     <style>
@@ -239,6 +238,7 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
         }
 
         .success-message {
@@ -250,6 +250,52 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
+        }
+
+        /* Email Verification Notice */
+        .verification-notice {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .verification-notice-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .verification-email {
+            font-weight: 600;
+            color: #b45309;
+        }
+
+        .resend-verification-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.75rem;
+        }
+
+        .resend-verification-btn:hover {
+            background: #d97706;
+        }
+
+        .resend-verification-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .auth-links {
@@ -338,6 +384,7 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
         }
 
         /* Mobile optimizations */
@@ -388,14 +435,14 @@
     </style>
 </head>
 <body>
-    <a href="/" class="back-home">
+    <a href="javascript:history.back()" class="back-home">
         <span>←</span>
-        <span>Back to Home</span>
+        <span>Back</span>
     </a>
     
     <div class="auth-container fadeInUp">
         <div class="logo">
-            <a href="/" class="mobile-back-btn">←</a>
+            <a href="javascript:history.back()" class="mobile-back-btn">←</a>
             <div class="logo-content">
                 <h1>SteadyManager</h1>
                 <p>A Steady Scaling LLC Product</p>
@@ -410,6 +457,11 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
         <div id="rateLimitNotice" class="rate-limit-notice"></div>
+        <div id="verificationNotice" class="verification-notice">
+            <div class="verification-notice-title">📧 Email Verification Required</div>
+            <p>Please verify your email address before signing in. We sent a verification link to <span class="verification-email" id="verificationEmail"></span></p>
+            <button class="resend-verification-btn" id="resendVerificationBtn">Resend Verification Email</button>
+        </div>
 
         <form id="loginForm">
             <div class="form-group">
@@ -464,19 +516,22 @@
             </div>
             
             <p>
-                <a href="/auth/register" class="auth-link">Create free account</a> 
+                <a href="/register" class="auth-link">Create free account</a> 
                 or 
-                <a href="/auth/trial" class="auth-link">Start free trial</a>
+                <a href="/trial" class="auth-link">Start free trial</a>
             </p>
         </div>
     </div>
 
     <script>
+        let pendingVerificationEmail = '';
+
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const error = urlParams.get('error');
         const message = urlParams.get('message');
         const cancelled = urlParams.get('cancelled');
+        const reset = urlParams.get('reset');
 
         // Display URL-based messages
         if (error) {
@@ -488,6 +543,9 @@
         if (cancelled) {
             showError('Payment was cancelled. You can try again anytime.');
         }
+        if (reset === 'success') {
+            showSuccess('Password reset successfully! You can now sign in with your new password.');
+        }
 
         function getErrorMessage(errorCode) {
             const errorMessages = {
@@ -496,7 +554,8 @@
                 'user_not_found': 'Account not found. Please check your credentials.',
                 'invalid_credentials': 'Invalid email or password.',
                 'rate_limit': 'Too many login attempts. Please wait a moment and try again.',
-                'server_error': 'Server error occurred. Please try again.'
+                'server_error': 'Server error occurred. Please try again.',
+                'tier_access_denied': 'Access denied. Please contact support.'
             };
             return errorMessages[errorCode] || 'An error occurred. Please try again.';
         }
@@ -506,8 +565,9 @@
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             
-            // Hide success message if showing
+            // Hide other messages
             document.getElementById('successMessage').style.display = 'none';
+            document.getElementById('verificationNotice').style.display = 'none';
             
             // Auto-hide after 8 seconds
             setTimeout(() => {
@@ -520,8 +580,9 @@
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             
-            // Hide error message if showing
+            // Hide other messages
             document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('verificationNotice').style.display = 'none';
             
             // Auto-hide after 5 seconds
             setTimeout(() => {
@@ -535,10 +596,21 @@
             rateLimitDiv.style.display = 'block';
         }
 
+        function showVerificationNotice(email) {
+            pendingVerificationEmail = email;
+            document.getElementById('verificationEmail').textContent = email;
+            document.getElementById('verificationNotice').style.display = 'block';
+            
+            // Hide other messages
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
         function clearMessages() {
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('successMessage').style.display = 'none';
             document.getElementById('rateLimitNotice').style.display = 'none';
+            document.getElementById('verificationNotice').style.display = 'none';
         }
 
         function setLoading(isLoading) {
@@ -569,6 +641,40 @@
                 field.classList.add('error');
             }
         }
+
+        // Resend verification email
+        document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
+            if (!pendingVerificationEmail) return;
+
+            const resendBtn = document.getElementById('resendVerificationBtn');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch('/api/resend-verification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: pendingVerificationEmail }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Verification email resent! Check your inbox.');
+                } else {
+                    showError(data.error || 'Failed to resend verification email.');
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                showError('Network error. Please try again.');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend Verification Email';
+            }
+        });
 
         // Form submission
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -626,16 +732,21 @@
                     if (response.status === 429) {
                         showRateLimit(data.error || 'Too many login attempts. Please wait and try again.');
                     } else if (response.status === 400) {
-                        showError(data.error || 'Invalid credentials.');
-                        // Highlight relevant fields
-                        if (data.error.toLowerCase().includes('email')) {
-                            setFieldError('email');
-                        } else if (data.error.toLowerCase().includes('password')) {
-                            setFieldError('password');
+                        // Check if it's a verification error
+                        if (data.error.includes('verify your email') || data.requiresVerification) {
+                            showVerificationNotice(loginData.email);
                         } else {
-                            // Invalid credentials - highlight both
-                            setFieldError('email');
-                            setFieldError('password');
+                            showError(data.error || 'Invalid credentials.');
+                            // Highlight relevant fields
+                            if (data.error.toLowerCase().includes('email')) {
+                                setFieldError('email');
+                            } else if (data.error.toLowerCase().includes('password')) {
+                                setFieldError('password');
+                            } else {
+                                // Invalid credentials - highlight both
+                                setFieldError('email');
+                                setFieldError('password');
+                            }
                         }
                     } else {
                         showError(data.error || 'Login failed. Please try again.');
@@ -672,6 +783,7 @@
         });
 
         console.log('🔐 SteadyManager Login Page Loaded');
+        console.log('📧 Email verification handling active!');
         console.log('✅ Ready for secure authentication');
     </script>
 </body>

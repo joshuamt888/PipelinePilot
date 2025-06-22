@@ -23,7 +23,7 @@
             
             --background: #f8fafc;
             --surface: #ffffff;
-            --surface-hover: #f8fafc;
+            --surface-hover: #f1f5f9;
             --text-primary: #0f172a;
             --text-secondary: #475569;
             --text-tertiary: #64748b;
@@ -38,7 +38,7 @@
             --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* 🌙 DARK MODE */
+        /* 🌙 DARK MODE BASE */
         [data-theme="dark"] {
             --background: #0f172a;
             --surface: #1e293b;
@@ -47,6 +47,331 @@
             --text-secondary: #cbd5e1;
             --text-tertiary: #94a3b8;
             --border: #334155;
+        }
+
+        /* 🌙 DARK MODE ENHANCEMENT ATTACHMENT */
+        [data-theme="dark"] {
+            /* Core Colors - Deeper, richer palette */
+            --background: #0a0f1c;
+            --surface: #1a1f2e;
+            --surface-hover: #242938;
+            --surface-elevated: #2d3142;
+            
+            /* Text with better contrast ratios */
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            
+            /* Enhanced borders and dividers */
+            --border: #374151;
+            --border-light: #4b5563;
+            --border-accent: #6366f1;
+            
+            /* Improved accent colors for dark mode */
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            
+            /* Status colors optimized for dark backgrounds */
+            --success: #10b981;
+            --success-dark: #059669;
+            --warning: #f59e0b;
+            --warning-dark: #d97706;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --info: #06b6d4;
+            --info-dark: #0891b2;
+            
+            /* Enhanced gradients for dark mode */
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --gradient-surface: linear-gradient(135deg, #1a1f2e 0%, #242938 100%);
+            --gradient-card: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            
+            /* Dark mode specific shadows */
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            
+            /* Glow effects for dark mode */
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+            --glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
+            --glow-warning: 0 0 20px rgba(245, 158, 11, 0.3);
+            --glow-danger: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 🌙 Dark Mode Sidebar Enhancements */
+        [data-theme="dark"] .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 30%, #1e293b 70%, #0f172a 100%);
+            border-right: 1px solid var(--border);
+            box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(148, 163, 184, 0.1);
+        }
+
+        [data-theme="dark"] .sidebar-logo {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
+        }
+
+        [data-theme="dark"] .nav-link {
+            color: rgba(241, 245, 249, 0.7);
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        [data-theme="dark"] .nav-link:hover {
+            color: #f1f5f9;
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 2px solid var(--primary);
+            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .nav-link:hover::before {
+            left: 100%;
+        }
+
+        [data-theme="dark"] .nav-link.active {
+            color: #f1f5f9;
+            background: rgba(99, 102, 241, 0.2);
+            border-left: 3px solid var(--primary);
+            box-shadow: var(--glow-primary), inset 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .upgrade-nav-link {
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        [data-theme="dark"] .upgrade-nav-link:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            box-shadow: var(--glow-primary);
+            transform: translateY(-2px);
+        }
+
+        /* 🌙 Dark Mode Header & Content */
+        [data-theme="dark"] .header {
+            background: rgba(26, 31, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .header-title {
+            color: white !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: unset !important;
+            background-clip: unset !important;
+            filter: none !important;
+        }
+
+        /* 🌙 Dark Mode User Menu */
+        [data-theme="dark"] .user-menu {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow), 0 0 0 1px rgba(99, 102, 241, 0.05);
+        }
+
+        [data-theme="dark"] .user-menu:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg), var(--glow-primary);
+            transform: translateY(-1px);
+        }
+
+        [data-theme="dark"] .user-menu::before {
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+        }
+
+        [data-theme="dark"] .profile-dropdown {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-2xl), 0 0 0 1px rgba(99, 102, 241, 0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        [data-theme="dark"] .dropdown-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-light);
+        }
+
+        /* 🌙 Dark Mode Scrollbars */
+        [data-theme="dark"] ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--surface);
+            border-radius: 4px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 🎯 SICK LEAD PROGRESS BAR IN HEADER */
+        .lead-progress-header {
+            display: flex;
+            align-items: center;
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 0.75rem 1rem;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lead-progress-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.8s ease;
+        }
+
+        .lead-progress-header:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .lead-progress-header:hover::before {
+            left: 100%;
+        }
+
+        .progress-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 120px;
+        }
+
+        .progress-stats {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .current-leads {
+            color: var(--primary);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .progress-separator {
+    color: var(--text-tertiary);
+    font-size: 1.1rem;   /* Same size */
+    font-weight: 500;
+    margin: 0 2px;       /* Better spacing */
+}
+
+        .max-leads {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .leads-label {
+            color: var(--text-tertiary);
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.25rem;
+        }
+
+        .progress-bar-mini {
+            width: 100%;
+            height: 4px;
+            background: var(--surface);
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .progress-fill-mini {
+            height: 100%;
+            background: var(--gradient-primary);
+            border-radius: 2px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .progress-fill-mini.near-limit {
+            background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
+        }
+
+        .progress-fill-mini.at-limit {
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        /* 🌙 Dark Mode Progress Bar */
+        [data-theme="dark"] .lead-progress-header {
+            background: var(--surface);
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .current-leads {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        [data-theme="dark"] .progress-bar-mini {
+            background: var(--background);
+        }
+
+        /* 📱 Mobile Progress Bar */
+        @media (max-width: 768px) {
+            .lead-progress-header {
+                padding: 0.5rem 0.75rem;
+                min-width: 100px;
+            }
+
+            .progress-stats {
+                font-size: 1rem;
+            }
+
+            .current-leads {
+    width: 28px; /* Fixed width instead of min-width */
+    text-align: center;
+}
+
+            .leads-label {
+                display: none;
+            }
         }
 
         * {
@@ -64,7 +389,7 @@
             transition: var(--transition);
         }
 
-        /* 🗂️ SIDEBAR */
+        /* 🗂️ SIDEBAR - SIMPLIFIED & SLEEK */
         .sidebar {
             position: fixed;
             left: 0;
@@ -77,96 +402,48 @@
             overflow-y: auto;
             box-shadow: var(--shadow-xl);
             transition: var(--transition);
-        }
-
-        [data-theme="dark"] .sidebar {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
-        }
-
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(180deg, 
-                rgba(255, 255, 255, 0.1) 0%,
-                rgba(255, 255, 255, 0.05) 50%,
-                rgba(0, 0, 0, 0.1) 100%
-            );
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        [data-theme="dark"] .sidebar::before {
-            display: none;
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar-content {
-            position: relative;
-            z-index: 10;
             padding: 2rem 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar-header {
             padding: 0 1.5rem 2rem;
-            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
             margin-bottom: 2rem;
-        }
-
-        [data-theme="dark"] .sidebar-header {
-            border-bottom-color: rgba(102, 126, 234, 0.3);
         }
 
         .sidebar-logo {
             font-size: 1.75rem;
             font-weight: 900;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
+            text-align: center;
             color: white;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: var(--transition);
-            text-align: center;
         }
 
-        /* 🌙 Dark mode sidebar logo - calm dark blue */
-        [data-theme="dark"] .sidebar-logo {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: none;
-        }
-
-        .logo-icon {
-            width: 24px;
-            height: 24px;
-            color: white;
-        }
-
-        [data-theme="dark"] .logo-icon {
-            color: var(--primary-light);
-        }
-
-        /* 🧭 NAVIGATION */
+        /* 🧭 NAVIGATION - CLEAN & SIMPLE */
         .sidebar-nav {
             list-style: none;
             padding: 0;
-            margin-bottom: 2rem;
+            margin-bottom: auto;
+            flex: 1;
         }
 
         .nav-item {
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.5rem;
         }
 
         .nav-link {
             display: flex;
             align-items: center;
             gap: 1rem;
-            padding: 0.875rem 1.5rem;
+            padding: 1rem 1.5rem;
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: var(--transition);
@@ -174,95 +451,24 @@
             font-weight: 500;
             cursor: pointer;
             margin: 0 0.75rem;
-        }
-
-        [data-theme="dark"] .nav-link {
-            color: var(--text-secondary);
-        }
-
-        .nav-link.disabled {
-            color: rgba(255, 255, 255, 0.4);
-            cursor: not-allowed;
-        }
-
-        [data-theme="dark"] .nav-link.disabled {
-            color: var(--text-tertiary);
-        }
-
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            left: 0.75rem;
-            right: 0.75rem;
-            top: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.1);
             border-radius: var(--radius);
-            opacity: 0;
-            transform: scale(0.95);
-            transition: var(--transition);
-            z-index: -1;
         }
 
-        [data-theme="dark"] .nav-link::before {
-            background: var(--surface-hover);
-        }
-
-        .nav-link:hover::before,
-        .nav-link.active::before {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .nav-link.disabled:hover::before {
-            opacity: 0;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             transform: translateX(8px);
         }
 
-        .nav-link.disabled:hover {
-            color: rgba(255, 255, 255, 0.4);
-            transform: none;
-        }
-
-        [data-theme="dark"] .nav-link:hover,
-        [data-theme="dark"] .nav-link.active {
-            color: var(--text-primary);
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-weight: 600;
             transform: translateX(8px);
         }
 
-        [data-theme="dark"] .nav-link.disabled:hover {
-            color: var(--text-tertiary);
-            transform: none;
-        }
-
-        .nav-link.active {
-            font-weight: 600;
-        }
-
-        .nav-link.active::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 24px;
-            background: white;
-            border-radius: 0 var(--radius) var(--radius) 0;
-        }
-
-        [data-theme="dark"] .nav-link.active::after {
-            background: var(--primary);
-        }
-
         .nav-emoji {
-            font-size: 1.1rem;
-            margin-right: 0.5rem;
+            font-size: 1.2rem;
         }
 
         .pro-badge {
@@ -276,109 +482,48 @@
             box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
         }
 
-        /* 🌟 UPGRADE SECTION */
-        .upgrade-section {
-            margin: 2rem 1rem 1rem;
-            padding: 1.5rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius-lg);
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            overflow: hidden;
+        .nav-link.disabled {
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
         }
 
-        [data-theme="dark"] .upgrade-section {
-            background: var(--surface-hover);
-            border-color: var(--border);
+        /* 🚀 UPGRADE BUTTON - SIMPLIFIED */
+        .upgrade-nav-item {
+            margin: 1.5rem 0.75rem 1rem;
         }
 
-        .upgrade-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: rotate 8s linear infinite;
-            z-index: 1;
-        }
-
-        [data-theme="dark"] .upgrade-section::before {
-            display: none;
-        }
-
-        @keyframes rotate {
-            to { transform: rotate(360deg); }
-        }
-
-        .upgrade-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        .upgrade-title {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: white;
+        .upgrade-nav-link {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-        }
-
-        [data-theme="dark"] .upgrade-title {
-            color: var(--text-primary);
-        }
-
-        .upgrade-desc {
-            font-size: 0.875rem;
-            margin-bottom: 1rem;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.4;
-        }
-
-        [data-theme="dark"] .upgrade-desc {
-            color: var(--text-secondary);
-        }
-
-        .upgrade-btn {
-            background: white;
-            color: var(--primary);
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius);
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-lg);
+            color: white;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 0.875rem;
+            font-weight: 700;
+            font-size: 0.95rem;
             transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            border: none;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            position: relative;
-            z-index: 10;
+            text-align: center;
         }
 
-        [data-theme="dark"] .upgrade-btn {
-            background: var(--primary);
-            color: white;
+        .upgrade-nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
         }
 
-        .upgrade-btn:hover {
-            background: var(--primary-dark);
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+        .upgrade-emoji {
+            font-size: 1.2rem;
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        [data-theme="dark"] .upgrade-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
         /* 📊 MAIN CONTENT */
@@ -389,10 +534,10 @@
             transition: var(--transition);
         }
 
-        /* 📋 HEADER */
+        /* 📋 HEADER - LOCKED & CONSISTENT */
         .header {
             background: var(--surface);
-            padding: 1.35rem 1.5rem 1.35rem 2rem;
+            padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -401,18 +546,20 @@
             z-index: 100;
             backdrop-filter: blur(20px);
             transition: var(--transition);
-            min-height: 87px;
+            border-bottom: 1px solid var(--border);
+            height: 80px; /* FIXED HEIGHT - NO CHANGES ALLOWED */
+            min-height: 80px;
+            max-height: 80px;
         }
 
         .header-left {
             display: flex;
             align-items: center;
-            gap: 2rem;
-            flex: 1;
+            gap: 1rem;
         }
 
         .header-title {
-            font-size: 1.375rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: var(--text-primary);
             background: var(--gradient-primary);
@@ -420,145 +567,15 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             transition: var(--transition);
-            margin-left: -0.25rem; /* Align with sidebar logo */
         }
 
-        /* 📊 LEADS PROGRESS BAR */
-        .leads-progress {
+        .header-right {
             display: flex;
-            flex-direction: column;
-            gap: 0.375rem;
-            min-width: 180px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 0.75rem 0.875rem;
-            border-radius: var(--radius);
-            border: 2px solid rgba(102, 126, 234, 0.3);
-            box-shadow: 
-                0 6px 24px rgba(102, 126, 234, 0.1), 
-                0 2px 6px rgba(0, 0, 0, 0.05),
-                0 0 0 1px rgba(102, 126, 234, 0.2),
-                0 0 15px rgba(102, 126, 234, 0.12);
-            transition: var(--transition);
-        }
-
-        [data-theme="dark"] .leads-progress {
-            background: rgba(30, 41, 59, 0.8);
-            border: 2px solid var(--border);
-            box-shadow: 
-                0 6px 24px rgba(0, 0, 0, 0.2), 
-                0 2px 6px rgba(0, 0, 0, 0.1),
-                0 0 0 1px rgba(102, 126, 234, 0.3),
-                0 0 12px rgba(102, 126, 234, 0.18);
-        }
-
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            gap: 1rem;
         }
 
-        .progress-count {
-            font-weight: 800;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            transition: var(--transition);
-        }
-
-        /* 🌙 Dark mode progress count override */
-        [data-theme="dark"] .progress-count {
-            background: none;
-            -webkit-background-clip: unset;
-            -webkit-text-fill-color: unset;
-            background-clip: unset;
-            color: white;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: rgba(226, 232, 240, 0.5);
-            border-radius: 9999px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme="dark"] .progress-bar {
-            background: rgba(51, 65, 85, 0.6);
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--gradient-primary);
-            border-radius: 9999px;
-            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 0%;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
-        }
-
-        .progress-fill::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                rgba(255, 255, 255, 0) 0%, 
-                rgba(255, 255, 255, 0.6) 50%, 
-                rgba(255, 255, 255, 0) 100%
-            );
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent 0%, 
-                rgba(255, 255, 255, 0.8) 50%, 
-                transparent 100%
-            );
-            animation: shimmer 3s infinite;
-            transform: translateX(-100%);
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(200%); }
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-
-        /* 🌙 Dark mode header title override */
-        [data-theme="dark"] .header-title {
-            background: none;
-            -webkit-background-clip: unset;
-            -webkit-text-fill-color: unset;
-            background-clip: unset;
-            color: white;
-        }
-
-        /* 👤 USER MENU */
+        /* 👤 USER MENU - CLEAN & FUNCTIONAL */
         .user-menu-container {
             position: relative;
             z-index: 200;
@@ -570,7 +587,7 @@
             gap: 0.75rem;
             background: var(--surface-hover);
             padding: 0.5rem 1rem;
-            border-radius: var(--radius);
+            border-radius: var(--radius-lg);
             cursor: pointer;
             transition: var(--transition);
             border: 1px solid var(--border);
@@ -579,19 +596,21 @@
         .user-menu:hover {
             border-color: var(--primary);
             box-shadow: var(--shadow);
+            transform: translateY(-1px);
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: var(--radius);
-            background: var(--primary);
+            background: var(--gradient-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: 600;
-            font-size: 0.8rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow);
         }
 
         .user-info {
@@ -611,7 +630,19 @@
             font-weight: 500;
         }
 
-        /* 📋 PROFILE DROPDOWN */
+        .chevron-down {
+            width: 16px;
+            height: 16px;
+            opacity: 0.5;
+            transition: var(--transition);
+        }
+
+        .user-menu:hover .chevron-down {
+            opacity: 1;
+            transform: rotate(180deg);
+        }
+
+        /* 📋 PROFILE DROPDOWN - CLEAN */
         .profile-dropdown {
             position: absolute;
             top: calc(100% + 8px);
@@ -620,13 +651,13 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow-xl);
             overflow: hidden;
             z-index: 9999;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px) scale(0.95);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .profile-dropdown.show {
@@ -639,11 +670,12 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            padding: 1rem;
             color: var(--text-primary);
             cursor: pointer;
             transition: var(--transition);
             font-size: 0.875rem;
+            font-weight: 500;
         }
 
         .dropdown-item:hover {
@@ -662,8 +694,8 @@
         }
 
         .dropdown-icon {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             stroke-width: 2;
         }
 
@@ -673,8 +705,8 @@
 
         .toggle-switch {
             position: relative;
-            width: 36px;
-            height: 18px;
+            width: 40px;
+            height: 20px;
             background: var(--border);
             border-radius: 9999px;
             cursor: pointer;
@@ -685,12 +717,12 @@
             position: absolute;
             top: 2px;
             left: 2px;
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             background: var(--surface);
             border-radius: 50%;
             transition: var(--transition);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         [data-theme="dark"] .toggle-switch {
@@ -698,186 +730,19 @@
         }
 
         [data-theme="dark"] .toggle-slider {
-            transform: translateX(18px);
+            transform: translateX(20px);
         }
 
-        /* 📱 CONTENT AREA */
+        /* 📱 CONTENT AREA - LOCKED HEIGHT */
         .dashboard-content {
             padding: 2rem;
-            min-height: calc(100vh - 70px);
+            min-height: calc(100vh - 80px); /* FIXED: Based on locked header height */
             transition: var(--transition);
         }
 
         .content-container {
             max-width: 1200px;
             margin: 0 auto;
-        }
-
-        /* 🎪 PRO UPGRADE MODAL */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 1rem;
-        }
-
-        .modal-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal-content {
-            background: var(--surface);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            max-width: 480px;
-            width: 100%;
-            max-height: 85vh;
-            transform: scale(0.9) translateY(20px);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-        }
-
-        .modal-overlay.show .modal-content {
-            transform: scale(1) translateY(0);
-        }
-
-        .modal-header {
-            padding: 1.5rem;
-            text-align: center;
-            background: var(--gradient-primary);
-            color: white;
-        }
-
-        .modal-header h3 {
-            font-size: 1.25rem;
-            font-weight: 800;
-            margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .modal-header p {
-            opacity: 0.9;
-            font-size: 0.875rem;
-        }
-
-        .modal-body {
-            padding: 1.5rem;
-            max-height: 50vh;
-            overflow-y: auto;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            background: var(--surface-hover);
-            border-radius: var(--radius);
-            font-size: 0.875rem;
-        }
-
-        .feature-icon {
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-
-        .feature-text {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .capacity-highlight {
-            background: var(--primary-light);
-            border: 1px solid var(--primary);
-            border-radius: var(--radius);
-            padding: 1rem;
-            margin-top: 1rem;
-            text-align: center;
-        }
-
-        [data-theme="dark"] .capacity-highlight {
-            background: rgba(102, 126, 234, 0.1);
-            border-color: rgba(102, 126, 234, 0.3);
-        }
-
-        .capacity-highlight .number {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--primary);
-            margin: 0 0.25rem;
-        }
-
-        .transfer-notice {
-            background: var(--success);
-            color: white;
-            border-radius: var(--radius);
-            padding: 0.75rem;
-            margin-top: 1rem;
-            font-size: 0.875rem;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            display: flex;
-            gap: 0.75rem;
-            justify-content: center;
-            border-top: 1px solid var(--border);
-        }
-
-        .modal-btn {
-            padding: 0.75rem 1.25rem;
-            border-radius: var(--radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            border: none;
-            font-size: 0.875rem;
-            flex: 1;
-            max-width: 140px;
-        }
-
-        .modal-btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .modal-btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-
-        .modal-btn-secondary {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
-
-        .modal-btn-secondary:hover {
-            background: var(--surface-hover);
         }
 
         /* 📱 MOBILE RESPONSIVE */
@@ -903,19 +768,22 @@
                 padding: 1rem;
             }
 
+            /* 🚫 NEVER HIDE USER INFO - ALWAYS VISIBLE */
             .user-info {
-                display: none;
+                display: flex !important; /* FORCE SHOW */
             }
-
-            .modal-content {
-                margin: 1rem;
-                width: calc(100% - 2rem);
+            
+            /* Make user menu smaller on mobile but always visible */
+            .user-menu {
+                padding: 0.25rem 0.5rem;
             }
-
-            .modal-header,
-            .modal-body,
-            .modal-footer {
-                padding: 1.5rem;
+            
+            .user-name {
+                font-size: 0.75rem;
+            }
+            
+            .user-tier {
+                font-size: 0.65rem;
             }
         }
 
@@ -943,6 +811,44 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* 🌟 STEADYUTILS ENHANCEMENTS */
+        .sidebar-nav .nav-link {
+            position: relative;
+            /* Removed overflow: hidden and shimmer effect */
+        }
+
+        .user-menu {
+            position: relative;
+            /* Removed overflow: hidden and shimmer effect */
+        }
+
+        /* 🎨 THEME TRANSITION ENHANCEMENTS */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* 🌈 GRADIENT HOVER EFFECTS */
+        .upgrade-nav-link {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upgrade-nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .upgrade-nav-link:hover::before {
+            left: 100%;
+        }
     </style>
 </head>
 <body data-theme="light">
@@ -966,7 +872,7 @@
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="leads">
                             <span class="nav-emoji">👥</span>
-                            <span>Leads</span>
+                            <span>Add Leads</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -976,16 +882,15 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link disabled" data-page="analytics">
-                            <span class="nav-emoji">📈</span>
-                            <span>Analytics</span>
-                            <span class="pro-badge">PRO</span>
+                        <a href="#" class="nav-link" data-page="scheduling">
+                            <span class="nav-emoji">📅</span>
+                            <span>Scheduling</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link disabled" data-page="export">
-                            <span class="nav-emoji">📥</span>
-                            <span>Export</span>
+                        <a href="#" class="nav-link disabled" data-page="upgrade" data-upgrade-trigger="analytics">
+                            <span class="nav-emoji">📈</span>
+                            <span>Analytics</span>
                             <span class="pro-badge">PRO</span>
                         </a>
                     </li>
@@ -998,74 +903,72 @@
                 </ul>
             </nav>
 
-            <div class="upgrade-section">
-                <div class="upgrade-content">
-                    <h3 class="upgrade-title">
-                        ⚡ Unlock Pro Features
-                    </h3>
-                    <p class="upgrade-desc">Get advanced analytics, automation, and 1,000 leads!</p>
-                    <button class="upgrade-btn" id="upgradeBtn">
-                        🚀 Start Free Trial
-                    </button>
-                </div>
+            <!-- 🚀 UPGRADE NAVIGATION BUTTON -->
+            <div class="upgrade-nav-item">
+                <a href="#" class="upgrade-nav-link" data-page="upgrade">
+                    <span class="upgrade-emoji">🚀</span>
+                    <span>Upgrade Plan</span>
+                </a>
             </div>
         </div>
     </div>
 
     <!-- 📊 MAIN CONTENT -->
     <div class="main-content">
-        <!-- 📋 HEADER -->
+        <!-- 📋 HEADER - LOCKED DOWN & CONSISTENT -->
         <header class="header">
             <div class="header-left">
                 <h1 class="header-title" id="pageTitle">Dashboard</h1>
-                
-                <!-- 📊 LEADS PROGRESS -->
-                <div class="leads-progress">
-                    <div class="progress-label">
-                        <span>Leads</span>
-                        <span class="progress-count">
-                            <span id="leadCount">
-                                <div class="loading-spinner"></div>
-                            </span>/50
-                        </span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill"></div>
-                    </div>
-                </div>
             </div>
             
-            <!-- 👤 USER MENU -->
-            <div class="user-menu-container">
-                <div class="user-menu" id="userMenu">
-                    <div class="user-avatar" id="userAvatar">
-                        <div class="loading-spinner"></div>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name" id="userName">Loading...</div>
-                        <div class="user-tier" id="userTier">Free Plan</div>
-                    </div>
-                    <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5;"></i>
-                </div>
-                
-                <!-- 📋 PROFILE DROPDOWN -->
-                <div class="profile-dropdown" id="profileDropdown">
-                    <div class="dropdown-item" id="darkModeToggle">
-                        <i data-lucide="moon" class="dropdown-icon"></i>
-                        <span>Dark Mode</span>
-                        <div class="dropdown-toggle">
-                            <div class="toggle-switch">
-                                <div class="toggle-slider"></div>
-                            </div>
+            <div class="header-right">
+                <!-- 🎯 LEAD PROGRESS BAR -->
+                <div class="lead-progress-header" id="leadProgressHeader">
+                    <div class="progress-content">
+                        <div class="progress-stats">
+                            <span class="current-leads" id="currentLeads">-</span>
+                            <span class="progress-separator">/</span>
+                            <span class="max-leads">50</span>
+                            <span class="leads-label">leads</span>
+                        </div>
+                        <div class="progress-bar-mini">
+                            <div class="progress-fill-mini" id="progressFillMini" style="width: 0%"></div>
                         </div>
                     </div>
-                    <div class="dropdown-item" data-page="settings">
-                        <i data-lucide="settings" class="dropdown-icon"></i>
-                        <span>Settings</span>
+                </div>
+
+                <!-- 👤 USER MENU - ALWAYS VISIBLE -->
+                <div class="user-menu-container">
+                    <div class="user-menu" id="userMenu">
+                        <div class="user-avatar" id="userAvatar">
+                            <div class="loading-spinner"></div>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Loading...</div>
+                            <div class="user-tier" id="userTier">Free Plan</div>
+                        </div>
+                        <i data-lucide="chevron-down" class="chevron-down"></i>
                     </div>
-                    <div class="dropdown-item logout-item" id="logoutBtn">
-                        <i data-lucide="log-out" class="dropdown-icon"></i>
-                        <span>Logout</span>
+                    
+                    <!-- 📋 PROFILE DROPDOWN -->
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-item" id="darkModeToggle">
+                            <i data-lucide="moon" class="dropdown-icon"></i>
+                            <span>Dark Mode</span>
+                            <div class="dropdown-toggle">
+                                <div class="toggle-switch">
+                                    <div class="toggle-slider"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-item" data-page="settings">
+                            <i data-lucide="settings" class="dropdown-icon"></i>
+                            <span>Settings</span>
+                        </div>
+                        <div class="dropdown-item logout-item" id="logoutBtn">
+                            <i data-lucide="log-out" class="dropdown-icon"></i>
+                            <span>Logout</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1086,65 +989,11 @@
         </main>
     </div>
 
-    <!-- 🎪 PRO UPGRADE MODAL -->
-    <div class="modal-overlay" id="proModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚡ Upgrade to Professional</h3>
-                <p>Unlock powerful features to supercharge your sales</p>
-            </div>
-            <div class="modal-body">
-                <div class="features-grid">
-                    <div class="feature-item">
-                        <span class="feature-icon">📊</span>
-                        <span class="feature-text">Advanced Analytics</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">📥</span>
-                        <span class="feature-text">Data Export</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🔍</span>
-                        <span class="feature-text">Advanced Search</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🤖</span>
-                        <span class="feature-text">Automation</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">📊</span>
-                        <span class="feature-text">Enhanced Dashboard</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">👥</span>
-                        <span class="feature-text">Team Collaboration</span>
-                    </div>
-                </div>
-
-                <div class="capacity-highlight">
-                    <div>Upgrade from <span class="number">50</span> to <span class="number">1,000</span> leads!</div>
-                </div>
-
-                <div class="transfer-notice">
-                    🔄 All your existing leads will automatically transfer - zero downtime!
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn modal-btn-primary" id="startTrialBtn">
-                    🚀 Start Free Trial
-                </button>
-                <button class="modal-btn modal-btn-secondary" id="closeModalBtn">
-                    Maybe Later
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🚀 DYNAMIC NAVIGATION SYSTEM -->
+    <!-- 🚀 SIMPLE & CLEAN NAVIGATION SYSTEM -->
     <script>
         // 🎬 INITIALIZE
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 SteadyManager Shell loading...');
+            console.log('🚀 Simple SteadyManager Shell loading...');
             
             // Initialize icons
             if (typeof lucide !== 'undefined') {
@@ -1160,43 +1009,35 @@
             // Setup user menu
             setupUserMenu();
             
-            // Setup pro modal
-            setupProModal();
-            
             // Initialize shell with real data
             initializeShell();
             
-            console.log('✅ Shell ready!');
+            console.log('✅ Simple Shell ready!');
         });
 
-        // 🔐 INITIALIZE SHELL WITH REAL DATA
+        // 🔐 SIMPLE SHELL INITIALIZATION
         async function initializeShell() {
             try {
-                console.log('🔐 Initializing shell...');
+                console.log('🔐 Initializing simple shell...');
                 
-                // Wait for authManager to be ready
-                if (!window.authManager) {
-                    console.log('⏳ Waiting for auth manager...');
-                    await waitForAuthManager();
+                // Check authentication
+                const authResponse = await API.checkAuth();
+                
+                if (!authResponse.authenticated) {
+                    console.log('❌ Not authenticated, redirecting to login');
+                    window.location.href = '/login?error=auth_required';
+                    return;
                 }
                 
-                // If authManager handled auth and we have a user, proceed
-                if (window.authManager.authenticated && window.authManager.user) {
-                    console.log('✅ Using auth manager user data');
-                    
-                    // Use the user data from auth manager
-                    const user = window.authManager.user;
-                    await loadUserDataFromAuth(user);
-                    
-                    // Load lead statistics
-                    await loadLeadStatistics();
-                    
-                    console.log('✅ Shell initialized with auth manager data');
-                } else {
-                    // Fallback to direct API calls if auth manager isn't working
-                    console.log('🔄 Fallback: Direct API initialization');
-                    await initializeDirectly();
-                }
+                console.log('✅ Authentication verified');
+                
+                // Load user profile
+                await loadUserProfile();
+                
+                // 🎯 Load lead progress
+                await loadLeadProgress();
+                
+                console.log('✅ Simple shell initialized successfully');
                 
             } catch (error) {
                 console.error('❌ Shell initialization failed:', error);
@@ -1204,118 +1045,82 @@
             }
         }
 
-        // ⏳ WAIT FOR AUTH MANAGER TO BE READY
-        function waitForAuthManager() {
-            return new Promise((resolve) => {
-                const checkAuthManager = () => {
-                    if (window.authManager) {
-                        resolve();
-                    } else {
-                        setTimeout(checkAuthManager, 50);
-                    }
-                };
-                checkAuthManager();
-            });
-        }
-
-        // 👤 LOAD USER DATA FROM AUTH MANAGER
-        async function loadUserDataFromAuth(user) {
+        // 🎯 LOAD LEAD PROGRESS BAR
+        async function loadLeadProgress() {
             try {
-                // Generate user initials from email
-                const email = user.email || 'User';
-                const initials = generateInitials(email);
+                console.log('🎯 Loading lead progress...');
+                const stats = await API.getCurrentMonthStats();
                 
-                // Extract display name
-                // Extract display name - USE FULL EMAIL!
-                const displayName = user.firstName && user.lastName 
-                      ? `${user.firstName} ${user.lastName}`
-                      : email;  // ← BOOM! FULL EMAIL NOW!
+                const currentCount = stats.currentMonthLeads || 0;
+                const maxCount = 50; // Fixed limit
+                const percentage = Math.min((currentCount / maxCount) * 100, 100);
                 
-                // Map subscription tiers to display names
-                const tierDisplayNames = {
-                    'FREE': 'Free Plan',
-                    'PROFESSIONAL': 'Professional',
-                    'PROFESSIONAL_TRIAL': 'Trial',
-                    'BUSINESS': 'Business',
-                    'ENTERPRISE': 'Enterprise',
-                    'ADMIN': 'Admin'
-                };
+                // Update the display
+                document.getElementById('currentLeads').textContent = currentCount;
                 
-                const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
+                const progressFill = document.getElementById('progressFillMini');
+                progressFill.style.width = `${percentage}%`;
                 
-                // Update UI elements
-                updateUserInfo({
-                    name: displayName,
-                    initials: initials,
-                    tier: tierDisplay,
-                    email: email
+                // Update styling based on progress
+                progressFill.className = 'progress-fill-mini';
+                if (percentage >= 100) {
+                    progressFill.classList.add('at-limit');
+                } else if (percentage >= 80) {
+                    progressFill.classList.add('near-limit');
+                }
+                
+                console.log(`🎯 Lead progress loaded: ${currentCount}/50 (${Math.round(percentage)}%)`);
+                
+                // Make progress bar clickable to go to pipeline
+                const progressHeader = document.getElementById('leadProgressHeader');
+                progressHeader.addEventListener('click', () => {
+                    loadPage('pipeline');
                 });
-                
-                console.log(`👤 User loaded from auth: ${displayName} (${tierDisplay})`);
                 
             } catch (error) {
-                console.error('❌ Failed to load user data from auth:', error);
+                console.error('❌ Failed to load lead progress:', error);
                 // Set fallback values
-                updateUserInfo({
-                    name: 'User',
-                    initials: 'U',
-                    tier: 'Free Plan'
-                });
+                document.getElementById('currentLeads').textContent = '-';
             }
         }
 
-        // 🔄 FALLBACK: DIRECT API INITIALIZATION
-        async function initializeDirectly() {
-            const authResponse = await API.checkAuth();
-            
-            if (!authResponse.authenticated) {
-                console.log('❌ Not authenticated, redirecting to login');
-                window.location.href = '/auth/login?error=session_required';
-                return;
-            }
-            
-            console.log('✅ Direct auth verified');
-            
-            // Load user profile and stats
-            await loadUserProfile();
-            await loadLeadStatistics();
-        }
-
-        // 👤 LOAD USER PROFILE AND UPDATE UI
+        // 👤 LOAD USER PROFILE
         async function loadUserProfile() {
             try {
-                const profile = await API.getProfile();
-                
-                // Generate user initials from email
-                const email = profile.email || 'User';
-                const initials = generateInitials(email);
-                
-                // Extract first/last name if available, otherwise use email
-                const displayName = profile.firstName && profile.lastName 
-                    ? `${profile.firstName} ${profile.lastName}`
-                    : email;  // ← SHOW FULL EMAIL!
-                
-                // Map subscription tiers to display names
-                const tierDisplayNames = {
-                    'FREE': 'Free Plan',
-                    'PROFESSIONAL': 'Professional',
-                    'PROFESSIONAL_TRIAL': 'Trial',
-                    'BUSINESS': 'Business',
-                    'ENTERPRISE': 'Enterprise',
-                    'ADMIN': 'Admin'
-                };
-                
-                const tierDisplay = tierDisplayNames[profile.subscriptionTier] || 'Free Plan';
-                
-                // Update UI elements
-                updateUserInfo({
-                    name: displayName,
-                    initials: initials,
-                    tier: tierDisplay,
-                    email: email
-                });
-                
-                console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
+                const authResponse = await API.checkAuth();
+                if (authResponse.authenticated && authResponse.user) {
+                    const user = authResponse.user;
+                    
+                    // Generate user initials from email
+                    const email = user.email || 'User';
+                    const initials = generateInitials(email);
+                    
+                    // Use full email as display name
+                    const displayName = email;
+                    
+                    // Map subscription tiers to display names
+                    const tierDisplayNames = {
+                        'FREE': 'Free Plan',
+                        'PROFESSIONAL': 'Professional',
+                        'PROFESSIONAL_TRIAL': 'Trial',
+                        'BUSINESS': 'Business',
+                        'ENTERPRISE': 'Enterprise',
+                        'ADMIN': 'Admin'
+                    };
+                    
+                    const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
+                    
+                    // Update UI with smooth animations
+                    updateUserInfo({
+                        name: displayName,
+                        initials: initials,
+                        tier: tierDisplay
+                    });
+                    
+                    console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
+                } else {
+                    console.error('❌ Auth check failed in loadUserProfile');
+                }
                 
             } catch (error) {
                 console.error('❌ Failed to load user profile:', error);
@@ -1328,49 +1133,16 @@
             }
         }
 
-        // 📊 LOAD LEAD STATISTICS AND UPDATE PROGRESS
-        // 📊 LOAD LEAD STATISTICS AND UPDATE PROGRESS
-async function loadLeadStatistics() {
-    try {
-        const monthStats = await API.getCurrentMonthStats();
-        const leadCount = monthStats.currentMonthLeads || 0;
-        const limit = monthStats.monthlyLeadLimit || 50;
-        
-        // Update progress bar with real user limit (handles all tiers)
-        updateLeadsProgress(leadCount, limit);
-        
-        console.log(`📊 Month stats loaded: ${leadCount}/${limit} leads (${monthStats.percentageUsed}%)`);
-        
-    } catch (error) {
-        console.error('❌ Failed to load month statistics:', error);
-        // Fallback to auth manager data if available
-        if (window.authManager && window.authManager.user) {
-            const fallbackCount = window.authManager.user.currentMonthLeads || 0;
-            const fallbackLimit = window.authManager.user.monthlyLeadLimit || 50;
-            updateLeadsProgress(fallbackCount, fallbackLimit);
-            console.log(`📊 Using auth manager fallback: ${fallbackCount}/${fallbackLimit} leads`);
-        } else {
-            // Final fallback
-            updateLeadsProgress(0, 50);
-        }
-    }
-}
-
         // 🔤 GENERATE INITIALS FROM EMAIL
         function generateInitials(email) {
             if (!email) return 'U';
             
-            // Try to get initials from the name part of email
             const namePart = email.split('@')[0];
-            
-            // Split by common separators
             const parts = namePart.split(/[._-]/);
             
             if (parts.length >= 2) {
-                // Use first letter of first two parts
                 return (parts[0][0] + parts[1][0]).toUpperCase();
             } else {
-                // Use first two letters of the name part
                 return namePart.substring(0, 2).toUpperCase();
             }
         }
@@ -1395,7 +1167,10 @@ async function loadLeadStatistics() {
                             border-radius: var(--radius); 
                             cursor: pointer;
                             font-weight: 600;
-                        ">Retry</button>
+                            transition: var(--transition);
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            🔄 Retry
+                        </button>
                     </div>
                 `;
             }
@@ -1403,7 +1178,6 @@ async function loadLeadStatistics() {
 
         // 🎨 THEME MANAGEMENT
         function applySavedTheme() {
-            // Use utils if available, fallback to localStorage
             const savedTheme = window.SteadyUtils ? 
                 SteadyUtils.storage.get('dashboard-theme', 'light') : 
                 localStorage.getItem('dashboard-theme') || 'light';
@@ -1412,9 +1186,15 @@ async function loadLeadStatistics() {
         }
 
         function toggleTheme() {
-            // Use SteadyUtils if available
             if (window.SteadyUtils && SteadyUtils.theme) {
-                SteadyUtils.theme.toggle();
+                const newTheme = SteadyUtils.theme.toggle();
+                
+                // Show theme change toast
+                SteadyUtils.showToast(`Switched to ${newTheme} mode! 🎨`, 'success', {
+                    duration: 2000,
+                    position: 'bottom-right'
+                });
+                
                 return;
             }
             
@@ -1433,102 +1213,152 @@ async function loadLeadStatistics() {
 
         // 🧭 NAVIGATION SYSTEM
         function setupNavigation() {
-            document.querySelectorAll('.nav-link').forEach(link => {
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
+                    const upgradeTrigger = link.getAttribute('data-upgrade-trigger');
                     
-                    // Check if it's a pro feature
-                    if (link.classList.contains('disabled')) {
-                        showProModal();
-                        return;
+                    // SteadyUtils click animation
+                    if (window.SteadyUtils) {
+                        SteadyUtils.pulse(link, { scale: 0.95, duration: 200 });
                     }
                     
                     if (page) {
-                        loadPage(page);
+                        if (link.classList.contains('disabled') && page === 'upgrade') {
+                            loadPage('upgrade', upgradeTrigger || 'navigation');
+                        } else if (link.classList.contains('upgrade-nav-link')) {
+                            loadPage('upgrade');
+                        } else {
+                            loadPage(page);
+                        }
                     }
                 });
             });
         }
 
-        function loadPage(pageName) {
-            console.log(`🧭 Loading page: ${pageName}`);
-            
-            // Update active nav state
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-            
-            // Page titles with emojis
-            const pageTitles = {
-                dashboard: 'Dashboard',
-                leads: 'Leads', 
-                pipeline: 'Pipeline',
-                analytics: 'Analytics',
-                export: 'Export',
-                settings: 'Settings'
-            };
-            
-            // Update page title
-            const pageTitle = document.getElementById('pageTitle');
-            if (pageTitle) {
-                pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
-            }
-            
-            // Try to load module from window object
-            const moduleNames = {
-                dashboard: 'DashboardController',
-                leads: 'AddLeadModule', 
-                pipeline: 'PipelineModule',
-                settings: 'SettingsModule'
-            };
-            
-            const moduleName = moduleNames[pageName];
-            const module = window[moduleName];
-            
-            if (module && typeof module.init === 'function') {
-                console.log(`✅ Loading ${moduleName}...`);
-                module.init();
-                
-                // Animate content if utils available
-                if (window.SteadyUtils && SteadyUtils.animateInStagger) {
-                    setTimeout(() => {
-                        SteadyUtils.animateInStagger('.fade-in', {
-                            staggerDelay: 150,
-                            duration: 600
-                        });
-                    }, 100);
-                }
-            } else {
-                console.warn(`⚠️ Module ${moduleName} not found`);
-                showModuleNotFound(pageName);
-            }
+        async function loadPage(pageName, triggerSource = null) {
+    // 🔥 CANCEL ANY PENDING OPERATIONS
+    if (window.currentPageLoad) {
+        window.currentPageLoad.cancelled = true;
+    }
+    
+    // 🔥 CREATE NEW LOAD TRACKER
+    const currentLoad = { cancelled: false, pageName };
+    window.currentPageLoad = currentLoad;
+    
+    console.log(`🧭 Loading page: ${pageName}`);
+    
+    // 🔥 CHECK IF CANCELLED BEFORE EACH ASYNC OPERATION
+    const checkCancelled = () => {
+        if (currentLoad.cancelled) {
+            console.log(`🚫 ${pageName} load cancelled`);
+            return true;
         }
+        return false;
+    };
+    
+    // 🔥 FIRST: Clear any existing modals from previous modules
+    document.querySelectorAll('.addlead-modal-overlay, .edit-modal-streamlined, .pipeline-selector-modal, .upgrade-modal-overlay').forEach(modal => {
+        modal.remove();
+    });
+    
+    // Update active nav state with animations
+    document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    if (pageName === 'upgrade') {
+        document.querySelector('.upgrade-nav-link')?.classList.add('active');
+    } else {
+        document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+    }
+    
+    // Page titles
+    const pageTitles = {
+        dashboard: 'Dashboard',
+        leads: 'Add Leads', 
+        pipeline: 'Pipeline',
+        scheduling: 'Scheduling',
+        analytics: 'Analytics',
+        settings: 'Settings',
+        upgrade: 'Upgrade Plan'
+    };
+    
+    // Update page title
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+        const newTitle = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
+        pageTitle.textContent = newTitle;
+    }
+    
+    // 🔥 CLEAR MAIN CONTENT FIRST - HARD RESET
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    Loading ${pageTitles[pageName]}...
+                </h2>
+            </div>
+        `;
+    }
+    
+    // 🔥 STANDARD MODULE LOADING (Dashboard, Pipeline, etc.)
+    const moduleNames = {
+        dashboard: 'DashboardController',
+        leads: 'AddLeadModule',
+        pipeline: 'PipelineModule',
+        scheduling: 'SchedulingModule',
+        settings: 'SettingsModule',
+        upgrade: 'UpgradeModule'
+    };
+    
+    const moduleName = moduleNames[pageName];
+    if (checkCancelled()) return;
+    const module = window[moduleName];
+    
+    if (module && typeof module.init === 'function') {
+        console.log(`✅ Loading ${moduleName}...`);
+        
+        // Pass trigger source to upgrade module for context
+        if (pageName === 'upgrade' && triggerSource) {
+            module.init({ triggerSource });
+        } else {
+            module.init();
+        }
+    } else {
+        console.warn(`⚠️ Module ${moduleName} not found`);
+        showModuleNotFound(pageName);
+    }
+}
 
         function showModuleNotFound(pageName) {
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                const emoji = {
-                    dashboard: '📊',
-                    leads: '👥', 
-                    pipeline: '🌿',
-                    analytics: '📈',
-                    export: '📥',
-                    settings: '⚙️'
-                }[pageName] || '📦';
-                
-                mainContent.innerHTML = `
-                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
-                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                            ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
-                        </h2>
-                        <p>Module not loaded yet. Check that the script is included.</p>
-                    </div>
-                `;
-            }
-        }
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) {
+        const emoji = {
+            dashboard: '📊',
+            leads: '👥', 
+            pipeline: '🌿',
+            scheduling: '📅',
+            analytics: '📈',
+            settings: '⚙️',
+            upgrade: '🚀'
+        }[pageName] || '📦';
+        if (checkCancelled()) return;
+        
+        mainContent.innerHTML = `
+            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
+                </h2>
+                <p>Module not loaded yet. Check that the script is included.</p>
+            </div>
+        `;
+    }
+}
 
         // 👤 USER MENU SETUP
         function setupUserMenu() {
@@ -1536,10 +1366,15 @@ async function loadLeadStatistics() {
             const profileDropdown = document.getElementById('profileDropdown');
             const darkModeToggle = document.getElementById('darkModeToggle');
             
-            // Toggle dropdown
+            // Toggle dropdown with animation
             userMenu?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown?.classList.toggle('show');
+                
+                // Pulse animation on click
+                if (window.SteadyUtils) {
+                    SteadyUtils.pulse(userMenu, { scale: 0.95, duration: 200 });
+                }
             });
             
             // Close on outside click
@@ -1559,107 +1394,202 @@ async function loadLeadStatistics() {
                 profileDropdown.classList.remove('show');
             });
 
-            // Logout
+            // Logout with confirmation
             const logoutBtn = document.getElementById('logoutBtn');
             logoutBtn?.addEventListener('click', async () => {
-                // Use auth manager if available, otherwise fallback to API
-                if (window.authManager) {
-                    await window.authManager.logout();
+                // Show logout confirmation if SteadyUtils available
+                if (window.SteadyUtils) {
+                    const modal = SteadyUtils.createModal(
+                        'Confirm Logout',
+                        'Are you sure you want to logout?',
+                        {
+                            size: 'small',
+                            buttons: [
+                                {
+                                    text: 'Cancel',
+                                    type: 'secondary',
+                                    onClick: () => true // Close modal
+                                },
+                                {
+                                    text: 'Logout',
+                                    type: 'danger',
+                                    onClick: async () => {
+                                        await performLogout();
+                                        return true; // Close modal
+                                    }
+                                }
+                            ]
+                        }
+                    );
                 } else {
-                    try {
-                        await API.logout();
-                        console.log('🚪 Logged out successfully');
-                        window.location.href = '/auth/login';
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                        window.location.href = '/auth/login';
-                    }
+                    // Direct logout without confirmation
+                    await performLogout();
                 }
+                
                 profileDropdown.classList.remove('show');
             });
         }
 
-        // 🎪 PRO MODAL SETUP
-        function setupProModal() {
-            const proModal = document.getElementById('proModal');
-            const upgradeBtn = document.getElementById('upgradeBtn');
-            const startTrialBtn = document.getElementById('startTrialBtn');
-            const closeModalBtn = document.getElementById('closeModalBtn');
-            
-            // Show modal
-            upgradeBtn?.addEventListener('click', showProModal);
-            startTrialBtn?.addEventListener('click', startTrial);
-            
-            // Close modal
-            closeModalBtn?.addEventListener('click', hideProModal);
-            proModal?.addEventListener('click', (e) => {
-                if (e.target === proModal) hideProModal();
-            });
-            
-            // Escape key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && proModal?.classList.contains('show')) {
-                    hideProModal();
+        async function performLogout() {
+            try {
+                if (window.SteadyUtils) {
+                    SteadyUtils.showToast('Logging out... 👋', 'info', {
+                        duration: 2000
+                    });
                 }
-            });
+                
+                await API.logout();
+                console.log('🚪 Logged out successfully');
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            }
         }
 
-        function showProModal() {
-            const proModal = document.getElementById('proModal');
-            proModal?.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideProModal() {
-            const proModal = document.getElementById('proModal');
-            proModal?.classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        function startTrial() {
-            // Redirect to trial signup
-            window.location.href = '/auth/trial';
-        }
-
-        // 🌐 GLOBAL HELPERS FOR MODULES
+        // 🔒 LOCK DOWN HEADER - NO MODULE INTERFERENCE
+        // Modules can change title but NOT the profile/user info
+        
         window.loadPage = loadPage;
+        
+        // ✅ Allow title updates but protect user info
         window.updatePageTitle = (title) => {
             const pageTitle = document.getElementById('pageTitle');
-            if (pageTitle) pageTitle.textContent = title;
+            if (pageTitle) {
+                if (window.SteadyUtils) {
+                    SteadyUtils.animateOut(pageTitle, { duration: 200 }).then(() => {
+                        pageTitle.textContent = title;
+                        SteadyUtils.animateIn(pageTitle, { duration: 300 });
+                    });
+                } else {
+                    pageTitle.textContent = title;
+                }
+            }
         };
         
-        window.updateUserInfo = (user) => {
+        // 🔒 PROTECTED: User info updates - FORCE AVATAR STYLING
+        function updateUserInfo(user) {
             const userName = document.getElementById('userName');
             const userAvatar = document.getElementById('userAvatar');
             const userTier = document.getElementById('userTier');
             
-            if (user.name && userName) userName.textContent = user.name;
-            if (user.initials && userAvatar) userAvatar.textContent = user.initials;
-            if (user.tier && userTier) userTier.textContent = user.tier;
-        };
-
-        window.updateLeadsProgress = (current, max = 50) => {
-            const leadCount = document.getElementById('leadCount');
-            const progressFill = document.getElementById('progressFill');
+            if (user.name && userName) {
+                if (window.SteadyUtils) {
+                    SteadyUtils.animateOut(userName, { duration: 200 }).then(() => {
+                        userName.textContent = user.name;
+                        SteadyUtils.animateIn(userName, { duration: 300 });
+                    });
+                } else {
+                    userName.textContent = user.name;
+                }
+            }
             
-            if (leadCount) leadCount.textContent = current;
-            if (progressFill) {
-                const percentage = (current / max) * 100;
-                progressFill.style.width = `${Math.min(percentage, 100)}%`;
+            if (user.initials && userAvatar) {
+                if (window.SteadyUtils) {
+                    SteadyUtils.animateOut(userAvatar, { duration: 200 }).then(() => {
+                        // FORCE CLEAR ALL CONTENT AND STYLING
+                        userAvatar.innerHTML = '';
+                        userAvatar.textContent = user.initials;
+                        
+                        // FORCE PROPER STYLING
+                        userAvatar.style.background = 'var(--gradient-primary)';
+                        userAvatar.style.color = 'white';
+                        userAvatar.style.fontSize = '0.9rem';
+                        userAvatar.style.fontWeight = '700';
+                        userAvatar.style.display = 'flex';
+                        userAvatar.style.alignItems = 'center';
+                        userAvatar.style.justifyContent = 'center';
+                        
+                        SteadyUtils.animateIn(userAvatar, { duration: 300 });
+                    });
+                } else {
+                    // FORCE CLEAR ALL CONTENT AND STYLING
+                    userAvatar.innerHTML = '';
+                    userAvatar.textContent = user.initials;
+                    
+                    // FORCE PROPER STYLING
+                    userAvatar.style.background = 'var(--gradient-primary)';
+                    userAvatar.style.color = 'white';
+                    userAvatar.style.fontSize = '0.9rem';
+                    userAvatar.style.fontWeight = '700';
+                    userAvatar.style.display = 'flex';
+                    userAvatar.style.alignItems = 'center';
+                    userAvatar.style.justifyContent = 'center';
+                }
+            }
+            
+            if (user.tier && userTier) {
+                if (window.SteadyUtils) {
+                    SteadyUtils.animateOut(userTier, { duration: 200 }).then(() => {
+                        userTier.textContent = user.tier;
+                        SteadyUtils.animateIn(userTier, { duration: 300 });
+                    });
+                } else {
+                    userTier.textContent = user.tier;
+                }
+            }
+        }
+
+        // 🎯 UPDATE LEAD PROGRESS (For modules to call)
+        window.updateLeadProgress = async function(newCount) {
+            try {
+                const maxCount = 50;
+                const percentage = Math.min((newCount / maxCount) * 100, 100);
+                
+                // Animate the number change
+                const currentLeadsEl = document.getElementById('currentLeads');
+                if (currentLeadsEl) {
+                    currentLeadsEl.textContent = newCount;
+                }
+                
+                // Update progress bar
+                const progressFill = document.getElementById('progressFillMini');
+                if (progressFill) {
+                    progressFill.style.width = `${percentage}%`;
+                    
+                    // Update styling
+                    progressFill.className = 'progress-fill-mini';
+                    if (percentage >= 100) {
+                        progressFill.classList.add('at-limit');
+                    } else if (percentage >= 80) {
+                        progressFill.classList.add('near-limit');
+                    }
+                }
+                
+                console.log(`🎯 Progress updated: ${newCount}/50 (${Math.round(percentage)}%)`);
+            } catch (error) {
+                console.error('❌ Failed to update progress:', error);
             }
         };
 
-        console.log('🔥 SteadyManager Shell ready for modules!');
+        // 🎯 REFRESH LEAD PROGRESS (For modules to call)
+        window.refreshLeadProgress = async function() {
+            await loadLeadProgress();
+        };
+
+        // 🎉 WELCOME MESSAGE
+        if (window.SteadyUtils) {
+            setTimeout(() => {
+                SteadyUtils.showToast('Welcome to SteadyManager! 🚀', 'success', {
+                    duration: 3000,
+                    position: 'bottom-right'
+                });
+            }, 1000);
+        }
+
+        console.log('🔥 Simple SteadyManager Shell ready for modules!');
+        console.log('✨ Enhanced with SteadyUtils animations and interactions!');
     </script>
 
     <!-- 🔧 MODULE LOADER -->
-    <script src="/dashboard/shared/js/auth.js"></script>
     <script src="/dashboard/shared/js/utils.js"></script>
     <script src="/dashboard/shared/js/api.js"></script>
     <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
     <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
     <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
     <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
+    <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
 
 </body>
 </html>

@@ -325,6 +325,7 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
         }
 
         .success-message {
@@ -336,6 +337,100 @@
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
             display: none;
+            line-height: 1.4;
+        }
+
+        /* EMAIL VERIFICATION SECTION FOR TRIALS */
+        .verification-section {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-radius: 12px;
+            border: 1px solid #bbf7d0;
+            margin-top: 1rem;
+        }
+
+        .verification-section.show {
+            display: block;
+        }
+
+        .verification-section h3 {
+            color: #166534;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .verification-section p {
+            color: #166534;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .verification-email {
+            font-weight: 600;
+            color: #15803d;
+            word-break: break-word;
+        }
+
+        .trial-countdown {
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .trial-countdown-title {
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .trial-countdown-text {
+            color: #92400e;
+            font-size: 0.9rem;
+        }
+
+        .resend-btn {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .resend-btn:hover {
+            background: #15803d;
+            transform: translateY(-1px);
+        }
+
+        .resend-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .verification-help {
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #166534;
+            line-height: 1.4;
+        }
+
+        .verification-help a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .verification-help a:hover {
+            text-decoration: underline;
         }
 
         .auth-links {
@@ -404,6 +499,39 @@
             font-weight: 500;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .action-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.secondary {
+            background: #6b7280;
+        }
+
+        .action-btn.secondary:hover {
+            background: #4b5563;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 768px) {
             body {
@@ -437,6 +565,14 @@
                 grid-template-columns: 1fr;
                 gap: 0.5rem;
             }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-btn {
+                text-align: center;
+            }
         }
 
         /* Animation classes */
@@ -457,14 +593,14 @@
     </style>
 </head>
 <body>
-    <a href="/" class="back-home">
+    <a href="javascript:history.back()" class="back-home">
         <span>←</span>
-        <span>Back to Home</span>
+        <span>Back</span>
     </a>
     
     <div class="auth-container fadeInUp">
         <div class="logo">
-            <a href="/" class="mobile-back-btn">←</a>
+            <a href="javascript:history.back()" class="mobile-back-btn">←</a>
             <div class="logo-content">
                 <h1>SteadyManager</h1>
                 <p>A Steady Scaling LLC Product</p>
@@ -480,82 +616,112 @@
         <div id="errorMessage" class="error-message"></div>
         <div id="successMessage" class="success-message"></div>
 
-        <!-- Trial Features -->
-        <div class="trial-features">
-            <div class="trial-features-title">What You Get in Your Free Trial</div>
-            <div class="features-grid">
-                <div class="feature-item">1,000 leads/month</div>
-                <div class="feature-item">Advanced analytics</div>
-                <div class="feature-item">Data export</div>
-                <div class="feature-item">Goal tracking</div>
-                <div class="feature-item">Priority support</div>
-                <div class="feature-item">Full dashboard access</div>
-            </div>
-        </div>
-
-        <!-- Trial Highlight -->
-        <div class="trial-highlight">
-            <div class="trial-highlight-title">No Risk, All Reward</div>
-            <div class="trial-highlight-text">
-                Experience the full power of SteadyManager Professional for 14 days. 
-                No commitments, no hidden fees, no credit card required.
-            </div>
-        </div>
-
-        <form id="trialForm">
-            <div class="form-group">
-                <label for="email" class="form-label">Email Address</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    class="form-input" 
-                    required 
-                    autocomplete="email"
-                    placeholder="Enter your email"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="password" class="form-label">Create Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    class="form-input" 
-                    required 
-                    autocomplete="new-password"
-                    placeholder="Create a strong password"
-                >
-                <div id="passwordStrength" class="password-strength"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="confirmPassword" class="form-label">Confirm Password</label>
-                <input 
-                    type="password" 
-                    id="confirmPassword" 
-                    name="confirmPassword" 
-                    class="form-input" 
-                    required 
-                    autocomplete="new-password"
-                    placeholder="Confirm your password"
-                >
-            </div>
-
-            <button type="submit" class="submit-btn" id="submitBtn">
-                <div class="loading-spinner" id="loadingSpinner"></div>
-                <span id="submitText">Start Free Trial</span>
-            </button>
-
-            <div class="guarantee">
-                <div class="guarantee-text">
-                    Free for 14 days, then $6.99/month. Cancel anytime with one click.
+        <!-- Trial Registration Form -->
+        <div id="trialForm">
+            <!-- Trial Features -->
+            <div class="trial-features">
+                <div class="trial-features-title">What You Get in Your Free Trial</div>
+                <div class="features-grid">
+                    <div class="feature-item">1,000 leads/month</div>
+                    <div class="feature-item">Advanced analytics</div>
+                    <div class="feature-item">Data export</div>
+                    <div class="feature-item">Goal tracking</div>
+                    <div class="feature-item">Priority support</div>
+                    <div class="feature-item">Full dashboard access</div>
                 </div>
             </div>
-        </form>
 
-        <div class="auth-links">
+            <!-- Trial Highlight -->
+            <div class="trial-highlight">
+                <div class="trial-highlight-title">No Risk, All Reward</div>
+                <div class="trial-highlight-text">
+                    Experience the full power of SteadyManager Professional for 14 days. 
+                    No commitments, no hidden fees, no credit card required.
+                </div>
+            </div>
+
+            <form id="trialRegistrationForm">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-input" 
+                        required 
+                        autocomplete="email"
+                        placeholder="Enter your email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Create Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        required 
+                        autocomplete="new-password"
+                        placeholder="Create a strong password"
+                    >
+                    <div id="passwordStrength" class="password-strength"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword" class="form-label">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        class="form-input" 
+                        required 
+                        autocomplete="new-password"
+                        placeholder="Confirm your password"
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <div class="loading-spinner" id="loadingSpinner"></div>
+                    <span id="submitText">Start Free Trial</span>
+                </button>
+
+                <div class="guarantee">
+                    <div class="guarantee-text">
+                        Free for 14 days, then $6.99/month. Cancel anytime with one click.
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Email Verification Section for Trials -->
+        <div class="verification-section" id="verificationSection">
+            <h3>🎉 Almost There!</h3>
+            <p>We've sent an activation link to:</p>
+            <p class="verification-email" id="verificationEmail"></p>
+            
+            <div class="trial-countdown">
+                <div class="trial-countdown-title">⏰ Your 14-Day Trial Awaits!</div>
+                <div class="trial-countdown-text">
+                    Click the link in your email to activate your trial and access 1,000 leads + all Professional features.
+                </div>
+            </div>
+            
+            <button class="resend-btn" id="resendBtn">Resend Activation Email</button>
+            
+            <div class="verification-help">
+                <p><strong>Didn't receive the email?</strong></p>
+                <p>• Check your spam/junk folder</p>
+                <p>• Make sure you entered the correct email address</p>
+                <p>• Wait a few minutes and try resending</p>
+                <p style="margin-top: 1rem;">
+                    Still having trouble? 
+                    <a href="/contact">Contact our support team</a>
+                </p>
+            </div>
+        </div>
+
+        <div class="auth-links" id="authLinks">
             <p>
                 Already have an account? 
                 <a href="/login" class="auth-link">Sign in</a>
@@ -564,6 +730,8 @@
     </div>
 
     <script>
+        let currentEmail = '';
+
         // Password strength checker
         document.getElementById('password').addEventListener('input', (e) => {
             checkPasswordStrength(e.target.value);
@@ -607,27 +775,50 @@
             }
         }
 
-        // Error/Success message functions
+        // Show verification section
+        function showVerificationSection(email) {
+            currentEmail = email;
+            document.getElementById('trialForm').style.display = 'none';
+            document.getElementById('verificationSection').classList.add('show');
+            document.getElementById('verificationEmail').textContent = email;
+            document.getElementById('authLinks').style.display = 'none';
+        }
+
+        // Enhanced message functions
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = message;
+            
+            if (message.includes('<')) {
+                errorDiv.innerHTML = message;
+            } else {
+                errorDiv.textContent = message;
+            }
+            
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
             
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 8000);
+            if (!message.includes('<')) {
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 8000);
+            }
         }
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMessage');
-            successDiv.textContent = message;
+            
+            if (message.includes('<')) {
+                successDiv.innerHTML = message;
+            } else {
+                successDiv.textContent = message;
+            }
+            
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
             
             setTimeout(() => {
                 successDiv.style.display = 'none';
-            }, 5000);
+            }, 10000);
         }
 
         function clearMessages() {
@@ -664,8 +855,111 @@
             }
         }
 
-        // Form submission
-        document.getElementById('trialForm').addEventListener('submit', async (e) => {
+        // Validation function
+        function validateForm(data) {
+            if (!data.email || !data.password || !data.confirmPassword) {
+                showError('Please fill in all fields.');
+                if (!data.email) setFieldError('email');
+                if (!data.password) setFieldError('password');
+                if (!data.confirmPassword) setFieldError('confirmPassword');
+                return false;
+            }
+            
+            if (!data.email.includes('@')) {
+                showError('Please enter a valid email address.');
+                setFieldError('email');
+                return false;
+            }
+            
+            if (data.password !== data.confirmPassword) {
+                showError('Passwords do not match.');
+                setFieldError('password');
+                setFieldError('confirmPassword');
+                return false;
+            }
+            
+            if (data.password.length < 8) {
+                showError('Password must be at least 8 characters long.');
+                setFieldError('password');
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Handle user already exists scenario
+        function handleUserExists(data) {
+            const errorMessage = `
+                <div style="margin-bottom: 1rem;">
+                    ${data.error}
+                </div>
+                <div class="action-buttons">
+                    <a href="/login" class="action-btn">Sign In Instead</a>
+                    <a href="/register" class="action-btn secondary">Create Paid Account</a>
+                </div>
+            `;
+            
+            showError(errorMessage);
+            setFieldError('email');
+        }
+
+        // Handle trial error scenarios
+        function handleTrialError(response, data) {
+            if (response.status === 429) {
+                showError(data.error || 'Too many trial attempts. Please wait and try again.');
+            } 
+            else if (response.status === 400) {
+                if (data.shouldSignIn) {
+                    handleUserExists(data);
+                } 
+                else {
+                    showError(data.error || 'Failed to start trial.');
+                    if (data.error && data.error.toLowerCase().includes('email')) {
+                        setFieldError('email');
+                    }
+                }
+            } 
+            else {
+                showError(data.error || 'Failed to start trial. Please try again.');
+            }
+        }
+
+        // Resend verification email for trials
+        document.getElementById('resendBtn').addEventListener('click', async () => {
+            if (!currentEmail) return;
+
+            const resendBtn = document.getElementById('resendBtn');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch('/api/resend-verification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: currentEmail }),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showSuccess('Trial activation email resent! Check your inbox.');
+                } else {
+                    showError(data.error || 'Failed to resend email. Please try again.');
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                showError('Network error. Please try again.');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend Activation Email';
+            }
+        });
+
+        // Main form submission handler
+        document.getElementById('trialRegistrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             clearMessages();
@@ -680,33 +974,7 @@
             };
             
             // Client-side validation
-            if (!trialData.email || !trialData.password || !trialData.confirmPassword) {
-                showError('Please fill in all fields.');
-                setLoading(false);
-                if (!trialData.email) setFieldError('email');
-                if (!trialData.password) setFieldError('password');
-                if (!trialData.confirmPassword) setFieldError('confirmPassword');
-                return;
-            }
-            
-            if (!trialData.email.includes('@')) {
-                showError('Please enter a valid email address.');
-                setFieldError('email');
-                setLoading(false);
-                return;
-            }
-            
-            if (trialData.password !== trialData.confirmPassword) {
-                showError('Passwords do not match.');
-                setFieldError('password');
-                setFieldError('confirmPassword');
-                setLoading(false);
-                return;
-            }
-            
-            if (trialData.password.length < 8) {
-                showError('Password must be at least 8 characters long.');
-                setFieldError('password');
+            if (!validateForm(trialData)) {
                 setLoading(false);
                 return;
             }
@@ -724,33 +992,19 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    // Success! Show message and redirect
-                    showSuccess(data.message || 'Free trial started! Redirecting to your dashboard...');
-                    
-                    // Redirect to dashboard after success
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 2000);
-                } else {
-                    // Handle various error cases
-                    if (response.status === 429) {
-                        showError(data.error || 'Too many trial attempts. Please wait and try again.');
-                    } else if (response.status === 400) {
-                        if (data.shouldSignIn) {
-                            showError(data.error + ' Would you like to sign in instead?');
-                            // Could add a link to login page
-                        } else {
-                            showError(data.error || 'Failed to start trial.');
-                            // Highlight relevant fields based on error
-                            if (data.error.toLowerCase().includes('email')) {
-                                setFieldError('email');
-                            } else if (data.error.toLowerCase().includes('password')) {
-                                setFieldError('password');
-                            }
-                        }
+                    if (data.requiresVerification) {
+                        // Show email verification screen
+                        showVerificationSection(trialData.email);
+                        showSuccess('Trial account created! Check your email to activate your 14-day trial.');
                     } else {
-                        showError(data.error || 'Failed to start trial. Please try again.');
+                        // No verification needed (shouldn't happen for trials, but just in case)
+                        showSuccess('Trial activated! Redirecting to your dashboard...');
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 2000);
                     }
+                } else {
+                    handleTrialError(response, data);
                 }
             } catch (error) {
                 console.error('Trial start error:', error);
@@ -767,12 +1021,32 @@
             });
         });
 
+        // Check URL parameters for verification results
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('verified') === 'success') {
+                showSuccess('Trial activated! You can now sign in to access your 14-day trial.');
+                // Hide trial form and show login link
+                document.getElementById('trialForm').style.display = 'none';
+                const authLinks = document.getElementById('authLinks');
+                authLinks.innerHTML = `
+                    <p>Your trial has been activated!</p>
+                    <p><a href="/login" class="auth-link">Click here to sign in and start your trial →</a></p>
+                `;
+            } else if (urlParams.get('verified') === 'error') {
+                showError('Trial activation failed. Please try starting your trial again.');
+            }
+        }
+
         // Focus first input on load
         document.addEventListener('DOMContentLoaded', () => {
+            checkUrlParams();
             document.getElementById('email').focus();
         });
 
         console.log('🎁 SteadyManager Free Trial Page Loaded');
+        console.log('📧 Email verification integration active for trials!');
         console.log('✅ Ready to convert visitors to trial users!');
     </script>
 </body>

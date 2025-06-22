@@ -322,8 +322,8 @@ async function sendPasswordResetEmail(email, resetToken, origin) {
 
 // 🔒 Basic CORS & Security
 app.use(cors({
-  origin: process.env.NODE_ENV === 'development' ? true : process.env.ALLOWED_ORIGINS?.split(','),
-  credentials: true
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8080'], // Add your frontend URLs
+    credentials: true // Important for cookies/auth
 }));
 
 app.use(compression());
@@ -376,10 +376,30 @@ const passwordResetLimiter = rateLimit({
   message: { error: 'Too many password reset attempts, please wait 5 minutes' }
 });
 
+// Add this after the passwordResetLimiter definition
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // API calls
-  message: { error: 'API rate limit exceeded' }
+  max: 1000, // 1000 requests per 15 minutes for authenticated users
+  message: { error: 'API rate limit exceeded' },
+  
+  // Skip rate limiting for authenticated users on most endpoints
+  skip: (req, res) => {
+    const hasAuthCookie = !!req.cookies.authToken;
+    
+    // Always apply rate limiting to auth endpoints regardless of auth status
+    const authEndpoints = ['/api/login', '/api/register', '/api/start-trial', 
+                          '/api/forgot-password', '/api/reset-password', 
+                          '/api/resend-verification'];
+    
+    if (authEndpoints.some(endpoint => req.path.startsWith(endpoint))) {
+      return false; // Don't skip - apply rate limiting
+    }
+  },
+  
+  onLimitReached: (req, res, options) => {
+    console.log(`🚨 RATE LIMIT HIT: ${req.ip} exceeded ${options.max} requests`);
+    console.log(`🍪 Auth cookie present: ${!!req.cookies.authToken}`);
+  }
 });
 
 const validator = require('validator');
@@ -580,7 +600,7 @@ async function initializeDatabase() {
         lead_score INTEGER DEFAULT 0, -- Advanced scoring algorithm result
         
         -- Business Information
-        potential_value INTEGER DEFAULT 0,
+        potential_value DECIMAL(10,2) DEFAULT 0,
         estimated_close_date DATE,
         deal_stage VARCHAR(50) DEFAULT 'prospecting',
         deal_probability INTEGER DEFAULT 0 CHECK (deal_probability >= 0 AND deal_probability <= 100),
@@ -824,7 +844,12 @@ async function createLead(leadData) {
         leadData.notes,
         leadData.qualityScore || 5,
         leadData.potentialValue || 0,
-        leadData.followUpDate
+        leadData.followUpDate,
+        leadData.linkedin_url || null,      // 🔥 ADD THESE
+        leadData.facebook_url || null,      // 🔥 ADD THESE  
+        leadData.twitter_url || null,       // 🔥 ADD THESE
+        leadData.instagram_url || null,     // 🔥 ADD THESE
+        leadData.website || null            // 🔥 ADD THESE
       ]
     );
     return result.rows[0];
@@ -1190,9 +1215,12 @@ app.use('/api/resend-verification', passwordResetLimiter); // 5 attempts per 5 m
 app.use('/api', apiLimiter);
 
 // Apply CSRF protection to sensitive routes
-app.use('/api/leads', csrfProtection);
 app.use('/api/user/settings', csrfProtection);
 app.use('/api/admin/*', csrfProtection);
+
+// =============================================
+// 🔐 AUTHENTICATION ENDPOINTS 
+// =============================================
 
 // 🍪 COOKIE VALIDATION ENDPOINT (for client-side checks)
 app.get('/api/auth/check', async (req, res) => {
@@ -1932,6 +1960,10 @@ app.post('/api/reset-password',
   }
 );
 
+// =============================================
+// 💳 STRIPE & BILLING ENDPOINTS
+// =============================================
+
 // 💳 STRIPE CHECKOUT SESSION
 app.post('/api/create-checkout-session', 
   authenticateFromCookie,
@@ -2163,6 +2195,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   }
 });
 
+
+
 // Get Stripe config
 app.get('/api/stripe-config', (req, res) => {
   res.json({
@@ -2184,6 +2218,10 @@ app.get('/api/pricing-plans', (req, res) => {
   res.json({ plans });
 });
 
+// =============================================
+// 🆓 FREE TIER - CORE CRUD ENDPOINTS
+// =============================================
+
 // 📋 Get leads
 app.get('/api/leads', authenticateFromCookie, async (req, res) => {
   try {
@@ -2192,7 +2230,6 @@ app.get('/api/leads', authenticateFromCookie, async (req, res) => {
     const categorizedLeads = {
       cold: userLeads.filter(lead => lead.type === 'cold'),
       warm: userLeads.filter(lead => lead.type === 'warm'),
-      crm: userLeads.filter(lead => lead.type === 'crm'),
       all: userLeads
     };
     
@@ -2208,10 +2245,8 @@ app.post('/api/leads',
   authenticateFromCookie,
   [
     validateLeadName,
-    body('email').optional().isEmail().normalizeEmail(),
-    body('type').optional().isIn(['cold', 'warm', 'crm']).withMessage('Invalid lead type'),
-    body('qualityScore').optional().isInt({ min: 1, max: 10 }).withMessage('Quality score must be 1-10'),
-    handleValidationErrors
+  // Remove email validation entirely - let it be whatever
+  handleValidationErrors
   ],
   async (req, res) => {
     try {
@@ -2236,11 +2271,16 @@ app.post('/api/leads',
         company: req.body.company,
         platform: req.body.platform,
         status: req.body.status || 'New lead',
-        type: req.body.type || 'cold',
+        type: req.body.type,
         notes: req.body.notes,
         qualityScore: req.body.qualityScore || 5,
         potentialValue: req.body.potentialValue || 0,
-        followUpDate: req.body.followUpDate
+        followUpDate: req.body.followUpDate,
+        linkedin_url: req.body.linkedin_url,
+        facebook_url: req.body.facebook_url,
+        twitter_url: req.body.twitter_url,
+        instagram_url: req.body.instagram_url,
+        website: req.body.website
       };
 
       const newLead = await createLead(leadData);
@@ -2257,6 +2297,8 @@ app.post('/api/leads',
     }
   }
 );
+
+
 
 // ✏️ Update lead
 app.put('/api/leads/:id', 
@@ -2287,11 +2329,13 @@ app.put('/api/leads/:id',
         const updateValues = [];
         let paramCount = 1;
 
-        const allowedFields = ['name', 'email', 'phone', 'company', 'platform', 'status', 'type', 'notes', 'quality_score', 'potential_value', 'follow_up_date'];
+        const allowedFields = ['name', 'email', 'phone', 'company', 'platform', 'status', 'type', 
+  'notes', 'quality_score', 'potential_value', 'follow_up_date',
+  'dealValue', 'lost_reason'];
 
         for (const field of allowedFields) {
           if (req.body.hasOwnProperty(field)) {
-            updateFields.push(`${field} = ${paramCount}`);
+            updateFields.push(`${field} = $${paramCount}`);
             let value = req.body[field];
             
             if (field === 'email' && value) {
@@ -2313,14 +2357,13 @@ app.put('/api/leads/:id',
         const updateQuery = `
           UPDATE ${getTableName('leads')} 
           SET ${updateFields.join(', ')}
-          WHERE id = ${paramCount}
+          WHERE id = $${paramCount}
           RETURNING *
         `;
 
         const updateResult = await client.query(updateQuery, updateValues);
         const updatedLead = updateResult.rows[0];
         
-        console.log(`✅ Lead updated: ${leadId} by user ${req.user.userId}`);
         res.json(updatedLead);
       } finally {
         client.release();
@@ -2581,6 +2624,56 @@ app.get('/api/tasks', authenticateFromCookie, async (req, res) => {
   }
 });
 
+// 📅 UPDATE TASK ENDPOINT - ADD THIS TO YOUR SERVER.JS
+app.put('/api/tasks/:id', 
+  authenticateFromCookie,
+  [validateNumericId, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const client = await pool.connect();
+      
+      try {
+        // Check if task exists and user owns it
+        const taskResult = await client.query(
+          `SELECT * FROM ${getTableName('tasks')} WHERE id = $1`,
+          [taskId]
+        );
+        
+        if (taskResult.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        
+        const task = taskResult.rows[0];
+        if (!req.user.isAdmin && task.user_id !== req.user.userId) {
+          return res.status(403).json({ error: 'Unauthorized' });
+        }
+
+        // Update the task - simple and clean
+        const result = await client.query(
+          `UPDATE ${getTableName('tasks')} 
+           SET status = COALESCE($1, status),
+               completion_notes = COALESCE($2, completion_notes),
+               due_date = COALESCE($3, due_date),
+               completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END,
+               updated_at = NOW()
+           WHERE id = $4 
+           RETURNING *`,
+          [req.body.status, req.body.completion_notes, req.body.due_date, taskId]
+        );
+        
+        console.log(`✅ Task updated: ${taskId} by user ${req.user.userId}`);
+        res.json(result.rows[0]);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Update task error:', error.message);
+      res.status(500).json({ error: 'Failed to update task' });
+    }
+  }
+);
+
 // 🎯 GET SINGLE LEAD
 app.get('/api/leads/:id', 
   authenticateFromCookie,
@@ -2705,6 +2798,32 @@ app.get('/api/available-upgrades', authenticateFromCookie, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch available upgrades' });
   }
 });
+
+// =============================================
+// 💼 PRO TIER ENDPOINTS - ANALYTICS & GOALS
+// =============================================
+// 📊 ADD FUTURE ANALYTICS HERE
+// 🎯 ADD FUTURE GOALS HERE
+// 🏷️ ADD FUTURE TAGS HERE
+
+// =============================================
+// 🏢 BUSINESS TIER ENDPOINTS - TEAM FEATURES  
+// =============================================
+// 👥 ADD FUTURE TEAM MANAGEMENT HERE
+// 🤖 ADD FUTURE AUTOMATION HERE
+
+// =============================================
+// ⭐ ENTERPRISE TIER ENDPOINTS - ADVANCED
+// =============================================
+// 📊 ADD FUTURE CUSTOM REPORTS HERE
+// 🔗 ADD FUTURE API KEYS HERE
+
+// =============================================
+// 👑 ADMIN TIER ENDPOINTS - SYSTEM CONTROL
+// =============================================
+// 👤 ADD FUTURE USER MANAGEMENT HERE
+// 💰 ADD FUTURE BILLING ANALYTICS HERE
+// 🔄 ADD FUTURE TIER SWITCHING HERE
 
 // 🏥 Health check endpoint
 app.get('/api/health', async (req, res) => {
