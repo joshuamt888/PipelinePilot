@@ -1238,32 +1238,9 @@
         }
 
         async function loadPage(pageName, triggerSource = null) {
-    // 🔥 CANCEL ANY PENDING OPERATIONS
-    if (window.currentPageLoad) {
-        window.currentPageLoad.cancelled = true;
-    }
-    
-    // 🔥 CREATE NEW LOAD TRACKER
-    const currentLoad = { cancelled: false, pageName };
-    window.currentPageLoad = currentLoad;
-    
     console.log(`🧭 Loading page: ${pageName}`);
     
-    // 🔥 CHECK IF CANCELLED BEFORE EACH ASYNC OPERATION
-    const checkCancelled = () => {
-        if (currentLoad.cancelled) {
-            console.log(`🚫 ${pageName} load cancelled`);
-            return true;
-        }
-        return false;
-    };
-    
-    // 🔥 FIRST: Clear any existing modals from previous modules
-    document.querySelectorAll('.addlead-modal-overlay, .edit-modal-streamlined, .pipeline-selector-modal, .upgrade-modal-overlay').forEach(modal => {
-        modal.remove();
-    });
-    
-    // Update active nav state with animations
+    // Update active nav state
     document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
         link.classList.remove('active');
     });
@@ -1288,24 +1265,21 @@
     // Update page title
     const pageTitle = document.getElementById('pageTitle');
     if (pageTitle) {
-        const newTitle = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
-        pageTitle.textContent = newTitle;
+        pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
     }
     
-    // 🔥 CLEAR MAIN CONTENT FIRST - HARD RESET
+    // Simple loading state
     const mainContent = document.getElementById('mainContent');
     if (mainContent) {
         mainContent.innerHTML = `
-            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+            <div class="fade-in" style="text-align: center; padding: 2rem;">
                 <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-                <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    Loading ${pageTitles[pageName]}...
-                </h2>
+                <p>Loading ${pageTitles[pageName]}...</p>
             </div>
         `;
     }
     
-    // 🔥 STANDARD MODULE LOADING (Dashboard, Pipeline, etc.)
+    // Load the module
     const moduleNames = {
         dashboard: 'DashboardController',
         leads: 'AddLeadModule',
@@ -1316,18 +1290,11 @@
     };
     
     const moduleName = moduleNames[pageName];
-    if (checkCancelled()) return;
     const module = window[moduleName];
     
     if (module && typeof module.init === 'function') {
         console.log(`✅ Loading ${moduleName}...`);
-        
-        // Pass trigger source to upgrade module for context
-        if (pageName === 'upgrade' && triggerSource) {
-            module.init({ triggerSource });
-        } else {
-            module.init();
-        }
+        await module.init();
     } else {
         console.warn(`⚠️ Module ${moduleName} not found`);
         showModuleNotFound(pageName);

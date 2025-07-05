@@ -379,7 +379,7 @@ const passwordResetLimiter = rateLimit({
 // Add this after the passwordResetLimiter definition
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 1000 requests per 15 minutes for authenticated users
+  max: 100000, // 1000 requests per 15 minutes for authenticated users
   message: { error: 'API rate limit exceeded' },
   
   // Skip rate limiting for authenticated users on most endpoints
@@ -411,6 +411,23 @@ const validatePassword = body('password')
   .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
   .withMessage('Password must be 8+ chars with uppercase, lowercase, and number');
 
+  // 📞 ADD THIS RIGHT HERE:
+const validatePhone = body('phone').optional().custom((value) => {
+  if (!value) return true; // Phone is optional
+  
+  const digits = value.replace(/\D/g, '');
+  
+  if (digits.length !== 10) {
+    throw new Error('Phone must be exactly 10 digits');
+  }
+  
+  if (digits[0] === '0' || digits[0] === '1') {
+    throw new Error('Invalid phone number format');
+  }
+  
+  return true;
+}).withMessage('Phone must be a valid 10-digit US number');
+
 const validateLeadName = body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required');
 const validateNumericId = param('id').isInt({ min: 1 }).withMessage('Valid ID required');
 
@@ -424,6 +441,8 @@ const handleValidationErrors = (req, res, next) => {
   }
   next();
 };
+
+
 
 // 🗄️ Database setup
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -829,29 +848,29 @@ async function createLead(leadData) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `INSERT INTO ${getTableName('leads')} 
-       (user_id, name, email, phone, company, platform, status, type, notes, quality_score, potential_value, follow_up_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [
-        leadData.userId,
-        leadData.name,
-        leadData.email?.toLowerCase(),
-        leadData.phone,
-        leadData.company,
-        leadData.platform,
-        leadData.status,
-        leadData.type,
-        leadData.notes,
-        leadData.qualityScore || 5,
-        leadData.potentialValue || 0,
-        leadData.followUpDate,
-        leadData.linkedin_url || null,      // 🔥 ADD THESE
-        leadData.facebook_url || null,      // 🔥 ADD THESE  
-        leadData.twitter_url || null,       // 🔥 ADD THESE
-        leadData.instagram_url || null,     // 🔥 ADD THESE
-        leadData.website || null            // 🔥 ADD THESE
-      ]
-    );
+  `INSERT INTO ${getTableName('leads')} 
+(user_id, name, email, phone, company, source, status, type, notes, quality_score, potential_value, follow_up_date, linkedin_url, facebook_url, twitter_url, instagram_url, website) 
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+  [
+    leadData.userId,
+    leadData.name,
+    leadData.email?.toLowerCase(),
+    leadData.phone,
+    leadData.company,
+    leadData.source,
+    leadData.status,
+    leadData.type,
+    leadData.notes,
+    leadData.quality_score || 5,
+    leadData.potential_value || 0,
+    leadData.followUpDate,
+    leadData.linkedin_url || null,      // 🔥 THESE ARE EXTRA VALUES
+    leadData.facebook_url || null,      // 🔥 NOT IN THE COLUMN LIST!
+    leadData.twitter_url || null,       // 🔥 CAUSING THE ERROR
+    leadData.instagram_url || null,     // 🔥 
+    leadData.website || null            // 🔥 
+  ]
+);
     return result.rows[0];
   } catch (error) {
     console.error('Database error in createLead:', error.message);
@@ -2269,12 +2288,13 @@ app.post('/api/leads',
         email: req.body.email,
         phone: req.body.phone,
         company: req.body.company,
+        source: req.body.source,
         platform: req.body.platform,
         status: req.body.status || 'New lead',
         type: req.body.type,
         notes: req.body.notes,
-        qualityScore: req.body.qualityScore || 5,
-        potentialValue: req.body.potentialValue || 0,
+        potential_value: req.body.potential_value || 0,
+        quality_score: parseInt(req.body.quality_score) || 5,
         followUpDate: req.body.followUpDate,
         linkedin_url: req.body.linkedin_url,
         facebook_url: req.body.facebook_url,
@@ -2329,23 +2349,31 @@ app.put('/api/leads/:id',
         const updateValues = [];
         let paramCount = 1;
 
-        const allowedFields = ['name', 'email', 'phone', 'company', 'platform', 'status', 'type', 
-  'notes', 'quality_score', 'potential_value', 'follow_up_date',
-  'dealValue', 'lost_reason'];
+        const allowedFields = ['name', 'email', 'phone', 'company', 'platform', 'source', 'status', 'type', 
+  'notes', 'quality_score', 'potential_value', 'follow_up_date', 'lost_reason',
+  'linkedin_url', 'facebook_url', 'twitter_url', 'instagram_url', 'website'];
 
         for (const field of allowedFields) {
-          if (req.body.hasOwnProperty(field)) {
-            updateFields.push(`${field} = $${paramCount}`);
-            let value = req.body[field];
-            
-            if (field === 'email' && value) {
-              value = value.toLowerCase();
-            }
-            
-            updateValues.push(value);
-            paramCount++;
-          }
-        }
+  if (req.body.hasOwnProperty(field)) {
+    updateFields.push(`${field} = $${paramCount}`);
+    let value = req.body[field];
+    
+    if (field === 'email' && value) {
+      value = value.toLowerCase();
+    }
+    
+    // 🔥 ADD: Handle numeric fields properly
+    if (field === 'quality_score') {
+      value = parseInt(value) || 5;
+    }
+    if (field === 'potential_value') {
+      value = parseFloat(value) || 0;
+    }
+    
+    updateValues.push(value);
+    paramCount++;
+  }
+}
 
         if (updateFields.length === 0) {
           return res.status(400).json({ error: 'No valid fields to update' });

@@ -115,30 +115,21 @@ class TierScalingAPI {
     };
   }
 
-  // 🎯 LEAD MANAGEMENT (Free Tier)
   static async getLeads() {
   const response = await this.request('/api/leads');
   
-  // Map database fields to frontend fields
-  const mapLeadFields = (lead) => ({
-    ...lead,
-    qualityScore: lead.quality_score,           // Map underscore to camelCase
-    potentialValue: lead.potential_value,       // Map this too for consistency
-    lostReason: lead.lost_reason                // And this one
-  });
-  
-  // Map all lead arrays
+  // No field mapping needed - use database fields directly
   return {
-    cold: response.cold?.map(mapLeadFields) || [],
-    warm: response.warm?.map(mapLeadFields) || [],
-    crm: response.crm?.map(mapLeadFields) || [],
-    all: response.all?.map(mapLeadFields) || []
+    cold: response.cold || [],
+    warm: response.warm || [],
+    crm: response.crm || [],
+    all: response.all || []
   };
 }
 
   static async createLead(leadData) {
-    return await this.request('/api/leads', 'POST', leadData);
-  }
+  return await this.request('/api/leads', 'POST', leadData);
+}
 
   static async updateLead(leadId, data) {
     // Map camelCase frontend fields to snake_case database fields
@@ -151,9 +142,9 @@ class TierScalingAPI {
     }
     
     if (data.potentialValue !== undefined) {
-        mappedData.potential_value = data.potentialValue;
-        delete mappedData.potentialValue;
-    }
+    mappedData.potential_value = isNaN(parseFloat(data.potentialValue)) ? 0.00 : parseFloat(data.potentialValue);
+    delete mappedData.potentialValue;
+}
     
     if (data.followUpDate !== undefined) {
         mappedData.follow_up_date = data.followUpDate;
@@ -253,16 +244,39 @@ class TierScalingAPI {
     };
   }
 
-  // 📅 ENHANCED TASK MANAGEMENT (Perfect for Scheduling.js)
-  static async addBasicReminder(leadId, date, notes = '') {
-    return await this.request('/api/tasks', 'POST', {
-      leadId,
-      title: 'Follow up reminder',
-      description: notes,
-      dueDate: date,
-      type: 'follow_up'
-    });
+  // 📅 ENHANCED FOLLOW-UP WITH TIME (replaces addBasicReminder)
+static async createFollowUpTask(leadId, leadName, date, time = null, notes = '') {
+  const taskData = {
+    leadId: leadId,
+    title: `Follow up with ${leadName}`,
+    description: notes || `Follow up call/email scheduled`,
+    dueDate: date,
+    dueTime: time, // This will be the new time field
+    type: 'follow_up',
+    status: 'pending'
+  };
+  
+  return await this.createTask(taskData);
+}
+
+// Quick helper for lead creation with follow-up
+static async createLeadWithFollowUp(leadData) {
+  // Create the lead first
+  const newLead = await this.createLead(leadData);
+  
+  // If they set a follow-up date, create the task
+  if (leadData.follow_up_date) {
+    await this.createFollowUpTask(
+      newLead.id,
+      newLead.name,
+      leadData.follow_up_date,
+      leadData.follow_up_time, // New field we'll add
+      leadData.notes ? `Follow up: ${leadData.notes}` : ''
+    );
   }
+  
+  return newLead;
+}
 
   static async createTask(taskData) {
     return await this.request('/api/tasks', 'POST', taskData);
@@ -362,9 +376,172 @@ static async updateTask(taskId, data) {
     return await this.request(`/api/leads/export?format=${format}`);
   }
 
-  static async duplicateLeadCheck() {
-    return await this.request('/api/leads/duplicates');
+  // 🚨 DUPLICATE DETECTION SYSTEM
+static async checkDuplicates(leadData) {
+  const duplicates = {
+    exact: [],
+    similar: [],
+    suggestions: []
+  };
+  
+  try {
+    // Get all existing leads
+    const existingLeads = await this.getLeads();
+    const allLeads = existingLeads.all || [];
+    
+    for (const existing of allLeads) {
+      let matchScore = 0;
+      let matchReasons = [];
+      
+      // EXACT EMAIL MATCH (immediate duplicate)
+      if (leadData.email && existing.email && 
+          leadData.email.toLowerCase() === existing.email.toLowerCase()) {
+        duplicates.exact.push({
+          lead: existing,
+          reason: 'Exact email match',
+          confidence: 100
+        });
+        continue; // Skip other checks if exact email match
+      }
+      
+      // NAME MATCHING
+      if (leadData.name && existing.name) {
+        const nameScore = this.calculateNameSimilarity(leadData.name, existing.name);
+        if (nameScore > 80) {
+          matchScore += nameScore;
+          matchReasons.push(`Name similarity: ${nameScore}%`);
+        }
+      }
+      
+      // COMPANY MATCHING
+      if (leadData.company && existing.company) {
+        const companyScore = this.calculateCompanySimilarity(leadData.company, existing.company);
+        if (companyScore > 70) {
+          matchScore += companyScore;
+          matchReasons.push(`Company similarity: ${companyScore}%`);
+        }
+      }
+      
+      // PHONE MATCHING
+      if (leadData.phone && existing.phone) {
+        const phoneScore = this.calculatePhoneSimilarity(leadData.phone, existing.phone);
+        if (phoneScore > 90) {
+          matchScore += phoneScore;
+          matchReasons.push(`Phone similarity: ${phoneScore}%`);
+        }
+      }
+      
+      // CATEGORIZE MATCHES
+      if (matchScore > 150) {
+        duplicates.similar.push({
+          lead: existing,
+          reasons: matchReasons,
+          confidence: Math.min(matchScore / 2, 95),
+          matchScore: matchScore
+        });
+      } else if (matchScore > 80) {
+        duplicates.suggestions.push({
+          lead: existing,
+          reasons: matchReasons,
+          confidence: Math.min(matchScore / 2, 75),
+          matchScore: matchScore
+        });
+      }
+    }
+    
+    // Sort by confidence
+    duplicates.similar.sort((a, b) => b.confidence - a.confidence);
+    duplicates.suggestions.sort((a, b) => b.confidence - a.confidence);
+    
+    return {
+      hasExactDuplicates: duplicates.exact.length > 0,
+      hasSimilarLeads: duplicates.similar.length > 0,
+      hasSuggestions: duplicates.suggestions.length > 0,
+      ...duplicates
+    };
+    
+  } catch (error) {
+    console.error('Duplicate check failed:', error);
+    return { hasExactDuplicates: false, hasSimilarLeads: false, hasSuggestions: false };
   }
+}
+
+// 🧠 SMART SIMILARITY ALGORITHMS
+static calculateNameSimilarity(name1, name2) {
+  if (!name1 || !name2) return 0;
+  
+  const clean1 = name1.toLowerCase().trim();
+  const clean2 = name2.toLowerCase().trim();
+  
+  // Exact match
+  if (clean1 === clean2) return 100;
+  
+  // Levenshtein distance for fuzzy matching
+  const distance = this.levenshteinDistance(clean1, clean2);
+  const maxLength = Math.max(clean1.length, clean2.length);
+  const similarity = ((maxLength - distance) / maxLength) * 100;
+  
+  return Math.round(similarity);
+}
+
+static calculateCompanySimilarity(company1, company2) {
+  if (!company1 || !company2) return 0;
+  
+  const clean1 = company1.toLowerCase().replace(/inc|llc|corp|ltd|co\.|company/g, '').trim();
+  const clean2 = company2.toLowerCase().replace(/inc|llc|corp|ltd|co\.|company/g, '').trim();
+  
+  if (clean1 === clean2) return 100;
+  
+  // Check if one contains the other
+  if (clean1.includes(clean2) || clean2.includes(clean1)) return 85;
+  
+  const distance = this.levenshteinDistance(clean1, clean2);
+  const maxLength = Math.max(clean1.length, clean2.length);
+  const similarity = ((maxLength - distance) / maxLength) * 100;
+  
+  return Math.round(similarity);
+}
+
+static calculatePhoneSimilarity(phone1, phone2) {
+  if (!phone1 || !phone2) return 0;
+  
+  // Strip all non-digits
+  const digits1 = phone1.replace(/\D/g, '');
+  const digits2 = phone2.replace(/\D/g, '');
+  
+  // Exact match
+  if (digits1 === digits2) return 100;
+  
+  // Last 10 digits match (US phone numbers)
+  if (digits1.length >= 10 && digits2.length >= 10) {
+    const last10_1 = digits1.slice(-10);
+    const last10_2 = digits2.slice(-10);
+    if (last10_1 === last10_2) return 95;
+  }
+  
+  return 0;
+}
+
+// Helper: Levenshtein distance for fuzzy string matching
+static levenshteinDistance(str1, str2) {
+  const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+  
+  for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+  
+  for (let j = 1; j <= str2.length; j++) {
+    for (let i = 1; i <= str1.length; i++) {
+      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,     // deletion
+        matrix[j - 1][i] + 1,     // insertion
+        matrix[j - 1][i - 1] + indicator // substitution
+      );
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
+}
 
   static async mergeLeads(leadIds) {
     return await this.request('/api/leads/merge', 'POST', { leadIds });

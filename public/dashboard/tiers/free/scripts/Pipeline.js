@@ -133,7 +133,7 @@ window.PipelineModule = {
                 ...lead,
                 status: lead.status || 'new',
                 potential_value: lead.potential_value || 0,
-                loss_reason: lead.lost_reason || null,
+                lost_reason: lead.lost_reason || null,
                 id: lead.id || this.generateId()
             }));
 
@@ -382,12 +382,12 @@ window.PipelineModule = {
                 ${isAtLimit ? `
                     <div class="progress-warning at-limit">
                         <span class="warning-icon">⚠️</span>
-                        <span class="warning-text">Monthly limit reached</span>
+                        <span class="warning-text">limit reached</span>
                     </div>
                 ` : isNearLimit ? `
                     <div class="progress-warning near-limit">
                         <span class="warning-icon">🔔</span>
-                        <span class="warning-text">Approaching monthly limit</span>
+                        <span class="warning-text">Approaching limit</span>
                     </div>
                 ` : ''}
             </div>
@@ -493,7 +493,6 @@ window.PipelineModule = {
                     <div class="leads-container" data-leads-container="${stage.id}">
                         ${this.renderLeadsOrEmpty(stageLeads, stage)}
                     </div>
-                    ${leadCount > 6 ? '<div class="scroll-indicator">⬇️ Scroll for more</div>' : ''}
                 </div>
             </div>
         `;
@@ -682,7 +681,7 @@ ${lead.status === 'lost' ? `
                     </div>
                     <div class="card-content-analytics">
                         <div class="primary-metric">${conversionRate}%</div>
-                        <div class="metric-detail">Qualified → Closed</div>
+                        <div class="metric-detail">Win Rate</div>
                     </div>
                 </div>
                 
@@ -692,7 +691,7 @@ ${lead.status === 'lost' ? `
                         <div class="card-title-analytics">Total Outcome Value</div>
                     </div>
                     <div class="card-content-analytics">
-                        <div class="primary-metric">$${Math.round(outcomeValue).toLocaleString()}</div>
+                        <div class="primary-metric">$${(outcomeValue || 0).toLocaleString()}</div>
                         <div class="metric-detail">Negotiation + Closed + Lost</div>
                     </div>
                 </div>
@@ -1571,7 +1570,7 @@ showPipelineSelector(leadId) {
 }
 
 .lead-card[data-lead-status="closed"] {
-    border: 2px solidrgb(0, 255, 21); /* green */
+    border: 2px solid rgb(0, 255, 21); /* ✅ FIXED - Added space */
 }
 
 .lead-card[data-lead-status="lost"] {
@@ -2189,6 +2188,21 @@ showPipelineSelector(leadId) {
                 .analytics-card.primary { --card-accent: var(--pipeline-primary); }
                 .analytics-card.success { --card-accent: var(--pipeline-success); }
                 .analytics-card.danger { --card-accent: var(--pipeline-danger); }
+                /* 🔥 GRADIENT OUTLINES */
+.analytics-card.primary {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, var(--primary), #8b5cf6) 1;
+}
+
+.analytics-card.success {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, var(--success), #059669) 1;
+}
+
+.analytics-card.danger {
+    border: 2px solid;
+    border-image: linear-gradient(135deg, var(--danger), #dc2626) 1;
+}
 
                 .analytics-card:hover {
                     transform: translateY(-2px);
@@ -2742,11 +2756,12 @@ calculateFilteredOutcomeValue() {
 },
 
     calculateConversionRate() {
-        const qualifiedLeads = this.leads.filter(l => ['qualified', 'negotiation', 'closed', 'lost'].includes(l.status)).length;
-        const wonLeads = this.filteredLeads['closed']?.length || 0;
-        
-        return qualifiedLeads > 0 ? Math.round((wonLeads / qualifiedLeads) * 100) : 0;
-    },
+    const wonLeads = this.leads.filter(l => l.status === 'closed').length;
+    const lostLeads = this.leads.filter(l => l.status === 'lost').length;
+    const totalOutcomes = wonLeads + lostLeads;
+    
+    return totalOutcomes > 0 ? Math.round((wonLeads / totalOutcomes) * 100) : 0;
+},
 
     getTopLossReasons() {
     // Use filteredLeads instead of all leads
@@ -3646,7 +3661,7 @@ async addLossReason(leadId) {
         saveBtn.innerHTML = '⏳ Saving...';
         
         try {
-            const updateData = { lost_reason: lossReason };
+            const updateData = { lostReason: lossReason };
             
             // Add notes if provided
             if (lossNotes) {
@@ -4456,7 +4471,7 @@ async editLossReason(leadId) {
         
         try {
             // Update backend
-            await API.updateLead(leadId, { lost_reason: lossReason });
+            await API.updateLead(leadId, { lostReason: lossReason });
             
             // Update local data
             lead.lost_reason = lossReason;
@@ -5340,7 +5355,7 @@ showDeleteConfirmation(leadId) {
                     draggedCard.classList.add(newStage.row === 'active' ? 'active-card' : 'outcome-card');
                 }
 
-                // Handle loss reason section
+            // Handle loss reason section
 if (newStatus === 'lost') {
     const cardBody = draggedCard.querySelector('.card-body');
     if (cardBody && !cardBody.querySelector('.loss-reason-section')) {
@@ -5363,6 +5378,12 @@ if (newStatus === 'lost') {
             </div>
         `;
         cardBody.insertAdjacentHTML('beforeend', lossReasonHTML);
+    }
+} else {
+    // 🔥 REMOVE loss reason section when moving OUT of lost
+    const existingLossSection = draggedCard.querySelector('.loss-reason-section');
+    if (existingLossSection) {
+        existingLossSection.remove();
     }
 }
 
@@ -5629,11 +5650,10 @@ if (hasActiveFilters) {
     },
 
     renderEditForm(lead) {
-    const canHaveDealValue = true;
-    
     return `
         <form id="editLeadForm" class="edit-form">
             <div class="form-grid">
+                <!-- Basic Info -->
                 <div class="form-group">
                     <label class="form-label">Name *</label>
                     <input type="text" id="editName" class="form-input" value="${lead.name}" required>
@@ -5654,46 +5674,30 @@ if (hasActiveFilters) {
                     <input type="tel" id="editPhone" class="form-input" value="${lead.phone || ''}">
                 </div>
                 
-                <!-- 🔥 CUSTOM TEMPERATURE DROPDOWN -->
-                <div class="form-group">
-                    <label class="form-label">Lead Temperature</label>
-                    ${this.renderEditDropdown('editType', 'Select temperature...', [
-                        { value: '', label: 'Select temperature...', icon: '🌡️' },
-                        { value: 'cold', label: 'Cold Lead', icon: '❄️' },
-                        { value: 'hot', label: 'Hot Lead', icon: '🔥' }
-                    ], lead.type || '')}
-                </div>
+                <!-- 🎯 STATUS DROPDOWN - DRIPPED OUT -->
+<div class="form-group">
+    <label class="form-label">Pipeline Status</label>
+    ${this.renderEditDropdown('editStatus', 'Select pipeline stage...', [
+        { value: 'new', label: 'New Lead', icon: '🆕' },
+        { value: 'contacted', label: 'Contacted', icon: '📞' },
+        { value: 'qualified', label: 'Qualified', icon: '✅' },
+        { value: 'negotiation', label: 'Negotiation', icon: '🤝' },
+        { value: 'closed', label: 'Closed Won', icon: '🎉' },
+        { value: 'lost', label: 'Lost', icon: '❌' }
+    ], lead.status)}
+</div>
+
+<!-- 🌡️ LEAD TEMPERATURE - DRIPPED OUT -->
+<div class="form-group">
+    <label class="form-label">Lead Temperature</label>
+    ${this.renderEditDropdown('editType', 'Select temperature...', [
+        { value: '', label: 'Select temperature...', icon: '🌡️' },
+        { value: 'cold', label: 'Cold Lead', icon: '❄️' },
+        { value: 'hot', label: 'Hot Lead', icon: '🔥' }
+    ], lead.type || '')}
+</div>
                 
-                <!-- 🔥 CUSTOM SOURCE DROPDOWN WITH ALL OPTIONS -->
-                <div class="form-group">
-                    <label class="form-label">Lead Source</label>
-                    ${this.renderEditDropdown('editSource', 'Select source...', [
-                        { value: '', label: 'Select source...', icon: '📋' },
-                        { value: 'website', label: 'Website', icon: '🌐' },
-                        { value: 'social_media', label: 'Social Media', icon: '📱' },
-                        { value: 'referral', label: 'Referral', icon: '👥' },
-                        { value: 'email', label: 'Email Campaign', icon: '📧' },
-                        { value: 'phone', label: 'Phone Call', icon: '📞' },
-                        { value: 'event', label: 'Event', icon: '🎪' },
-                        { value: 'advertisement', label: 'Advertisement', icon: '📢' },
-                        { value: 'direct', label: 'Direct', icon: '🎯' },
-                        { value: 'linkedin', label: 'LinkedIn', icon: '💼' },
-                        { value: 'facebook', label: 'Facebook', icon: '📘' },
-                        { value: 'instagram', label: 'Instagram', icon: '📸' },
-                        { value: 'twitter', label: 'Twitter/X', icon: '🐦' },
-                        { value: 'google', label: 'Google', icon: '🔍' },
-                        { value: 'organic', label: 'Organic', icon: '🌱' },
-                        { value: 'paid', label: 'Paid', icon: '💰' },
-                        { value: 'cold_call', label: 'Cold Call', icon: '❄️' },
-                        { value: 'trade_show', label: 'Trade Show', icon: '🏢' },
-                        { value: 'webinar', label: 'Webinar', icon: '💻' },
-                        { value: 'content', label: 'Content', icon: '📝' },
-                        { value: 'partnership', label: 'Partnership', icon: '🤝' },
-                        { value: 'other', label: 'Other', icon: '📋' }
-                    ], lead.platform || '')}
-                </div>
-                
-                <!-- 🎯 ONE QUALITY SCORE - SPANS BOTH COLUMNS -->
+                <!-- ⭐ QUALITY SCORE - Full width -->
                 <div class="form-group full-width">
                     <label class="form-label">Quality Score (1-10)</label>
                     <div class="score-input-group">
@@ -5702,22 +5706,27 @@ if (hasActiveFilters) {
                         <div class="score-display">Score: <span id="scoreValue">${lead.qualityScore || 5}</span></div>
                     </div>
                 </div>
-             
+                
+                <!-- ❌ LOSS REASON - Only if lost -->
                 ${lead.status === 'lost' ? `
                     <div class="form-group full-width">
                         <label class="form-label">Loss Reason</label>
                         <select id="editLossReason" class="form-select">
                             <option value="">Select reason...</option>
-                            <option value="Price too high" ${lead.lost_reason === 'Price too high' ? 'selected' : ''}>Price too high</option>
-                            <option value="Went with competitor" ${lead.lost_reason === 'Went with competitor' ? 'selected' : ''}>Went with competitor</option>
-                            <option value="Budget constraints" ${lead.lost_reason === 'Budget constraints' ? 'selected' : ''}>Budget constraints</option>
-                            <option value="Timing not right" ${lead.lost_reason === 'Timing not right' ? 'selected' : ''}>Timing not right</option>
-                            <option value="No longer interested" ${lead.lost_reason === 'No longer interested' ? 'selected' : ''}>No longer interested</option>
-                            <option value="Other" ${lead.lost_reason === 'Other' ? 'selected' : ''}>Other</option>
+                            <option value="Price too high" ${lead.lost_reason === 'Price too high' ? 'selected' : ''}>💰 Price too high</option>
+                            <option value="Went with competitor" ${lead.lost_reason === 'Went with competitor' ? 'selected' : ''}>🏢 Went with competitor</option>
+                            <option value="Budget constraints" ${lead.lost_reason === 'Budget constraints' ? 'selected' : ''}>💸 Budget constraints</option>
+                            <option value="Timing not right" ${lead.lost_reason === 'Timing not right' ? 'selected' : ''}>⏰ Timing not right</option>
+                            <option value="No longer interested" ${lead.lost_reason === 'No longer interested' ? 'selected' : ''}>😐 No longer interested</option>
+                            <option value="Poor communication" ${lead.lost_reason === 'Poor communication' ? 'selected' : ''}>📞 Poor communication</option>
+                            <option value="Product not a fit" ${lead.lost_reason === 'Product not a fit' ? 'selected' : ''}>🎯 Product not a fit</option>
+                            <option value="Decision maker changed" ${lead.lost_reason === 'Decision maker changed' ? 'selected' : ''}>👤 Decision maker changed</option>
+                            <option value="Other" ${lead.lost_reason === 'Other' ? 'selected' : ''}>🤷 Other</option>
                         </select>
                     </div>
                 ` : ''}
                 
+                <!-- 📝 NOTES - Optional -->
                 <div class="form-group full-width">
                     <label class="form-label">Notes</label>
                     <textarea id="editNotes" rows="3" class="form-textarea" 
@@ -5806,6 +5815,27 @@ if (hasActiveFilters) {
                 padding: 0.5rem;
                 background: var(--surface-hover);
                 border-radius: var(--radius);
+            }
+            
+            /* 💰 Currency Input Styling */
+            .currency-input-group {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            
+            .currency-symbol {
+                position: absolute;
+                left: 1rem;
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--success);
+                z-index: 1;
+                pointer-events: none;
+            }
+            
+            .currency-input {
+                padding-left: 2.5rem !important;
             }
             
             .form-actions {
@@ -6040,21 +6070,16 @@ setupEditFormDropdowns() {
             company: document.getElementById('editCompany').value.trim() || null,
             email: document.getElementById('editEmail').value.trim() || null,
             phone: document.getElementById('editPhone').value.trim() || null,
+            status: document.getElementById('editStatus').value,
             type: typeValue,
             platform: sourceValue,
             quality_score: qualityScoreValue, // 🔥 FIXED - NOW GETS FROM RANGE SLIDER
             notes: document.getElementById('editNotes').value.trim() || null
         };
 
-        const dealValueInput = document.getElementById('editDealValue');
-        if (dealValueInput) {
-            const dealValue = dealValueInput.value.trim();
-            updatedData.potential_value = dealValue ? parseFloat(dealValue) : 0;
-        }
-
         const lossReasonSelect = document.getElementById('editLossReason');
         if (lossReasonSelect) {
-            updatedData.lost_reason = lossReasonSelect.value || null;
+            updatedData.lostReason = lossReasonSelect.value || null;
         }
 
         if (!updatedData.name) {
