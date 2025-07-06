@@ -2247,27 +2247,6 @@ addSimilarPopupStyles() {
 
     async handleEditSubmit(e) {
     e.preventDefault();
-
-    // Match backend validation completely
-// ✅ WITH THIS:
-// ✅ SUPER SIMPLE VERSION - just check the actual phone digits
-const phoneInput = e.target.querySelector('input[name="phone"]');
-if (phoneInput && phoneInput.value.trim()) {
-    // Get all digits
-    let allDigits = phoneInput.value.replace(/\D/g, '');
-    
-    // Remove any leading 1 (country code)
-    if (allDigits.startsWith('1')) {
-        allDigits = allDigits.substring(1);
-    }
-    
-    // Must be exactly 10 digits after removing country code
-    if (allDigits.length !== 10) {
-        this.showNotification('📞 Phone must be exactly 10 digits', 'error');
-        phoneInput.focus();
-        return;
-    }
-}
     
     try {
         this.setEditLoadingState(true);
