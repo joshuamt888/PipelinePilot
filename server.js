@@ -406,27 +406,21 @@ const validator = require('validator');
 
 // 🔒 Input validation (essential fields only)
 const validateEmail = body('email').isEmail().normalizeEmail().withMessage('Valid email required');
+const validatePhone = body('phone')
+  .optional()
+  .custom((value) => {
+    if (!value || value.trim() === '') return true; // Empty is valid
+    const digits = value.replace(/\D/g, '');
+    if (digits.length < 10) {
+      throw new Error('Phone number must have at least 10 digits');
+    }
+    return true;
+  })
+  .withMessage('Valid phone number required (10+ digits)');
 const validatePassword = body('password')
   .isLength({ min: 8, max: 128 })
   .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
   .withMessage('Password must be 8+ chars with uppercase, lowercase, and number');
-
-  // 📞 ADD THIS RIGHT HERE:
-const validatePhone = body('phone').optional().custom((value) => {
-  if (!value) return true; // Phone is optional
-  
-  const digits = value.replace(/\D/g, '');
-  
-  if (digits.length !== 10) {
-    throw new Error('Phone must be exactly 10 digits');
-  }
-  
-  if (digits[0] === '0' || digits[0] === '1') {
-    throw new Error('Invalid phone number format');
-  }
-  
-  return true;
-}).withMessage('Phone must be a valid 10-digit US number');
 
 const validateLeadName = body('name').trim().isLength({ min: 1, max: 255 }).withMessage('Name is required');
 const validateNumericId = param('id').isInt({ min: 1 }).withMessage('Valid ID required');
@@ -441,8 +435,6 @@ const handleValidationErrors = (req, res, next) => {
   }
   next();
 };
-
-
 
 // 🗄️ Database setup
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -848,29 +840,25 @@ async function createLead(leadData) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-  `INSERT INTO ${getTableName('leads')} 
-(user_id, name, email, phone, company, source, status, type, notes, quality_score, potential_value, follow_up_date, linkedin_url, facebook_url, twitter_url, instagram_url, website) 
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
-  [
-    leadData.userId,
-    leadData.name,
-    leadData.email?.toLowerCase(),
-    leadData.phone,
-    leadData.company,
-    leadData.source,
-    leadData.status,
-    leadData.type,
-    leadData.notes,
-    leadData.quality_score || 5,
-    leadData.potential_value || 0,
-    leadData.followUpDate,
-    leadData.linkedin_url || null,      // 🔥 THESE ARE EXTRA VALUES
-    leadData.facebook_url || null,      // 🔥 NOT IN THE COLUMN LIST!
-    leadData.twitter_url || null,       // 🔥 CAUSING THE ERROR
-    leadData.instagram_url || null,     // 🔥 
-    leadData.website || null            // 🔥 
-  ]
-);
+      `INSERT INTO ${getTableName('leads')} 
+       (user_id, name, email, phone, company, source, status, type, notes, quality_score, potential_value, follow_up_date, website) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [
+        leadData.userId,
+        leadData.name,
+        leadData.email?.toLowerCase(),
+        leadData.phone,
+        leadData.company,
+        leadData.source,
+        leadData.status,
+        leadData.type,
+        leadData.notes,
+        leadData.quality_score || 5,
+        leadData.potential_value || 0,
+        leadData.followUpDate,
+        leadData.website || null
+      ]
+    );
     return result.rows[0];
   } catch (error) {
     console.error('Database error in createLead:', error.message);
@@ -2652,8 +2640,8 @@ app.get('/api/tasks', authenticateFromCookie, async (req, res) => {
   }
 });
 
-// 📅 UPDATE TASK ENDPOINT - ADD THIS TO YOUR SERVER.JS
-app.put('/api/tasks/:id', 
+// 🗑️ DELETE TASK ENDPOINT (add this after your existing task endpoints)
+app.delete('/api/tasks/:id', 
   authenticateFromCookie,
   [validateNumericId, handleValidationErrors],
   async (req, res) => {
@@ -2662,7 +2650,6 @@ app.put('/api/tasks/:id',
       const client = await pool.connect();
       
       try {
-        // Check if task exists and user owns it
         const taskResult = await client.query(
           `SELECT * FROM ${getTableName('tasks')} WHERE id = $1`,
           [taskId]
@@ -2677,17 +2664,72 @@ app.put('/api/tasks/:id',
           return res.status(403).json({ error: 'Unauthorized' });
         }
 
-        // Update the task - simple and clean
+        await client.query(`DELETE FROM ${getTableName('tasks')} WHERE id = $1`, [taskId]);
+        
+        console.log(`🗑️ Task deleted: ${taskId} by user ${req.user.userId}`);
+        res.json({ message: 'Task deleted successfully' });
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Delete task error:', error.message);
+      res.status(500).json({ error: 'Failed to delete task' });
+    }
+  }
+);
+
+// 📅 UPDATE TASK ENDPOINT - ADD THIS TO YOUR SERVER.JS
+app.put('/api/tasks/:id', 
+  authenticateFromCookie,
+  [validateNumericId, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const client = await pool.connect();
+      
+      try {
+        // Check ownership...
+        
+        // 🔥 FIX: Clean the data before sending to database
+        const cleanData = {
+          title: req.body.title || null,
+          description: req.body.description || null,
+          due_date: req.body.due_date === '' ? null : req.body.due_date,  // ✅ Convert empty string to null
+          due_time: req.body.due_time === '' ? null : req.body.due_time,  // ✅ Convert empty string to null
+          task_type: req.body.task_type || null,
+          priority: req.body.priority || null,
+          lead_id: req.body.lead_id === '' ? null : parseInt(req.body.lead_id) || null,  // ✅ Handle lead_id properly
+          status: req.body.status || null,
+          completion_notes: req.body.completion_notes || null
+        };
+
         const result = await client.query(
           `UPDATE ${getTableName('tasks')} 
-           SET status = COALESCE($1, status),
-               completion_notes = COALESCE($2, completion_notes),
+           SET title = COALESCE($1, title),
+               description = COALESCE($2, description),
                due_date = COALESCE($3, due_date),
-               completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END,
+               due_time = COALESCE($4, due_time),
+               task_type = COALESCE($5, task_type),
+               priority = COALESCE($6, priority),
+               lead_id = COALESCE($7, lead_id),
+               status = COALESCE($8, status),
+               completion_notes = COALESCE($9, completion_notes),
+               completed_at = CASE WHEN $8 = 'completed' THEN NOW() ELSE completed_at END,
                updated_at = NOW()
-           WHERE id = $4 
+           WHERE id = $10 
            RETURNING *`,
-          [req.body.status, req.body.completion_notes, req.body.due_date, taskId]
+          [
+            cleanData.title,
+            cleanData.description,
+            cleanData.due_date,
+            cleanData.due_time,
+            cleanData.task_type,
+            cleanData.priority,
+            cleanData.lead_id,
+            cleanData.status,
+            cleanData.completion_notes,
+            taskId
+          ]
         );
         
         console.log(`✅ Task updated: ${taskId} by user ${req.user.userId}`);
@@ -2701,6 +2743,302 @@ app.put('/api/tasks/:id',
     }
   }
 );
+
+// 📅 ADD THESE ENDPOINTS TO YOUR SERVER.JS FOR SICK SCHEDULING
+
+// 🎯 GET TASKS BY DATE RANGE (for calendar view)
+app.get('/api/tasks/date-range', authenticateFromCookie, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Start date and end date required' });
+    }
+    
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT t.*, l.name as lead_name, l.company as lead_company, l.type as lead_type
+         FROM ${getTableName('tasks')} t
+         LEFT JOIN ${getTableName('leads')} l ON t.lead_id = l.id
+         WHERE t.user_id = $1 
+         AND t.due_date BETWEEN $2 AND $3
+         ORDER BY t.due_date ASC, t.due_time ASC`,
+        [req.user.userId, startDate, endDate]
+      );
+      
+      res.json(result.rows);
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get tasks by date range error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch tasks for date range' });
+  }
+});
+
+// 📅 GET TODAY'S TASKS (dashboard focus)
+app.get('/api/tasks/today', authenticateFromCookie, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query(
+        `SELECT t.*, l.name as lead_name, l.company as lead_company, l.type as lead_type
+         FROM ${getTableName('tasks')} t
+         LEFT JOIN ${getTableName('leads')} l ON t.lead_id = l.id
+         WHERE t.user_id = $1 
+         AND t.due_date = $2
+         AND t.status != 'completed'
+         ORDER BY t.due_time ASC, t.created_at ASC`,
+        [req.user.userId, today]
+      );
+      
+      res.json(result.rows);
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get today tasks error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch today tasks' });
+  }
+});
+
+// ⚠️ GET OVERDUE TASKS
+app.get('/api/tasks/overdue', authenticateFromCookie, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query(
+        `SELECT t.*, l.name as lead_name, l.company as lead_company, l.type as lead_type
+         FROM ${getTableName('tasks')} t
+         LEFT JOIN ${getTableName('leads')} l ON t.lead_id = l.id
+         WHERE t.user_id = $1 
+         AND t.due_date < $2
+         AND t.status != 'completed'
+         ORDER BY t.due_date DESC, t.due_time DESC`,
+        [req.user.userId, today]
+      );
+      
+      res.json(result.rows);
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get overdue tasks error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch overdue tasks' });
+  }
+});
+
+// 📅 GET UPCOMING WEEK TASKS
+app.get('/api/tasks/upcoming-week', authenticateFromCookie, async (req, res) => {
+  try {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const startDate = today.toISOString().split('T')[0];
+    const endDate = nextWeek.toISOString().split('T')[0];
+    
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT t.*, l.name as lead_name, l.company as lead_company, l.type as lead_type
+         FROM ${getTableName('tasks')} t
+         LEFT JOIN ${getTableName('leads')} l ON t.lead_id = l.id
+         WHERE t.user_id = $1 
+         AND t.due_date BETWEEN $2 AND $3
+         AND t.status != 'completed'
+         ORDER BY t.due_date ASC, t.due_time ASC`,
+        [req.user.userId, startDate, endDate]
+      );
+      
+      res.json(result.rows);
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get upcoming week tasks error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch upcoming week tasks' });
+  }
+});
+
+// 🎯 GET TASKS FOR SPECIFIC LEAD
+app.get('/api/tasks/lead/:leadId', 
+  authenticateFromCookie,
+  [validateNumericId, handleValidationErrors],
+  async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.leadId);
+      const client = await pool.connect();
+      
+      try {
+        // Verify user owns the lead
+        const leadCheck = await client.query(
+          `SELECT id FROM ${getTableName('leads')} WHERE id = $1 AND user_id = $2`,
+          [leadId, req.user.userId]
+        );
+        
+        if (leadCheck.rows.length === 0) {
+          return res.status(404).json({ error: 'Lead not found' });
+        }
+        
+        const result = await client.query(
+          `SELECT * FROM ${getTableName('tasks')} 
+           WHERE user_id = $1 AND lead_id = $2
+           ORDER BY due_date ASC, due_time ASC`,
+          [req.user.userId, leadId]
+        );
+        
+        res.json(result.rows);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Get lead tasks error:', error.message);
+      res.status(500).json({ error: 'Failed to fetch lead tasks' });
+    }
+  }
+);
+
+// ⏰ SNOOZE TASK (reschedule to new date/time)
+app.post('/api/tasks/:id/snooze', 
+  authenticateFromCookie,
+  [
+    validateNumericId,
+    body('newDate').isISO8601().withMessage('Valid date required'),
+    body('newTime').optional().matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid time format (HH:MM)'),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const { newDate, newTime } = req.body;
+      
+      const client = await pool.connect();
+      try {
+        // Verify task ownership
+        const taskCheck = await client.query(
+          `SELECT id FROM ${getTableName('tasks')} WHERE id = $1 AND user_id = $2`,
+          [taskId, req.user.userId]
+        );
+        
+        if (taskCheck.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        
+        const result = await client.query(
+          `UPDATE ${getTableName('tasks')} 
+           SET due_date = $1, due_time = $2, updated_at = NOW()
+           WHERE id = $3 
+           RETURNING *`,
+          [newDate, newTime || null, taskId]
+        );
+        
+        console.log(`⏰ Task snoozed: ${taskId} to ${newDate} ${newTime || ''}`);
+        res.json(result.rows[0]);
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Snooze task error:', error.message);
+      res.status(500).json({ error: 'Failed to snooze task' });
+    }
+  }
+);
+
+// ✅ BULK COMPLETE TASKS
+app.post('/api/tasks/bulk-complete', 
+  authenticateFromCookie,
+  [
+    body('taskIds').isArray({ min: 1 }).withMessage('Task IDs array required'),
+    body('taskIds.*').isInt().withMessage('Valid task IDs required'),
+    body('completionNotes').optional().isString(),
+    handleValidationErrors
+  ],
+  async (req, res) => {
+    try {
+      const { taskIds, completionNotes } = req.body;
+      const client = await pool.connect();
+      
+      try {
+        // Verify all tasks belong to user
+        const taskCheck = await client.query(
+          `SELECT id FROM ${getTableName('tasks')} 
+           WHERE id = ANY($1) AND user_id = $2`,
+          [taskIds, req.user.userId]
+        );
+        
+        if (taskCheck.rows.length !== taskIds.length) {
+          return res.status(403).json({ error: 'Some tasks not found or unauthorized' });
+        }
+        
+        const result = await client.query(
+          `UPDATE ${getTableName('tasks')} 
+           SET status = 'completed', 
+               completed_at = NOW(), 
+               completion_notes = COALESCE($1, completion_notes),
+               updated_at = NOW()
+           WHERE id = ANY($2) 
+           RETURNING *`,
+          [completionNotes, taskIds]
+        );
+        
+        console.log(`✅ Bulk completed ${taskIds.length} tasks for user ${req.user.userId}`);
+        res.json({
+          message: `${taskIds.length} tasks completed successfully`,
+          completedTasks: result.rows
+        });
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Bulk complete tasks error:', error.message);
+      res.status(500).json({ error: 'Failed to bulk complete tasks' });
+    }
+  }
+);
+
+// 📊 TASK SUMMARY STATS (for dashboard widgets)
+app.get('/api/tasks/summary', authenticateFromCookie, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const client = await pool.connect();
+    
+    try {
+      // Get various counts in one query for efficiency
+      const result = await client.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE due_date = $2 AND status != 'completed') as today_count,
+          COUNT(*) FILTER (WHERE due_date < $2 AND status != 'completed') as overdue_count,
+          COUNT(*) FILTER (WHERE status = 'completed' AND DATE(completed_at) = $2) as completed_today,
+          COUNT(*) FILTER (WHERE status = 'pending') as total_pending,
+          COUNT(*) FILTER (WHERE due_date BETWEEN $2 AND $2::date + INTERVAL '7 days' AND status != 'completed') as upcoming_week
+        FROM ${getTableName('tasks')} 
+        WHERE user_id = $1
+      `, [req.user.userId, today]);
+      
+      const stats = result.rows[0];
+      
+      res.json({
+        today: parseInt(stats.today_count),
+        overdue: parseInt(stats.overdue_count),
+        completedToday: parseInt(stats.completed_today),
+        totalPending: parseInt(stats.total_pending),
+        upcomingWeek: parseInt(stats.upcoming_week)
+      });
+      
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Get task summary error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch task summary' });
+  }
+});
 
 // 🎯 GET SINGLE LEAD
 app.get('/api/leads/:id', 

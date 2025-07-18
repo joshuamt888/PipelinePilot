@@ -79,6 +79,7 @@ window.PipelineModule = {
             this.setupFilters();
             this.setupEditingSystem();
             this.setupAnimations();
+            this.setupClickToActivate();
 
             setTimeout(() => {
             this.clearFilters();
@@ -133,7 +134,8 @@ window.PipelineModule = {
                 ...lead,
                 status: lead.status || 'new',
                 potential_value: lead.potential_value || 0,
-                lost_reason: lead.lost_reason || null,
+                loss_reason: lead.lost_reason || null,
+                qualityScore: lead.qualityScore || lead.quality_score || 5,
                 id: lead.id || this.generateId()
             }));
 
@@ -382,12 +384,12 @@ window.PipelineModule = {
                 ${isAtLimit ? `
                     <div class="progress-warning at-limit">
                         <span class="warning-icon">⚠️</span>
-                        <span class="warning-text">limit reached</span>
+                        <span class="warning-text">Monthly limit reached</span>
                     </div>
                 ` : isNearLimit ? `
                     <div class="progress-warning near-limit">
                         <span class="warning-icon">🔔</span>
-                        <span class="warning-text">Approaching limit</span>
+                        <span class="warning-text">Approaching monthly limit</span>
                     </div>
                 ` : ''}
             </div>
@@ -493,6 +495,7 @@ window.PipelineModule = {
                     <div class="leads-container" data-leads-container="${stage.id}">
                         ${this.renderLeadsOrEmpty(stageLeads, stage)}
                     </div>
+                    ${leadCount > 6 ? '<div class="scroll-indicator">⬇️ Scroll for more</div>' : ''}
                 </div>
             </div>
         `;
@@ -517,21 +520,21 @@ window.PipelineModule = {
                     draggable="true"
                 >
                     <!-- Card Header -->
-                    <div class="card-header">
-                        <div class="lead-avatar">
-                            <span class="avatar-text">${this.getInitials(lead.name)}</span>
-                        </div>
-                        <div class="lead-main-info">
-                            <h4 class="lead-name">${lead.name}</h4>
-                            <div class="lead-company">${lead.company || 'No company'}</div>
-                        </div>
-                        <div class="lead-meta">
-                            <span class="lead-type-badge">${typeIcon}</span>
-                            ${lead.qualityScore ? `
-                                <span class="lead-score-badge" style="background: ${scoreColor}">${lead.qualityScore}</span>
-                            ` : ''}
-                        </div>
-                    </div>
+<div class="card-header">
+    <div class="lead-avatar">
+        <span class="avatar-text">${this.getInitials(lead.name)}</span>
+    </div>
+    <div class="lead-main-info">
+        <h4 class="lead-name">${lead.name}</h4>
+        <div class="lead-company">${lead.company || 'No company'}</div>
+    </div>
+    <div class="lead-meta">
+        ${lead.qualityScore ? `
+            <span class="lead-score-badge" style="background: ${scoreColor}">${lead.qualityScore}</span>
+        ` : ''}
+        <span class="lead-type-badge">${typeIcon}</span>
+    </div>
+</div>
                     
                     <!-- Card Body -->
                     <div class="card-body">
@@ -681,7 +684,7 @@ ${lead.status === 'lost' ? `
                     </div>
                     <div class="card-content-analytics">
                         <div class="primary-metric">${conversionRate}%</div>
-                        <div class="metric-detail">Win Rate</div>
+                        <div class="metric-detail">Qualified → Closed</div>
                     </div>
                 </div>
                 
@@ -691,7 +694,7 @@ ${lead.status === 'lost' ? `
                         <div class="card-title-analytics">Total Outcome Value</div>
                     </div>
                     <div class="card-content-analytics">
-                        <div class="primary-metric">$${(outcomeValue || 0).toLocaleString()}</div>
+                        <div class="primary-metric">$${Math.round(outcomeValue).toLocaleString()}</div>
                         <div class="metric-detail">Negotiation + Closed + Lost</div>
                     </div>
                 </div>
@@ -1552,6 +1555,113 @@ showPipelineSelector(leadId) {
                     z-index: 1000;
                 }
 
+                /* 🎯 UNIVERSAL CLICK-TO-ACTIVATE SYSTEM */
+
+/* Enhanced activated state - stronger glow for all devices */
+.lead-card.card-activated {
+    border-color: var(--primary) !important;
+    box-shadow: 
+        0 0 0 3px rgba(102, 126, 234, 0.4),
+        0 12px 35px rgba(102, 126, 234, 0.25),
+        0 0 20px rgba(102, 126, 234, 0.3) !important;
+    transform: translateY(-3px);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(102, 126, 234, 0.02) 100%);
+    z-index: 50;
+    position: relative;
+}
+
+/* Force actions to stay visible on activated cards */
+.lead-card.card-activated .card-actions {
+    opacity: 1 !important;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+/* Enhanced action buttons on activated cards */
+.lead-card.card-activated .action-btn {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    transform: scale(1.05);
+}
+
+/* Subtle click indicator for all users */
+.lead-card {
+    cursor: pointer;
+    position: relative;
+}
+
+.lead-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.lead-card.card-activated::before {
+    opacity: 1;
+}
+
+/* Keep existing hover behavior for desktop */
+@media (min-width: 769px) {
+    .lead-card:hover .card-actions {
+        opacity: 1;
+    }
+    
+    /* Hover + activated = extra special */
+    .lead-card.card-activated:hover {
+        box-shadow: 
+            0 0 0 3px rgba(102, 126, 234, 0.5),
+            0 15px 40px rgba(102, 126, 234, 0.3),
+            0 0 25px rgba(102, 126, 234, 0.4) !important;
+        transform: translateY(-4px);
+    }
+}
+
+/* Mobile enhancements */
+@media (max-width: 768px) {
+    /* Larger touch targets on mobile */
+    .lead-card.card-activated .action-btn {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 1rem;
+    }
+    
+    /* Prevent text selection on mobile */
+    .lead-card {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Activated cards get priority z-index on mobile */
+    .lead-card.card-activated {
+        z-index: 100;
+    }
+}
+
+/* Smooth transitions for all states */
+.lead-card,
+.card-actions,
+.action-btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus styles for accessibility */
+.lead-card:focus {
+    outline: 3px solid rgba(102, 126, 234, 0.5);
+    outline-offset: 2px;
+}
+
 /* Add stage-specific outlines */
 .lead-card[data-lead-status="new"] {
     border: 2px solid var(--info);
@@ -1570,7 +1680,7 @@ showPipelineSelector(leadId) {
 }
 
 .lead-card[data-lead-status="closed"] {
-    border: 2px solid rgb(0, 255, 21); /* ✅ FIXED - Added space */
+    border: 2px solidrgb(0, 255, 21); /* green */
 }
 
 .lead-card[data-lead-status="lost"] {
@@ -2188,21 +2298,6 @@ showPipelineSelector(leadId) {
                 .analytics-card.primary { --card-accent: var(--pipeline-primary); }
                 .analytics-card.success { --card-accent: var(--pipeline-success); }
                 .analytics-card.danger { --card-accent: var(--pipeline-danger); }
-                /* 🔥 GRADIENT OUTLINES */
-.analytics-card.primary {
-    border: 2px solid;
-    border-image: linear-gradient(135deg, var(--primary), #8b5cf6) 1;
-}
-
-.analytics-card.success {
-    border: 2px solid;
-    border-image: linear-gradient(135deg, var(--success), #059669) 1;
-}
-
-.analytics-card.danger {
-    border: 2px solid;
-    border-image: linear-gradient(135deg, var(--danger), #dc2626) 1;
-}
 
                 .analytics-card:hover {
                     transform: translateY(-2px);
@@ -2756,12 +2851,11 @@ calculateFilteredOutcomeValue() {
 },
 
     calculateConversionRate() {
-    const wonLeads = this.leads.filter(l => l.status === 'closed').length;
-    const lostLeads = this.leads.filter(l => l.status === 'lost').length;
-    const totalOutcomes = wonLeads + lostLeads;
-    
-    return totalOutcomes > 0 ? Math.round((wonLeads / totalOutcomes) * 100) : 0;
-},
+        const qualifiedLeads = this.leads.filter(l => ['qualified', 'negotiation', 'closed', 'lost'].includes(l.status)).length;
+        const wonLeads = this.filteredLeads['closed']?.length || 0;
+        
+        return qualifiedLeads > 0 ? Math.round((wonLeads / qualifiedLeads) * 100) : 0;
+    },
 
     getTopLossReasons() {
     // Use filteredLeads instead of all leads
@@ -3661,7 +3755,7 @@ async addLossReason(leadId) {
         saveBtn.innerHTML = '⏳ Saving...';
         
         try {
-            const updateData = { lostReason: lossReason };
+            const updateData = { lost_reason: lossReason };
             
             // Add notes if provided
             if (lossNotes) {
@@ -4471,7 +4565,7 @@ async editLossReason(leadId) {
         
         try {
             // Update backend
-            await API.updateLead(leadId, { lostReason: lossReason });
+            await API.updateLead(leadId, { lost_reason: lossReason });
             
             // Update local data
             lead.lost_reason = lossReason;
@@ -5149,6 +5243,127 @@ showDeleteConfirmation(leadId) {
         console.log('🎯 Drag and drop setup complete');
     },
 
+    // Add this to your PipelineModule after setupDragAndDrop() method
+
+// 🎯 Universal Click-to-Activate System (Desktop + Mobile)
+setupClickToActivate() {
+    let activeCard = null;
+    let autoDeactivateTimeout = null;
+
+    const pipelineBoard = document.querySelector('.pipeline-board-streamlined');
+    if (!pipelineBoard) return;
+
+    // Handle card clicks
+    pipelineBoard.addEventListener('click', (e) => {
+        const clickedCard = e.target.closest('.lead-card');
+        
+        // Don't interfere with action buttons or interactive elements
+        if (e.target.closest('.card-actions') || 
+            e.target.closest('.action-btn') || 
+            e.target.closest('button') || 
+            e.target.closest('input') || 
+            e.target.closest('select') ||
+            e.target.closest('.deal-value-btn') ||
+            e.target.closest('.loss-reason-btn') ||
+            e.target.closest('.value-edit-btn') ||
+            e.target.closest('.loss-edit-btn')) {
+            return;
+        }
+
+        if (clickedCard) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // If same card clicked, toggle off
+            if (activeCard === clickedCard) {
+                this.deactivateCard(activeCard);
+                activeCard = null;
+                this.clearAutoDeactivate();
+                return;
+            }
+
+            // Deactivate previous card
+            if (activeCard) {
+                this.deactivateCard(activeCard);
+            }
+
+            // Activate new card
+            this.activateCard(clickedCard);
+            activeCard = clickedCard;
+
+            // Auto-deactivate after 10 seconds
+            this.setAutoDeactivate(() => {
+                if (activeCard) {
+                    this.deactivateCard(activeCard);
+                    activeCard = null;
+                }
+            });
+
+        } else {
+            // Clicked outside any card - deactivate
+            if (activeCard) {
+                this.deactivateCard(activeCard);
+                activeCard = null;
+                this.clearAutoDeactivate();
+            }
+        }
+    });
+
+    // Clear activation when drag starts (don't interfere with drag & drop)
+    pipelineBoard.addEventListener('dragstart', () => {
+        if (activeCard) {
+            this.deactivateCard(activeCard);
+            activeCard = null;
+            this.clearAutoDeactivate();
+        }
+    });
+
+    // Store references for cleanup
+    this.clickToActivate = {
+        activeCard: () => activeCard,
+        deactivateAll: () => {
+            if (activeCard) {
+                this.deactivateCard(activeCard);
+                activeCard = null;
+                this.clearAutoDeactivate();
+            }
+        }
+    };
+
+    console.log('🎯 Universal click-to-activate setup complete');
+},
+
+// Activate card with enhanced glow and persistent actions
+activateCard(card) {
+    card.classList.add('card-activated');
+    
+    // Optional: Add subtle haptic feedback for mobile devices
+    if (navigator.vibrate && window.innerWidth <= 768) {
+        navigator.vibrate(30);
+    }
+    
+    console.log('✨ Card activated:', card.dataset.leadId);
+},
+
+// Deactivate card
+deactivateCard(card) {
+    card.classList.remove('card-activated');
+    console.log('🔄 Card deactivated:', card.dataset.leadId);
+},
+
+// Auto-deactivate timer management
+setAutoDeactivate(callback) {
+    this.clearAutoDeactivate();
+    this.autoDeactivateTimer = setTimeout(callback, 10000); // 10 seconds
+},
+
+clearAutoDeactivate() {
+    if (this.autoDeactivateTimer) {
+        clearTimeout(this.autoDeactivateTimer);
+        this.autoDeactivateTimer = null;
+    }
+},
+
     handleDragStart(e) {
     const card = e.target.closest('.lead-card');
     if (!card) return;
@@ -5355,7 +5570,7 @@ showDeleteConfirmation(leadId) {
                     draggedCard.classList.add(newStage.row === 'active' ? 'active-card' : 'outcome-card');
                 }
 
-            // Handle loss reason section
+                // Handle loss reason section
 if (newStatus === 'lost') {
     const cardBody = draggedCard.querySelector('.card-body');
     if (cardBody && !cardBody.querySelector('.loss-reason-section')) {
@@ -5378,12 +5593,6 @@ if (newStatus === 'lost') {
             </div>
         `;
         cardBody.insertAdjacentHTML('beforeend', lossReasonHTML);
-    }
-} else {
-    // 🔥 REMOVE loss reason section when moving OUT of lost
-    const existingLossSection = draggedCard.querySelector('.loss-reason-section');
-    if (existingLossSection) {
-        existingLossSection.remove();
     }
 }
 
@@ -5627,6 +5836,375 @@ if (hasActiveFilters) {
     }
 },
 
+renderEditForm(lead) {
+    return `
+        <form id="editLeadForm" class="minimalist-edit-form">
+            <!-- 🔥 TEMPERATURE TOGGLE -->
+            <div class="temperature-section">
+                <label class="section-label">Lead Temperature</label>
+                <div class="temperature-toggle">
+                    <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold">
+                        <span class="temp-icon">❄️</span>
+                        <span class="temp-label">Cold</span>
+                    </button>
+                    <button type="button" class="temp-btn ${lead.type === 'hot' ? 'active' : ''}" data-temp="hot">
+                        <span class="temp-icon">🔥</span>
+                        <span class="temp-label">Hot</span>
+                    </button>
+                </div>
+                <input type="hidden" id="editType" value="${lead.type || ''}">
+            </div>
+
+            <!-- 🎯 QUALITY SCORE SLIDER -->
+            <div class="quality-section">
+                <label class="section-label">Quality Score</label>
+                <div class="quality-slider-container">
+                    <div class="score-track">
+                        <input type="range" 
+                               id="editScore" 
+                               class="quality-slider" 
+                               min="1" 
+                               max="10" 
+                               value="${lead.qualityScore || 5}"
+                               oninput="this.style.setProperty('--value', this.value); document.getElementById('scoreDisplay').textContent = this.value; this.style.setProperty('--color', this.value >= 8 ? 'var(--primary)' : this.value >= 6 ? 'var(--success)' : this.value >= 4 ? 'var(--warning)' : 'var(--danger)');">
+                    </div>
+                    <div class="score-display-container">
+                        <div class="score-number" id="scoreDisplay">${lead.qualityScore || 5}</div>
+                        <div class="score-label">out of 10</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📝 NOTES AREA -->
+            <div class="notes-section">
+                <label class="section-label">Notes</label>
+                <textarea id="editNotes" 
+                          class="notes-textarea" 
+                          rows="6"
+                          placeholder="Add context, insights, or important details about this lead...">${lead.notes || ''}</textarea>
+            </div>
+
+            <!-- 🎪 FORM ACTIONS -->
+            <div class="form-actions">
+                <button type="button" class="btn-danger" id="deleteLeadBtn">
+                    🗑️ Delete Lead
+                </button>
+                <div class="form-actions-right">
+                    <button type="button" class="btn-secondary" onclick="PipelineModule.closeEditModal()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <span class="btn-loading" id="saveLoading" style="display: none;">
+                            <div class="loading-spinner-small"></div>
+                        </span>
+                        <span class="btn-text">Save Changes</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <style>
+            /* 🎨 MINIMALIST EDIT FORM STYLES */
+            .minimalist-edit-form {
+                display: flex;
+                flex-direction: column;
+                gap: 2rem;
+                padding: 0;
+            }
+
+            .section-label {
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 1rem;
+                display: block;
+            }
+
+            /* 🔥 TEMPERATURE TOGGLE */
+            .temperature-section {
+                background: var(--surface-hover);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                border: 1px solid var(--border);
+            }
+
+            .temperature-toggle {
+                display: flex;
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .temp-btn {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.75rem;
+                padding: 1rem 1.5rem;
+                border: 2px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--background);
+                color: var(--text-secondary);
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                font-weight: 600;
+                font-size: 0.95rem;
+            }
+
+            .temp-btn:hover {
+                border-color: var(--primary);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            }
+
+            .temp-btn.active {
+                border-color: var(--primary);
+                background: var(--primary);
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            }
+
+            .temp-icon {
+                font-size: 1.25rem;
+            }
+
+            .temp-label {
+                font-weight: 700;
+            }
+
+            /* 🎯 QUALITY SCORE SLIDER */
+            .quality-section {
+                background: var(--surface-hover);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                border: 1px solid var(--border);
+            }
+
+            .quality-slider-container {
+                display: flex;
+                align-items: center;
+                gap: 2rem;
+            }
+
+            .score-track {
+                flex: 1;
+                position: relative;
+            }
+
+            .quality-slider {
+                width: 100%;
+                height: 8px;
+                border-radius: 4px;
+                background: linear-gradient(to right, 
+                    var(--danger) 0%, 
+                    var(--warning) 40%, 
+                    var(--success) 70%, 
+                    var(--primary) 100%);
+                outline: none;
+                --value: ${lead.qualityScore || 5};
+                --color: ${(lead.qualityScore || 5) >= 8 ? 'var(--primary)' : (lead.qualityScore || 5) >= 6 ? 'var(--success)' : (lead.qualityScore || 5) >= 4 ? 'var(--warning)' : 'var(--danger)'};
+            }
+
+            .quality-slider::-webkit-slider-thumb {
+                appearance: none;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: var(--color, var(--primary));
+                cursor: pointer;
+                border: 3px solid white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                transition: all 0.2s ease;
+            }
+
+            .quality-slider::-webkit-slider-thumb:hover {
+                transform: scale(1.2);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            }
+
+            .quality-slider::-moz-range-thumb {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: var(--color, var(--primary));
+                cursor: pointer;
+                border: 3px solid white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            .score-display-container {
+                text-align: center;
+                min-width: 80px;
+            }
+
+            .score-number {
+                font-size: 2.5rem;
+                font-weight: 800;
+                color: var(--color, var(--primary));
+                line-height: 1;
+                margin-bottom: 0.25rem;
+            }
+
+            .score-label {
+                font-size: 0.8rem;
+                color: var(--text-tertiary);
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            /* 📝 NOTES SECTION */
+            .notes-section {
+                background: var(--surface-hover);
+                border-radius: var(--radius-lg);
+                padding: 1.5rem;
+                border: 1px solid var(--border);
+            }
+
+            .notes-textarea {
+                width: 100%;
+                padding: 1.25rem;
+                border: 2px solid var(--border);
+                border-radius: var(--radius);
+                font-size: 1rem;
+                background: var(--background);
+                color: var(--text-primary);
+                transition: all 0.3s ease;
+                font-family: inherit;
+                line-height: 1.6;
+                resize: vertical;
+                min-height: 140px;
+            }
+
+            .notes-textarea:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                transform: translateY(-1px);
+            }
+
+            .notes-textarea::placeholder {
+                color: var(--text-tertiary);
+                font-style: italic;
+            }
+
+            /* 🎪 FORM ACTIONS */
+            .form-actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-top: 1.5rem;
+                border-top: 1px solid var(--border);
+                margin-top: 1rem;
+            }
+
+            .form-actions-right {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .btn-primary, .btn-secondary, .btn-danger {
+                padding: 1rem 2rem;
+                border-radius: var(--radius);
+                font-weight: 600;
+                font-size: 0.95rem;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border: none;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .btn-primary {
+                background: var(--primary);
+                color: white;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            }
+
+            .btn-primary:hover:not(:disabled) {
+                background: var(--primary-dark);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            }
+
+            .btn-secondary {
+                background: var(--surface-hover);
+                color: var(--text-primary);
+                border: 2px solid var(--border);
+            }
+
+            .btn-secondary:hover {
+                background: var(--background);
+                border-color: var(--primary);
+                color: var(--primary);
+                transform: translateY(-1px);
+            }
+
+            .btn-danger {
+                background: var(--danger);
+                color: white;
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            }
+
+            .btn-danger:hover {
+                background: #dc2626;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+            }
+
+            .loading-spinner-small {
+                width: 16px;
+                height: 16px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                border-top-color: white;
+                animation: spin 0.8s linear infinite;
+            }
+
+            /* 📱 MOBILE RESPONSIVE */
+            @media (max-width: 768px) {
+                .quality-slider-container {
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .score-display-container {
+                    order: -1;
+                }
+
+                .temperature-toggle {
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .form-actions {
+                    flex-direction: column;
+                    gap: 1rem;
+                    align-items: stretch;
+                }
+
+                .form-actions-right {
+                    flex-direction: column;
+                }
+
+                .btn-primary, .btn-secondary, .btn-danger {
+                    width: 100%;
+                    justify-content: center;
+                }
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+},
+
     editLead(leadId) {
         const lead = this.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) {
@@ -5649,343 +6227,6 @@ if (hasActiveFilters) {
         console.log(`✏️ Editing lead: ${lead.name}`);
     },
 
-    renderEditForm(lead) {
-    return `
-        <form id="editLeadForm" class="edit-form">
-            <div class="form-grid">
-                <!-- Basic Info -->
-                <div class="form-group">
-                    <label class="form-label">Name *</label>
-                    <input type="text" id="editName" class="form-input" value="${lead.name}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Company</label>
-                    <input type="text" id="editCompany" class="form-input" value="${lead.company || ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="editEmail" class="form-input" value="${lead.email || ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Phone</label>
-                    <input type="tel" id="editPhone" class="form-input" value="${lead.phone || ''}">
-                </div>
-                
-                <!-- 🎯 STATUS DROPDOWN - DRIPPED OUT -->
-<div class="form-group">
-    <label class="form-label">Pipeline Status</label>
-    ${this.renderEditDropdown('editStatus', 'Select pipeline stage...', [
-        { value: 'new', label: 'New Lead', icon: '🆕' },
-        { value: 'contacted', label: 'Contacted', icon: '📞' },
-        { value: 'qualified', label: 'Qualified', icon: '✅' },
-        { value: 'negotiation', label: 'Negotiation', icon: '🤝' },
-        { value: 'closed', label: 'Closed Won', icon: '🎉' },
-        { value: 'lost', label: 'Lost', icon: '❌' }
-    ], lead.status)}
-</div>
-
-<!-- 🌡️ LEAD TEMPERATURE - DRIPPED OUT -->
-<div class="form-group">
-    <label class="form-label">Lead Temperature</label>
-    ${this.renderEditDropdown('editType', 'Select temperature...', [
-        { value: '', label: 'Select temperature...', icon: '🌡️' },
-        { value: 'cold', label: 'Cold Lead', icon: '❄️' },
-        { value: 'hot', label: 'Hot Lead', icon: '🔥' }
-    ], lead.type || '')}
-</div>
-                
-                <!-- ⭐ QUALITY SCORE - Full width -->
-                <div class="form-group full-width">
-                    <label class="form-label">Quality Score (1-10)</label>
-                    <div class="score-input-group">
-                        <input type="range" id="editScore" class="form-range" min="1" max="10" value="${lead.qualityScore || 5}"
-                               oninput="document.getElementById('scoreValue').textContent = this.value">
-                        <div class="score-display">Score: <span id="scoreValue">${lead.qualityScore || 5}</span></div>
-                    </div>
-                </div>
-                
-                <!-- ❌ LOSS REASON - Only if lost -->
-                ${lead.status === 'lost' ? `
-                    <div class="form-group full-width">
-                        <label class="form-label">Loss Reason</label>
-                        <select id="editLossReason" class="form-select">
-                            <option value="">Select reason...</option>
-                            <option value="Price too high" ${lead.lost_reason === 'Price too high' ? 'selected' : ''}>💰 Price too high</option>
-                            <option value="Went with competitor" ${lead.lost_reason === 'Went with competitor' ? 'selected' : ''}>🏢 Went with competitor</option>
-                            <option value="Budget constraints" ${lead.lost_reason === 'Budget constraints' ? 'selected' : ''}>💸 Budget constraints</option>
-                            <option value="Timing not right" ${lead.lost_reason === 'Timing not right' ? 'selected' : ''}>⏰ Timing not right</option>
-                            <option value="No longer interested" ${lead.lost_reason === 'No longer interested' ? 'selected' : ''}>😐 No longer interested</option>
-                            <option value="Poor communication" ${lead.lost_reason === 'Poor communication' ? 'selected' : ''}>📞 Poor communication</option>
-                            <option value="Product not a fit" ${lead.lost_reason === 'Product not a fit' ? 'selected' : ''}>🎯 Product not a fit</option>
-                            <option value="Decision maker changed" ${lead.lost_reason === 'Decision maker changed' ? 'selected' : ''}>👤 Decision maker changed</option>
-                            <option value="Other" ${lead.lost_reason === 'Other' ? 'selected' : ''}>🤷 Other</option>
-                        </select>
-                    </div>
-                ` : ''}
-                
-                <!-- 📝 NOTES - Optional -->
-                <div class="form-group full-width">
-                    <label class="form-label">Notes</label>
-                    <textarea id="editNotes" rows="3" class="form-textarea" 
-                              placeholder="Add notes about this lead...">${lead.notes || ''}</textarea>
-                </div>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn-danger" id="deleteLeadBtn">
-                    🗑️ Delete Lead
-                </button>
-                <div class="form-actions-right">
-                    <button type="button" class="btn-secondary" onclick="PipelineModule.closeEditModal()">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn-primary">
-                        <span class="btn-loading" id="saveLoading" style="display: none;">
-                            <div class="loading-spinner-small"></div>
-                        </span>
-                        <span class="btn-text">Save Changes</span>
-                    </button>
-                </div>
-            </div>
-        </form>
-        
-        <style>
-            .edit-form {
-                display: flex;
-                flex-direction: column;
-                gap: 2rem;
-            }
-            
-            .form-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1.5rem;
-            }
-            
-            .form-group {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-            
-            .form-group.full-width {
-                grid-column: 1 / -1;
-            }
-            
-            .form-label {
-                font-weight: 600;
-                color: var(--text-primary);
-                font-size: 0.9rem;
-            }
-            
-            .form-input,
-            .form-select,
-            .form-textarea {
-                padding: 0.875rem 1rem;
-                border: 2px solid var(--border);
-                border-radius: var(--radius);
-                font-size: 0.95rem;
-                background: var(--background);
-                color: var(--text-primary);
-                transition: var(--transition);
-                font-family: inherit;
-            }
-            
-            .form-input:focus,
-            .form-select:focus,
-            .form-textarea:focus {
-                outline: none;
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            }
-            
-            .form-range {
-                width: 100%;
-                margin: 0.5rem 0;
-            }
-            
-            .score-display {
-                text-align: center;
-                font-size: 0.9rem;
-                color: var(--text-secondary);
-                font-weight: 600;
-                padding: 0.5rem;
-                background: var(--surface-hover);
-                border-radius: var(--radius);
-            }
-            
-            /* 💰 Currency Input Styling */
-            .currency-input-group {
-                position: relative;
-                display: flex;
-                align-items: center;
-            }
-            
-            .currency-symbol {
-                position: absolute;
-                left: 1rem;
-                font-size: 1rem;
-                font-weight: 700;
-                color: var(--success);
-                z-index: 1;
-                pointer-events: none;
-            }
-            
-            .currency-input {
-                padding-left: 2.5rem !important;
-            }
-            
-            .form-actions {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding-top: 1rem;
-                border-top: 1px solid var(--border);
-            }
-
-            .form-actions-right {
-                display: flex;
-                gap: 1rem;
-            }
-
-            .btn-primary, .btn-secondary, .btn-danger {
-                padding: 0.875rem 2rem;
-                border-radius: var(--radius);
-                font-weight: 600;
-                font-size: 0.95rem;
-                cursor: pointer;
-                transition: var(--transition);
-                border: none;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .btn-primary {
-                background: var(--primary);
-                color: white;
-            }
-
-            .btn-primary:hover:not(:disabled) {
-                background: var(--primary-dark);
-                transform: translateY(-1px);
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-            }
-
-            .btn-secondary {
-                background: var(--surface-hover);
-                color: var(--text-primary);
-                border: 1px solid var(--border);
-            }
-
-            .btn-secondary:hover {
-                background: var(--border);
-                border-color: var(--primary);
-                color: var(--primary);
-            }
-
-            .btn-danger {
-                background: var(--danger);
-                color: white;
-            }
-
-            .btn-danger:hover {
-                background: #dc2626;
-                transform: translateY(-1px);
-                box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
-            }
-
-            .loading-spinner-small {
-                width: 16px;
-                height: 16px;
-                border: 2px solid rgba(255, 255, 255, 0.3);
-                border-radius: 50%;
-                border-top-color: white;
-                animation: spin 0.8s linear infinite;
-            }
-
-            @media (max-width: 768px) {
-                .form-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .form-actions {
-                    flex-direction: column;
-                    gap: 1rem;
-                    align-items: stretch;
-                }
-                
-                .form-actions-right {
-                    flex-direction: column;
-                }
-            }
-        </style>
-    `;
-},
-
-// 🗑️ Confirm Delete Lead
-async confirmDeleteLead(leadId) {
-    const lead = this.leads.find(l => l.id.toString() === leadId.toString());
-    if (!lead) return;
-
-    // Remove confirmation modal
-    const confirmModal = document.querySelector('.delete-confirm-overlay');
-    if (confirmModal) confirmModal.remove();
-
-    // Show loading on delete button
-    const deleteBtn = document.querySelector('.btn-confirm-delete');
-    if (deleteBtn) {
-        deleteBtn.disabled = true;
-        deleteBtn.innerHTML = '⏳ Deleting...';
-    }
-
-    try {
-        // Call API to delete
-        await API.deleteLead(leadId);
-        
-        // Remove from local data
-        this.leads = this.leads.filter(l => l.id.toString() !== leadId.toString());
-        
-        // Close edit modal
-        this.closeEditModal();
-        
-        // Refresh pipeline
-        await this.refreshPipeline();
-        
-        // Update monthly stats
-        await this.loadMonthlyStats();
-        
-        // Update progress bar
-        const progressContainer = document.querySelector('.monthly-progress-container');
-        if (progressContainer) {
-            const progressHTML = this.renderMonthlyProgress();
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = progressHTML;
-            const newProgress = tempDiv.querySelector('.monthly-progress-container');
-            if (newProgress) {
-                progressContainer.innerHTML = newProgress.innerHTML;
-            }
-        }
-        
-        // Show success message
-        this.showNotification(`✅ ${lead.name} deleted successfully`, 'success');
-        console.log(`✅ Lead deleted: ${lead.name}`);
-        
-    } catch (error) {
-        console.error('❌ Failed to delete lead:', error);
-        this.showNotification(`❌ Failed to delete lead: ${error.message}`, 'error');
-        
-        // Re-enable button if still exists
-        if (deleteBtn) {
-            deleteBtn.disabled = false;
-            deleteBtn.innerHTML = 'Yes, Delete Lead';
-        }
-    }
-},
-
     setupEditFormListeners() {
     const form = document.getElementById('editLeadForm');
     form?.addEventListener('submit', (e) => this.handleEditSubmit(e));
@@ -5995,60 +6236,45 @@ async confirmDeleteLead(leadId) {
         this.showDeleteConfirmation(this.editState.editingLeadId);
     });
     
-    // 🔥 SETUP EDIT FORM DROPDOWNS
-    this.setupEditFormDropdowns();
-},
-
-setupEditFormDropdowns() {
-    document.querySelectorAll('.edit-custom-dropdown').forEach(dropdown => {
-        const trigger = dropdown.querySelector('.edit-dropdown-trigger');
-        const menu = dropdown.querySelector('.edit-dropdown-menu');
-        const options = dropdown.querySelectorAll('.edit-dropdown-option');
-        const hiddenInput = dropdown.querySelector('input[type="hidden"]');
-        
-        trigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Close other dropdowns
-            document.querySelectorAll('.edit-custom-dropdown.open').forEach(dd => {
-                if (dd !== dropdown) dd.classList.remove('open');
-            });
-            dropdown.classList.toggle('open');
-        });
-        
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-                const value = option.dataset.value;
-                
-                // Update selection
-                options.forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-                
-                // Update trigger display
-                const icon = option.querySelector('.option-icon').textContent;
-                const text = option.querySelector('.option-text').textContent;
-                trigger.querySelector('.dropdown-icon').textContent = icon;
-                trigger.querySelector('.dropdown-text').textContent = text;
-                
-                // Update hidden input value
-                hiddenInput.value = value;
-                
-                // Close dropdown
-                dropdown.classList.remove('open');
-                
-                console.log(`Updated ${hiddenInput.id}: ${value}`);
-            });
+    // 🔥 TEMPERATURE TOGGLE LISTENERS
+    document.querySelectorAll('.temp-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active from all buttons
+            document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active'));
+            
+            // Add active to clicked button
+            btn.classList.add('active');
+            
+            // Update hidden input
+            const tempValue = btn.dataset.temp;
+            document.getElementById('editType').value = tempValue;
+            
+            console.log(`Temperature updated: ${tempValue}`);
         });
     });
     
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', () => {
-        document.querySelectorAll('.edit-custom-dropdown.open').forEach(dropdown => {
-            dropdown.classList.remove('open');
-        });
-    });
+    // 🎯 QUALITY SLIDER INITIALIZATION
+    const slider = document.getElementById('editScore');
+    if (slider) {
+        // Set initial CSS custom properties
+        const initialValue = slider.value;
+        const initialColor = initialValue >= 8 ? 'var(--primary)' : 
+                           initialValue >= 6 ? 'var(--success)' : 
+                           initialValue >= 4 ? 'var(--warning)' : 'var(--danger)';
+        
+        slider.style.setProperty('--value', initialValue);
+        slider.style.setProperty('--color', initialColor);
+        
+        // Update score display color
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        if (scoreDisplay) {
+            scoreDisplay.style.color = initialColor;
+        }
+    }
 },
 
-    async handleEditSubmit(e) {
+// 🔥 UPDATED SUBMIT HANDLER (MINIMALIST VERSION)
+async handleEditSubmit(e) {
     e.preventDefault();
     
     const loadingSpinner = document.getElementById('saveLoading');
@@ -6058,38 +6284,25 @@ setupEditFormDropdowns() {
         loadingSpinner.style.display = 'flex';
         saveBtn.disabled = true;
         
-        // GET VALUES FROM DROPDOWNS (hidden inputs)
+        // 🎯 ONLY GET THE TRIO VALUES
         const typeValue = document.getElementById('editType').value || null;
-        const sourceValue = document.getElementById('editSource').value || null;
-        
-        // GET QUALITY SCORE FROM THE RANGE SLIDER
         const qualityScoreValue = parseInt(document.getElementById('editScore').value) || 5;
+        const notesValue = document.getElementById('editNotes').value.trim() || null;
         
         const updatedData = {
-            name: document.getElementById('editName').value.trim(),
-            company: document.getElementById('editCompany').value.trim() || null,
-            email: document.getElementById('editEmail').value.trim() || null,
-            phone: document.getElementById('editPhone').value.trim() || null,
-            status: document.getElementById('editStatus').value,
             type: typeValue,
-            platform: sourceValue,
-            quality_score: qualityScoreValue, // 🔥 FIXED - NOW GETS FROM RANGE SLIDER
-            notes: document.getElementById('editNotes').value.trim() || null
+            quality_score: qualityScoreValue,
+            notes: notesValue
         };
 
-        const lossReasonSelect = document.getElementById('editLossReason');
-        if (lossReasonSelect) {
-            updatedData.lostReason = lossReasonSelect.value || null;
-        }
-
-        if (!updatedData.name) {
-            throw new Error('Name is required');
-        }
+        console.log('💾 Saving minimalist data:', updatedData);
 
         await API.updateLead(this.editState.editingLeadId, updatedData);
         
         this.closeEditModal();
         await this.refreshPipeline();
+        
+        this.showNotification('✅ Lead updated successfully!', 'success');
         
     } catch (error) {
         console.error('❌ Failed to update lead:', error);
@@ -6218,6 +6431,7 @@ if (analyticsContainer) {
             this.setupFilters();
             this.setupEditingSystem();
             this.setupAnimations();
+            this.setupClickToActivate();
 
             
         } catch (error) {

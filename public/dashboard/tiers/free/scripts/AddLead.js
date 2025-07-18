@@ -198,7 +198,6 @@ window.AddLeadModule = {
                         <th>Source</th>
                         <th>Value</th>
                         <th>Added</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -245,31 +244,6 @@ window.AddLeadModule = {
                 </td>
                 <td class="date-cell">
                     <span class="date-text">${timeAgo}</span>
-                </td>
-                <td class="actions-cell">
-                    <div class="actions-dropdown">
-                        <button class="actions-trigger" onclick="AddLeadModule.toggleActions('${lead.id}')">
-                            ⋮
-                        </button>
-                        <div class="actions-menu" id="actions-${lead.id}">
-                            <button onclick="AddLeadModule.editLead('${lead.id}')">
-                                <span>✏️</span>
-                                <span>Edit Lead</span>
-                            </button>
-                            <button onclick="AddLeadModule.quickCall('${lead.id}')">
-                                <span>📞</span>
-                                <span>Call Lead</span>
-                            </button>
-                            <button onclick="AddLeadModule.quickEmail('${lead.id}')">
-                                <span>📧</span>
-                                <span>Send Email</span>
-                            </button>
-                            <button onclick="AddLeadModule.deleteLead('${lead.id}')" class="danger">
-                                <span>🗑️</span>
-                                <span>Delete Lead</span>
-                            </button>
-                        </div>
-                    </div>
                 </td>
             </tr>
         `;
@@ -385,11 +359,13 @@ window.AddLeadModule = {
                     
                     <div class="form-group">
     <label class="form-label">Phone</label>
-    <input type="tel" 
-           name="phone" 
-           class="form-input phone-input" 
-           placeholder="+1 (555) 123-4567"
-           maxlength="17">
+    <input type="tel"
+       name="phone"
+       class="form-input phone-input"
+       pattern="^.{14}$|^$"
+       title="Please complete the phone number format"
+       placeholder="(555) 123-4567"
+       maxlength="17">
 </div>
                     
                     <div class="form-group">
@@ -506,111 +482,11 @@ window.AddLeadModule = {
             }
         });
     this.setupSimpleEmailValidation();
-    this.setupPhoneValidation();
+    this.setupSimplePhoneValidation();
     this.setupQualitySliders();
     this.setupSourceSelector();
     this.setupDynamicSelectBorders();
     this.setupMoneyInputFormatting();
-},
-
-// 📞 Simple Phone Validation - Matching Email Validator Style
-setupPhoneValidation() {
-    const phoneInputs = document.querySelectorAll('input[name="phone"]:not([data-phone-validated])');
-    
-    phoneInputs.forEach(input => {
-        const container = input.parentElement;
-        
-        // Create simple error message
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'phone-error';
-        errorMsg.style.display = 'none';
-        errorMsg.textContent = '📞 Phone must be exactly 10 digits';
-        container.appendChild(errorMsg);
-        
-        // Simple phone check (matches backend)
-const isValidPhone = (phone) => {
-    if (!phone) return true; // Optional field
-    let digits = phone.replace(/\D/g, '');
-    
-    // Remove country code like your formatter does
-    if (digits.startsWith('1') && digits.length > 1) {
-        digits = digits.substring(1);
-    }
-    
-    if (digits.length !== 10) return false;
-    return true;
-};
-        
-        // Format as user types
-        input.addEventListener('input', (e) => {
-            const rawValue = e.target.value;
-            
-            // 🔥 FIX: Detect if user is deleting and handle gracefully
-            if (rawValue === '' || rawValue === '+' || rawValue === '+1' || rawValue === '+1 ' || rawValue === '+1 (') {
-                e.target.value = '';
-                errorMsg.style.display = 'none';
-                input.style.borderColor = '';
-                return;
-            }
-            
-            // Extract only the actual phone digits (skip the +1 country code)
-            let allDigits = rawValue.replace(/\D/g, '');
-            
-            // If we have digits and the first one is "1", it's likely the country code
-            if (allDigits.startsWith('1') && allDigits.length > 1) {
-                allDigits = allDigits.substring(1); // Remove the leading 1
-            }
-            
-            // If no real phone digits left after cleaning, clear the field
-            if (allDigits.length === 0) {
-                e.target.value = '';
-                errorMsg.style.display = 'none';
-                input.style.borderColor = '';
-                return;
-            }
-            
-            // Limit to 10 digits max
-            if (allDigits.length > 10) {
-                allDigits = allDigits.slice(0, 10);
-            }
-            
-            // Auto format with +1
-            if (allDigits.length <= 3) {
-                e.target.value = `+1 (${allDigits}`;
-            } else if (allDigits.length <= 6) {
-                e.target.value = `+1 (${allDigits.slice(0, 3)}) ${allDigits.slice(3)}`;
-            } else {
-                e.target.value = `+1 (${allDigits.slice(0, 3)}) ${allDigits.slice(3, 6)}-${allDigits.slice(6)}`;
-            }
-            
-            // Hide error when they start typing again
-            errorMsg.style.display = 'none';
-            input.style.borderColor = '';
-        });
-        
-        // Show/hide error on blur (when they finish typing)
-        input.addEventListener('blur', () => {
-            const phone = input.value.trim();
-            
-            if (phone && !isValidPhone(phone)) {
-                errorMsg.style.display = 'block';
-                input.style.borderColor = '#ef4444';
-                
-                // Show specific error message
-                const digits = phone.replace(/\D/g, '');
-                if (digits.length !== 10) {
-                    errorMsg.textContent = '📞 Phone must be exactly 10 digits';
-                } else if (digits[0] === '0' || digits[0] === '1') {
-                    errorMsg.textContent = '📞 Phone must be exactly 10 digits';
-                }
-            } else {
-                errorMsg.style.display = 'none';
-                input.style.borderColor = '';
-            }
-        });
-        
-        input.setAttribute('data-phone-validated', 'true');
-    });
 },
 
 // 💰 Setup Money Input Formatting
@@ -1227,6 +1103,60 @@ setupSimpleEmailValidation() {
 },
 
 
+setupSimplePhoneValidation() {
+    const phoneInputs = document.querySelectorAll('input[name="phone"]:not([data-phone-validated])');
+    
+    phoneInputs.forEach(input => {
+        const container = input.parentElement;
+        
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'phone-error';
+        errorMsg.style.display = 'none';
+        errorMsg.textContent = '📞 Please enter a valid phone number';
+        container.appendChild(errorMsg);
+        
+        const isValidPhone = (phone) => {
+            if (!phone) return true; // Empty is valid
+            const digits = phone.replace(/\D/g, '');
+            return digits.length >= 10;
+        };
+        
+        // 🎨 FORMAT ON INPUT 
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Format as user types
+            if (value.length >= 6) {
+                value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+            } else if (value.length >= 3) {
+                value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+            } else if (value.length > 0) {
+                value = `(${value}`;
+            }
+            
+            e.target.value = value;
+            
+            // 🔥 FIX: Hide error on input (like email does)
+            errorMsg.style.display = 'none';
+            input.style.borderColor = '';
+        });
+        
+        // 🔥 FIX: Show error on blur if invalid (like email does)
+        input.addEventListener('blur', () => {
+            const phone = input.value.trim();
+            
+            if (phone && !isValidPhone(phone)) {
+                errorMsg.style.display = 'block';
+                input.style.borderColor = '#ef4444';
+            } else {
+                errorMsg.style.display = 'none';
+                input.style.borderColor = '';
+            }
+        });
+        
+        input.setAttribute('data-phone-validated', 'true');
+    });
+},
 
 // 🎯 Setup Quality Sliders
 setupQualitySliders() {
@@ -1304,27 +1234,6 @@ setupDynamicSelectBorders() {
 
    async handleSubmit(e) {
     e.preventDefault();
-
-    // Match backend validation completely
-// ✅ WITH THIS:
-// ✅ SUPER SIMPLE VERSION - just check the actual phone digits
-const phoneInput = e.target.querySelector('input[name="phone"]');
-if (phoneInput && phoneInput.value.trim()) {
-    // Get all digits
-    let allDigits = phoneInput.value.replace(/\D/g, '');
-    
-    // Remove any leading 1 (country code)
-    if (allDigits.startsWith('1')) {
-        allDigits = allDigits.substring(1);
-    }
-    
-    // Must be exactly 10 digits after removing country code
-    if (allDigits.length !== 10) {
-        this.showNotification('📞 Phone must be exactly 10 digits', 'error');
-        phoneInput.focus();
-        return;
-    }
-}
     
     try {
         this.setLoadingState(true);
@@ -1346,11 +1255,6 @@ if (phoneInput && phoneInput.value.trim()) {
         if (sourceInput && sourceInput.value.trim()) {
             leadData.source = sourceInput.value.trim();
         }
-
-        if (leadData.phone) {
-    const cleanPhone = leadData.phone.replace(/\D/g, '');
-    leadData.phone = cleanPhone.length === 10 ? `+1${cleanPhone}` : null;
-}
         
         // Clean up data
         leadData.potential_value = parseFloat(leadData.potential_value) || 0;
@@ -2045,7 +1949,7 @@ addSimilarPopupStyles() {
                 
                 // Reinitialize all interactive elements
                 this.setupSimpleEmailValidation();
-    this.setupPhoneValidation();
+    this.setupSimplePhoneValidation();
     this.setupQualitySliders();
     this.setupSourceSelector();
     this.setupDynamicSelectBorders();
@@ -2112,8 +2016,8 @@ addSimilarPopupStyles() {
             formContainer.innerHTML = this.renderEditForm(lead);
             modal.classList.add('show');
 
-            this.setupSimpleEmailValidation();
-    this.setupPhoneValidation();
+    this.setupSimpleEmailValidation();
+    this.setupSimplePhoneValidation();
     this.setupQualitySliders();
     this.setupSourceSelector();
     this.setupDynamicSelectBorders();
@@ -2148,12 +2052,14 @@ addSimilarPopupStyles() {
                 
                 <div class="form-group">
     <label class="form-label">Phone</label>
-    <input type="tel" 
-           name="phone" 
-           class="form-input phone-input" 
-           placeholder="+1 (555) 123-4567"
-           maxlength="17"
-           value="${this.formatPhoneForDisplay(lead.phone)}">
+    <input type="tel"
+       name="phone"
+       class="form-input phone-input"
+       pattern="^.{14}$|^$"
+       title="Please complete the phone number format"
+       placeholder="(555) 123-4567"
+       maxlength="17"
+       value="${lead.phone || ''}">
 </div>
                 
                 <div class="form-group">
@@ -2267,12 +2173,6 @@ addSimilarPopupStyles() {
         const sourceInput = e.target.querySelector('input[name="source"]');
         if (sourceInput && sourceInput.value.trim()) {
             leadData.source = sourceInput.value.trim();
-        }
-
-        // 🔥 ADD THIS: CLEAN PHONE FOR BACKEND
-        if (leadData.phone) {
-            const cleanPhone = leadData.phone.replace(/\D/g, '');
-            leadData.phone = cleanPhone.length === 10 ? `+1${cleanPhone}` : null;
         }
         
         // Clean up data
@@ -3057,14 +2957,8 @@ setEditLoadingState(isLoading) {
     formatPhoneForDisplay(phone) {
     if (!phone) return '';
     
-    // Remove +1 and any non-digits
-    const digits = phone.replace(/\D/g, '').replace(/^1/, '');
-    
-    if (digits.length === 10) {
-        return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    }
-    
-    return phone; // Return as-is if it's not a standard format
+    // Just return whatever is stored - no cleaning needed
+    return phone;
 },
 
     // 🎨 Styles
@@ -3577,9 +3471,9 @@ setEditLoadingState(isLoading) {
                     transition: background-color 0.3s ease;
                 }
 
-                .table-row:hover {
-                    background: var(--surface-hover);
-                }
+                .table-row:hover .recent-actions {
+    opacity: 1;
+}
 
                 .lead-info {
                     display: flex;

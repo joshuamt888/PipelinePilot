@@ -282,6 +282,11 @@ static async createLeadWithFollowUp(leadData) {
     return await this.request('/api/tasks', 'POST', taskData);
   }
 
+// Add this to your TierScalingAPI class
+static async deleteTask(taskId) {
+  return await this.request(`/api/tasks/${taskId}`, 'DELETE');
+}
+
   static async getTasks(filters = {}) {
     let query = '/api/tasks';
     const params = new URLSearchParams();
