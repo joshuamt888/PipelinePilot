@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
-        /* 🎨 CLEAN DESIGN SYSTEM */
+        /* 🎨 DESIGN SYSTEM */
         :root {
             --primary: #667eea;
             --primary-dark: #4f46e5;
@@ -38,346 +38,99 @@
             --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* 🌙 DARK MODE BASE */
+        /* 🌙 DARK MODE */
         [data-theme="dark"] {
-            --background: #0f172a;
-            --surface: #1e293b;
-            --surface-hover: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-tertiary: #94a3b8;
-            --border: #334155;
-        }
-
-        /* 🌙 DARK MODE ENHANCEMENT ATTACHMENT */
-        [data-theme="dark"] {
-            /* Core Colors - Deeper, richer palette */
             --background: #0a0f1c;
             --surface: #1a1f2e;
             --surface-hover: #242938;
             --surface-elevated: #2d3142;
             
-            /* Text with better contrast ratios */
             --text-primary: #f1f5f9;
             --text-secondary: #cbd5e1;
             --text-tertiary: #94a3b8;
             
-            /* Enhanced borders and dividers */
             --border: #374151;
             --border-light: #4b5563;
             --border-accent: #6366f1;
             
-            /* Improved accent colors for dark mode */
             --primary: #6366f1;
             --primary-dark: #4f46e5;
             --primary-light: #818cf8;
             
-            /* Status colors optimized for dark backgrounds */
             --success: #10b981;
-            --success-dark: #059669;
             --warning: #f59e0b;
-            --warning-dark: #d97706;
             --danger: #ef4444;
-            --danger-dark: #dc2626;
             --info: #06b6d4;
-            --info-dark: #0891b2;
             
-            /* Enhanced gradients for dark mode */
             --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
             --gradient-surface: linear-gradient(135deg, #1a1f2e 0%, #242938 100%);
             --gradient-card: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             
-            /* Dark mode specific shadows */
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
             --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
             
-            /* Glow effects for dark mode */
             --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
-            --glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
-            --glow-warning: 0 0 20px rgba(245, 158, 11, 0.3);
-            --glow-danger: 0 0 20px rgba(239, 68, 68, 0.3);
         }
 
-        /* 🌙 Dark Mode Sidebar Enhancements */
-        [data-theme="dark"] .sidebar {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 30%, #1e293b 70%, #0f172a 100%);
-            border-right: 1px solid var(--border);
-            box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(148, 163, 184, 0.1);
-        }
-
-        [data-theme="dark"] .sidebar-logo {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: none;
-            filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
-        }
-
-        [data-theme="dark"] .nav-link {
-            color: rgba(241, 245, 249, 0.7);
-            position: relative;
-            overflow: hidden;
-        }
-
-        [data-theme="dark"] .nav-link::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
-            transition: left 0.6s ease;
-        }
-
-        [data-theme="dark"] .nav-link:hover {
-            color: #f1f5f9;
-            background: rgba(99, 102, 241, 0.1);
-            border-left: 2px solid var(--primary);
-            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.1);
-        }
-
-        [data-theme="dark"] .nav-link:hover::before {
-            left: 100%;
-        }
-
-        [data-theme="dark"] .nav-link.active {
-            color: #f1f5f9;
-            background: rgba(99, 102, 241, 0.2);
-            border-left: 3px solid var(--primary);
-            box-shadow: var(--glow-primary), inset 0 0 20px rgba(99, 102, 241, 0.1);
-        }
-
-        [data-theme="dark"] .upgrade-nav-link {
-            background: rgba(99, 102, 241, 0.1);
-            border: 2px solid rgba(99, 102, 241, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        [data-theme="dark"] .upgrade-nav-link:hover {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: var(--primary);
-            box-shadow: var(--glow-primary);
-            transform: translateY(-2px);
-        }
-
-        /* 🌙 Dark Mode Header & Content */
-        [data-theme="dark"] .header {
-            background: rgba(26, 31, 46, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        }
-
-        [data-theme="dark"] .header-title {
-            color: white !important;
-            background: none !important;
-            -webkit-background-clip: unset !important;
-            -webkit-text-fill-color: unset !important;
-            background-clip: unset !important;
-            filter: none !important;
-        }
-
-        /* 🌙 Dark Mode User Menu */
-        [data-theme="dark"] .user-menu {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow), 0 0 0 1px rgba(99, 102, 241, 0.05);
-        }
-
-        [data-theme="dark"] .user-menu:hover {
-            border-color: var(--primary);
-            box-shadow: var(--shadow-lg), var(--glow-primary);
-            transform: translateY(-1px);
-        }
-
-        [data-theme="dark"] .user-menu::before {
-            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
-        }
-
-        [data-theme="dark"] .profile-dropdown {
-            background: var(--surface-elevated);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow-2xl), 0 0 0 1px rgba(99, 102, 241, 0.1);
-            backdrop-filter: blur(20px);
-        }
-
-        [data-theme="dark"] .dropdown-item:hover {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary-light);
-        }
-
-        /* 🌙 Dark Mode Scrollbars */
-        [data-theme="dark"] ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        [data-theme="dark"] ::-webkit-scrollbar-track {
-            background: var(--surface);
-            border-radius: 4px;
-        }
-
-        [data-theme="dark"] ::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 4px;
-            transition: background 0.2s ease;
-        }
-
-        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-            box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
-        }
-
-        /* 🎯 SICK LEAD PROGRESS BAR IN HEADER */
-        .lead-progress-header {
-            display: flex;
-            align-items: center;
-            background: var(--surface-hover);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 0.75rem 1rem;
-            transition: var(--transition);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .lead-progress-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-            transition: left 0.8s ease;
-        }
-
-        .lead-progress-header:hover {
-            border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow);
-        }
-
-        .lead-progress-header:hover::before {
-            left: 100%;
-        }
-
-        .progress-content {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            min-width: 120px;
-        }
-
-        .progress-stats {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-weight: 700;
-            font-size: 0.95rem;
-        }
-
-        .current-leads {
-            color: var(--primary);
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 1.1rem;
-            text-align: center;
-        }
-
-        .progress-separator {
-    color: var(--text-tertiary);
-    font-size: 1.1rem;   /* Same size */
-    font-weight: 500;
-    margin: 0 2px;       /* Better spacing */
+        /* 🔒 RESET & LOCK */
+        /* 🔒 SELECTIVE RESET - Drag & Drop Friendly */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-        .max-leads {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .leads-label {
-            color: var(--text-tertiary);
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-left: 0.25rem;
-        }
-
-        .progress-bar-mini {
-            width: 100%;
-            height: 4px;
-            background: var(--surface);
-            border-radius: 2px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .progress-fill-mini {
-            height: 100%;
-            background: var(--gradient-primary);
-            border-radius: 2px;
-            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-
-        .progress-fill-mini.near-limit {
-            background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
-        }
-
-        .progress-fill-mini.at-limit {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-        }
-
-        /* 🌙 Dark Mode Progress Bar */
-        [data-theme="dark"] .lead-progress-header {
-            background: var(--surface);
-            border-color: var(--border);
-        }
-
-        [data-theme="dark"] .current-leads {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        [data-theme="dark"] .progress-bar-mini {
-            background: var(--background);
-        }
-
-        /* 📱 Mobile Progress Bar */
-        @media (max-width: 768px) {
-            .lead-progress-header {
-                padding: 0.5rem 0.75rem;
-                min-width: 100px;
-            }
-
-            .progress-stats {
-                font-size: 1rem;
-            }
-
-            .current-leads {
-    width: 28px; /* Fixed width instead of min-width */
-    text-align: center;
+/* Apply no-select only where needed */
+.no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
-            .leads-label {
-                display: none;
-            }
+/* Apply no-drag only to specific elements */
+.no-drag {
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    user-drag: none;
+}
+
+/* Enable dragging for draggable elements */
+[draggable="true"] {
+    -webkit-user-drag: element;
+    -moz-user-drag: element;
+    user-drag: element;
+    cursor: grab;
+}
+
+[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* Allow text selection in inputs and textareas */
+input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+        input, textarea, [contenteditable] {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
 
         body {
@@ -385,11 +138,10 @@
             background: var(--background);
             color: var(--text-primary);
             line-height: 1.6;
-            overflow-x: hidden;
             transition: var(--transition);
         }
 
-        /* 🗂️ SIDEBAR - SIMPLIFIED & SLEEK */
+        /* 🗂️ SIDEBAR */
         .sidebar {
             position: fixed;
             left: 0;
@@ -427,7 +179,6 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* 🧭 NAVIGATION - CLEAN & SIMPLE */
         .sidebar-nav {
             list-style: none;
             padding: 0;
@@ -487,7 +238,6 @@
             cursor: pointer;
         }
 
-        /* 🚀 UPGRADE BUTTON - SIMPLIFIED */
         .upgrade-nav-item {
             margin: 1.5rem 0.75rem 1rem;
         }
@@ -529,27 +279,43 @@
         /* 📊 MAIN CONTENT */
         .main-content {
             margin-left: 280px;
-            min-height: 100vh;
+            height: 100vh;
             background: var(--background);
             transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        /* 📋 HEADER - LOCKED & CONSISTENT */
+        /* 📄 Page Content System */
+.page-content {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    min-height: 400px;
+}
+
+.page-content.active {
+    display: block;
+    opacity: 1;
+}
+
+        /* 📋 HEADER */
         .header {
             background: var(--surface);
             padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
             backdrop-filter: blur(20px);
             transition: var(--transition);
             border-bottom: 1px solid var(--border);
-            height: 80px; /* FIXED HEIGHT - NO CHANGES ALLOWED */
+            height: 80px;
             min-height: 80px;
             max-height: 80px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 100;
         }
 
         .header-left {
@@ -573,12 +339,14 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            position: relative;
+            z-index: 999999;
         }
 
-        /* 👤 USER MENU - CLEAN & FUNCTIONAL */
+        /* 👤 USER MENU */
         .user-menu-container {
             position: relative;
-            z-index: 200;
+            z-index: 999999;
         }
 
         .user-menu {
@@ -591,6 +359,8 @@
             cursor: pointer;
             transition: var(--transition);
             border: 1px solid var(--border);
+            position: relative;
+            z-index: 999999;
         }
 
         .user-menu:hover {
@@ -642,107 +412,142 @@
             transform: rotate(180deg);
         }
 
-        /* 📋 PROFILE DROPDOWN - CLEAN */
+        /* 🚀 NUCLEAR DROPDOWN - BULLETPROOF */
         .profile-dropdown {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            width: 220px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            overflow: hidden;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px) scale(0.95);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed !important;
+            top: 80px !important;
+            right: 2rem !important;
+            width: 220px !important;
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: var(--radius-lg) !important;
+            box-shadow: var(--shadow-xl) !important;
+            overflow: hidden !important;
+            z-index: 2147483647 !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transform: translateY(-10px) scale(0.95) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            pointer-events: auto !important;
         }
 
         .profile-dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0) scale(1);
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) scale(1) !important;
+        }
+
+        .profile-dropdown::before {
+            content: '' !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            z-index: -1 !important;
+            background: transparent !important;
+            pointer-events: none !important;
+        }
+
+        .profile-dropdown.show::before {
+            pointer-events: auto !important;
         }
 
         .dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 0.875rem;
-            font-weight: 500;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            padding: 1rem !important;
+            color: var(--text-primary) !important;
+            cursor: pointer !important;
+            transition: var(--transition) !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            background: transparent !important;
+            border: none !important;
+            position: relative !important;
         }
 
         .dropdown-item:hover {
-            background: var(--surface-hover);
-            color: var(--primary);
+            background: var(--surface-hover) !important;
+            color: var(--primary) !important;
         }
 
         .logout-item {
-            color: var(--danger);
-            border-top: 1px solid var(--border);
+            color: var(--danger) !important;
+            border-top: 1px solid var(--border) !important;
         }
 
         .logout-item:hover {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1) !important;
+            color: var(--danger) !important;
         }
 
         .dropdown-icon {
-            width: 18px;
-            height: 18px;
-            stroke-width: 2;
+            width: 18px !important;
+            height: 18px !important;
+            stroke-width: 2 !important;
+            flex-shrink: 0 !important;
         }
 
         .dropdown-toggle {
-            margin-left: auto;
+            margin-left: auto !important;
         }
 
         .toggle-switch {
-            position: relative;
-            width: 40px;
-            height: 20px;
-            background: var(--border);
-            border-radius: 9999px;
-            cursor: pointer;
-            transition: var(--transition);
+            position: relative !important;
+            width: 40px !important;
+            height: 20px !important;
+            background: var(--border) !important;
+            border-radius: 9999px !important;
+            cursor: pointer !important;
+            transition: var(--transition) !important;
+            flex-shrink: 0 !important;
         }
 
         .toggle-slider {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 16px;
-            height: 16px;
-            background: var(--surface);
-            border-radius: 50%;
-            transition: var(--transition);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: absolute !important;
+            top: 2px !important;
+            left: 2px !important;
+            width: 16px !important;
+            height: 16px !important;
+            background: var(--surface) !important;
+            border-radius: 50% !important;
+            transition: var(--transition) !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
 
         [data-theme="dark"] .toggle-switch {
-            background: var(--primary);
+            background: var(--primary) !important;
         }
 
         [data-theme="dark"] .toggle-slider {
-            transform: translateX(20px);
+            transform: translateX(20px) !important;
         }
 
-        /* 📱 CONTENT AREA - LOCKED HEIGHT */
+        /* 📱 CONTENT AREA */
         .dashboard-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
             padding: 2rem;
-            min-height: calc(100vh - 80px); /* FIXED: Based on locked header height */
             transition: var(--transition);
+            background: var(--background);
         }
 
         .content-container {
             max-width: 1200px;
             margin: 0 auto;
+            height: 100%;
+        }
+
+        /* 🖥️ DESKTOP SIDEBAR TOGGLE */
+        .sidebar.desktop-hidden {
+            transform: translateX(-100%);
+        }
+        
+        .main-content.sidebar-hidden {
+            margin-left: 0;
         }
 
         /* 📱 MOBILE RESPONSIVE */
@@ -751,29 +556,36 @@
                 transform: translateX(-100%);
                 transition: transform 0.3s ease;
             }
-
+            
             .sidebar.mobile-open {
                 transform: translateX(0);
             }
-
+            
             .main-content {
                 margin-left: 0;
             }
-
+            
+            /* Force desktop classes off on mobile */
+            .sidebar.desktop-hidden {
+                transform: translateX(-100%);
+            }
+            
+            .main-content.sidebar-hidden {
+                margin-left: 0;
+            }
+            
             .header {
                 padding: 1rem;
             }
-
+            
             .dashboard-content {
                 padding: 1rem;
             }
-
-            /* 🚫 NEVER HIDE USER INFO - ALWAYS VISIBLE */
+            
             .user-info {
-                display: flex !important; /* FORCE SHOW */
+                display: flex !important;
             }
             
-            /* Make user menu smaller on mobile but always visible */
             .user-menu {
                 padding: 0.25rem 0.5rem;
             }
@@ -785,6 +597,296 @@
             .user-tier {
                 font-size: 0.65rem;
             }
+            
+            .header-title {
+                cursor: pointer !important;
+                padding: 0.75rem 1rem !important;
+                border: 2px solid transparent !important;
+                border-radius: var(--radius-lg) !important;
+                transition: var(--transition) !important;
+                position: relative !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                z-index: 1000 !important;
+                pointer-events: auto !important;
+                user-select: none !important;
+                box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.1) !important;
+            }
+            
+            .header-title::after {
+                content: '📱' !important;
+                font-size: 1rem !important;
+                opacity: 0.7 !important;
+                color: var(--text-secondary) !important;
+                -webkit-text-fill-color: var(--text-secondary) !important;
+            }
+            
+            .header-title:hover {
+                border-color: var(--primary) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+                background: var(--primary) !important;
+                -webkit-background-clip: unset !important;
+                -webkit-text-fill-color: white !important;
+                background-clip: unset !important;
+                color: white !important;
+            }
+            
+            .header-title:hover::after {
+                color: white !important;
+                -webkit-text-fill-color: white !important;
+                opacity: 0.8 !important;
+            }
+            
+            .header-title:active {
+                transform: scale(0.98) !important;
+            }
+
+            .profile-dropdown {
+                right: 1rem !important;
+                top: 60px !important;
+                width: 200px !important;
+            }
+        }
+
+        @media (min-width: 1025px) {
+            /* 🖥️ DESKTOP TITLE IS ALSO CLICKABLE NOW! */
+            .header-title {
+                cursor: pointer !important;
+                padding: 0.5rem 1rem !important;
+                border: 2px solid transparent !important;
+                border-radius: var(--radius-lg) !important;
+                transition: var(--transition) !important;
+                position: relative !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                box-shadow: none !important;
+                background: var(--gradient-primary) !important;
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                background-clip: text !important;
+            }
+            
+            .header-title::after {
+                content: '🔽' !important;
+                font-size: 0.8rem !important;
+                opacity: 0.6 !important;
+                color: var(--text-secondary) !important;
+                -webkit-text-fill-color: var(--text-secondary) !important;
+                transition: var(--transition) !important;
+            }
+            
+            .header-title.sidebar-hidden::after {
+                content: '🔼' !important;
+                opacity: 0.8 !important;
+            }
+            
+            .header-title:hover {
+                border-color: var(--primary) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15) !important;
+            }
+            
+            .header-title:hover::after {
+                opacity: 1 !important;
+                transform: scale(1.1) !important;
+            }
+            
+            .header-title:active {
+                transform: scale(0.98) !important;
+            }
+        }
+
+       /* 🚀 SIMPLE BRAND LOADING SCREEN */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999999;
+    opacity: 1;
+    visibility: visible;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.loading-overlay.fade-out {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1.02);
+}
+
+.loading-container {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+.loading-logo {
+    margin-bottom: 2rem;
+    animation: brandPulse 2s ease-in-out infinite;
+}
+
+.logo-text {
+    font-size: 4rem;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    letter-spacing: -0.02em;
+}
+
+.logo-tagline {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.loading-progress {
+    width: 240px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+    margin: 3rem auto 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-bar {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 9999px;
+    width: 0%;
+    transition: width 0.4s ease;
+    position: relative;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.loading-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: brandShimmer 2s ease-in-out infinite;
+}
+
+.loading-status {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    margin: 2rem 0 0.5rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.loading-substatus {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 0.9;
+}
+
+/* 🎪 BRAND ANIMATIONS */
+@keyframes brandPulse {
+    0%, 100% { 
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+    }
+    50% { 
+        transform: scale(1.02);
+        filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
+    }
+}
+
+@keyframes brandShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* 📱 MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+    .logo-text {
+        font-size: 2.5rem;
+    }
+    
+    .logo-tagline {
+        font-size: 1rem;
+    }
+    
+    .loading-progress {
+        width: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-text {
+        font-size: 2rem;
+    }
+    
+    .loading-progress {
+        width: 160px;
+    }
+}
+
+        /* 🌙 DARK MODE */
+        [data-theme="dark"] .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 30%, #1e293b 70%, #0f172a 100%);
+            border-right: 1px solid var(--border);
+            box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(148, 163, 184, 0.1);
+        }
+
+        [data-theme="dark"] .sidebar-logo {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
+        }
+
+        [data-theme="dark"] .nav-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 2px solid var(--primary);
+            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .nav-link.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-left: 3px solid var(--primary);
+            box-shadow: var(--glow-primary), inset 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(26, 31, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="dark"] .header-title {
+            color: white !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: white !important;
+            background-clip: unset !important;
+        }
+
+        [data-theme="dark"] .header-title:hover {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+
+        [data-theme="dark"] .profile-dropdown {
+            background: var(--surface) !important;
+            border-color: var(--border) !important;
+            box-shadow: var(--shadow-xl), 0 0 30px rgba(0, 0, 0, 0.5) !important;
         }
 
         /* 🎪 ANIMATIONS */
@@ -797,7 +899,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 🔄 LOADING STATE */
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -812,54 +913,58 @@
             to { transform: rotate(360deg); }
         }
 
-        /* 🌟 STEADYUTILS ENHANCEMENTS */
-        .sidebar-nav .nav-link {
-            position: relative;
-            /* Removed overflow: hidden and shimmer effect */
-        }
-
-        .user-menu {
-            position: relative;
-            /* Removed overflow: hidden and shimmer effect */
-        }
-
-        /* 🎨 THEME TRANSITION ENHANCEMENTS */
         * {
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
 
-        /* 🌈 GRADIENT HOVER EFFECTS */
-        .upgrade-nav-link {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .upgrade-nav-link::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .upgrade-nav-link:hover::before {
-            left: 100%;
+        html {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
 <body data-theme="light">
-    <!-- 🗂️ SIDEBAR -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-content">
-            <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    SteadyManager
-                </div>
+    <!-- 🚀 EPIC LOADING SCREEN -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-container">
+        <div class="loading-logo">
+            <div class="logo-text">SteadyManager</div>
+            <div class="logo-tagline">Loading your workspace...</div>
+        </div>
+        
+        <div class="loading-spinner-wrapper">
+            <div class="loading-spinner-outer">
+                <div class="loading-spinner-inner"></div>
             </div>
+            <div class="loading-progress">
+                <div class="loading-progress-bar" id="loadingProgress"></div>
+            </div>
+        </div>
+        
+        <div class="loading-dots">
+            <div class="loading-status" id="loadingStatus">Initializing...</div>
+            <div class="loading-substatus" id="loadingSubstatus">Connecting to servers</div>
+        </div>
+    </div>
+    
+    <div class="loading-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+</div>
+    <!-- 🗂️ SIDEBAR -->
+<div class="sidebar no-select" id="sidebar">
+    <div class="sidebar-content">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">SteadyManager</div>
+        </div>
 
             <nav>
                 <ul class="sidebar-nav">
@@ -903,7 +1008,6 @@
                 </ul>
             </nav>
 
-            <!-- 🚀 UPGRADE NAVIGATION BUTTON -->
             <div class="upgrade-nav-item">
                 <a href="#" class="upgrade-nav-link" data-page="upgrade">
                     <span class="upgrade-emoji">🚀</span>
@@ -915,29 +1019,12 @@
 
     <!-- 📊 MAIN CONTENT -->
     <div class="main-content">
-        <!-- 📋 HEADER - LOCKED DOWN & CONSISTENT -->
         <header class="header">
             <div class="header-left">
                 <h1 class="header-title" id="pageTitle">Dashboard</h1>
             </div>
             
             <div class="header-right">
-                <!-- 🎯 LEAD PROGRESS BAR -->
-                <div class="lead-progress-header" id="leadProgressHeader">
-                    <div class="progress-content">
-                        <div class="progress-stats">
-                            <span class="current-leads" id="currentLeads">-</span>
-                            <span class="progress-separator">/</span>
-                            <span class="max-leads">50</span>
-                            <span class="leads-label">leads</span>
-                        </div>
-                        <div class="progress-bar-mini">
-                            <div class="progress-fill-mini" id="progressFillMini" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 👤 USER MENU - ALWAYS VISIBLE -->
                 <div class="user-menu-container">
                     <div class="user-menu" id="userMenu">
                         <div class="user-avatar" id="userAvatar">
@@ -950,7 +1037,6 @@
                         <i data-lucide="chevron-down" class="chevron-down"></i>
                     </div>
                     
-                    <!-- 📋 PROFILE DROPDOWN -->
                     <div class="profile-dropdown" id="profileDropdown">
                         <div class="dropdown-item" id="darkModeToggle">
                             <i data-lucide="moon" class="dropdown-icon"></i>
@@ -974,166 +1060,287 @@
             </div>
         </header>
 
-        <!-- 📊 CONTENT AREA -->
         <main class="dashboard-content">
-            <div class="content-container" id="mainContent">
-                <!-- Module content loads here -->
-                <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
-                    <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                        SteadyManager Ready
-                    </h2>
-                    <p>Select a page from the sidebar to get started!</p>
-                </div>
+    <div class="content-container">
+        <div id="dashboard-content" class="page-content active">
+            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    SteadyManager Ready
+                </h2>
+                <p>Select a page from the sidebar to get started!</p>
             </div>
-        </main>
+        </div>
+        <div id="leads-content" class="page-content"></div>
+        <div id="pipeline-content" class="page-content"></div>
+        <div id="tasks-content" class="page-content"></div>
+        <div id="settings-content" class="page-content"></div>
+        <div id="upgrade-content" class="page-content"></div>
+    </div>
+</main>
     </div>
 
-    <!-- 🚀 SIMPLE & CLEAN NAVIGATION SYSTEM -->
     <script>
-        // 🎬 INITIALIZE
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Simple SteadyManager Shell loading...');
+       // 🚫 SELECTIVE SECURITY - Allow drag & drop for draggable elements
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Only prevent drag/drop on non-draggable elements
+document.addEventListener('dragstart', (e) => {
+    if (!e.target.closest('[draggable="true"]')) {
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('drop', (e) => {
+    // Allow drops only in designated drop zones
+    if (!e.target.closest('.stage-content') && !e.target.closest('[data-droppable="true"]')) {
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('dragover', (e) => {
+    // Allow dragover only in designated drop zones
+    if (!e.target.closest('.stage-content') && !e.target.closest('[data-droppable="true"]')) {
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.ctrlKey && e.key === 's')) {
+        e.preventDefault();
+    }
+});
+
+// 🎬 INITIALIZE
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 SteadyManager Shell loading...');
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+    
+    applySavedTheme();
+    setupNavigation();
+    setupUserMenu();
+    setupMobileTitleClick();
+    initializeShell();
+    
+    console.log('✅ Shell ready!');
+});
+
+        // 🔐 ENHANCED SHELL INITIALIZATION WITH LOADING
+async function initializeShell() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingProgress = document.getElementById('loadingProgress');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const loadingSubstatus = document.getElementById('loadingSubstatus');
+    
+    // 🎬 Loading sequence
+    const loadingSteps = [
+        { progress: 10, status: 'Initializing...', substatus: 'Connecting to servers' },
+        { progress: 30, status: 'Authenticating...', substatus: 'Verifying credentials' },
+        { progress: 50, status: 'Loading profile...', substatus: 'Fetching user data' },
+        { progress: 70, status: 'Setting up workspace...', substatus: 'Preparing dashboard' },
+        { progress: 90, status: 'Almost ready...', substatus: 'Final touches' },
+        { progress: 100, status: 'Welcome!', substatus: 'Launching SteadyManager' }
+    ];
+    
+    try {
+        console.log('🔐 Initializing shell with loading screen...');
+        
+        // 🎪 Animate through loading steps
+        for (let i = 0; i < loadingSteps.length; i++) {
+            const step = loadingSteps[i];
             
-            // Initialize icons
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
+            // Update progress bar
+            if (loadingProgress) {
+                loadingProgress.style.width = `${step.progress}%`;
             }
             
-            // Apply saved theme
-            applySavedTheme();
+            // Update status text
+            if (loadingStatus) {
+                loadingStatus.textContent = step.status;
+            }
+            if (loadingSubstatus) {
+                loadingSubstatus.textContent = step.substatus;
+            }
             
-            // Setup navigation
-            setupNavigation();
+            // Wait between steps for smooth UX
+            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300));
             
-            // Setup user menu
-            setupUserMenu();
+            // Perform actual work during key steps
+if (i === 1) {
+    // Authentication step
+    const authResponse = await API.checkAuth();
+    if (!authResponse.authenticated) {
+        throw new Error('Authentication failed');
+    }
+} else if (i === 2) {
+    // Load profile step
+    await loadUserProfile();
+} else if (i === 3) {
+    // Initialize ALL modules step
+console.log('🔥 Initializing all modules...');
+const moduleInitPromises = [];
+
+// if (window.DashboardController?.init) {
+//     moduleInitPromises.push(window.DashboardController.init('dashboard-content'));
+// }
+if (window.AddLeadModule?.init) {
+    moduleInitPromises.push(window.AddLeadModule.init('leads-content'));
+}
+if (window.PipelineModule?.init) {
+    moduleInitPromises.push(window.PipelineModule.init('pipeline-content'));
+}
+if (window.SchedulingModule?.init) {
+    moduleInitPromises.push(window.SchedulingModule.init('tasks-content'));
+}
+// if (window.SettingsModule?.init) {
+//     moduleInitPromises.push(window.SettingsModule.init('settings-content'));
+// }
+// if (window.UpgradeModule?.init) {
+//     moduleInitPromises.push(window.UpgradeModule.init('upgrade-content'));
+// }
+
+    await Promise.all(moduleInitPromises);
+    console.log('✅ All modules initialized!');
+}
+        }
+        
+        // 🎉 Success! Hide loading screen
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                }, 800);
+            }
             
-            // Initialize shell with real data
-            initializeShell();
+            if (window.SteadyUtils) {
+                SteadyUtils.showToast('Welcome to SteadyManager! 🚀', 'success', {
+                    duration: 3000,
+                    position: 'bottom-right'
+                });
+            }
+        }, 800);
+        
+        console.log('✅ Shell initialized successfully with epic loading!');
+        
+    } catch (error) {
+        console.error('❌ Shell initialization failed:', error);
+        
+        // 💥 Error state
+        if (loadingProgress) loadingProgress.style.width = '100%';
+        if (loadingStatus) loadingStatus.textContent = 'Connection Error';
+        if (loadingSubstatus) loadingSubstatus.textContent = 'Retrying in 3 seconds...';
+        
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                    showInitializationError(error.message);
+                }, 800);
+            }
+        }, 3000);
+    }
+}
+
+// 👤 LOAD USER PROFILE
+async function loadUserProfile() {
+    try {
+        const authResponse = await API.checkAuth();
+        if (authResponse.authenticated && authResponse.user) {
+            const user = authResponse.user;
             
-            console.log('✅ Simple Shell ready!');
+            const email = user.email || 'User';
+            const initials = generateInitials(email);
+            const displayName = email;
+            
+            const tierDisplayNames = {
+                'FREE': 'Free Plan',
+                'PROFESSIONAL': 'Professional',
+                'PROFESSIONAL_TRIAL': 'Trial',
+                'BUSINESS': 'Business',
+                'ENTERPRISE': 'Enterprise',
+                'ADMIN': 'Admin'
+            };
+            
+            const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
+            
+            updateUserInfo({
+                name: displayName,
+                initials: initials,
+                tier: tierDisplay
+            });
+            
+            console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
+        } else {
+            console.error('❌ Auth check failed in loadUserProfile');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to load user profile:', error);
+        updateUserInfo({
+            name: 'User',
+            initials: 'U',
+            tier: 'Free Plan'
         });
+    }
+}
 
-        // 🔐 SIMPLE SHELL INITIALIZATION
-        async function initializeShell() {
-            try {
-                console.log('🔐 Initializing simple shell...');
-                
-                // Check authentication
-                const authResponse = await API.checkAuth();
-                
-                if (!authResponse.authenticated) {
-                    console.log('❌ Not authenticated, redirecting to login');
-                    window.location.href = '/login?error=auth_required';
-                    return;
-                }
-                
-                console.log('✅ Authentication verified');
-                
-                // Load user profile
-                await loadUserProfile();
-                
-                // 🎯 Load lead progress
-                await loadLeadProgress();
-                
-                console.log('✅ Simple shell initialized successfully');
-                
-            } catch (error) {
-                console.error('❌ Shell initialization failed:', error);
-                showInitializationError(error.message);
-            }
-        }
+        async function loadPage(pageName, triggerSource = null) {
+    console.log(`🧭 Loading page: ${pageName}`);
+    
+    // Hide all pages
+    document.querySelectorAll('.page-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Show target page
+    const targetContent = document.getElementById(`${pageName}-content`);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+    
+    // Update navigation active states
+    document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    if (pageName === 'upgrade') {
+        document.querySelector('.upgrade-nav-link')?.classList.add('active');
+    } else {
+        document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+    }
+    
+    // Update page title
+    const pageTitles = {
+        dashboard: 'Dashboard',
+        leads: 'Add Leads', 
+        pipeline: 'Pipeline',
+        tasks: 'Tasks',
+        analytics: 'Analytics',
+        settings: 'Settings',
+        upgrade: 'Upgrade Plan'
+    };
+    
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+        pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
+    }
+    
+    // Re-setup mobile title click after navigation
+    setTimeout(() => {
+        setupMobileTitleClick();
+    }, 100);
+}
 
-        // 🎯 LOAD LEAD PROGRESS BAR
-        async function loadLeadProgress() {
-            try {
-                console.log('🎯 Loading lead progress...');
-                const stats = await API.getCurrentMonthStats();
-                
-                const currentCount = stats.currentMonthLeads || 0;
-                const maxCount = 50; // Fixed limit
-                const percentage = Math.min((currentCount / maxCount) * 100, 100);
-                
-                // Update the display
-                document.getElementById('currentLeads').textContent = currentCount;
-                
-                const progressFill = document.getElementById('progressFillMini');
-                progressFill.style.width = `${percentage}%`;
-                
-                // Update styling based on progress
-                progressFill.className = 'progress-fill-mini';
-                if (percentage >= 100) {
-                    progressFill.classList.add('at-limit');
-                } else if (percentage >= 80) {
-                    progressFill.classList.add('near-limit');
-                }
-                
-                console.log(`🎯 Lead progress loaded: ${currentCount}/50 (${Math.round(percentage)}%)`);
-                
-                // Make progress bar clickable to go to pipeline
-                const progressHeader = document.getElementById('leadProgressHeader');
-                progressHeader.addEventListener('click', () => {
-                    loadPage('pipeline');
-                });
-                
-            } catch (error) {
-                console.error('❌ Failed to load lead progress:', error);
-                // Set fallback values
-                document.getElementById('currentLeads').textContent = '-';
-            }
-        }
-
-        // 👤 LOAD USER PROFILE
-        async function loadUserProfile() {
-            try {
-                const authResponse = await API.checkAuth();
-                if (authResponse.authenticated && authResponse.user) {
-                    const user = authResponse.user;
-                    
-                    // Generate user initials from email
-                    const email = user.email || 'User';
-                    const initials = generateInitials(email);
-                    
-                    // Use full email as display name
-                    const displayName = email;
-                    
-                    // Map subscription tiers to display names
-                    const tierDisplayNames = {
-                        'FREE': 'Free Plan',
-                        'PROFESSIONAL': 'Professional',
-                        'PROFESSIONAL_TRIAL': 'Trial',
-                        'BUSINESS': 'Business',
-                        'ENTERPRISE': 'Enterprise',
-                        'ADMIN': 'Admin'
-                    };
-                    
-                    const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
-                    
-                    // Update UI with smooth animations
-                    updateUserInfo({
-                        name: displayName,
-                        initials: initials,
-                        tier: tierDisplay
-                    });
-                    
-                    console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
-                } else {
-                    console.error('❌ Auth check failed in loadUserProfile');
-                }
-                
-            } catch (error) {
-                console.error('❌ Failed to load user profile:', error);
-                // Set fallback values
-                updateUserInfo({
-                    name: 'User',
-                    initials: 'U',
-                    tier: 'Free Plan'
-                });
-            }
-        }
-
-        // 🔤 GENERATE INITIALS FROM EMAIL
+        // 🔤 GENERATE INITIALS
         function generateInitials(email) {
             if (!email) return 'U';
             
@@ -1147,34 +1354,33 @@
             }
         }
 
-        // ❌ SHOW INITIALIZATION ERROR
         function showInitializationError(errorMessage) {
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) {
-                mainContent.innerHTML = `
-                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                            Connection Error
-                        </h2>
-                        <p>Unable to load dashboard data. Please check your connection and try refreshing.</p>
-                        <button onclick="location.reload()" style="
-                            margin-top: 1rem; 
-                            padding: 0.75rem 1.5rem; 
-                            background: var(--primary); 
-                            color: white; 
-                            border: none; 
-                            border-radius: var(--radius); 
-                            cursor: pointer;
-                            font-weight: 600;
-                            transition: var(--transition);
-                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                            🔄 Retry
-                        </button>
-                    </div>
-                `;
-            }
-        }
+    const container = document.getElementById('dashboard-content');
+    if (container) {
+        container.innerHTML = `
+            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                    Connection Error
+                </h2>
+                <p>Unable to load dashboard data. Please check your connection and try refreshing.</p>
+                <button onclick="location.reload()" style="
+                    margin-top: 1rem; 
+                    padding: 0.75rem 1.5rem; 
+                    background: var(--primary); 
+                    color: white; 
+                    border: none; 
+                    border-radius: var(--radius); 
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: var(--transition);
+                " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                    🔄 Retry
+                </button>
+            </div>
+        `;
+    }
+}
 
         // 🎨 THEME MANAGEMENT
         function applySavedTheme() {
@@ -1189,7 +1395,6 @@
             if (window.SteadyUtils && SteadyUtils.theme) {
                 const newTheme = SteadyUtils.theme.toggle();
                 
-                // Show theme change toast
                 SteadyUtils.showToast(`Switched to ${newTheme} mode! 🎨`, 'success', {
                     duration: 2000,
                     position: 'bottom-right'
@@ -1198,7 +1403,6 @@
                 return;
             }
             
-            // Fallback method
             const current = document.documentElement.getAttribute('data-theme');
             const newTheme = current === 'dark' ? 'light' : 'dark';
             
@@ -1211,7 +1415,74 @@
             }
         }
 
-        // 🧭 NAVIGATION SYSTEM
+        // 📱 SICK TITLE CLICK HANDLER - MOBILE & DESKTOP MAGIC
+        function setupMobileTitleClick() {
+            const headerTitle = document.getElementById('pageTitle');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            if (!headerTitle || !sidebar || !mainContent) return;
+            
+            if (headerTitle._titleHandler) {
+                headerTitle.removeEventListener('click', headerTitle._titleHandler);
+            }
+            
+            headerTitle._titleHandler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (window.innerWidth <= 1024) {
+                    // 📱 MOBILE: Toggle sidebar
+                    sidebar.classList.toggle('mobile-open');
+                    
+                    if (window.SteadyUtils) {
+                        SteadyUtils.pulse(headerTitle, { scale: 0.95, duration: 200 });
+                    }
+                    
+                    console.log('📱 Mobile sidebar toggled');
+                } else {
+                    // 🖥️ DESKTOP: Sick slide toggle
+                    const isHidden = sidebar.classList.contains('desktop-hidden');
+                    
+                    if (isHidden) {
+                        // Show sidebar
+                        sidebar.classList.remove('desktop-hidden');
+                        mainContent.classList.remove('sidebar-hidden');
+                        headerTitle.classList.remove('sidebar-hidden');
+                        console.log('🖥️ Desktop sidebar REVEALED!');
+                    } else {
+                        // Hide sidebar
+                        sidebar.classList.add('desktop-hidden');
+                        mainContent.classList.add('sidebar-hidden');
+                        headerTitle.classList.add('sidebar-hidden');
+                        console.log('🖥️ Desktop sidebar HIDDEN!');
+                    }
+                    
+                    if (window.SteadyUtils) {
+                        SteadyUtils.pulse(headerTitle, { scale: 0.95, duration: 200 });
+                    }
+                }
+            };
+            
+            headerTitle.addEventListener('click', headerTitle._titleHandler);
+            
+            if (!window._globalClickSetup) {
+                document.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 1024) {
+                        const currentTitle = document.getElementById('pageTitle');
+                        const currentSidebar = document.getElementById('sidebar');
+                        
+                        if (currentSidebar && !currentSidebar.contains(e.target) && 
+                            !currentTitle?.contains(e.target)) {
+                            currentSidebar.classList.remove('mobile-open');
+                        }
+                    }
+                });
+                window._globalClickSetup = true;
+            }
+        }
+
+        // 🧭 SICK NAVIGATION WITH AUTO-CLOSE
         function setupNavigation() {
             document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
@@ -1219,9 +1490,19 @@
                     const page = link.getAttribute('data-page');
                     const upgradeTrigger = link.getAttribute('data-upgrade-trigger');
                     
-                    // SteadyUtils click animation
                     if (window.SteadyUtils) {
                         SteadyUtils.pulse(link, { scale: 0.95, duration: 200 });
+                    }
+                    
+                    // 🔥 MOBILE MAGIC: Auto-close sidebar after nav click
+                    if (window.innerWidth <= 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar) {
+                            setTimeout(() => {
+                                sidebar.classList.remove('mobile-open');
+                                console.log('📱 Mobile sidebar auto-closed after navigation!');
+                            }, 150); // Small delay for smooth UX
+                        }
                     }
                     
                     if (page) {
@@ -1237,134 +1518,62 @@
             });
         }
 
-        async function loadPage(pageName, triggerSource = null) {
-    console.log(`🧭 Loading page: ${pageName}`);
-    
-    // Update active nav state
-    document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    
-    if (pageName === 'upgrade') {
-        document.querySelector('.upgrade-nav-link')?.classList.add('active');
-    } else {
-        document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-    }
-    
-    // Page titles
-    const pageTitles = {
-        dashboard: 'Dashboard',
-        leads: 'Add Leads', 
-        pipeline: 'Pipeline',
-        Tasks: 'Tasks',
-        analytics: 'Analytics',
-        settings: 'Settings',
-        upgrade: 'Upgrade Plan'
-    };
-    
-    // Update page title
-    const pageTitle = document.getElementById('pageTitle');
-    if (pageTitle) {
-        pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
-    }
-    
-    // Simple loading state
-    const mainContent = document.getElementById('mainContent');
-    if (mainContent) {
-        mainContent.innerHTML = `
-            <div class="fade-in" style="text-align: center; padding: 2rem;">
-                <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-                <p>Loading ${pageTitles[pageName]}...</p>
-            </div>
-        `;
-    }
-    
-    // Load the module
-    const moduleNames = {
-        dashboard: 'DashboardController',
-        leads: 'AddLeadModule',
-        pipeline: 'PipelineModule',
-        tasks: 'SchedulingModule',
-        settings: 'SettingsModule',
-        upgrade: 'UpgradeModule'
-    };
-    
-    const moduleName = moduleNames[pageName];
-    const module = window[moduleName];
-    
-    if (module && typeof module.init === 'function') {
-        console.log(`✅ Loading ${moduleName}...`);
-        await module.init();
-    } else {
-        console.warn(`⚠️ Module ${moduleName} not found`);
-        showModuleNotFound(pageName);
-    }
-}
-
         function showModuleNotFound(pageName) {
-    const mainContent = document.getElementById('mainContent');
-    if (mainContent) {
-        const emoji = {
-            dashboard: '📊',
-            leads: '👥', 
-            pipeline: '🌿',
-            Tasks: '📋',
-            analytics: '📈',
-            settings: '⚙️',
-            upgrade: '🚀'
-        }[pageName] || '📦';
-        if (checkCancelled()) return;
-        
-        mainContent.innerHTML = `
-            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
-                </h2>
-                <p>Module not loaded yet. Check that the script is included.</p>
-            </div>
-        `;
-    }
-}
+    const container = document.getElementById(`${pageName}-content`);
+    if (container) {
+                const emoji = {
+                    dashboard: '📊',
+                    leads: '👥', 
+                    pipeline: '🌿',
+                    tasks: '📋',
+                    analytics: '📈',
+                    settings: '⚙️',
+                    upgrade: '🚀'
+                }[pageName] || '📦';
+                
+                mainContent.innerHTML = `
+                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
+                            ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
+                        </h2>
+                        <p>Module not loaded yet. Check that the script is included.</p>
+                    </div>
+                `;
+            }
+        }
 
-        // 👤 USER MENU SETUP
+        // 👤 USER MENU
         function setupUserMenu() {
             const userMenu = document.getElementById('userMenu');
             const profileDropdown = document.getElementById('profileDropdown');
             const darkModeToggle = document.getElementById('darkModeToggle');
             
-            // Toggle dropdown with animation
             userMenu?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown?.classList.toggle('show');
                 
-                // Pulse animation on click
                 if (window.SteadyUtils) {
                     SteadyUtils.pulse(userMenu, { scale: 0.95, duration: 200 });
                 }
             });
             
-            // Close on outside click
             document.addEventListener('click', () => {
                 profileDropdown?.classList.remove('show');
             });
             
-            // Dark mode toggle
             darkModeToggle?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleTheme();
             });
             
-            // Settings from dropdown
             profileDropdown?.querySelector('[data-page="settings"]')?.addEventListener('click', () => {
                 loadPage('settings');
                 profileDropdown.classList.remove('show');
             });
 
-            // Logout with confirmation
             const logoutBtn = document.getElementById('logoutBtn');
             logoutBtn?.addEventListener('click', async () => {
-                // Show logout confirmation if SteadyUtils available
                 if (window.SteadyUtils) {
                     const modal = SteadyUtils.createModal(
                         'Confirm Logout',
@@ -1375,21 +1584,20 @@
                                 {
                                     text: 'Cancel',
                                     type: 'secondary',
-                                    onClick: () => true // Close modal
+                                    onClick: () => true
                                 },
                                 {
                                     text: 'Logout',
                                     type: 'danger',
                                     onClick: async () => {
                                         await performLogout();
-                                        return true; // Close modal
+                                        return true;
                                     }
                                 }
                             ]
                         }
                     );
                 } else {
-                    // Direct logout without confirmation
                     await performLogout();
                 }
                 
@@ -1414,12 +1622,9 @@
             }
         }
 
-        // 🔒 LOCK DOWN HEADER - NO MODULE INTERFERENCE
-        // Modules can change title but NOT the profile/user info
-        
+        // 🔒 GLOBALS
         window.loadPage = loadPage;
         
-        // ✅ Allow title updates but protect user info
         window.updatePageTitle = (title) => {
             const pageTitle = document.getElementById('pageTitle');
             if (pageTitle) {
@@ -1434,7 +1639,6 @@
             }
         };
         
-        // 🔒 PROTECTED: User info updates - FORCE AVATAR STYLING
         function updateUserInfo(user) {
             const userName = document.getElementById('userName');
             const userAvatar = document.getElementById('userAvatar');
@@ -1454,11 +1658,9 @@
             if (user.initials && userAvatar) {
                 if (window.SteadyUtils) {
                     SteadyUtils.animateOut(userAvatar, { duration: 200 }).then(() => {
-                        // FORCE CLEAR ALL CONTENT AND STYLING
                         userAvatar.innerHTML = '';
                         userAvatar.textContent = user.initials;
                         
-                        // FORCE PROPER STYLING
                         userAvatar.style.background = 'var(--gradient-primary)';
                         userAvatar.style.color = 'white';
                         userAvatar.style.fontSize = '0.9rem';
@@ -1470,11 +1672,9 @@
                         SteadyUtils.animateIn(userAvatar, { duration: 300 });
                     });
                 } else {
-                    // FORCE CLEAR ALL CONTENT AND STYLING
                     userAvatar.innerHTML = '';
                     userAvatar.textContent = user.initials;
                     
-                    // FORCE PROPER STYLING
                     userAvatar.style.background = 'var(--gradient-primary)';
                     userAvatar.style.color = 'white';
                     userAvatar.style.fontSize = '0.9rem';
@@ -1497,44 +1697,7 @@
             }
         }
 
-        // 🎯 UPDATE LEAD PROGRESS (For modules to call)
-        window.updateLeadProgress = async function(newCount) {
-            try {
-                const maxCount = 50;
-                const percentage = Math.min((newCount / maxCount) * 100, 100);
-                
-                // Animate the number change
-                const currentLeadsEl = document.getElementById('currentLeads');
-                if (currentLeadsEl) {
-                    currentLeadsEl.textContent = newCount;
-                }
-                
-                // Update progress bar
-                const progressFill = document.getElementById('progressFillMini');
-                if (progressFill) {
-                    progressFill.style.width = `${percentage}%`;
-                    
-                    // Update styling
-                    progressFill.className = 'progress-fill-mini';
-                    if (percentage >= 100) {
-                        progressFill.classList.add('at-limit');
-                    } else if (percentage >= 80) {
-                        progressFill.classList.add('near-limit');
-                    }
-                }
-                
-                console.log(`🎯 Progress updated: ${newCount}/50 (${Math.round(percentage)}%)`);
-            } catch (error) {
-                console.error('❌ Failed to update progress:', error);
-            }
-        };
-
-        // 🎯 REFRESH LEAD PROGRESS (For modules to call)
-        window.refreshLeadProgress = async function() {
-            await loadLeadProgress();
-        };
-
-        // 🎉 WELCOME MESSAGE
+        // 🎉 WELCOME
         if (window.SteadyUtils) {
             setTimeout(() => {
                 SteadyUtils.showToast('Welcome to SteadyManager! 🚀', 'success', {
@@ -1544,8 +1707,8 @@
             }, 1000);
         }
 
-        console.log('🔥 Simple SteadyManager Shell ready for modules!');
-        console.log('✨ Enhanced with SteadyUtils animations and interactions!');
+        console.log('🔥 SteadyManager Shell ready for modules!');
+        console.log('✨ Enhanced with locked viewport and clean interactions!');
     </script>
 
     <!-- 🔧 MODULE LOADER -->

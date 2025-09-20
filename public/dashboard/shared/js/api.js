@@ -352,7 +352,33 @@ static async getUpcomingWeek() {
 }
 
 static async updateTask(taskId, data) {
-    return await this.request(`/api/tasks/${taskId}`, 'PUT', data);
+    // Map camelCase frontend fields to snake_case database fields
+    const mappedData = { ...data };
+    
+    // Field mappings for consistency with database
+    if (data.leadId !== undefined) {
+        mappedData.lead_id = data.leadId;
+        delete mappedData.leadId;
+    }
+    
+    if (data.dueDate !== undefined) {
+        mappedData.due_date = data.dueDate;
+        delete mappedData.dueDate;
+    }
+    
+    if (data.dueTime !== undefined) {
+        mappedData.due_time = data.dueTime;
+        delete mappedData.dueTime;
+    }
+    
+    if (data.type !== undefined) {
+        mappedData.task_type = data.type;
+        delete mappedData.type;
+    }
+    
+    console.log('🔥 MAPPED TASK DATA FOR BACKEND:', mappedData);
+    
+    return await this.request(`/api/tasks/${taskId}`, 'PUT', mappedData);
 }
 
   // 💳 BILLING & STRIPE (All Tiers)
@@ -399,15 +425,31 @@ static async checkDuplicates(leadData) {
       let matchReasons = [];
       
       // EXACT EMAIL MATCH (immediate duplicate)
-      if (leadData.email && existing.email && 
-          leadData.email.toLowerCase() === existing.email.toLowerCase()) {
-        duplicates.exact.push({
-          lead: existing,
-          reason: 'Exact email match',
-          confidence: 100
-        });
-        continue; // Skip other checks if exact email match
-      }
+if (leadData.email && existing.email && 
+    leadData.email.toLowerCase() === existing.email.toLowerCase()) {
+  duplicates.exact.push({
+    lead: existing,
+    reason: 'Exact email match',
+    confidence: 100
+  });
+  continue; // Skip other checks if exact email match
+}
+
+// EXACT NAME + COMPANY MATCH (immediate duplicate)
+if (leadData.name && existing.name && leadData.company && existing.company) {
+  const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
+  const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
+  
+  if (nameMatch && companyMatch) {
+    duplicates.exact.push({
+      lead: existing,
+      reason: 'Exact name and company match',
+      confidence: 100
+    });
+    continue; // Skip other checks if exact match
+  }
+}
+
       
       // NAME MATCHING
       if (leadData.name && existing.name) {

@@ -22,15 +22,16 @@ window.PipelineModule = {
     // 🎬 Module State
     leads: [],
     filteredLeads: {},
-    monthlyStats: { currentMonthLeads: 0, monthlyLeadLimit: 50 }, // Default values
+    monthlyStats: { currentMonthLeads: 0, monthlyLeadLimit: 50 },
+    targetContainer: 'pipeline-content',
     stages: [
         // Active Pipeline (Top Row) - Removed proposal
         { id: 'new', name: 'New Leads', icon: '🆕', color: 'var(--info)', row: 'active' },
         { id: 'contacted', name: 'Contacted', icon: '📞', color: 'var(--warning)', row: 'active' },
-        { id: 'qualified', name: 'Qualified', icon: '✅', color: 'var(--success)', row: 'active' },
+        { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#F97316', row: 'active' },
         
         // Outcome Pipeline (Bottom Row)
-        { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#F97316', row: 'outcome' },
+        { id: 'qualified', name: 'Qualified', icon: '✅', color: 'var(--success)', row: 'outcome' },
         { id: 'closed', name: 'Closed Won', icon: '🎉', color: 'var(--success)', row: 'outcome' },
         { id: 'lost', name: 'Lost', icon: '❌', color: 'var(--danger)', row: 'outcome' }
     ],
@@ -55,45 +56,45 @@ window.PipelineModule = {
     version: '3.0.0',
 
     // 🚀 Initialize Pipeline
-    async init() {
-        console.log('🌿 Streamlined Pipeline Module v3.0.0 initializing...');
+    async init(targetContainer = 'pipeline-content') {
+    console.log('🌿 Streamlined Pipeline Module v3.0.0 initializing...');
+    
+    try {
+        this.targetContainer = targetContainer; // ADD THIS LINE
+        this.isLoading = true;
+        this.renderLoadingState();
         
-        try {
-            this.isLoading = true;
-            this.renderLoadingState();
-            
-            // Load monthly stats first
-            await this.loadMonthlyStats();
-            
-            // Load all leads
-            await this.loadLeads();
-            
-            // Organize leads by status
-            this.organizeLeads();
-            
-            // Render the streamlined pipeline
-            this.render();
-            
-            // Setup all interactions
-            this.setupDragAndDrop();
-            this.setupFilters();
-            this.setupEditingSystem();
-            this.setupAnimations();
-            this.setupClickToActivate();
+        // Load monthly stats first
+        await this.loadMonthlyStats();
+        
+        // Load all leads
+        await this.loadLeads();
+        
+        // Organize leads by status
+        this.organizeLeads();
+        
+        // Render the streamlined pipeline (analytics will be fresh)
+        this.render();
+        
+        // Setup all interactions
+        this.setupDragAndDrop();
+        this.setupFilters();
+        this.setupEditingSystem();
+        this.setupAnimations();
+        this.setupClickToActivate();
 
-            setTimeout(() => {
-            this.clearFilters();
-        }, 200);
-            
-            console.log('✅ Streamlined Pipeline Module ready!');
-            
-        } catch (error) {
-            console.error('❌ Pipeline Module failed to initialize:', error);
-            this.renderError('Failed to load pipeline. Please refresh and try again.');
-        } finally {
-            this.isLoading = false;
-        }
-    },
+        // Just clear filters - no analytics nonsense
+        this.clearFilters();
+        
+        console.log('✅ Streamlined Pipeline Module ready!');
+        
+    } catch (error) {
+        console.error('❌ Pipeline Module failed to initialize:', error);
+        this.renderError('Failed to load pipeline. Please refresh and try again.');
+    } finally {
+        this.isLoading = false;
+    }
+},
 
     // 📊 Load Monthly Stats
     async loadMonthlyStats() {
@@ -148,17 +149,31 @@ window.PipelineModule = {
         }
     },
 
-    // 🗂️ Organize Leads by Status with Smart Filtering
     organizeLeads() {
+    // Add this guard at the top
+    if (this._organizingInProgress) return;
+    this._organizingInProgress = true;
+    
+    try {
+        // Initialize empty arrays for each stage FIRST
         this.filteredLeads = {};
-        
-        // Initialize empty arrays for each stage
         this.stages.forEach(stage => {
             this.filteredLeads[stage.id] = [];
         });
 
+        // Only proceed if we have leads
+        if (!this.leads || !Array.isArray(this.leads)) {
+            console.warn('No leads to organize');
+            return; // This is now safe because of the finally block
+        }
+
         // Sort leads into stages with validation
         this.leads.forEach(lead => {
+            if (!lead || typeof lead !== 'object') {
+                console.warn('Invalid lead object:', lead);
+                return;
+            }
+            
             const status = lead.status || 'new';
             const validStatus = this.stages.find(stage => stage.id === status);
             const finalStatus = validStatus ? status : 'new';
@@ -174,12 +189,21 @@ window.PipelineModule = {
         // Apply filters
         this.applyFilters();
         
-        console.log('🗂️ Streamlined pipeline organization:');
-        this.stages.forEach(stage => {
-            const count = this.filteredLeads[stage.id]?.length || 0;
-            console.log(`   ${stage.icon} ${stage.name}: ${count} leads`);
-        });
-    },
+        // Only log if we want to see organization results (add this flag)
+        if (this._shouldLogOrganization) {
+            console.log('🗂️ Streamlined pipeline organization:');
+            this.stages.forEach(stage => {
+                const count = this.filteredLeads[stage.id]?.length || 0;
+                console.log(`   ${stage.icon} ${stage.name}: ${count} leads`);
+            });
+            this._shouldLogOrganization = false; // Reset flag
+        }
+        
+    } finally {
+        // Always reset the flag, even if an error occurs
+        this._organizingInProgress = false;
+    }
+},
 
     // 🔍 Apply Current Filters
     applyFilters() {
@@ -222,9 +246,10 @@ window.PipelineModule = {
 
     // 🎨 Render Streamlined Pipeline Interface
     render() {
-        const mainContent = document.getElementById('mainContent');
-        
-        mainContent.innerHTML = `
+        const container = document.getElementById(this.targetContainer); 
+        if (!container) return;    
+        container.innerHTML = `
+        <div class="addlead-container fade-in"> 
             <div class="streamlined-pipeline-container fade-in">
                 <!-- 🎯 STREAMLINED HEADER -->
                 <div class="pipeline-header-streamlined">
@@ -264,14 +289,13 @@ window.PipelineModule = {
     { value: 'cold', label: 'Cold Leads', icon: '❄️' },
     { value: 'hot', label: 'Hot Leads', icon: '🔥' }
 ], this.filters.type)}
-                            
-                            ${this.renderCustomDropdown('scoreFilter', 'All Scores', [
-                                { value: 'all', label: 'All Scores', icon: '⭐' },
-                                { value: 'high', label: 'High (8-10)', icon: '🌟' },
-                                { value: 'medium', label: 'Medium (5-7)', icon: '⚡' },
-                                { value: 'low', label: 'Low (1-4)', icon: '📈' }
-                            ], this.filters.score)}
-                            
+
+${this.renderCustomDropdown('scoreFilter', 'All Scores', [
+    { value: 'all', label: 'All Scores', icon: '⭐' },
+    { value: 'high', label: 'High (8-10)', icon: '🌟' },
+    { value: 'medium', label: 'Medium (5-7)', icon: '⚡' },
+    { value: 'low', label: 'Low (1-4)', icon: '📈' }
+], this.filters.score)}
                             <button class="clear-filters-btn" id="clearFilters">
                                 <span class="btn-icon">🔄</span>
                                 <span class="btn-text">Reset</span>
@@ -337,7 +361,7 @@ window.PipelineModule = {
 
             <!-- 📱 MOBILE PIPELINE SELECTOR -->
             <div id="pipelineSelectorModal" class="pipeline-selector-modal">
-                <div class="selector-backdrop"></div>
+                <div class="selector-backdrop" onclick="PipelineModule.closePipelineSelector()"></div>
                 <div class="selector-content">
                     <div class="selector-header">
                         <h3 class="selector-title">Move Lead</h3>
@@ -355,6 +379,12 @@ window.PipelineModule = {
         // Initialize animations after render
         this.initializeAnimations();
         this.setupCustomDropdowns();
+
+        // 🔥 ADD THIS - FORCE REFRESH DRAG & DROP ON EVERY RENDER
+    setTimeout(() => {
+        this.dragAndDropInitialized = false;
+        this.setupDragAndDrop();
+    }, 100);
     },
 
     // 📊 Render Monthly Progress Bar
@@ -398,28 +428,21 @@ window.PipelineModule = {
 
     // 🎨 Render Custom Dropdown
     renderCustomDropdown(id, placeholder, options, selectedValue) {
-        const selected = options.find(opt => opt.value === selectedValue) || options[0];
-        
-        return `
-            <div class="custom-dropdown" data-dropdown="${id}">
-                <button class="dropdown-trigger" type="button">
-                    <span class="dropdown-icon">${selected.icon}</span>
-                    <span class="dropdown-text">${selected.label}</span>
-                    <span class="dropdown-arrow">▼</span>
-                </button>
-                <div class="dropdown-menu">
-                    ${options.map(option => `
-                        <div class="dropdown-option ${option.value === selectedValue ? 'selected' : ''}" 
-                             data-value="${option.value}">
-                            <span class="option-icon">${option.icon}</span>
-                            <span class="option-text">${option.label}</span>
-                            ${option.value === selectedValue ? '<span class="option-check">✓</span>' : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    },
+    const selected = options.find(opt => opt.value === selectedValue) || options[0];
+    
+    return `
+        <div class="simple-dropdown-wrapper">
+            <select class="simple-dropdown" id="${id}" data-dropdown="${id}">
+                ${options.map(option => `
+                    <option value="${option.value}" ${option.value === selectedValue ? 'selected' : ''}>
+                        ${option.icon} ${option.label}
+                    </option>
+                `).join('')}
+            </select>
+            <div class="dropdown-arrow">▼</div>
+        </div>
+    `;
+},
 
     renderEditDropdown(id, placeholder, options, selectedValue) {
     const selected = options.find(opt => opt.value === selectedValue);
@@ -495,7 +518,6 @@ window.PipelineModule = {
                     <div class="leads-container" data-leads-container="${stage.id}">
                         ${this.renderLeadsOrEmpty(stageLeads, stage)}
                     </div>
-                    ${leadCount > 6 ? '<div class="scroll-indicator">⬇️ Scroll for more</div>' : ''}
                 </div>
             </div>
         `;
@@ -507,7 +529,6 @@ window.PipelineModule = {
         return leads.map(lead => {
             const typeIcon = this.getTypeIcon(lead.type);
             const scoreColor = this.getScoreColor(lead.qualityScore || 5);
-            const followUpStatus = this.getFollowUpStatus(lead.follow_up_date);
             const hasDealValue = lead.potential_value && lead.potential_value > 0;
             const canHaveDealValue = true;
             const sourceIcon = this.getSourceIcon(lead.platform);
@@ -545,7 +566,7 @@ window.PipelineModule = {
                         
                         ${lead.notes ? `
                             <div class="lead-notes">
-                                ${this.truncate(lead.notes, 80)}
+                                ${this.truncate(lead.notes, 27)}
                             </div>
                         ` : ''}
                         
@@ -590,34 +611,22 @@ ${lead.status === 'lost' ? `
 ` : ''}
                     </div>
                     
-                    <!-- Card Footer -->
-                    <div class="card-footer">
-                        <div class="card-date">
-                            ${this.formatDate(lead.created_at, 'short')}
-                        </div>
-                        ${followUpStatus.hasFollowUp ? `
-                            <div class="follow-up-badge ${followUpStatus.status}">
-                                <span class="follow-icon">📅</span>
-                                <span class="follow-text">${followUpStatus.text}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Card Actions with Pipeline Selector -->
-                    <div class="card-actions">
-                        <button class="action-btn edit" onclick="PipelineModule.editLead('${lead.id}')" title="Edit Lead">
-                            <span class="action-icon">✏️</span>
-                        </button>
-                        <button class="action-btn call" onclick="PipelineModule.quickCall('${lead.id}')" title="Call">
-                            <span class="action-icon">📞</span>
-                        </button>
-                        <button class="action-btn email" onclick="PipelineModule.quickEmail('${lead.id}')" title="Email">
-                            <span class="action-icon">📧</span>
-                        </button>
-                        <button class="action-btn move" onclick="PipelineModule.showPipelineSelector('${lead.id}')" title="Move to Stage">
-                            <span class="action-icon">➡️</span>
-                        </button>
-                    </div>
+                    <!-- Card Footer with Simple Controls -->
+<div class="card-footer-enhanced">
+    <div class="card-date">
+        ${this.formatDate(lead.created_at, 'short')}
+    </div>
+    <div class="engraved-controls">
+        <button class="engraved-btn edit-btn" onclick="PipelineModule.editLead('${lead.id}')" title="Edit Lead">
+            <span>✏️</span>
+            <span>Edit</span>
+        </button>
+        <button class="engraved-btn move-btn" onclick="PipelineModule.showPipelineSelector('${lead.id}')" title="Move Stage">
+            <span>➡️</span>
+            <span>Move</span>
+        </button>
+    </div>
+</div>
                 </div>
             `;
         }).join('');
@@ -656,62 +665,56 @@ ${lead.status === 'lost' ? `
     return this.renderLeads(leads, stage);
 },
 
-    // 📊 Render Streamlined Analytics (Focused on Key Metrics)
     renderStreamlinedAnalytics() {
-        const conversionRate = this.calculateConversionRate();
-        const topLossReasons = this.getTopLossReasons();
-        const outcomeValue = this.calculateOutcomeValue();
+    // Calculate fresh data every time this is called
+    const conversionRate = this.calculateConversionRate();
+    const topLossReasons = this.getTopLossReasons();
+    const outcomeValue = this.calculateOutcomeValue();
+    
+    return `
+        <div class="analytics-header">
+            <div class="analytics-title-group">
+                <h2 class="analytics-title">📊 Key Insights</h2>
+                <p class="analytics-subtitle">Track your pipeline performance</p>
+            </div>
+        </div>
         
-        return `
-            <div class="analytics-header">
-                <div class="analytics-title-group">
-                    <h2 class="analytics-title">📊 Key Insights</h2>
-                    <p class="analytics-subtitle">Track your pipeline performance</p>
+        <div class="analytics-grid">
+            <div class="analytics-card primary">
+                <div class="card-header-analytics">
+                    <div class="card-icon-analytics">📈</div>
+                    <div class="card-title-analytics">Conversion Rate</div>
                 </div>
-                <div class="analytics-actions">
-                    <button class="analytics-btn" onclick="PipelineModule.exportAnalytics()">
-                        <span class="btn-icon">📤</span>
-                        <span class="btn-text">Export</span>
-                    </button>
+                <div class="card-content-analytics">
+                    <div class="primary-metric">${conversionRate}%</div>
+                    <div class="metric-detail">Closed vs Lost</div>
                 </div>
             </div>
             
-            <div class="analytics-grid">
-                <div class="analytics-card primary">
-                    <div class="card-header-analytics">
-                        <div class="card-icon-analytics">📈</div>
-                        <div class="card-title-analytics">Conversion Rate</div>
-                    </div>
-                    <div class="card-content-analytics">
-                        <div class="primary-metric">${conversionRate}%</div>
-                        <div class="metric-detail">Qualified → Closed</div>
-                    </div>
+            <div class="analytics-card success">
+                <div class="card-header-analytics">
+                    <div class="card-icon-analytics">🎯</div>
+                    <div class="card-title-analytics">Total Outcome Value</div>
                 </div>
-                
-                <div class="analytics-card success">
-                    <div class="card-header-analytics">
-                        <div class="card-icon-analytics">🎯</div>
-                        <div class="card-title-analytics">Total Outcome Value</div>
-                    </div>
-                    <div class="card-content-analytics">
-                        <div class="primary-metric">$${Math.round(outcomeValue).toLocaleString()}</div>
-                        <div class="metric-detail">Negotiation + Closed + Lost</div>
-                    </div>
-                </div>
-                
-                <div class="analytics-card danger">
-                    <div class="card-header-analytics">
-                        <div class="card-icon-analytics">❌</div>
-                        <div class="card-title-analytics">Top Loss Reason</div>
-                    </div>
-                    <div class="card-content-analytics">
-                        <div class="primary-metric">${topLossReasons[0]?.reason || 'N/A'}</div>
-                        <div class="metric-detail">${topLossReasons[0]?.count || 0} deals affected</div>
-                    </div>
+                <div class="card-content-analytics">
+                    <div class="primary-metric">$${Math.round(outcomeValue).toLocaleString()}</div>
+                    <div class="metric-detail">Negotiation + Closed + Lost</div>
                 </div>
             </div>
-        `;
-    },
+            
+            <div class="analytics-card danger">
+                <div class="card-header-analytics">
+                    <div class="card-icon-analytics">❌</div>
+                    <div class="card-title-analytics">Top Loss Reason</div>
+                </div>
+                <div class="card-content-analytics">
+                    <div class="primary-metric">${topLossReasons[0]?.reason || 'N/A'}</div>
+                    <div class="metric-detail">${topLossReasons[0]?.count || 0} deals affected</div>
+                </div>
+            </div>
+        </div>
+    `;
+},
 
     // Update the showPipelineSelector function
 showPipelineSelector(leadId) {
@@ -1521,6 +1524,7 @@ showPipelineSelector(leadId) {
                     overflow-y: auto;
                     max-height: 600px;
                 }
+                    
 
                 /* 📋 LEAD CARDS */
                 .leads-container {
@@ -1549,13 +1553,69 @@ showPipelineSelector(leadId) {
 
                 .lead-card.dragging {
                     opacity: 0.8;
-                    transform: rotate(2deg) scale(1.02);
+                    transform: rotate(2deg) scale(1.0);
                     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
                     cursor: grabbing;
                     z-index: 1000;
                 }
 
-                /* 🎯 UNIVERSAL CLICK-TO-ACTIVATE SYSTEM */
+                /* 🎯 SIMPLIFIED DROPDOWN STYLES */
+.simple-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.simple-dropdown {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 3rem 1rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 140px;
+    font-family: inherit;
+}
+
+.simple-dropdown:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.simple-dropdown:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dropdown-arrow {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    pointer-events: none;
+    transition: transform 0.2s ease;
+}
+
+.simple-dropdown:focus + .dropdown-arrow {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* 📱 Mobile optimizations */
+@media (max-width: 768px) {
+    .simple-dropdown {
+        padding: 1.1rem 3rem 1.1rem 1.25rem;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
 
 /* Enhanced activated state - stronger glow for all devices */
 .lead-card.card-activated {
@@ -1680,7 +1740,7 @@ showPipelineSelector(leadId) {
 }
 
 .lead-card[data-lead-status="closed"] {
-    border: 2px solidrgb(0, 255, 21); /* green */
+    border: 2px solid rgb(0, 255, 21); /* green - ADDED SPACE! */
 }
 
 .lead-card[data-lead-status="lost"] {
@@ -1841,6 +1901,23 @@ showPipelineSelector(leadId) {
                     opacity: 1;
                 }
 
+
+/* 🔥 MOBILE: ALWAYS SHOW EDIT BUTTONS */
+@media (max-width: 768px) {
+    .value-edit-btn {
+        opacity: 1 !important; /* Always visible on mobile */
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 6px;
+        padding: 0.4rem;
+    }
+    
+    .value-edit-btn:active {
+        background: rgba(16, 185, 129, 0.2);
+        transform: scale(0.95);
+    }
+}
+
                 .value-edit-btn:hover {
                     background: rgba(16, 185, 129, 0.2);
                     transform: scale(1.1);
@@ -1919,6 +1996,22 @@ showPipelineSelector(leadId) {
                     opacity: 1;
                 }
 
+                /* 🔥 MOBILE: ALWAYS SHOW EDIT BUTTONS */
+@media (max-width: 768px) {
+    .loss-edit-btn {
+        opacity: 1 !important; /* Always visible on mobile */
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 6px;
+        padding: 0.4rem;
+    }
+    
+    .loss-edit-btn:active {
+        background: rgba(239, 68, 68, 0.2);
+        transform: scale(0.95);
+    }
+}
+
                 .loss-edit-btn:hover {
                     background: rgba(239, 68, 68, 0.2);
                     transform: scale(1.1);
@@ -1948,105 +2041,74 @@ showPipelineSelector(leadId) {
                     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
                 }
 
-                .card-footer {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding-top: 0.75rem;
-                    border-top: 1px solid var(--border);
-                    font-size: 0.75rem;
-                }
+                /* 🎯 SIMPLE SLEEK CARD FOOTER CONTROLS */
+.card-footer-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 0 0;
+    border-top: 1px solid var(--border);
+    margin-top: 0.75rem;
+}
 
-                .card-date {
-                    color: var(--text-tertiary);
-                    font-weight: 500;
-                }
+.card-date {
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-size: 0.75rem;
+}
 
-                .follow-up-badge {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.25rem;
-                    padding: 0.25rem 0.5rem;
-                    border-radius: var(--radius);
-                    font-weight: 600;
-                    font-size: 0.7rem;
-                }
+.engraved-controls {
+    display: flex;
+    gap: 0.75rem;
+}
 
-                .follow-up-badge.overdue {
-                    background: rgba(239, 68, 68, 0.1);
-                    color: var(--danger);
-                }
+.engraved-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--background);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
 
-                .follow-up-badge.today {
-                    background: rgba(245, 158, 11, 0.1);
-                    color: var(--warning);
-                }
+.engraved-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+    transform: translateY(-1px);
+}
 
-                .follow-up-badge.upcoming {
-                    background: rgba(16, 185, 129, 0.1);
-                    color: var(--success);
-                }
+.edit-btn:hover {
+    border-color: var(--warning);
+    color: var(--warning);
+    background: rgba(245, 158, 11, 0.05);
+}
 
-                /* ⚡ ENHANCED CARD ACTIONS */
-                .card-actions {
-                    position: absolute;
-                    top: 1rem;
-                    right: 1rem;
-                    display: flex;
-                    gap: 0.25rem;
-                    opacity: 0;
-                    transition: var(--pipeline-transition);
-                }
+/* 📱 Mobile Optimizations */
+@media (max-width: 768px) {
+    .engraved-btn {
+        padding: 0.625rem 0.875rem;
+        font-size: 0.8rem;
+    }
+    
+    .engraved-controls {
+        gap: 0.5rem;
+    }
+}
 
-                .lead-card:hover .card-actions {
-                    opacity: 1;
-                }
-
-                .action-btn {
-                    width: 2rem;
-                    height: 2rem;
-                    border: none;
-                    border-radius: var(--radius);
-                    background: rgba(255, 255, 255, 0.95);
-                    backdrop-filter: blur(10px);
-                    cursor: pointer;
-                    transition: var(--pipeline-transition);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 0.8rem;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                    border: 1px solid var(--border);
-                }
-
-                .action-btn:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                }
-
-                .action-btn.edit:hover {
-                    background: var(--warning);
-                    color: white;
-                    border-color: var(--warning);
-                }
-
-                .action-btn.call:hover {
-                    background: var(--success);
-                    color: white;
-                    border-color: var(--success);
-                }
-
-                .action-btn.email:hover {
-                    background: var(--info);
-                    color: white;
-                    border-color: var(--info);
-                }
-
-                .action-btn.move:hover {
-                    background: var(--primary);
-                    color: white;
-                    border-color: var(--primary);
-                }
+/* 🧹 Clean Removal of Old Styles */
+.card-actions,
+.action-btn {
+    display: none !important;
+}
 
                 /* 📱 MOBILE PIPELINE SELECTOR */
                 .pipeline-selector-modal {
@@ -2082,7 +2144,7 @@ showPipelineSelector(leadId) {
 
                 .selector-content {
     background: var(--surface);
-    border-radius: var(--radius-xl);
+    border-radius: 24px;
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
     width: 100%;
     max-width: 500px;
@@ -2382,7 +2444,7 @@ showPipelineSelector(leadId) {
 
                 .edit-modal-content {
                     background: var(--surface);
-                    border-radius: var(--radius-xl);
+                    border-radius: 24px;
                     box-shadow: var(--shadow-2xl);
                     width: 100%;
                     max-width: 600px;
@@ -2772,29 +2834,26 @@ showPipelineSelector(leadId) {
     },
 
     calculateOutcomeValue() {
-    const outcomeStages = ['negotiation', 'closed', 'lost'];
-    let total = 0;
-    
-    outcomeStages.forEach(stage => {
-        const stageLeads = this.filteredLeads[stage] || [];
-        total += stageLeads.reduce((stageTotal, lead) => {
-            let value = lead.potential_value;
-            
-            // Same safe conversion
-            if (value === null || value === undefined || value === '') {
-                value = 0;
-            } else {
-                value = Number(value);
-                if (isNaN(value)) {
-                    value = 0;
-                }
+    try {
+        if (!this.leads || !Array.isArray(this.leads)) {
+            return 0;
+        }
+        
+        const outcomeStages = ['qualified', 'closed', 'lost'];
+        let total = 0;
+        
+        this.leads.forEach(lead => {
+            if (outcomeStages.includes(lead.status)) {
+                const value = Number(lead.potential_value) || 0;
+                total += value;
             }
-            
-            return stageTotal + value;
-        }, 0);
-    });
-    
-    return total;
+        });
+        
+        return total;
+    } catch (error) {
+        console.error('Error calculating outcome value:', error);
+        return 0;
+    }
 },
 
     calculateStageValue(stageId) {
@@ -2808,123 +2867,78 @@ showPipelineSelector(leadId) {
 },
 
     getActiveLeadsCount() {
-        const activeStages = ['new', 'contacted', 'qualified'];
+        const activeStages = ['new', 'contacted', 'negotiation'];
         return activeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
     },
 
     getOutcomeLeadsCount() {
-        const outcomeStages = ['negotiation', 'closed', 'lost'];
+        const outcomeStages = ['qualified', 'closed', 'lost'];
         return outcomeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
     },
 
-getFilteredActiveLeadsCount() {
-    const activeStages = ['new', 'contacted', 'qualified'];
-    return activeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
-},
-
-getFilteredOutcomeLeadsCount() {
-    const outcomeStages = ['negotiation', 'closed', 'lost'];
-    return outcomeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
-},
-
-calculateFilteredOutcomeValue() {
-    const outcomeStages = ['negotiation', 'closed', 'lost'];
-    let total = 0;
-    
-    outcomeStages.forEach(stage => {
-        const stageLeads = this.filteredLeads[stage] || [];
-        total += stageLeads.reduce((stageTotal, lead) => {
-            let value = lead.potential_value;
-            if (value === null || value === undefined || value === '') {
-                value = 0;
-            } else {
-                value = Number(value);
-                if (isNaN(value)) {
-                    value = 0;
-                }
-            }
-            return stageTotal + value;
-        }, 0);
-    });
-    
-    return total;
-},
-
     calculateConversionRate() {
-        const qualifiedLeads = this.leads.filter(l => ['qualified', 'negotiation', 'closed', 'lost'].includes(l.status)).length;
-        const wonLeads = this.filteredLeads['closed']?.length || 0;
+    try {
+        if (!this.leads || !Array.isArray(this.leads) || this.leads.length === 0) {
+            return 0;
+        }
         
-        return qualifiedLeads > 0 ? Math.round((wonLeads / qualifiedLeads) * 100) : 0;
-    },
+        // Get closed won and lost leads
+        const closedWonLeads = this.leads.filter(l => l.status === 'closed').length;
+        const lostLeads = this.leads.filter(l => l.status === 'lost').length;
+        
+        // Calculate total outcome deals (closed + lost)
+        const totalOutcomeDeals = closedWonLeads + lostLeads;
+        
+        // Return win rate as percentage of outcome deals
+        return totalOutcomeDeals > 0 ? Math.round((closedWonLeads / totalOutcomeDeals) * 100) : 0;
+    } catch (error) {
+        console.error('Error calculating conversion rate:', error);
+        return 0;
+    }
+},
 
     getTopLossReasons() {
-    // Use filteredLeads instead of all leads
-    const lostLeads = this.filteredLeads['lost'] || [];
-    const reasonCounts = {};
-    
-    lostLeads.forEach(lead => {
-        if (lead.lost_reason) {
-            const reason = lead.lost_reason;
-            reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    try {
+        if (!this.leads || !Array.isArray(this.leads)) {
+            return [];
         }
-    });
-    
-    return Object.entries(reasonCounts)
-        .sort(([,a], [,b]) => b - a)
-        .map(([reason, count]) => ({ reason, count }));
-},
-
-    // Setup custom dropdowns
-    setupCustomDropdowns() {
-        document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
-            const trigger = dropdown.querySelector('.dropdown-trigger');
-            const menu = dropdown.querySelector('.dropdown-menu');
-            const options = dropdown.querySelectorAll('.dropdown-option');
-            
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // Close other dropdowns
-                document.querySelectorAll('.custom-dropdown.open').forEach(dd => {
-                    if (dd !== dropdown) dd.classList.remove('open');
-                });
-                dropdown.classList.toggle('open');
-            });
-            
-            options.forEach(option => {
-                option.addEventListener('click', () => {
-                    const value = option.dataset.value;
-                    const dropdownId = dropdown.dataset.dropdown;
-                    
-                    // Update selection
-                    options.forEach(opt => opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                    
-                    // Update trigger text
-                    const icon = option.querySelector('.option-icon').textContent;
-                    const text = option.querySelector('.option-text').textContent;
-                    trigger.querySelector('.dropdown-icon').textContent = icon;
-                    trigger.querySelector('.dropdown-text').textContent = text;
-                    
-                    // Update filter and close dropdown
-                    if (dropdownId === 'typeFilter') {
-                        this.filters.type = value;
-                    } else if (dropdownId === 'scoreFilter') {
-                        this.filters.score = value;
-                    }
-                    
-                    dropdown.classList.remove('open');
-                    this.applyFiltersAndRerender();
-                });
-            });
+        
+        const lostLeads = this.leads.filter(l => l.status === 'lost');
+        const reasonCounts = {};
+        
+        lostLeads.forEach(lead => {
+            if (lead.lost_reason) {
+                const reason = lead.lost_reason;
+                reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+            }
         });
         
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.custom-dropdown.open').forEach(dropdown => {
-                dropdown.classList.remove('open');
-            });
+        return Object.entries(reasonCounts)
+            .sort(([,a], [,b]) => b - a)
+            .map(([reason, count]) => ({ reason, count }));
+    } catch (error) {
+        console.error('Error getting loss reasons:', error);
+        return [];
+    }
+},
+
+    setupCustomDropdowns() {
+    document.querySelectorAll('.simple-dropdown').forEach(select => {
+        select.addEventListener('change', (e) => {
+            const value = e.target.value;
+            const dropdownId = e.target.dataset.dropdown;
+            
+            // Update filter based on dropdown ID
+            if (dropdownId === 'typeFilter') {
+                this.filters.type = value;
+            } else if (dropdownId === 'scoreFilter') {
+                this.filters.score = value;
+            }
+            
+            this.applyFiltersAndRerender();
         });
-    },
+    });
+},
 
     // Continue with other essential methods...
     renderEmptyState(stage) {
@@ -2953,12 +2967,12 @@ calculateFilteredOutcomeValue() {
         }
     },
 
-    // 💰 FIRE Add Deal Value Function
+    // 💰 ENHANCED Add Deal Value Function with Better Error Handling
 async addDealValue(leadId) {
     const lead = this.leads.find(l => l.id.toString() === leadId.toString());
     if (!lead) return;
     
-    // Create fire popup
+    // Create enhanced popup with better validation
     const popup = document.createElement('div');
     popup.className = 'cool-popup-overlay';
     popup.innerHTML = `
@@ -2984,23 +2998,32 @@ async addDealValue(leadId) {
                                id="dealValueInput" 
                                class="value-input" 
                                placeholder="Enter amount"
-                               min="0" 
+                               min="1" 
+                               max="999999999"
                                step="1"
                                autofocus>
                     </div>
+                    <!-- Error message container -->
+                    <div class="error-message" id="errorMessage" style="display: none;"></div>
                 </div>
                 
                 <div class="quick-amounts">
-                    ${[250, 500, 750, 1000].map(amount => `
-                        <button class="quick-btn" onclick="document.getElementById('dealValueInput').value='${amount}'; document.getElementById('dealValueInput').focus();">
-                            $${amount}
+                    ${[250, 500, 750, 1000, 2500, 5000].map(amount => `
+                        <button class="quick-btn" onclick="PipelineModule.setDealValue('${amount}')">
+                            $${amount.toLocaleString()}
                         </button>
                     `).join('')}
                 </div>
                 
-                <div class="pro-tip">
-                    <span class="tip-icon">💡</span>
-                    <span class="tip-text">Set realistic revenue potential to track pipeline value</span>
+                <div class="input-hints">
+                    <div class="hint-item">
+                        <span class="hint-icon">💡</span>
+                        <span class="hint-text">Enter a value between $1 and $999,999,999</span>
+                    </div>
+                    <div class="hint-item">
+                        <span class="hint-icon">📊</span>
+                        <span class="hint-text">This helps track your pipeline's total value</span>
+                    </div>
                 </div>
             </div>
             
@@ -3036,7 +3059,7 @@ async addDealValue(leadId) {
                 border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
                 width: 100%;
-                max-width: 400px;
+                max-width: 450px;
                 animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
                 border: 1px solid var(--border, #e5e7eb);
                 overflow: hidden;
@@ -3129,6 +3152,7 @@ async addDealValue(leadId) {
                 position: relative;
                 display: flex;
                 align-items: center;
+                margin-bottom: 0.5rem;
             }
             
             .currency-symbol {
@@ -3162,24 +3186,47 @@ async addDealValue(leadId) {
                 transform: translateY(-1px);
             }
             
-            .quick-amounts {
+            .value-input.error {
+                border-color: var(--danger, #ef4444);
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+            }
+            
+            .error-message {
                 display: flex;
+                align-items: center;
                 gap: 0.5rem;
-                flex-wrap: wrap;
-                justify-content: center;
+                padding: 0.75rem 1rem;
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                border-radius: 8px;
+                color: var(--danger, #ef4444);
+                font-size: 0.85rem;
+                font-weight: 600;
+                animation: slideDown 0.3s ease;
+            }
+            
+            .error-message::before {
+                content: '⚠️';
+                font-size: 1rem;
+            }
+            
+            .quick-amounts {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
             }
             
             .quick-btn {
-                padding: 0.5rem 1rem;
+                padding: 0.75rem 1rem;
                 background: var(--background, #ffffff);
                 border: 2px solid var(--border, #e5e7eb);
                 border-radius: 8px;
                 color: var(--text-secondary, #6b7280);
                 cursor: pointer;
                 font-weight: 600;
-                font-size: 0.85rem;
+                font-size: 0.8rem;
                 transition: all 0.2s ease;
-                min-width: 60px;
+                text-align: center;
             }
             
             .quick-btn:hover {
@@ -3189,23 +3236,29 @@ async addDealValue(leadId) {
                 transform: translateY(-1px);
             }
             
-            .pro-tip {
+            .input-hints {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .hint-item {
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-                padding: 0.75rem 1rem;
+                padding: 0.5rem 0.75rem;
                 background: var(--surface-hover, #f8fafc);
-                border-radius: 8px;
+                border-radius: 6px;
                 border: 1px solid var(--border, #e5e7eb);
             }
             
-            .tip-icon {
-                font-size: 1rem;
+            .hint-icon {
+                font-size: 0.9rem;
                 flex-shrink: 0;
             }
             
-            .tip-text {
-                font-size: 0.8rem;
+            .hint-text {
+                font-size: 0.75rem;
                 color: var(--text-secondary, #6b7280);
                 font-weight: 500;
             }
@@ -3259,6 +3312,8 @@ async addDealValue(leadId) {
                 opacity: 0.6;
                 cursor: not-allowed;
                 transform: none;
+                background: #9ca3af;
+                box-shadow: none;
             }
             
             @keyframes fadeIn {
@@ -3271,6 +3326,17 @@ async addDealValue(leadId) {
                 to { opacity: 1; transform: scale(1) translateY(0); }
             }
             
+            @keyframes slideDown {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
             @media (max-width: 480px) {
                 .cool-popup {
                     margin: 0;
@@ -3279,13 +3345,13 @@ async addDealValue(leadId) {
                 }
                 
                 .quick-amounts {
+                    grid-template-columns: repeat(2, 1fr);
                     gap: 0.4rem;
                 }
                 
                 .quick-btn {
-                    min-width: 50px;
-                    padding: 0.4rem 0.8rem;
-                    font-size: 0.8rem;
+                    padding: 0.6rem 0.8rem;
+                    font-size: 0.75rem;
                 }
                 
                 .popup-actions {
@@ -3297,22 +3363,83 @@ async addDealValue(leadId) {
     
     // Add to document
     document.body.appendChild(popup);
+    popup.addEventListener('click', (e) => {
+    if (e.target === popup) {
+        popup.remove();
+    }
+});
+    
+    // Enhanced validation and error handling
+    const input = document.getElementById('dealValueInput');
+    const errorMessage = document.getElementById('errorMessage');
+    const saveBtn = popup.querySelector('#saveBtn');
+    
+    // Helper function to show error
+    const showError = (message) => {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'flex';
+        input.classList.add('error');
+        saveBtn.disabled = true;
+    };
+    
+    // Helper function to clear error
+    const clearError = () => {
+        errorMessage.style.display = 'none';
+        input.classList.remove('error');
+        saveBtn.disabled = false;
+    };
+    
+    // Real-time validation
+    input.addEventListener('input', (e) => {
+        const value = e.target.value.trim();
+        
+        // Clear previous errors
+        clearError();
+        
+        if (value === '') {
+            saveBtn.disabled = true;
+            return;
+        }
+        
+        const numericValue = parseFloat(value);
+        
+        // Validation checks
+        if (isNaN(numericValue)) {
+            showError('Please enter a valid number');
+            return;
+        }
+        
+        if (numericValue <= 0) {
+            showError('Deal value must be greater than $0');
+            return;
+        }
+        
+        if (numericValue > 999999999) {
+            showError('Deal value cannot exceed $999,999,999');
+            return;
+        }
+        
+        if (value.includes('.') && value.split('.')[1].length > 2) {
+            showError('Please enter cents in format: 123.45');
+            return;
+        }
+        
+        // Value is valid
+        saveBtn.disabled = false;
+    });
     
     // Focus the input
     setTimeout(() => {
-        const input = document.getElementById('dealValueInput');
         input?.focus();
     }, 100);
     
     // Handle save button
-    const saveBtn = popup.querySelector('#saveBtn');
     saveBtn.addEventListener('click', async () => {
-        const input = document.getElementById('dealValueInput');
-        const newValue = input.value.trim();
-        const numericValue = parseFloat(newValue) || 0;
+        const value = input.value.trim();
+        const numericValue = parseFloat(value);
         
-        if (numericValue <= 0) {
-            // Shake the input for invalid value
+        // Final validation before saving
+        if (!value || isNaN(numericValue) || numericValue <= 0 || numericValue > 999999999) {
             input.style.animation = 'shake 0.5s ease-in-out';
             setTimeout(() => input.style.animation = '', 500);
             return;
@@ -3337,13 +3464,22 @@ async addDealValue(leadId) {
             
             // Show success message
             this.showNotification(
-                `🔥 Deal value added: $${numericValue.toLocaleString()}`, 
+                `💰 Deal value added: $${numericValue.toLocaleString()}`, 
                 'success'
             );
             
         } catch (error) {
             console.error('❌ Failed to add deal value:', error);
-            this.showNotification('❌ Failed to add deal value. Please try again.', 'error');
+            
+            // Show specific error messages
+            let errorMsg = 'Failed to add deal value. Please try again.';
+            if (error.message?.includes('network')) {
+                errorMsg = 'Network error. Check your connection and try again.';
+            } else if (error.message?.includes('auth')) {
+                errorMsg = 'Session expired. Please refresh and try again.';
+            }
+            
+            this.showNotification(`❌ ${errorMsg}`, 'error');
             
             // Re-enable button
             saveBtn.disabled = false;
@@ -3359,17 +3495,17 @@ async addDealValue(leadId) {
             popup.remove();
         }
     });
-    
-    // Add shake animation for invalid input
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-    `;
-    document.head.appendChild(style);
+},
+
+// Helper function to set deal value from quick buttons
+setDealValue(amount) {
+    const input = document.getElementById('dealValueInput');
+    if (input) {
+        input.value = amount;
+        input.focus();
+        // Trigger input event for validation
+        input.dispatchEvent(new Event('input'));
+    }
 },
 
 // ❌ FIRE Add Loss Reason Function
@@ -3560,30 +3696,63 @@ async addLossReason(leadId) {
             }
             
             .reason-select {
-                width: 100%;
-                padding: 1rem 1.25rem;
-                border: 2px solid var(--border, #e5e7eb);
-                border-radius: 12px;
-                font-size: 0.95rem;
-                background: var(--background, #ffffff);
-                color: var(--text-primary, #111827);
-                transition: all 0.2s ease;
-                font-family: inherit;
-                cursor: pointer;
-            }
-            
-            .reason-select:focus {
-                outline: none;
-                border-color: var(--danger, #ef4444);
-                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-                transform: translateY(-1px);
-            }
-            
-            .reason-select option {
-                padding: 0.5rem;
-                background: var(--background, #ffffff);
-                color: var(--text-primary, #111827);
-            }
+    /* 🔥 ENHANCED APPEARANCE */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    width: 100%;
+    padding: 1rem 3rem 1rem 1.25rem; /* Extra right padding for custom arrow */
+    border: 2px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    
+    /* 🎨 COOL GRADIENT BACKGROUND */
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.02) 100%);
+    
+    color: var(--text-primary, #111827);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    cursor: pointer;
+    font-weight: 500;
+    
+    /* ✨ ENHANCED SHADOW */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    
+    /* 🎯 CUSTOM ARROW */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ef4444' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+}
+
+/* 🌟 ENHANCED HOVER */
+.reason-select:hover {
+    border-color: var(--danger, #ef4444);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(239, 68, 68, 0.15),
+        0 0 20px rgba(239, 68, 68, 0.1);
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.05) 100%);
+}
+
+/* 🔥 ENHANCED FOCUS */
+.reason-select:focus {
+    outline: none;
+    border-color: var(--danger, #ef4444);
+    box-shadow: 
+        0 0 0 3px rgba(239, 68, 68, 0.2),
+        0 12px 35px rgba(239, 68, 68, 0.2);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.08) 100%);
+}
+
+/* Keep your existing option styles */
+.reason-select option {
+    padding: 0.5rem;
+    background: var(--background, #ffffff);
+    color: var(--text-primary, #111827);
+}
             
             .notes-group {
                 display: flex;
@@ -3727,6 +3896,13 @@ async addLossReason(leadId) {
     
     // Add to document
     document.body.appendChild(popup);
+    popup.addEventListener('click', (e) => {
+    if (e.target === popup) {
+        popup.remove();
+    }
+});
+
+    
     
     // Focus the select
     setTimeout(() => {
@@ -3803,14 +3979,14 @@ async addLossReason(leadId) {
     });
 },
 
-// 💰 COOL POPUP Edit Deal Value Function
+// 💰 ENHANCED Edit Deal Value Function with Better Error Handling
 async editDealValue(leadId) {
     const lead = this.leads.find(l => l.id.toString() === leadId.toString());
     if (!lead) return;
 
     const currentValue = lead.potential_value || 0;
     
-    // Create cool popup
+    // Create enhanced popup with better validation
     const popup = document.createElement('div');
     popup.className = 'cool-popup-overlay';
     popup.innerHTML = `
@@ -3835,17 +4011,31 @@ async editDealValue(leadId) {
                                value="${currentValue > 0 ? currentValue : ''}" 
                                placeholder="Enter amount"
                                min="0" 
-                               step="100"
+                               max="999999999"
+                               step="1"
                                autofocus>
                     </div>
+                    <!-- Error message container -->
+                    <div class="error-message" id="errorMessage" style="display: none;"></div>
                 </div>
                 
                 <div class="quick-amounts">
-                    ${[250, 500, 750, 1000].map(amount => `
-                        <button class="quick-btn" onclick="document.getElementById('dealValueInput').value='${amount}'; document.getElementById('dealValueInput').focus();">
-                            ${amount}
+                    ${[250, 500, 750, 1000, 2500, 5000].map(amount => `
+                        <button class="quick-btn" onclick="PipelineModule.setEditDealValue('${amount}')">
+                            $${amount.toLocaleString()}
                         </button>
                     `).join('')}
+                </div>
+                
+                <div class="input-hints">
+                    <div class="hint-item">
+                        <span class="hint-icon">💡</span>
+                        <span class="hint-text">Enter a value between $0 and $999,999,999</span>
+                    </div>
+                    <div class="hint-item">
+                        <span class="hint-icon">📝</span>
+                        <span class="hint-text">Set to $0 to remove deal value entirely</span>
+                    </div>
                 </div>
             </div>
             
@@ -3872,8 +4062,16 @@ async editDealValue(leadId) {
                 align-items: center;
                 justify-content: center;
                 z-index: 10000;
-                animation: fadeIn 0.2s ease;
                 padding: 1rem;
+                /* 🔥 SMOOTH TRANSITIONS */
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .cool-popup-overlay.show {
+                opacity: 1;
+                visibility: visible;
             }
             
             .cool-popup {
@@ -3881,10 +4079,16 @@ async editDealValue(leadId) {
                 border-radius: 16px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
                 width: 100%;
-                max-width: 400px;
-                animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                max-width: 450px;
                 border: 1px solid var(--border, #e5e7eb);
                 overflow: hidden;
+                /* 🔥 SMOOTH TRANSITIONS */
+                transform: scale(0.9) translateY(20px);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .cool-popup-overlay.show .cool-popup {
+                transform: scale(1) translateY(0);
             }
             
             .popup-header {
@@ -3959,6 +4163,7 @@ async editDealValue(leadId) {
                 position: relative;
                 display: flex;
                 align-items: center;
+                margin-bottom: 0.5rem;
             }
             
             .currency-symbol {
@@ -3992,24 +4197,47 @@ async editDealValue(leadId) {
                 transform: translateY(-1px);
             }
             
-            .quick-amounts {
+            .value-input.error {
+                border-color: var(--danger, #ef4444);
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+            }
+            
+            .error-message {
                 display: flex;
+                align-items: center;
                 gap: 0.5rem;
-                flex-wrap: wrap;
-                justify-content: center;
+                padding: 0.75rem 1rem;
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.2);
+                border-radius: 8px;
+                color: var(--danger, #ef4444);
+                font-size: 0.85rem;
+                font-weight: 600;
+                animation: slideDown 0.3s ease;
+            }
+            
+            .error-message::before {
+                content: '⚠️';
+                font-size: 1rem;
+            }
+            
+            .quick-amounts {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
             }
             
             .quick-btn {
-                padding: 0.5rem 1rem;
+                padding: 0.75rem 1rem;
                 background: var(--background, #ffffff);
                 border: 2px solid var(--border, #e5e7eb);
                 border-radius: 8px;
                 color: var(--text-secondary, #6b7280);
                 cursor: pointer;
                 font-weight: 600;
-                font-size: 0.85rem;
+                font-size: 0.8rem;
                 transition: all 0.2s ease;
-                min-width: 60px;
+                text-align: center;
             }
             
             .quick-btn:hover {
@@ -4017,6 +4245,33 @@ async editDealValue(leadId) {
                 color: var(--primary, #3b82f6);
                 background: rgba(59, 130, 246, 0.05);
                 transform: translateY(-1px);
+            }
+            
+            .input-hints {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .hint-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem 0.75rem;
+                background: var(--surface-hover, #f8fafc);
+                border-radius: 6px;
+                border: 1px solid var(--border, #e5e7eb);
+            }
+            
+            .hint-icon {
+                font-size: 0.9rem;
+                flex-shrink: 0;
+            }
+            
+            .hint-text {
+                font-size: 0.75rem;
+                color: var(--text-secondary, #6b7280);
+                font-weight: 500;
             }
             
             .popup-actions {
@@ -4068,16 +4323,19 @@ async editDealValue(leadId) {
                 opacity: 0.6;
                 cursor: not-allowed;
                 transform: none;
+                background: #9ca3af;
+                box-shadow: none;
             }
             
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
+            @keyframes slideDown {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
             }
             
-            @keyframes scaleIn {
-                from { opacity: 0; transform: scale(0.8) translateY(20px); }
-                to { opacity: 1; transform: scale(1) translateY(0); }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
             }
             
             @media (max-width: 480px) {
@@ -4088,13 +4346,13 @@ async editDealValue(leadId) {
                 }
                 
                 .quick-amounts {
+                    grid-template-columns: repeat(2, 1fr);
                     gap: 0.4rem;
                 }
                 
                 .quick-btn {
-                    min-width: 50px;
-                    padding: 0.4rem 0.8rem;
-                    font-size: 0.8rem;
+                    padding: 0.6rem 0.8rem;
+                    font-size: 0.75rem;
                 }
                 
                 .popup-actions {
@@ -4107,23 +4365,121 @@ async editDealValue(leadId) {
     // Add to document
     document.body.appendChild(popup);
     
-    // Focus the input
+    // 🔥 SMOOTH ENTRANCE ANIMATION
     setTimeout(() => {
-        const input = document.getElementById('dealValueInput');
+        popup.classList.add('show');
+    }, 10);
+    
+    // 🔥 SMOOTH BACKDROP CLICK CLOSE
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) {
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.remove();
+            }, 300);
+        }
+    });
+    
+    // Enhanced validation and error handling
+    const input = document.getElementById('dealValueInput');
+    const errorMessage = document.getElementById('errorMessage');
+    const saveBtn = popup.querySelector('#saveBtn');
+    
+    // Helper function to show error
+    const showError = (message) => {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'flex';
+        input.classList.add('error');
+        saveBtn.disabled = true;
+    };
+    
+    // Helper function to clear error
+    const clearError = () => {
+        errorMessage.style.display = 'none';
+        input.classList.remove('error');
+        saveBtn.disabled = false;
+    };
+    
+    // 🔥 ENHANCED REAL-TIME VALIDATION
+    input.addEventListener('input', (e) => {
+        const value = e.target.value.trim();
+        
+        // Clear previous errors
+        clearError();
+        
+        if (value === '') {
+            saveBtn.disabled = true;
+            return;
+        }
+        
+        // 🔥 ENHANCED: Check for non-numeric characters first
+        if (!/^-?\d*\.?\d*$/.test(value)) {
+            showError('Please enter a valid number');
+            return;
+        }
+        
+        const numericValue = parseFloat(value);
+        
+        // 🔥 ENHANCED: Better NaN check for edge cases
+        if (isNaN(numericValue) || value === '.' || value === '-' || value === '-.') {
+            showError('Please enter a valid number');
+            return;
+        }
+        
+        if (numericValue < 0) {
+            showError('Deal value cannot be negative');
+            return;
+        }
+        
+        if (numericValue > 999999999) {
+            showError('Deal value cannot exceed $999,999,999');
+            return;
+        }
+        
+        if (value.includes('.') && value.split('.')[1].length > 2) {
+            showError('Please enter cents in format: 123.45');
+            return;
+        }
+        
+        // Value is valid
+        saveBtn.disabled = false;
+    });
+    
+    // Focus the input and select all text
+    setTimeout(() => {
         input?.focus();
         input?.select();
     }, 100);
     
-    // Handle save button
-    const saveBtn = popup.querySelector('#saveBtn');
+    // 🔥 ENHANCED SAVE BUTTON HANDLER
     saveBtn.addEventListener('click', async () => {
-        const input = document.getElementById('dealValueInput');
-        const newValue = input.value.trim();
-        const numericValue = parseFloat(newValue) || 0;
+        const value = input.value.trim();
+        const numericValue = value === '' ? 0 : parseFloat(value);
+        
+        // 🔥 ENHANCED: Final validation with better error catching
+        if (value !== '' && (
+            isNaN(numericValue) || 
+            !/^-?\d*\.?\d*$/.test(value) || 
+            value === '.' || 
+            value === '-' || 
+            value === '-.' ||
+            numericValue < 0 || 
+            numericValue > 999999999
+        )) {
+            input.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => input.style.animation = '', 500);
+            if (!errorMessage.style.display || errorMessage.style.display === 'none') {
+                showError('Please enter a valid number');
+            }
+            return;
+        }
         
         // No change needed
         if (numericValue === currentValue) {
-            popup.remove();
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.remove();
+            }, 300);
             this.showNotification('💰 No changes made', 'info');
             return;
         }
@@ -4139,38 +4495,67 @@ async editDealValue(leadId) {
             // Update local data
             lead.potential_value = numericValue;
             
-            // Remove popup
-            popup.remove();
+            // Remove popup with animation
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.remove();
+            }, 300);
             
             // Refresh pipeline to show changes
             await this.refreshPipeline();
             
             // Show success message
-            this.showNotification(
-                `💰 Deal value updated: $${numericValue.toLocaleString()}`, 
-                'success'
-            );
+            if (numericValue === 0) {
+                this.showNotification('💰 Deal value removed', 'success');
+            } else {
+                this.showNotification(
+                    `💰 Deal value updated: $${numericValue.toLocaleString()}`, 
+                    'success'
+                );
+            }
             
         } catch (error) {
             console.error('❌ Failed to update deal value:', error);
-            this.showNotification('❌ Failed to update deal value. Please try again.', 'error');
+            
+            // Show specific error messages
+            let errorMsg = 'Failed to update deal value. Please try again.';
+            if (error.message?.includes('network')) {
+                errorMsg = 'Network error. Check your connection and try again.';
+            } else if (error.message?.includes('auth')) {
+                errorMsg = 'Session expired. Please refresh and try again.';
+            }
+            
+            this.showNotification(`❌ ${errorMsg}`, 'error');
             
             // Re-enable button
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '💰 Update Value';
+            saveBtn.innerHTML = 'Update Value';
         }
     });
     
-    // Handle Enter key
+    // 🔥 ENHANCED KEYBOARD HANDLERS
     popup.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !saveBtn.disabled) {
             saveBtn.click();
         } else if (e.key === 'Escape') {
-            popup.remove();
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.remove();
+            }, 300);
         }
     });
 },
 
+// 🔥 ENHANCED Helper function for quick buttons
+setEditDealValue(amount) {
+    const input = document.getElementById('dealValueInput');
+    if (input) {
+        input.value = amount;
+        input.focus();
+        // Trigger input event for validation
+        input.dispatchEvent(new Event('input'));
+    }
+},
     
    // ❌ NUCLEAR Edit Loss Reason Function
 async editLossReason(leadId) {
@@ -4402,30 +4787,63 @@ async editLossReason(leadId) {
             }
             
             .reason-select {
-                width: 100%;
-                padding: 1rem 1.25rem;
-                border: 2px solid var(--border, #e5e7eb);
-                border-radius: 12px;
-                font-size: 0.95rem;
-                background: var(--background, #ffffff);
-                color: var(--text-primary, #111827);
-                transition: all 0.2s ease;
-                font-family: inherit;
-                cursor: pointer;
-            }
-            
-            .reason-select:focus {
-                outline: none;
-                border-color: var(--warning, #f59e0b);
-                box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-                transform: translateY(-1px);
-            }
-            
-            .reason-select option {
-                padding: 0.5rem;
-                background: var(--background, #ffffff);
-                color: var(--text-primary, #111827);
-            }
+    /* 🔥 ENHANCED APPEARANCE */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    width: 100%;
+    padding: 1rem 3rem 1rem 1.25rem; /* Extra right padding for custom arrow */
+    border: 2px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    
+    /* 🎨 COOL GRADIENT BACKGROUND */
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.02) 100%);
+    
+    color: var(--text-primary, #111827);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+    cursor: pointer;
+    font-weight: 500;
+    
+    /* ✨ ENHANCED SHADOW */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    
+    /* 🎯 CUSTOM ARROW */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ef4444' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+}
+
+/* 🌟 ENHANCED HOVER */
+.reason-select:hover {
+    border-color: var(--danger, #ef4444);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(239, 68, 68, 0.15),
+        0 0 20px rgba(239, 68, 68, 0.1);
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.05) 100%);
+}
+
+/* 🔥 ENHANCED FOCUS */
+.reason-select:focus {
+    outline: none;
+    border-color: var(--danger, #ef4444);
+    box-shadow: 
+        0 0 0 3px rgba(239, 68, 68, 0.2),
+        0 12px 35px rgba(239, 68, 68, 0.2);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--background, #ffffff) 0%, rgba(239, 68, 68, 0.08) 100%);
+}
+
+/* Keep your existing option styles */
+.reason-select option {
+    padding: 0.5rem;
+    background: var(--background, #ffffff);
+    color: var(--text-primary, #111827);
+}
             
             .insight-tip {
                 display: flex;
@@ -4533,6 +4951,11 @@ async editLossReason(leadId) {
     
     // Add to document
     document.body.appendChild(popup);
+    popup.addEventListener('click', (e) => {
+    if (e.target === popup) {
+        popup.remove();
+    }
+});
     
     // Focus the select
     setTimeout(() => {
@@ -4792,13 +5215,11 @@ showDeleteConfirmation(leadId) {
     `;
 
     document.body.appendChild(confirmModal);
-    
-    // Close on backdrop click
-    confirmModal.addEventListener('click', (e) => {
-        if (e.target === confirmModal) {
-            confirmModal.remove();
-        }
-    });
+    popup.addEventListener('click', (e) => {
+    if (e.target === popup) {
+        popup.remove();
+    }
+});
     
     // Close on Escape key
     const handleEscape = (e) => {
@@ -4962,40 +5383,6 @@ showDeleteConfirmation(leadId) {
         return result;
     },
 
-    getFollowUpStatus(followUpDate) {
-        if (!followUpDate) return { hasFollowUp: false };
-        
-        const today = new Date();
-        const followUp = new Date(followUpDate);
-        const diffDays = Math.ceil((followUp - today) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays < 0) {
-            return {
-                hasFollowUp: true,
-                status: 'overdue',
-                text: `${Math.abs(diffDays)} days overdue`
-            };
-        } else if (diffDays === 0) {
-            return {
-                hasFollowUp: true,
-                status: 'today',
-                text: 'Due today'
-            };
-        } else if (diffDays <= 7) {
-            return {
-                hasFollowUp: true,
-                status: 'upcoming',
-                text: `In ${diffDays} days`
-            };
-        } else {
-            return {
-                hasFollowUp: true,
-                status: 'future',
-                text: this.formatDate(followUpDate, 'short')
-            };
-        }
-    },
-
     // 📢 Notification System
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
@@ -5087,13 +5474,9 @@ showDeleteConfirmation(leadId) {
 
     // 🔄 Loading States
     renderLoadingState() {
-        const mainContent = document.getElementById('mainContent');
-        mainContent.innerHTML = `
-            <div class="loading-container fade-in">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">🌿 Loading your streamlined pipeline...</div>
-            </div>
-            
+        const container = document.getElementById(this.targetContainer);
+        if (container) {
+        container.innerHTML = `          
             <style>
                 .loading-container {
                     display: flex;
@@ -5125,11 +5508,13 @@ showDeleteConfirmation(leadId) {
                 }
             </style>
         `;
+        }
     },
 
     renderError(message) {
-        const mainContent = document.getElementById('mainContent');
-        mainContent.innerHTML = `
+        const container = document.getElementById(this.targetContainer);
+        if (container) {
+        container.innerHTML = `
             <div class="error-container fade-in">
                 <div class="error-icon">⚠️</div>
                 <h2 class="error-title">Pipeline Error</h2>
@@ -5188,6 +5573,7 @@ showDeleteConfirmation(leadId) {
                 }
             </style>
         `;
+        }
     },
 
     // Add remaining methods like setupDragAndDrop, setupFilters, editLead, quickCall, quickEmail, etc.
@@ -5209,41 +5595,72 @@ showDeleteConfirmation(leadId) {
         }
     },
 
-    // 🎧 Setup Enhanced Drag and Drop
-    setupDragAndDrop() {
-        const pipelineBoard = document.querySelector('.pipeline-board-streamlined');
-        if (!pipelineBoard) return;
+setupDragAndDrop() {
+    // 🛡️ PREVENT MULTIPLE SETUPS - STOPS THE x256 LOOP!
+    if (this.dragAndDropInitialized) {
+        return; // Silent return, no log spam
+    }
+    
+    const pipelineBoard = document.querySelector('.pipeline-board-streamlined');
+    if (!pipelineBoard) return;
 
-        pipelineBoard.addEventListener('dragstart', (e) => {
-            const card = e.target.closest('.lead-card');
-            if (card) this.handleDragStart(e);
-        });
+    // 🧹 REMOVE OLD LISTENERS FIRST (prevent duplicates)
+    this.removeDragAndDropListeners();
 
-        pipelineBoard.addEventListener('dragend', (e) => {
-            const card = e.target.closest('.lead-card');
-            if (card) this.handleDragEnd(e);
-        });
+    // 🎯 SETUP NEW LISTENERS
+    this.dragStartHandler = (e) => {
+        const card = e.target.closest('.lead-card');
+        if (card) this.handleDragStart(e);
+    };
+    
+    this.dragEndHandler = (e) => {
+        const card = e.target.closest('.lead-card');
+        if (card) this.handleDragEnd(e);
+    };
+    
+    this.dragOverHandler = (e) => {
+        if (e.target.closest('.stage-content')) this.handleDragOver(e);
+    };
+    
+    this.dragEnterHandler = (e) => {
+        if (e.target.closest('.stage-content')) this.handleDragEnter(e);
+    };
+    
+    this.dragLeaveHandler = (e) => {
+        if (e.target.closest('.stage-content')) this.handleDragLeave(e);
+    };
+    
+    this.dropHandler = (e) => {
+        if (e.target.closest('.stage-content')) this.handleDrop(e);
+    };
 
-        pipelineBoard.addEventListener('dragover', (e) => {
-            if (e.target.closest('.stage-content')) this.handleDragOver(e);
-        });
+    // 🔗 ATTACH LISTENERS
+    pipelineBoard.addEventListener('dragstart', this.dragStartHandler);
+    pipelineBoard.addEventListener('dragend', this.dragEndHandler);
+    pipelineBoard.addEventListener('dragover', this.dragOverHandler);
+    pipelineBoard.addEventListener('dragenter', this.dragEnterHandler);
+    pipelineBoard.addEventListener('dragleave', this.dragLeaveHandler);
+    pipelineBoard.addEventListener('drop', this.dropHandler);
 
-        pipelineBoard.addEventListener('dragenter', (e) => {
-            if (e.target.closest('.stage-content')) this.handleDragEnter(e);
-        });
+    // 🔒 MARK AS INITIALIZED
+    this.dragAndDropInitialized = true;
+    
+    // 🔇 SILENT SUCCESS (no console spam)
+},
 
-        pipelineBoard.addEventListener('dragleave', (e) => {
-            if (e.target.closest('.stage-content')) this.handleDragLeave(e);
-        });
+// 🧹 ADD THIS CLEANUP METHOD
+removeDragAndDropListeners() {
+    const pipelineBoard = document.querySelector('.pipeline-board-streamlined');
+    if (!pipelineBoard) return;
 
-        pipelineBoard.addEventListener('drop', (e) => {
-            if (e.target.closest('.stage-content')) this.handleDrop(e);
-        });
-
-        console.log('🎯 Drag and drop setup complete');
-    },
-
-    // Add this to your PipelineModule after setupDragAndDrop() method
+    // Remove old listeners if they exist
+    if (this.dragStartHandler) pipelineBoard.removeEventListener('dragstart', this.dragStartHandler);
+    if (this.dragEndHandler) pipelineBoard.removeEventListener('dragend', this.dragEndHandler);
+    if (this.dragOverHandler) pipelineBoard.removeEventListener('dragover', this.dragOverHandler);
+    if (this.dragEnterHandler) pipelineBoard.removeEventListener('dragenter', this.dragEnterHandler);
+    if (this.dragLeaveHandler) pipelineBoard.removeEventListener('dragleave', this.dragLeaveHandler);
+    if (this.dropHandler) pipelineBoard.removeEventListener('drop', this.dropHandler);
+},
 
 // 🎯 Universal Click-to-Activate System (Desktop + Mobile)
 setupClickToActivate() {
@@ -5373,30 +5790,29 @@ clearAutoDeactivate() {
     this.dragState.sourceColumn = card.dataset.leadStatus;
     this.dragState.dragElement = card;
 
-    // 🔥 FORCE THE ANIMATION WITH INLINE STYLES
-    card.style.opacity = '0.8';
-    card.style.transform = 'rotate(2deg) scale(1.02)';
-    card.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.2)';
+    // 🔥 CLEAN DRAG VISUAL - NO FANCY STUFF
+    card.style.opacity = '0.7';
+    card.style.transform = 'rotate(3deg) scale(1.05)';
+    card.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.3)';
     card.style.cursor = 'grabbing';
     card.style.zIndex = '1000';
-    card.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+    card.style.transition = 'all 0.2s ease';
     
     card.classList.add('dragging');
     
-    // Show all drop zones immediately when drag starts
+    // Show drop zones
     this.showAllDropZones();
     
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', card.outerHTML);
     e.dataTransfer.setData('text/plain', card.dataset.leadId);
+    
+    console.log(`🚀 Dragging lead: ${card.dataset.leadId}`);
+},
 
-        console.log(`🎯 Drag started: Lead ${this.dragState.draggedLead} from ${this.dragState.sourceColumn}`);
-    },
-
-    handleDragEnd(e) {
+handleDragEnd(e) {
     const card = e.target.closest('.lead-card');
     if (card) {
-        // 🔥 RESET ALL INLINE STYLES
+        // 🔥 RESET ALL STYLES CLEANLY
         card.style.opacity = '';
         card.style.transform = '';
         card.style.boxShadow = '';
@@ -5407,76 +5823,90 @@ clearAutoDeactivate() {
         card.classList.remove('dragging');
     }
 
+    // Hide all drop zones
     this.hideAllDropZones();
 
+    // Reset drag state
     this.dragState.isDragging = false;
     this.dragState.draggedLead = null;
     this.dragState.sourceColumn = null;
     this.dragState.dragElement = null;
     
-    },
+    console.log('✅ Drag ended, state reset');
+},
 
-    handleDragOver(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = 'move';
-        
-        // Ensure the specific drop zone stays highlighted
-        const container = e.target.closest('.stage-content');
-        if (container && this.dragState.isDragging) {
-            this.highlightSpecificDropZone(container);
+handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Highlight current drop zone
+    const container = e.target.closest('.stage-content');
+    if (container && this.dragState.isDragging) {
+        this.highlightSpecificDropZone(container);
+    }
+},
+
+handleDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const container = e.target.closest('.stage-content');
+    if (container && this.dragState.isDragging) {
+        this.highlightSpecificDropZone(container);
+    }
+},
+
+handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const container = e.target.closest('.stage-content');
+    if (container) {
+        // Only remove highlight if actually leaving the container
+        const relatedTarget = e.relatedTarget;
+        if (!relatedTarget || !container.contains(relatedTarget)) {
+            this.removeSpecificDropZoneHighlight(container);
         }
-    },
+    }
+},
 
-    handleDragEnter(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const container = e.target.closest('.stage-content');
-        if (container && this.dragState.isDragging) {
-            this.highlightSpecificDropZone(container);
-        }
-    },
+async handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const container = e.target.closest('.stage-content');
+    if (!container) {
+        console.log('🚫 No valid drop container found');
+        return;
+    }
 
-    handleDragLeave(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const container = e.target.closest('.stage-content');
-        if (container) {
-            // Only remove highlight if we're actually leaving the container
-            const relatedTarget = e.relatedTarget;
-            if (!relatedTarget || !container.contains(relatedTarget)) {
-                this.removeSpecificDropZoneHighlight(container);
-            }
-        }
-    },
+    // Remove any drag styling
+    container.classList.remove('drag-over', 'drop-zone-active');
 
-    async handleDrop(e) {
-        e.preventDefault();
-        
-        const container = e.target.closest('.stage-content');
-        if (!container) return;
+    const targetStage = container.dataset.stageContent;
+    const leadId = this.dragState.draggedLead;
+    const sourceStage = this.dragState.sourceColumn;
 
-        container.classList.remove('drag-over');
+    // Validate drop
+    if (!leadId || !targetStage) {
+        console.log('🚫 Invalid drop - missing data');
+        return;
+    }
 
-        const targetStage = container.dataset.stageContent;
-        const leadId = this.dragState.draggedLead;
-        const sourceStage = this.dragState.sourceColumn;
-
-        if (!leadId || !targetStage || targetStage === sourceStage) {
-            console.log('🚫 Invalid drop - same stage or missing data');
-            return;
-        }
-
-        console.log(`🎯 Drop: Lead ${leadId} from ${sourceStage} to ${targetStage}`);
-        
-        // Immediately update UI for smooth experience
-        this.updateLeadStatusImmediate(leadId, targetStage);
-        
-        // Then update backend
-        await this.updateLeadStatusDirect(leadId, targetStage);
-    },
+    if (targetStage === sourceStage) {
+        console.log('🚫 Invalid drop - same stage');
+        return;
+    }
+    
+    console.log(`🎯 Valid drop: ${leadId} from ${sourceStage} to ${targetStage}`);
+    
+    // Update UI immediately for smooth UX
+    this.updateLeadStatusImmediate(leadId, targetStage);
+    
+    // Then update backend
+    await this.updateLeadStatusDirect(leadId, targetStage);
+},
 
     // 🎯 Show All Drop Zones
     showAllDropZones() {
@@ -5491,8 +5921,6 @@ clearAutoDeactivate() {
                 container.classList.add('drop-zone-source');
             }
         });
-        
-        console.log('🎯 All drop zones activated');
     },
 
     // 🎯 Hide All Drop Zones
@@ -5501,8 +5929,6 @@ clearAutoDeactivate() {
         allStageContents.forEach(container => {
             container.classList.remove('drop-zone-available', 'drop-zone-active', 'drop-zone-source');
         });
-        
-        console.log('🎯 All drop zones deactivated');
     },
 
     // 🎯 Highlight Specific Drop Zone
@@ -5536,11 +5962,6 @@ clearAutoDeactivate() {
             lead.status = newStatus;
             this.organizeLeads();
 
-            // 🔥 RE-SETUP DRAG LISTENERS FOR THE MOVED CARD
-            setTimeout(() => {
-             this.setupDragAndDrop(); // Re-initialize all drag events
-            }, 100);
-            
             // Find the dragged card
             const draggedCard = this.dragState.dragElement;
             if (!draggedCard) return;
@@ -5569,6 +5990,15 @@ clearAutoDeactivate() {
                 if (newStage) {
                     draggedCard.classList.add(newStage.row === 'active' ? 'active-card' : 'outcome-card');
                 }
+
+                // Remove loss reason section if moving away from lost
+if (oldStatus === 'lost' && newStatus !== 'lost') {
+    const lossReasonSection = draggedCard.querySelector('.loss-reason-section');
+    if (lossReasonSection) {
+        lossReasonSection.remove();
+        console.log('🗑️ Removed loss reason section');
+    }
+}
 
                 // Handle loss reason section
 if (newStatus === 'lost') {
@@ -5622,8 +6052,6 @@ if (analyticsContainer) {
         analyticsContainer.innerHTML = newGrid.innerHTML;
     }
 }
-                
-                console.log(`✨ UI updated immediately: ${leadId} → ${newStatus}`);
             }
             
         } catch (error) {
@@ -5698,29 +6126,43 @@ if (hasActiveFilters) {
 }
 },
 
-    async updateLeadStatusDirect(leadId, newStatus) {
-        try {
-            const stageName = this.stages.find(s => s.id === newStatus)?.name || newStatus;
+  async updateLeadStatusDirect(leadId, newStatus) {
+    try {
+        const stageName = this.stages.find(s => s.id === newStatus)?.name || newStatus;
+        
+        // Update backend
+        await API.updateLead(leadId, { status: newStatus });
+        
+    } catch (error) {
+        console.error('❌ Failed to update lead status:', error);
+        
+        // 🛑 STOP LOOPS ON ALL NETWORK/AUTH ERRORS
+        if (error.toString().includes('Invalid or expired token') ||
+            error.toString().includes('Authentication required') ||
+            error.toString().includes('Load failed') ||              // 🔥 THIS IS KEY
+            error.toString().includes('network connection was lost') || // 🔥 ADD THIS TOO
+            error.message?.includes('Invalid or expired token') ||
+            error.message?.includes('Authentication required') ||
+            error.message?.includes('Load failed') ||                 // 🔥 THIS IS KEY
+            error.message?.includes('network connection was lost')) {   // 🔥 ADD THIS TOO
             
-            // Update backend
-            await API.updateLead(leadId, { status: newStatus });
-            ;
+            console.log('🔑 Network/Auth error detected - stopping retry loop');
+            this.showNotification('❌ Connection error. Please check your internet and refresh.', 'error');
             
-            console.log(`✅ Backend updated: Lead ${leadId} moved to ${newStatus}`);
-            
-        } catch (error) {
-            console.error('❌ Failed to update lead status:', error);
-            
-            // Revert UI changes if backend fails
-            const lead = this.leads.find(l => l.id.toString() === leadId.toString());
-            if (lead) {
-                lead.status = this.dragState.sourceColumn; // Revert to original
-                await this.refreshPipeline(); // Full refresh to fix UI
-            }
-            
-            this.showNotification('Failed to update lead status. Please try again.', 'error');
+            // 🚨 CRITICAL: DON'T RETRY OR REFRESH ON THESE ERRORS
+            return;
         }
-    },
+        
+        // Only revert UI for other errors (like validation errors)
+        const lead = this.leads.find(l => l.id.toString() === leadId.toString());
+        if (lead) {
+            lead.status = this.dragState.sourceColumn; // Revert to original
+            await this.refreshPipeline(); // Full refresh to fix UI
+        }
+        
+        this.showNotification('Failed to update lead status. Please try again.', 'error');
+    }
+},
 
     // 🔍 Setup Filters
     setupFilters() {
@@ -5763,35 +6205,25 @@ if (hasActiveFilters) {
 },
 
     clearFilters() {
-        this.filters = {
-            search: '',
-            type: 'all',
-            source: 'all',
-            score: 'all'
-        };
+    this.filters = {
+        search: '',
+        type: 'all',
+        source: 'all',
+        score: 'all'
+    };
 
-        const searchInput = document.getElementById('pipelineSearch');
-        if (searchInput) searchInput.value = '';
+    const searchInput = document.getElementById('pipelineSearch');
+    if (searchInput) searchInput.value = '';
 
-        // Reset custom dropdowns
-        document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
-            const trigger = dropdown.querySelector('.dropdown-trigger');
-            const firstOption = dropdown.querySelector('.dropdown-option[data-value="all"]');
-            if (firstOption && trigger) {
-                const icon = firstOption.querySelector('.option-icon').textContent;
-                const text = firstOption.querySelector('.option-text').textContent;
-                trigger.querySelector('.dropdown-icon').textContent = icon;
-                trigger.querySelector('.dropdown-text').textContent = text;
-                
-                dropdown.querySelectorAll('.dropdown-option').forEach(opt => opt.classList.remove('selected'));
-                firstOption.classList.add('selected');
-            }
-        });
+    // 🔥 RESET SIMPLIFIED DROPDOWNS
+    const typeFilter = document.getElementById('typeFilter');
+    const scoreFilter = document.getElementById('scoreFilter');
+    
+    if (typeFilter) typeFilter.value = 'all';
+    if (scoreFilter) scoreFilter.value = 'all';
 
-        this.applyFiltersAndRerender();
-        this.showNotification('Filters cleared', 'info');
-        console.log('🔄 Filters cleared');
-    },
+    this.applyFiltersAndRerender();
+},
 
     // ✏️ Setup Editing System
     setupEditingSystem() {
@@ -6302,7 +6734,7 @@ async handleEditSubmit(e) {
         this.closeEditModal();
         await this.refreshPipeline();
         
-        this.showNotification('✅ Lead updated successfully!', 'success');
+        this.showNotification('Lead updated successfully!', 'success');
         
     } catch (error) {
         console.error('❌ Failed to update lead:', error);
@@ -6310,6 +6742,26 @@ async handleEditSubmit(e) {
     } finally {
         loadingSpinner.style.display = 'none';
         saveBtn.disabled = false;
+    }
+},
+
+// Add this to your PipelineModule
+async confirmDeleteLead(leadId) {
+    const confirmModal = document.querySelector('.delete-confirm-overlay');
+    if (confirmModal) confirmModal.remove();
+    
+    try {
+        await API.deleteLead(leadId);
+        
+        this.leads = this.leads.filter(l => l.id.toString() !== leadId.toString());
+        this.closeEditModal();
+        await this.refreshPipeline();
+        
+        this.showNotification('🗑️ Lead deleted successfully!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Delete failed:', error);
+        this.showNotification('❌ Failed to delete lead', 'error');
     }
 },
 
@@ -6368,154 +6820,71 @@ async handleEditSubmit(e) {
         }
     },
 
-    // 🔄 Refresh Pipeline
-    async refreshPipeline() {
-        try {
-            await this.loadLeads();
-            await this.loadMonthlyStats();
-            this.organizeLeads();
-            
-            // Smart re-render of specific sections
-            const activeStagesContainer = document.querySelector('.active-stages');
-            const outcomeStagesContainer = document.querySelector('.outcome-stages');
-            
-            if (activeStagesContainer) {
-                activeStagesContainer.innerHTML = this.renderStageRow('active');
-            }
-            
-            if (outcomeStagesContainer) {
-                outcomeStagesContainer.innerHTML = this.renderStageRow('outcome');
-            }
-
-            // Update monthly progress
-const progressContainer = document.querySelector('.monthly-progress-container');
-if (progressContainer) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = this.renderMonthlyProgress();
-    const newProgress = tempDiv.querySelector('.monthly-progress-container');
-    if (newProgress) {
-        progressContainer.innerHTML = newProgress.innerHTML;
-    }
-}
-
-            // Update analytics
-            const analyticsContainer = document.querySelector('.analytics-grid');
-if (analyticsContainer) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = this.renderStreamlinedAnalytics();
-    const newGrid = tempDiv.querySelector('.analytics-grid');
-    if (newGrid) {
-        analyticsContainer.innerHTML = newGrid.innerHTML;
-    }
-}
-
-            // Update section values
-            const outcomeValue = document.querySelector('.outcome-section .section-value');
-            const activeBadge = document.querySelector('.active-section .section-badge');
-            const outcomeBadge = document.querySelector('.outcome-section .section-badge');
-
-            if (outcomeValue) outcomeValue.textContent = `${this.calculateOutcomeValue().toLocaleString()}`;
-            if (activeBadge) activeBadge.textContent = `${this.getActiveLeadsCount()} leads`;
-            if (outcomeBadge) outcomeBadge.textContent = `${this.getOutcomeLeadsCount()} leads`;
-
-            // Update shell progress if available
-            if (window.updateLeadsProgress) {
-                try {
-                    window.updateLeadsProgress(this.monthlyStats.currentMonthLeads, this.monthlyStats.monthlyLeadLimit);
-                } catch (error) {
-                    console.error('Failed to update shell progress:', error);
-                }
-            }
-
-            this.setupDragAndDrop();
-            this.setupFilters();
-            this.setupEditingSystem();
-            this.setupAnimations();
-            this.setupClickToActivate();
-
-            
-        } catch (error) {
-            console.error('❌ Failed to refresh pipeline:', error);
-            this.showNotification('Failed to refresh pipeline data', 'error');
-        }
-    },
-
-    // 📤 Export Analytics
-    exportAnalytics() {
-        try {
-            const analytics = {
-                generatedAt: new Date().toISOString(),
-                totalLeads: this.leads.length,
-                activeLeads: this.getActiveLeadsCount(),
-                outcomeLeads: this.getOutcomeLeadsCount(),
-                conversionRate: this.calculateConversionRate(),
-                outcomeValue: this.calculateOutcomeValue(),
-                stageBreakdown: this.stages.map(stage => ({
-                    stage: stage.name,
-                    count: this.filteredLeads[stage.id]?.length || 0,
-                    value: this.calculateStageValue(stage.id)
-                })),
-                topLossReasons: this.getTopLossReasons(),
-                monthlyProgress: {
-                    current: this.monthlyStats.currentMonthLeads,
-                    limit: this.monthlyStats.monthlyLeadLimit,
-                    percentage: Math.round((this.monthlyStats.currentMonthLeads / this.monthlyStats.monthlyLeadLimit) * 100)
-                }
-            };
-
-            const csvContent = this.convertAnalyticsToCSV(analytics);
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `pipeline-analytics-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            this.showNotification('Analytics exported successfully!', 'success');
-            
-        } catch (error) {
-            console.error('❌ Failed to export analytics:', error);
-            this.showNotification('Failed to export analytics', 'error');
-        }
-    },
-
-    convertAnalyticsToCSV(analytics) {
-        const lines = [
-            'Streamlined Pipeline Analytics Report',
-            `Generated: ${new Date(analytics.generatedAt).toLocaleString()}`,
-            '',
-            'Summary Metrics',
-            'Metric,Value',
-            `Total Leads,${analytics.totalLeads}`,
-            `Active Leads,${analytics.activeLeads}`,
-            `Outcome Leads,${analytics.outcomeLeads}`,
-            `Conversion Rate,${analytics.conversionRate}%`,
-            `Total Outcome Value,${analytics.outcomeValue.toLocaleString()}`,
-            '',
-            'Monthly Progress',
-            'Metric,Value',
-            `Current Month Leads,${analytics.monthlyProgress.current}`,
-            `Monthly Limit,${analytics.monthlyProgress.limit}`,
-            `Progress Percentage,${analytics.monthlyProgress.percentage}%`,
-            '',
-            'Stage Breakdown',
-            'Stage,Lead Count,Pipeline Value',
-            ...analytics.stageBreakdown.map(stage => 
-                `${stage.stage},${stage.count},${stage.value.toLocaleString()}`
-            ),
-            '',
-            'Loss Reasons',
-            'Reason,Count',
-            ...analytics.topLossReasons.map(reason => 
-                `${reason.reason},${reason.count}`
-            )
-        ];
+async simpleRefresh() {
+    try {
+        await this.loadLeads();
+        await this.loadMonthlyStats();
+        this.organizeLeads();
         
-        return lines.join('\n');
-    },
+        // Just re-render the whole thing - simple and bulletproof
+        this.render();
+        this.setupDragAndDrop();
+        this.setupFilters();
+        this.setupEditingSystem();
+        this.setupClickToActivate();
+        
+        console.log('✅ Simple refresh complete');
+    } catch (error) {
+        console.error('❌ Simple refresh failed:', error);
+        
+        // 🛑 STOP THE LOOP ON ALL THESE ERROR TYPES
+        if (error.toString().includes('Authentication required') ||
+            error.toString().includes('Invalid or expired token') ||
+            error.toString().includes('Load failed') ||              // 🔥 ADD THIS
+            error.message?.includes('Authentication required') ||
+            error.message?.includes('Invalid or expired token') ||
+            error.message?.includes('Load failed')) {                // 🔥 ADD THIS
+            
+            console.log('🔑 Connection/Auth error detected - stopping refresh loop');
+            
+            // Show user-friendly message
+            this.showNotification('❌ Connection error. Please refresh page and try again.', 'error');
+            
+            // Stop any loading states
+            this.isLoading = false;
+            
+            // 🚨 CRITICAL: DON'T THROW OR RETRY ON THESE ERRORS
+            return;
+        }
+        
+        // Only throw/retry for other errors
+        throw error;
+    }
+},
+
+async refreshPipeline() {
+    // 🛡️ PREVENT MULTIPLE SIMULTANEOUS REFRESHES
+    if (this.isLoading) {
+        console.log('🚫 Refresh already in progress, skipping...');
+        return;
+    }
+    
+    try {
+        this.isLoading = true;
+        await this.simpleRefresh();
+    } catch (error) {
+        console.error('❌ Pipeline refresh failed:', error);
+        
+        // Don't spam notifications on connection/auth errors (already handled in simpleRefresh)
+        if (!error.toString().includes('Authentication') &&
+            !error.toString().includes('Invalid or expired token') &&
+            !error.toString().includes('Load failed')) {              // 🔥 ADD THIS
+            this.showNotification('❌ Failed to refresh pipeline', 'error');
+        }
+    } finally {
+        this.isLoading = false;
+    }
+},
 
     // 🔧 System Utilities
     debug() {
@@ -6539,6 +6908,7 @@ if (analyticsContainer) {
 
     destroy() {
         // Clean up all event listeners to prevent memory leaks
+        this.dragAndDropInitialized = false;
         this.removeDragAndDropListeners?.();
         this.removeFilterListeners?.();
         this.removeEditingListeners?.();

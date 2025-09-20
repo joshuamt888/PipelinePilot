@@ -23,13 +23,15 @@ window.AddLeadModule = {
     searchTerm: '',
     currentView: 'dashboard', // 'dashboard' | 'table'
     currentEditLead: null,
+    targetContainer: 'leads-content',
     version: '1.0.0',
 
     // 🚀 Simple Initialization (with Pipeline-style loading)
-    async init() {
+    async init(targetContainer = 'leads-content') {
         console.log('🎯 Clean AddLead Module v1.0 initializing...');
         
         try {
+            this.targetContainer = targetContainer;
             this.isLoading = true;
             
             // 🔥 INSTANT SKELETON FEEDBACK (like Pipeline)
@@ -82,11 +84,11 @@ window.AddLeadModule = {
     },
 
     // 🎨 Main Render Method
-    render() {
-        const mainContent = document.getElementById('mainContent');
-        if (!mainContent) return;
+   render() {
+    const container = document.getElementById(this.targetContainer);
+    if (!container) return;
 
-        mainContent.innerHTML = `
+    container.innerHTML = `
             <div class="addlead-container fade-in">
                 ${this.currentView === 'table' ? this.renderTableView() : this.renderDashboardView()}
                 ${this.renderModals()}
@@ -306,36 +308,34 @@ window.AddLeadModule = {
 
     // 🎪 Modals
     renderModals() {
-        return `
-            <!-- Add Lead Modal -->
-            <div class="modal-overlay" id="addLeadModal">
-                <div class="modal-backdrop" onclick="AddLeadModule.hideAddLeadModal()"></div>
-                <div class="modal">
-                    <div class="modal-header">
-                        <h2 class="modal-title">Add New Lead</h2>
-                        <button class="modal-close" onclick="AddLeadModule.hideAddLeadModal()">×</button>
-                    </div>
-                    <div class="modal-body">
-                        ${this.renderAddLeadForm()}
-                    </div>
+    return `
+        <!-- Add Lead Modal -->
+        <div class="modal-overlay" id="addLeadModal" onclick="AddLeadModule.hideAddLeadModal()">
+            <div class="modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2 class="modal-title">Add New Lead</h2>
+                    <button class="modal-close" onclick="AddLeadModule.hideAddLeadModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    ${this.renderAddLeadForm()}
                 </div>
             </div>
+        </div>
 
-            <!-- Edit Lead Modal -->
-            <div class="modal-overlay" id="editLeadModal">
-                <div class="modal-backdrop" onclick="AddLeadModule.hideEditLeadModal()"></div>
-                <div class="modal">
-                    <div class="modal-header">
-                        <h2 class="modal-title">Edit Lead</h2>
-                        <button class="modal-close" onclick="AddLeadModule.hideEditLeadModal()">×</button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="editFormContainer"></div>
-                    </div>
+        <!-- Edit Lead Modal -->
+        <div class="modal-overlay" id="editLeadModal" onclick="AddLeadModule.hideEditLeadModal()">
+            <div class="modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Lead</h2>
+                    <button class="modal-close" onclick="AddLeadModule.hideEditLeadModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="editFormContainer"></div>
                 </div>
             </div>
-        `;
-    },
+        </div>
+    `;
+},
 
     // 📝 Add Lead Form
     renderAddLeadForm() {
@@ -489,36 +489,65 @@ window.AddLeadModule = {
     this.setupMoneyInputFormatting();
 },
 
-// 💰 Setup Money Input Formatting
 setupMoneyInputFormatting() {
     const moneyInputs = document.querySelectorAll('input[name="potential_value"]:not([data-money-listener])');
     
     moneyInputs.forEach(input => {
         const formatMoney = (e) => {
-            // Get cursor position
             const cursorPos = e.target.selectionStart;
+            let value = e.target.value;
             
-            // Remove all non-digits
-            let value = e.target.value.replace(/[^\d]/g, '');
+            // Remove everything except digits and decimal point
+            value = value.replace(/[^\d.]/g, '');
             
-            if (value === '') {
-                e.target.value = '';
+            // Handle multiple decimal points - keep only the first one
+            const decimalCount = (value.match(/\./g) || []).length;
+            if (decimalCount > 1) {
+                const firstDecimalIndex = value.indexOf('.');
+                value = value.slice(0, firstDecimalIndex + 1) + value.slice(firstDecimalIndex + 1).replace(/\./g, '');
+            }
+            
+            if (value === '' || value === '.') {
+                e.target.value = value === '.' ? '0.' : '';
+                e.target.setAttribute('data-raw-value', '0');
                 return;
             }
             
-            // Convert to number and format with commas
-            const number = parseInt(value, 10);
-            const formatted = number.toLocaleString();
+            // Split into whole and decimal parts
+            let [wholePart, decimalPart] = value.split('.');
             
-            // Calculate new cursor position
+            // Limit whole part to 12 digits (like 999,999,999,999)
+            if (wholePart.length > 12) {
+                wholePart = wholePart.slice(0, 12);
+            }
+            
+            // Limit decimal part to 2 places
+            if (decimalPart && decimalPart.length > 2) {
+                decimalPart = decimalPart.slice(0, 2);
+            }
+            
+            // Format the whole part with commas
+            let formatted = '';
+            if (wholePart) {
+                const number = parseInt(wholePart, 10);
+                formatted = number.toLocaleString();
+            }
+            
+            // Add decimal part if it exists
+            if (decimalPart !== undefined) {
+                formatted += '.' + decimalPart;
+            }
+            
+            // Store raw value for form submission (without commas)
+            const rawValue = wholePart + (decimalPart !== undefined ? '.' + decimalPart : '');
+            e.target.setAttribute('data-raw-value', rawValue);
+            
+            // Calculate cursor position
             const oldLength = e.target.value.length;
+            e.target.value = formatted;
             const newLength = formatted.length;
             const diff = newLength - oldLength;
             
-            // Set formatted value
-            e.target.value = formatted;
-            
-            // Restore cursor position
             const newPos = Math.max(0, Math.min(cursorPos + diff, formatted.length));
             setTimeout(() => {
                 e.target.setSelectionRange(newPos, newPos);
@@ -528,6 +557,130 @@ setupMoneyInputFormatting() {
         input.addEventListener('input', formatMoney);
         input.setAttribute('data-money-listener', 'true');
     });
+},
+
+// 🔥 ADD THESE VALIDATION METHODS AFTER LINE 1139
+validateNameInput(input) {
+    let feedback = document.getElementById('edit-name-feedback');
+    if (!feedback) {
+        feedback = document.getElementById('name-feedback');
+    }
+    
+    if (!feedback) return;
+    
+    const length = input.value.length;
+    const maxLength = 35;
+    const isFocused = document.activeElement === input;
+    
+    // Only show feedback when field is focused
+    if (!isFocused) {
+        feedback.textContent = '';
+        feedback.style.display = 'none';
+        return;
+    }
+    
+    // Show feedback when focused
+    if (length > maxLength - 5 && length < maxLength) {
+        const remaining = maxLength - length;
+        feedback.textContent = `${remaining} characters remaining`;
+        feedback.style.color = '#f59e0b';
+    } else if (length >= maxLength) {
+        feedback.textContent = 'Name must be less than 35 characters';
+        feedback.style.color = '#ef4444';
+        feedback.style.fontWeight = '600';
+    } else if (length === 0) {
+        feedback.textContent = '';
+        feedback.style.color = 'var(--text-secondary)';
+    } else {
+        feedback.textContent = `${length}/${maxLength}`;
+        feedback.style.color = 'var(--text-secondary)';
+    }
+    
+    feedback.style.display = 'block';
+    feedback.style.visibility = 'visible';
+    feedback.style.opacity = '1';
+},
+
+validateCompanyInput(input) {
+    let feedback = document.getElementById('edit-company-feedback');
+    if (!feedback) {
+        feedback = document.getElementById('company-feedback');
+    }
+    
+    if (!feedback) return;
+    
+    const length = input.value.length;
+    const maxLength = 45;
+    const isFocused = document.activeElement === input;
+    
+    // Only show feedback when field is focused
+    if (!isFocused) {
+        feedback.textContent = '';
+        feedback.style.display = 'none';
+        return;
+    }
+    
+    // Show feedback when focused
+    if (length > maxLength - 5 && length < maxLength) {
+        const remaining = maxLength - length;
+        feedback.textContent = `${remaining} characters remaining`;
+        feedback.style.color = '#f59e0b';
+    } else if (length >= maxLength) {
+        feedback.textContent = 'Company must be less than 45 characters';
+        feedback.style.color = '#ef4444';
+        feedback.style.fontWeight = '600';
+    } else if (length === 0) {
+        feedback.textContent = '';
+        feedback.style.color = 'var(--text-secondary)';
+    } else {
+        feedback.textContent = `${length}/${maxLength}`;
+        feedback.style.color = 'var(--text-secondary)';
+    }
+    
+    feedback.style.display = 'block';
+    feedback.style.visibility = 'visible';
+    feedback.style.opacity = '1';
+},
+
+validateNotesInput(textarea) {
+    let feedback = document.getElementById('edit-notes-feedback');
+    if (!feedback) {
+        feedback = document.getElementById('notes-feedback');
+    }
+    
+    if (!feedback) return;
+    
+    const length = textarea.value.length;
+    const maxLength = 600;
+    const isFocused = document.activeElement === textarea;
+    
+    // Only show feedback when field is focused
+    if (!isFocused) {
+        feedback.textContent = '';
+        feedback.style.display = 'none';
+        return;
+    }
+    
+    // Show feedback when focused
+    if (length > maxLength - 10 && length < maxLength) {
+        const remaining = maxLength - length;
+        feedback.textContent = `${remaining} characters remaining`;
+        feedback.style.color = '#f59e0b';
+    } else if (length >= maxLength) {
+        feedback.textContent = 'Notes must be less than 600 characters';
+        feedback.style.color = '#ef4444';
+        feedback.style.fontWeight = '600';
+    } else if (length === 0) {
+        feedback.textContent = '';
+        feedback.style.color = 'var(--text-secondary)';
+    } else {
+        feedback.textContent = `${length}/${maxLength}`;
+        feedback.style.color = 'var(--text-secondary)';
+    }
+    
+    feedback.style.display = 'block';
+    feedback.style.visibility = 'visible';
+    feedback.style.opacity = '1';
 },
 
 // 🎯 Simple Source Popup Selector
@@ -550,7 +703,7 @@ showSourcePopup(targetInput) {
     popup.innerHTML = `
         <div class="source-popup">
             <div class="source-popup-header">
-                <h3>🎯 Select Lead Source</h3>
+                <h3>Select Lead Source</h3>
                 <button class="popup-close" data-close-popup>×</button>
             </div>
             
@@ -692,7 +845,7 @@ showCustomSourceInput(targetInput) {
     customPopup.innerHTML = `
         <div class="custom-source-popup">
             <div class="custom-source-header">
-                <h3>✨ Custom Source</h3>
+                <h3>Custom Source</h3>
                 <button class="popup-close" data-close-custom>×</button>
             </div>
             
@@ -828,8 +981,8 @@ addSourcePopupStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1116,32 +1269,96 @@ setupSimplePhoneValidation() {
         container.appendChild(errorMsg);
         
         const isValidPhone = (phone) => {
-            if (!phone) return true; // Empty is valid
+            if (!phone) return true;
             const digits = phone.replace(/\D/g, '');
             return digits.length >= 10;
         };
         
-        // 🎨 FORMAT ON INPUT 
+        // 🔥 FIXED: Better formatting without cursor jumping
         input.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
+            const cursorPos = e.target.selectionStart;
+            const oldValue = e.target.getAttribute('data-old-value') || '';
+            const oldDigits = oldValue.replace(/\D/g, '');
             
-            // Format as user types
-            if (value.length >= 6) {
-                value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
-            } else if (value.length >= 3) {
-                value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
-            } else if (value.length > 0) {
-                value = `(${value}`;
+            // Get current digits
+            let digits = e.target.value.replace(/\D/g, '');
+            
+            // Limit to 10 digits
+            if (digits.length > 10) {
+                digits = digits.slice(0, 10);
             }
             
-            e.target.value = value;
+            // Format the number
+            let formatted = '';
+            if (digits.length === 0) {
+                formatted = '';
+            } else if (digits.length <= 3) {
+                formatted = `(${digits}`;
+            } else if (digits.length <= 6) {
+                formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+            } else {
+                formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+            }
             
-            // 🔥 FIX: Hide error on input (like email does)
+            // 🔥 FIX: Calculate new cursor position properly
+            let newCursorPos = cursorPos;
+            
+            // If we're adding digits (typing forward), move cursor to end of digits
+            if (digits.length > oldDigits.length) {
+                // Count how many digits are before the cursor
+                const beforeCursor = e.target.value.slice(0, cursorPos).replace(/\D/g, '');
+                const newDigitsBeforeCursor = beforeCursor.length;
+                
+                // Find where that many digits would be in the formatted string
+                let digitCount = 0;
+                for (let i = 0; i < formatted.length; i++) {
+                    if (/\d/.test(formatted[i])) {
+                        digitCount++;
+                        if (digitCount === newDigitsBeforeCursor) {
+                            newCursorPos = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Update the value
+            e.target.value = formatted;
+            e.target.setAttribute('data-old-value', formatted);
+            
+            // Set cursor position
+            setTimeout(() => {
+                e.target.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+            
+            // Hide error on input
             errorMsg.style.display = 'none';
             input.style.borderColor = '';
         });
         
-        // 🔥 FIX: Show error on blur if invalid (like email does)
+        // Store initial value
+        input.setAttribute('data-old-value', input.value);
+        
+        // Better backspace handling
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace') {
+                const cursorPos = e.target.selectionStart;
+                const value = e.target.value;
+                
+                // If cursor is right after a formatting character, move past it
+                if (cursorPos > 0) {
+                    const prevChar = value[cursorPos - 1];
+                    if (prevChar === ')' || prevChar === ' ' || prevChar === '-') {
+                        setTimeout(() => {
+                            const newPos = cursorPos - 1;
+                            e.target.setSelectionRange(newPos, newPos);
+                        }, 0);
+                    }
+                }
+            }
+        });
+        
+        // Blur validation
         input.addEventListener('blur', () => {
             const phone = input.value.trim();
             
@@ -1323,7 +1540,7 @@ showDuplicateModal(duplicateLead, type) {
             </div>
             
             <div class="duplicate-popup-content">
-                <p class="duplicate-message">This email already exists in your database. Click the lead to edit it:</p>
+    <p class="duplicate-message">${duplicateLead.reason}. Click the lead to edit it:</p>
                 
                 <div class="duplicate-lead-card clickable-lead" onclick="AddLeadModule.editLead('${duplicateLead.lead.id}'); this.closest('.duplicate-popup-overlay').remove();">
                     <div class="lead-info-simple">
@@ -1378,8 +1595,8 @@ addDuplicatePopupStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1589,7 +1806,7 @@ async showSimilarLeadsModal(similarLeads) {
         modal.innerHTML = `
             <div class="similar-popup">
                 <div class="similar-popup-header">
-                    <h3>🤔 Similar Leads Found</h3>
+                    <h3>Similar Leads Found</h3>
                     <button class="popup-close" onclick="this.closest('.similar-popup-overlay').remove(); window.similarModalResolve(false);">×</button>
                 </div>
                 
@@ -1665,8 +1882,8 @@ addSimilarPopupStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2341,8 +2558,8 @@ addSimilarPopupStyles() {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
-                    backdrop-filter: blur(8px);
+                    background: rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(4px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -2649,9 +2866,9 @@ setEditLoadingState(isLoading) {
 
     // 🔄 Loading & Error States (Pipeline Style)
     renderLoadingState() {
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent) {
-            mainContent.innerHTML = `
+        const container = document.getElementById(this.targetContainer);
+    if (container) {
+        container.innerHTML = `
                 <div class="streamlined-pipeline-container fade-in">
                     <!-- 🎯 SKELETON HEADER -->
                     <div class="skeleton-header">
@@ -2681,137 +2898,14 @@ setEditLoadingState(isLoading) {
                         <div class="skeleton-item"></div>
                     </div>
                 </div>
-                ${this.renderSkeletonStyles()}
             `;
         }
     },
 
-    // 🎨 Pipeline-Style Skeleton Styles
-    renderSkeletonStyles() {
-        return `
-            <style>
-                /* 🔥 SKELETON LOADING STYLES */
-                .skeleton-header {
-                    display: grid;
-                    grid-template-columns: auto 1fr auto;
-                    gap: 2rem;
-                    align-items: center;
-                    background: var(--surface);
-                    border: 1px solid var(--border);
-                    border-radius: var(--radius-lg);
-                    padding: 2rem;
-                    box-shadow: var(--shadow-lg);
-                    margin-bottom: 2rem;
-                }
-
-                .skeleton-icon,
-                .skeleton-title,
-                .skeleton-subtitle,
-                .skeleton-stat,
-                .skeleton-bubble,
-                .skeleton-item {
-                    background: linear-gradient(90deg, var(--border) 0%, var(--surface-hover) 50%, var(--border) 100%);
-                    background-size: 200% 100%;
-                    animation: shimmer 1.5s infinite;
-                    border-radius: var(--radius);
-                }
-
-                .skeleton-icon {
-                    width: 80px;
-                    height: 80px;
-                    border-radius: var(--radius-lg);
-                }
-
-                .skeleton-text-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.5rem;
-                }
-
-                .skeleton-title {
-                    width: 200px;
-                    height: 2rem;
-                }
-
-                .skeleton-subtitle {
-                    width: 300px;
-                    height: 1.25rem;
-                }
-
-                .skeleton-stats {
-                    display: flex;
-                    gap: 1.5rem;
-                }
-
-                .skeleton-stat {
-                    width: 140px;
-                    height: 100px;
-                    border-radius: var(--radius);
-                }
-
-                .skeleton-bubbles {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 2rem;
-                    margin-bottom: 2rem;
-                }
-
-                .skeleton-bubble {
-                    height: 200px;
-                    border-radius: var(--radius-lg);
-                }
-
-                .skeleton-list {
-                    background: var(--surface);
-                    border: 1px solid var(--border);
-                    border-radius: var(--radius-lg);
-                    padding: 2rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1rem;
-                    box-shadow: var(--shadow-lg);
-                }
-
-                .skeleton-item {
-                    height: 80px;
-                }
-
-                @keyframes shimmer {
-                    0% { background-position: -200% 0; }
-                    100% { background-position: 200% 0; }
-                }
-
-                /* 📱 RESPONSIVE SKELETON */
-                @media (max-width: 1024px) {
-                    .skeleton-header {
-                        grid-template-columns: 1fr;
-                        text-align: center;
-                        gap: 1.5rem;
-                    }
-
-                    .skeleton-bubbles {
-                        grid-template-columns: 1fr;
-                    }
-                }
-
-                @media (max-width: 768px) {
-                    .skeleton-header,
-                    .skeleton-list {
-                        padding: 1rem;
-                    }
-
-                    .skeleton-stats {
-                        justify-content: center;
-                    }
-                }
-            </style>
-        `;
-    },
-
     renderError(message) {
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent) {
-            mainContent.innerHTML = `
+    const container = document.getElementById(this.targetContainer);
+    if (container) {
+        container.innerHTML = `
                 <div class="streamlined-pipeline-container fade-in">
                     <div class="error-container">
                         <div class="error-icon">⚠️</div>
@@ -2925,7 +3019,7 @@ setEditLoadingState(isLoading) {
             'contacted': 'Contacted',
             'qualified': 'Qualified',
             'negotiation': 'Negotiation',
-            'closed': 'Closed Won',
+            'closed': 'Closed',
             'lost': 'Lost'
         };
         return statusMap[status] || status;
@@ -2965,6 +3059,15 @@ setEditLoadingState(isLoading) {
     renderStyles() {
         return `
             <style>
+            /* 🚫 NUCLEAR HOVER RESET FOR ADDLEAD - Put this FIRST */
+            .table-row:hover,
+            .clickable-row:hover,
+            .recent-item:hover {
+                background: unset !important;
+                box-shadow: unset !important;
+                transform: unset !important;
+                transition: unset !important;
+            }
                 /* 🎯 Clean AddLead Styles */
                 .addlead-container {
                     max-width: 1400px;
@@ -3738,35 +3841,28 @@ setEditLoadingState(isLoading) {
 
                 /* 🎪 Modals */
                 .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(8px);
-                    z-index: 10000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 2rem;
-                    opacity: 0;
-                    visibility: hidden;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.30);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
 
-                .modal-overlay.show {
-                    opacity: 1;
-                    visibility: visible;
-                }
-
-                .modal-backdrop {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                }
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.30);
+}
 
                 .modal {
                     background: var(--surface);
@@ -4392,48 +4488,3 @@ if (typeof window !== 'undefined') {
 console.log('🎯 CLEAN ADD LEAD MODULE v1.0 LOADED!');
 console.log('✅ Simple, reliable, and Pipeline.js compatible!');
 console.log('🚀 Available globally as: window.AddLeadModule');
-
-/**
- * 🎯 CLEAN ADD LEAD MODULE USAGE:
- * 
- * // 🚀 Initialize
- * await AddLeadModule.init();
- * 
- * // 🎯 Core Features
- * - Simple dashboard with action bubbles
- * - Clean table view with search
- * - Add/Edit lead modals
- * - Quick actions (call, email, delete)
- * - Recent leads display
- * - Mobile-responsive design
- * 
- * // 🎪 View Management
- * AddLeadModule.showDashboard();  // Show main dashboard
- * AddLeadModule.showTableView();  // Show leads table
- * 
- * // 🎯 Quick Actions
- * AddLeadModule.showAddLeadModal();       // Open add lead form
- * AddLeadModule.editLead('leadId');       // Edit specific lead
- * AddLeadModule.quickCall('leadId');      // Initiate phone call
- * AddLeadModule.quickEmail('leadId');     // Open email client
- * AddLeadModule.deleteLead('leadId');     // Delete with confirmation
- * 
- * // 🔄 Data Management
- * AddLeadModule.refreshData();            // Refresh leads data
- * 
- * // 🛠️ Debug & Development
- * addLeadDebug();                         // View module state
- * 
- * // ✨ Key Improvements Over Original:
- * ✅ No infinite loops or complex caching
- * ✅ Simple sequential initialization like Pipeline
- * ✅ Clean, readable code structure
- * ✅ Removed unnecessary progress bars and headers
- * ✅ Focus on core lead management functionality
- * ✅ Mobile-first responsive design
- * ✅ Smooth animations and transitions
- * ✅ Integration with Pipeline module
- * ✅ Consistent styling with your dashboard
- * 
- * CLEAN, SIMPLE, AND EFFECTIVE! 🚀
- */

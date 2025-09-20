@@ -2577,7 +2577,6 @@ app.post('/api/tasks',
   authenticateFromCookie,
   [
     body('title').notEmpty().withMessage('Title required'),
-    body('leadId').optional().isInt().withMessage('Valid lead ID required'),
     handleValidationErrors
   ],
   async (req, res) => {
@@ -2586,15 +2585,17 @@ app.post('/api/tasks',
       try {
         const result = await client.query(
           `INSERT INTO ${getTableName('tasks')} 
-           (user_id, lead_id, title, description, due_date, task_type, status) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+           (user_id, lead_id, title, description, due_date, due_time, task_type, priority, status) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
           [
             req.user.userId,
             req.body.leadId || null,
             req.body.title,
-            req.body.description || req.body.notes || '',
-            req.body.dueDate || req.body.date,
+            req.body.description || '',
+            req.body.dueDate || null,
+            req.body.dueTime || null,
             req.body.type || 'follow_up',
+            req.body.priority || 'medium',
             'pending'
           ]
         );
