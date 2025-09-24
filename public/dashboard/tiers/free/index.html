@@ -1270,7 +1270,7 @@ async function loadUserProfile() {
                 'ADMIN': 'Admin'
             };
             
-            const tierDisplay = tierDisplayNames[user.subscriptionTier] || 'Free Plan';
+            const tierDisplay = tierDisplayNames[user.userType] || 'Free Plan';
             
             updateUserInfo({
                 name: displayName,

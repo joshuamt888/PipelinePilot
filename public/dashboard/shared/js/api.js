@@ -109,8 +109,8 @@ class TierScalingAPI {
     const profile = await this.getUserProfile();
     return {
       tier: profile.subscriptionTier,
-      leadLimit: profile.monthlyLeadLimit,
-      currentLeads: profile.currentMonthLeads,
+      leadLimit: profile.currentLeadLimit,
+      currentLeads: profile.currentLeads,
       isAdmin: profile.isAdmin
     };
   }
@@ -203,19 +203,19 @@ class TierScalingAPI {
     return await this.request('/api/statistics');
   }
 
-  static async getCurrentMonthStats() {
+  static async getCurrentStats() {
     return await this.request('/api/current-month-stats');
   }
 
   static async getDetailedStats() {
     const stats = await this.getBasicStats();
-    const monthStats = await this.getCurrentMonthStats();
+    const currentStats = await this.getCurrentStats();
     
     return {
       ...stats,
       monthlyProgress: {
-        current: monthStats.currentMonthLeads,
-        limit: monthStats.monthlyLeadLimit,
+        current: monthStats.currentLeads,
+        limit: monthStats.currentLeadLimit,
         remaining: monthStats.leadsRemaining,
         percentage: monthStats.percentageUsed
       }
@@ -1106,7 +1106,7 @@ static async getTrialStatus() {
     }
     
     if (error.message.includes('limit reached')) {
-      return 'You\'ve reached your monthly lead limit. Upgrade to add more leads!';
+      return 'You\'ve reached your lead limit. Upgrade to add more leads!';
     }
     
     if (error.message.includes('Rate limited')) {

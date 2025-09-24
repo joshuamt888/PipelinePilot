@@ -517,9 +517,9 @@ setupMoneyInputFormatting() {
             let [wholePart, decimalPart] = value.split('.');
             
             // Limit whole part to 12 digits (like 999,999,999,999)
-            if (wholePart.length > 12) {
-                wholePart = wholePart.slice(0, 12);
-            }
+            if (wholePart.length > 8) {
+    wholePart = wholePart.slice(0, 8);
+}
             
             // Limit decimal part to 2 places
             if (decimalPart && decimalPart.length > 2) {

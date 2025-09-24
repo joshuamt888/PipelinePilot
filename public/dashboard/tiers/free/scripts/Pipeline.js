@@ -22,7 +22,7 @@ window.PipelineModule = {
     // 🎬 Module State
     leads: [],
     filteredLeads: {},
-    monthlyStats: { currentMonthLeads: 0, monthlyLeadLimit: 50 },
+    monthlyStats: { currentLeads: 0, currentLeadLimit: 50 },
     targetContainer: 'pipeline-content',
     stages: [
         // Active Pipeline (Top Row) - Removed proposal
@@ -102,10 +102,10 @@ window.PipelineModule = {
             console.log('📊 Loading monthly lead statistics...');
             const stats = await API.getCurrentMonthStats();
             this.monthlyStats = {
-                currentMonthLeads: stats.currentMonthLeads || 0,
-                monthlyLeadLimit: stats.monthlyLeadLimit || 50
+                currentLeads: stats.currentLeads || 0,
+                currentLeadLimit: stats.currentLeadLimit || 50
             };
-            console.log(`📊 Monthly stats: ${this.monthlyStats.currentMonthLeads}/${this.monthlyStats.monthlyLeadLimit}`);
+            console.log(`📊 Monthly stats: ${this.monthlyStats.currentLeads}/${this.monthlyStats.currentLeadLimit}`);
         } catch (error) {
             console.error('❌ Failed to load monthly stats:', error);
             // Keep default values
@@ -389,7 +389,7 @@ ${this.renderCustomDropdown('scoreFilter', 'All Scores', [
 
     // 📊 Render Monthly Progress Bar
     renderMonthlyProgress() {
-        const percentage = Math.min((this.monthlyStats.currentMonthLeads / this.monthlyStats.monthlyLeadLimit) * 100, 100);
+        const percentage = Math.min((this.monthlyStats.currentLeads / this.monthlyStats.currentLeadLimit) * 100, 100);
         const isNearLimit = percentage > 80;
         const isAtLimit = percentage >= 100;
         
@@ -398,9 +398,9 @@ ${this.renderCustomDropdown('scoreFilter', 'All Scores', [
                 <div class="progress-header">
                     <div class="progress-title">Lead Progress</div>
                     <div class="progress-stats">
-                        <span class="current-count">${this.monthlyStats.currentMonthLeads}</span>
+                        <span class="current-count">${this.monthlyStats.currentLeads}</span>
                         <span class="separator">/</span>
-                        <span class="limit-count">${this.monthlyStats.monthlyLeadLimit}</span>
+                        <span class="limit-count">${this.monthlyStats.currentLeadLimit}</span>
                         <span class="leads-text">leads</span>
                     </div>
                 </div>
@@ -6916,7 +6916,7 @@ async refreshPipeline() {
         // Reset state
         this.leads = [];
         this.filteredLeads = {};
-        this.monthlyStats = { currentMonthLeads: 0, monthlyLeadLimit: 50 };
+        this.monthlyStats = { currentLeads: 0, currentLeadLimit: 50 };
         this.dragState = {
             isDragging: false,
             draggedLead: null,

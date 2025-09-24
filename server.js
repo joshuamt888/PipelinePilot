@@ -60,14 +60,14 @@ const PRICING_PLANS = {
   professional_monthly: {
     name: 'Professional',
     userType: 'professional',
-    leadLimit: 1000,
+    leadLimit: 5000,
     priceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
     features: ['Full pipeline', 'Advanced analytics']
   },
   professional_yearly: {
     name: 'Professional Yearly',
     userType: 'professional',
-    leadLimit: 1000,
+    leadLimit: 5000,
     priceId: process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
     features: ['Full pipeline', 'Advanced analytics', 'Save 20%']
   },
@@ -379,7 +379,7 @@ const passwordResetLimiter = rateLimit({
 // Add this after the passwordResetLimiter definition
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100000, // 1000 requests per 15 minutes for authenticated users
+  max: 1000, // 1000 requests per 15 minutes for authenticated users
   message: { error: 'API rate limit exceeded' },
   
   // Skip rate limiting for authenticated users on most endpoints
@@ -395,11 +395,6 @@ const apiLimiter = rateLimit({
       return false; // Don't skip - apply rate limiting
     }
   },
-  
-  onLimitReached: (req, res, options) => {
-    console.log(`🚨 RATE LIMIT HIT: ${req.ip} exceeded ${options.max} requests`);
-    console.log(`🍪 Auth cookie present: ${!!req.cookies.authToken}`);
-  }
 });
 
 const validator = require('validator');
@@ -442,7 +437,7 @@ const tablePrefix = isDevelopment ? 'dev_' : '';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -520,7 +515,6 @@ async function initializeDatabase() {
         
         -- Subscription & Access Control
         user_type VARCHAR(50) DEFAULT 'free',
-        subscription_tier VARCHAR(50) DEFAULT 'FREE',
         billing_cycle VARCHAR(20),
         subscription_status VARCHAR(30) DEFAULT 'active',
         trial_end_date TIMESTAMP,
@@ -532,13 +526,13 @@ async function initializeDatabase() {
         permissions JSONB DEFAULT '["read_own_leads", "write_own_leads"]',
         
         -- Lead Limits & Usage
-        monthly_lead_limit INTEGER DEFAULT 50,
-        current_month_leads INTEGER DEFAULT 0,
+        current_lead_limit INTEGER DEFAULT 50,
+        current_leads INTEGER DEFAULT 0,
         total_leads_created INTEGER DEFAULT 0,
         lead_limit_reset_date DATE DEFAULT CURRENT_DATE,
         
         -- User Preferences & Settings
-        goals JSONB DEFAULT '{"daily": 5, "monthly": 50, "revenue": 10000}',
+        goals JSONB DEFAULT '{}',
         settings JSONB DEFAULT '{"darkMode": false, "notifications": true, "timezone": "UTC"}',
         dashboard_config JSONB DEFAULT '{}',
         
@@ -717,7 +711,6 @@ async function initializeDatabase() {
     await client.query(`
       -- User indexes
       CREATE INDEX IF NOT EXISTS idx_users_email ON ${getTableName('users')} (email);
-      CREATE INDEX IF NOT EXISTS idx_users_subscription_tier ON ${getTableName('users')} (subscription_tier);
       CREATE INDEX IF NOT EXISTS idx_users_created_at ON ${getTableName('users')} (created_at);
       CREATE INDEX IF NOT EXISTS idx_users_email_verification_token ON ${getTableName('users')} (email_verification_token);
       
@@ -786,17 +779,16 @@ async function createUser(userData) {
   try {
     const result = await client.query(
       `INSERT INTO ${getTableName('users')} 
-       (email, password, user_type, subscription_tier, billing_cycle, is_admin, monthly_lead_limit, current_month_leads, goals, settings) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+ (email, password, user_type, billing_cycle, is_admin, current_lead_limit, current_leads, goals, settings) 
+ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
         userData.email,
         userData.password,
         userData.userType,
-        userData.subscriptionTier,
         userData.billingCycle,
         userData.isAdmin,
-        userData.monthlyLeadLimit,
-        userData.currentMonthLeads,
+        userData.currentLeadLimit,
+        userData.currentLeads,
         JSON.stringify(userData.goals),
         JSON.stringify(userData.settings)
       ]
@@ -873,7 +865,7 @@ async function incrementUserLeadCount(userId) {
   try {
     await client.query(
       `UPDATE ${getTableName('users')} 
-       SET current_month_leads = current_month_leads + 1, updated_at = NOW()
+       SET current_leads = current_leads + 1, updated_at = NOW()
        WHERE id = $1`,
       [userId]
     );
@@ -889,7 +881,7 @@ async function decrementUserLeadCount(userId) {
   try {
     await client.query(
       `UPDATE ${getTableName('users')} 
-       SET current_month_leads = GREATEST(current_month_leads - 1, 0), updated_at = NOW()
+       SET current_leads = GREATEST(current_leads - 1, 0), updated_at = NOW()
        WHERE id = $1`,
       [userId]
     );
@@ -898,6 +890,37 @@ async function decrementUserLeadCount(userId) {
   } finally {
     client.release();
   }
+}
+
+// Add this new function:
+function calculateSubscriptionStatus(user) {
+  const now = new Date();
+  
+  if (user.user_type === 'free') {
+    return 'none';
+  }
+  
+  if (user.user_type === 'professional_trial') {
+    if (user.trial_end_date && new Date(user.trial_end_date) > now) {
+      return 'trialing';
+    } else {
+      return 'trial_expired';
+    }
+  }
+  
+  if (user.user_type === 'professional') {
+    if (!user.subscription_end_date) {
+      return 'active';
+    }
+    
+    if (new Date(user.subscription_end_date) > now) {
+      return 'active';
+    } else {
+      return 'expired';
+    }
+  }
+  
+  return 'unknown';
 }
 
 // 🔒 Password reset helper functions
@@ -988,19 +1011,26 @@ async function saveTrialVerificationToken(email, token) {
   return await saveAccountVerificationToken(email, token);
 }
 
-// 🎯 Helper function to map subscription tiers to folder paths
-function getTierPath(subscriptionTier) {
+function getTierPath(userType) {
   const tierMap = {
-    'FREE': 'free',
-    'PROFESSIONAL': 'professional',
-    'PROFESSIONAL_TRIAL': 'professional', // Trials get professional experience
-    'BUSINESS': 'business', 
-    'ENTERPRISE': 'enterprise',
-    'ADMIN': 'admin'
+    'free': 'free',
+    'professional': 'professional', 
+    'professional_trial': 'professional',
+    'business': 'business',
+    'enterprise': 'enterprise',
+    'admin': 'admin'
   };
   
-  const path = tierMap[subscriptionTier] || 'free';
-  console.log(`🗂️  Tier mapping: ${subscriptionTier} → ${path}`);
+  // Extract base type by removing suffixes
+  let baseType = userType;
+  if (userType) {
+    baseType = userType
+      .replace('_pending_verification', '')
+      .replace('_pending', '')
+      .replace('_trial_pending', '_trial');
+  }
+  
+  const path = tierMap[baseType] || 'free';
   return path;
 }
 
@@ -1083,9 +1113,15 @@ app.use('/dashboard', (req, res, next) => {
 app.get('/dashboard/tiers/:tier/*', async (req, res, next) => {
   try {
     const requestedTier = req.params.tier;
-    const token = req.cookies.authToken;
+    
+    // Allow static assets (JS, CSS, images, fonts) without authentication
+    if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|map)$/)) {
+      return next();
+    }
     
     console.log(`🔍 Direct tier access attempt: ${requestedTier}`);
+    
+    const token = req.cookies.authToken;
     
     if (!token) {
       console.log('❌ No token for direct tier access');
@@ -1102,11 +1138,10 @@ app.get('/dashboard/tiers/:tier/*', async (req, res, next) => {
     }
     
     // Check if user's tier allows access to requested tier
-    const userTierPath = getTierPath(user.subscription_tier);
-    const allowedTiers = getAllowedTiers(user.subscription_tier);
+    const allowedTiers = getAllowedTiers(user.user_type);
     
     if (!allowedTiers.includes(requestedTier)) {
-      console.log(`🚫 TIER VIOLATION: ${user.email} (${user.subscription_tier}) tried to access ${requestedTier}`);
+      console.log(`🚫 TIER VIOLATION: ${user.email} (${user.user_type}) tried to access ${requestedTier}`);
       return res.redirect(`/dashboard?error=tier_access_denied`);
     }
     
@@ -1180,9 +1215,9 @@ app.get('/dashboard', async (req, res) => {
     }
     
     // Determine tier path based on subscription
-    const tierPath = getTierPath(user.subscription_tier);
+    const tierPath = getTierPath( user.user_type);
     
-    console.log(`🎯 Serving dashboard for ${user.email} (${user.subscription_tier}) → tiers/${tierPath}/`);
+    console.log(`🎯 Serving dashboard for ${user.email} (${ user.user_type}) → tiers/${tierPath}/`);
     
     // Serve the tier-specific dashboard
     const dashboardPath = path.join(__dirname, 'public', 'dashboard', 'tiers', tierPath, 'index.html');
@@ -1252,10 +1287,10 @@ app.get('/api/auth/check', async (req, res) => {
         id: user.id,
         email: user.email,
         userType: user.user_type,
-        subscriptionTier: user.subscription_tier,
+        subscriptionTier:  user.user_type,
         isAdmin: user.is_admin,
-        monthlyLeadLimit: user.monthly_lead_limit,
-        currentMonthLeads: user.current_month_leads,
+        currentLeadLimit: user.current_lead_limit,
+        currentLeads: user.current_leads,
         goals: user.goals,
         settings: user.settings
       }
@@ -1275,10 +1310,10 @@ app.get('/api/current-month-stats', authenticateFromCookie, async (req, res) => 
     }
     
     res.json({
-      currentMonthLeads: user.current_month_leads,
-      monthlyLeadLimit: user.monthly_lead_limit,
-      leadsRemaining: Math.max(0, user.monthly_lead_limit - user.current_month_leads),
-      percentageUsed: Math.round((user.current_month_leads / user.monthly_lead_limit) * 100),
+      currentLeads: user.current_leads,
+      currentLeadLimit: user.current_lead_limit,
+      leadsRemaining: Math.max(0, user.current_lead_limit - user.current_leads),
+      percentageUsed: Math.round((user.current_leads / user.current_lead_limit) * 100),
       limitResetDate: user.lead_limit_reset_date
     });
   } catch (error) {
@@ -1330,20 +1365,20 @@ app.post('/api/register',
       const verificationToken = generateVerificationToken();
       const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
       
-      let userType, subscriptionTier, monthlyLeadLimit, goals, billingCycle, planName;
+      let userType, subscriptionTier, currentLeadLimit, goals, billingCycle, planName;
       
       if (pendingUpgrade && plan) {
         const planConfig = PRICING_PLANS[plan];
         userType = `${planConfig.userType}_pending_verification`;
         subscriptionTier = `${planConfig.name.toUpperCase()}_PENDING`;
-        monthlyLeadLimit = planConfig.leadLimit;
+        currentLeadLimit = planConfig.leadLimit;
         billingCycle = plan.includes('yearly') ? 'yearly' : 'monthly';
         goals = { daily: Math.floor(planConfig.leadLimit / 30), monthly: planConfig.leadLimit };
         planName = planConfig.userType; // for email template
       } else {
         userType = 'free_pending_verification';
         subscriptionTier = 'FREE_PENDING';
-        monthlyLeadLimit = 50;
+        currentLeadLimit = 50;
         goals = { daily: 5, monthly: 50 };
         billingCycle = null;
         planName = 'free';
@@ -1353,7 +1388,7 @@ app.post('/api/register',
       if (isAdmin) {
         userType = 'admin';
         subscriptionTier = 'ADMIN';
-        monthlyLeadLimit = 999999;
+        currentLeadLimit = 999999;
         goals = { daily: 999999, monthly: 999999 };
       }
 
@@ -1364,8 +1399,8 @@ app.post('/api/register',
         subscriptionTier,
         billingCycle,
         isAdmin,
-        monthlyLeadLimit,
-        currentMonthLeads: 0,
+        currentLeadLimit,
+        currentLeads: 0,
         goals,
         settings: {
           pendingVerification: !isAdmin,
@@ -1405,7 +1440,7 @@ app.post('/api/register',
           id: newUser.id, 
           email: newUser.email,
           userType: newUser.user_type,
-          subscriptionTier: newUser.subscription_tier,
+          userType: user.user_type,
           pendingVerification: !isAdmin,
           isAdmin
         }
@@ -1471,9 +1506,9 @@ app.post('/api/start-trial',
         subscriptionTier: 'PROFESSIONAL_TRIAL_PENDING',
         billingCycle: null,
         isAdmin: false,
-        monthlyLeadLimit: 1000,
-        currentMonthLeads: 0,
-        goals: { daily: 33, monthly: 1000 },
+        currentLeadLimit: 5000,
+        currentLeads: 0,
+        goals: {},
         settings: {
           subscriptionTier: 'PROFESSIONAL_TRIAL_PENDING',
           trialStartDate: new Date().toISOString(),
@@ -1509,7 +1544,7 @@ app.post('/api/start-trial',
           id: newUser.id, 
           email: newUser.email,
           userType: newUser.user_type,
-          subscriptionTier: newUser.subscription_tier,
+          userType: user.user_type,
           pendingVerification: true
         }
       });
@@ -1661,25 +1696,23 @@ app.get('/verify-account', async (req, res) => {
         newSubscriptionTier = 'FREE';
       }
       
-      await client.query(
-        `UPDATE ${getTableName('users')} 
-         SET user_type = $1,
-             subscription_tier = $2,
-             email_verified_at = NOW(), 
-             email_verification_token = NULL,
-             settings = settings || $3,
-             updated_at = NOW()
-         WHERE id = $4`,
-        [
-          newUserType,
-          newSubscriptionTier,
-          JSON.stringify({ 
-            verificationCompleted: true,
-            pendingVerification: false
-          }),
-          user.id
-        ]
-      );
+     await client.query(
+  `UPDATE ${getTableName('users')} 
+   SET user_type = $1, 
+       email_verified_at = NOW(), 
+       email_verification_token = NULL,
+       settings = settings || $2,
+       updated_at = NOW()
+   WHERE id = $3`,
+  [
+    newUserType,
+    JSON.stringify({ 
+      verificationCompleted: true,
+      pendingVerification: false
+    }),
+    user.id
+  ]
+);
       
       // Create JWT and set cookie for automatic login
       const authToken = jwt.sign(
@@ -1786,7 +1819,7 @@ app.post('/api/login',
         { expiresIn: tokenExpiry }
       );
       
-      const subscriptionTier = user.subscription_tier || 'FREE';
+      const subscriptionTier = user.user_type || 'free';
       
       console.log(`✅ User login: ${email} (${subscriptionTier})`);
       
@@ -1823,8 +1856,8 @@ app.post('/api/login',
           userType: user.user_type,
           subscriptionTier,
           billingCycle: user.billing_cycle,
-          monthlyLeadLimit: user.monthly_lead_limit,
-          currentMonthLeads: user.current_month_leads,
+          currentLeadLimit: user.current_lead_limit,
+          currentLeads: user.current_leads,
           goals: user.goals,
           settings: user.settings
         }
@@ -2000,7 +2033,7 @@ app.post('/api/create-checkout-session',
       if (!upgradeValidation.valid) {
         return res.status(400).json({ 
           error: upgradeValidation.message,
-          currentTier: user.subscription_tier,
+          currentTier:  user.user_type,
           availableUpgrades: getAvailableUpgradesForTier(user.user_type)
         });
       }
@@ -2097,33 +2130,33 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const checkoutClient = await pool.connect();
         try {
           await checkoutClient.query(
-            `UPDATE ${getTableName('users')} 
-             SET user_type = $1, 
-                 subscription_tier = $2, 
-                 billing_cycle = $3, 
-                 monthly_lead_limit = $4, 
-                 stripe_customer_id = $5, 
-                 stripe_subscription_id = $6,
-                 subscription_start_date = NOW(),
-                 settings = settings || $7,
-                 updated_at = NOW()
-             WHERE id = $8`,
-            [
-              planConfig.userType, 
-              planConfig.name.toUpperCase(),
-              plan.includes('yearly') ? 'yearly' : 'monthly',
-              planConfig.leadLimit, 
-              session.customer,
-              subscription.id,
-              JSON.stringify({
-                upgradeDate: new Date().toISOString(),
-                previousTier: previousTier,
-                plan: plan,
-                subscriptionTier: planConfig.name.toUpperCase()
-              }),
-              userId
-            ]
-          );
+  `UPDATE ${getTableName('users')} 
+   SET user_type = $1, 
+       billing_cycle = $3, 
+       current_lead_limit = $4, 
+       stripe_customer_id = $5, 
+       stripe_subscription_id = $6,
+       subscription_start_date = NOW(),
+       subscription_end_date = $7,
+       subscription_status = 'active',
+       settings = settings || $8,
+       updated_at = NOW()
+   WHERE id = $9`,
+  [
+    planConfig.userType, 
+    plan.includes('yearly') ? 'yearly' : 'monthly',
+    planConfig.leadLimit, 
+    session.customer,
+    subscription.id,
+    new Date(subscription.current_period_end * 1000), // Add this line
+    JSON.stringify({
+      upgradeDate: new Date().toISOString(),
+      previousTier: previousTier,
+      plan: plan
+    }),
+    userId
+  ]
+);
           
           console.log(`✅ User upgraded: ${email} (${previousTier} → ${planConfig.userType})`);
           
@@ -2143,11 +2176,15 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           const updateClient = await pool.connect();
           try {
             await updateClient.query(
-              `UPDATE ${getTableName('users')} 
-               SET user_type = 'free', subscription_tier = 'FREE', 
-                   billing_cycle = NULL, monthly_lead_limit = 50, 
-                   settings = settings || $1, updated_at = NOW()
-               WHERE stripe_customer_id = $2`,
+  `UPDATE ${getTableName('users')} 
+   SET user_type = 'free', 
+       billing_cycle = NULL, 
+       current_lead_limit = 50,
+       subscription_status = 'cancelled',
+       subscription_end_date = NOW(),
+       settings = settings || $1, 
+       updated_at = NOW()
+   WHERE stripe_customer_id = $2`,
               [
                 JSON.stringify({ 
                   downgradedDate: new Date().toISOString(),
@@ -2169,25 +2206,27 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         console.log(`🗑️ Subscription cancelled: ${cancelCustomer.email}`);
         
         const deleteClient = await pool.connect();
-        try {
-          await deleteClient.query(
-            `UPDATE ${getTableName('users')} 
-             SET user_type = 'free', subscription_tier = 'FREE', 
-                 billing_cycle = NULL, monthly_lead_limit = 50,
-                 stripe_subscription_id = NULL,
-                 settings = settings || $1, updated_at = NOW()
-             WHERE stripe_customer_id = $2`,
-            [
-              JSON.stringify({ 
-                downgradedDate: new Date().toISOString(),
-                reason: 'cancelled' 
-              }),
-              cancelCustomer.id
-            ]
-          );
-        } finally {
-          deleteClient.release();
-        }
+try {
+  await deleteClient.query(
+    `UPDATE ${getTableName('users')} 
+     SET user_type = 'free', 
+         billing_cycle = NULL, 
+         current_lead_limit = 50,
+         stripe_subscription_id = NULL,
+         settings = settings || $1, 
+         updated_at = NOW()
+     WHERE stripe_customer_id = $2`,
+    [
+      JSON.stringify({ 
+        downgradedDate: new Date().toISOString(),
+        reason: 'cancelled' 
+      }),
+      cancelCustomer.id
+    ]
+  );
+} finally {
+  deleteClient.release();
+}
         break;
 
       default:
@@ -2260,12 +2299,12 @@ app.post('/api/leads',
       // Check lead limits
       if (!req.user.isAdmin) {
         const user = await findUserById(req.user.userId);
-        if (user && user.current_month_leads >= user.monthly_lead_limit) {
+        if (user && user.current_leads >= user.current_lead_limit) {
           return res.status(403).json({ 
-            error: `Monthly lead limit reached (${user.monthly_lead_limit}). Upgrade to add more!`,
+            error: `Lead limit reached (${user.current_leads}/${user.current_lead_limit}). Upgrade for 5,000 leads!`,
             limitReached: true,
-            currentCount: user.current_month_leads,
-            limit: user.monthly_lead_limit
+            currentCount: user.current_leads,
+            limit: user.current_lead_limit
           });
         }
       }
@@ -2487,11 +2526,11 @@ app.get('/api/user/profile', authenticateFromCookie, async (req, res) => {
       firstName: user.first_name,
       lastName: user.last_name,
       userType: user.user_type,
-      subscriptionTier: user.subscription_tier,
+      subscriptionTier:  user.user_type,
       billingCycle: user.billing_cycle,
       isAdmin: user.is_admin,
-      monthlyLeadLimit: user.monthly_lead_limit,
-      currentMonthLeads: user.current_month_leads,
+      currentLeadLimit: user.current_lead_limit,
+      currentLeads: user.current_leads,
       goals: user.goals,
       settings: user.settings,
       onboardingCompleted: user.onboarding_completed,
@@ -2517,13 +2556,13 @@ app.get('/api/user/settings', authenticateFromCookie, async (req, res) => {
       id: user.id,
       email: user.email,
       userType: user.user_type,
-      subscriptionTier: user.subscription_tier,
+      subscriptionTier:  user.user_type,
       billingCycle: user.billing_cycle,
       isAdmin: user.is_admin,
       goals: user.goals,
       settings: user.settings,
-      monthlyLeadLimit: user.monthly_lead_limit,
-      currentMonthLeads: user.current_month_leads,
+      currentLeadLimit: user.current_lead_limit,
+      currentLeads: user.current_leads,
       createdAt: user.created_at
     });
   } catch (error) {
@@ -3134,7 +3173,7 @@ app.get('/api/available-upgrades', authenticateFromCookie, async (req, res) => {
     if (availablePlans.length === 0) {
       return res.json({
         hasUpgrades: false,
-        currentTier: user.subscription_tier,
+        currentTier:  user.user_type,
         message: user.user_type === 'enterprise' ? 
           'You have the highest tier available!' : 
           'No upgrades available for your account type.'
@@ -3155,7 +3194,7 @@ app.get('/api/available-upgrades', authenticateFromCookie, async (req, res) => {
     
     res.json({
       hasUpgrades: true,
-      currentTier: user.subscription_tier,
+      currentTier:  user.user_type,
       currentUserType: user.user_type,
       availableUpgrades: upgradeOptions
     });
