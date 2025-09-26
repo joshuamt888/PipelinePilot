@@ -699,143 +699,6 @@ input, textarea, [contenteditable] {
             }
         }
 
-       /* 🚀 SIMPLE BRAND LOADING SCREEN */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999999999;
-    opacity: 1;
-    visibility: visible;
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.loading-overlay.fade-out {
-    opacity: 0;
-    visibility: hidden;
-    transform: scale(1.02);
-}
-
-.loading-container {
-    text-align: center;
-    position: relative;
-    z-index: 2;
-}
-
-.loading-logo {
-    margin-bottom: 2rem;
-    animation: brandPulse 2s ease-in-out infinite;
-}
-
-.logo-text {
-    font-size: 4rem;
-    font-weight: 900;
-    color: white;
-    margin-bottom: 1rem;
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    letter-spacing: -0.02em;
-}
-
-.logo-tagline {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1.2rem;
-    font-weight: 500;
-    opacity: 0.9;
-}
-
-.loading-progress {
-    width: 240px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 9999px;
-    margin: 3rem auto 0;
-    overflow: hidden;
-    position: relative;
-}
-
-.loading-progress-bar {
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 9999px;
-    width: 0%;
-    transition: width 0.4s ease;
-    position: relative;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-.loading-progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    animation: brandShimmer 2s ease-in-out infinite;
-}
-
-.loading-status {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: white;
-    margin: 2rem 0 0.5rem;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.loading-substatus {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.8);
-    opacity: 0.9;
-}
-
-/* 🎪 BRAND ANIMATIONS */
-@keyframes brandPulse {
-    0%, 100% { 
-        transform: scale(1);
-        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
-    }
-    50% { 
-        transform: scale(1.02);
-        filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
-    }
-}
-
-@keyframes brandShimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-/* 📱 MOBILE RESPONSIVE */
-@media (max-width: 768px) {
-    .logo-text {
-        font-size: 2.5rem;
-    }
-    
-    .logo-tagline {
-        font-size: 1rem;
-    }
-    
-    .loading-progress {
-        width: 200px;
-    }
-}
-
-@media (max-width: 480px) {
-    .logo-text {
-        font-size: 2rem;
-    }
-    
-    .loading-progress {
-        width: 160px;
-    }
-}
-
         /* 🌙 DARK MODE */
         [data-theme="dark"] .sidebar {
             background: linear-gradient(180deg, #1e293b 0%, #0f172a 30%, #1e293b 70%, #0f172a 100%);
@@ -928,37 +791,6 @@ input, textarea, [contenteditable] {
     </style>
 </head>
 <body data-theme="light">
-    <!-- 🚀 EPIC LOADING SCREEN -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-container">
-        <div class="loading-logo">
-            <div class="logo-text">SteadyManager</div>
-            <div class="logo-tagline">Loading your workspace...</div>
-        </div>
-        
-        <div class="loading-spinner-wrapper">
-            <div class="loading-spinner-outer">
-                <div class="loading-spinner-inner"></div>
-            </div>
-            <div class="loading-progress">
-                <div class="loading-progress-bar" id="loadingProgress"></div>
-            </div>
-        </div>
-        
-        <div class="loading-dots">
-            <div class="loading-status" id="loadingStatus">Initializing...</div>
-            <div class="loading-substatus" id="loadingSubstatus">Connecting to servers</div>
-        </div>
-    </div>
-    
-    <div class="loading-particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
-</div>
     <!-- 🗂️ SIDEBAR -->
 <div class="sidebar no-select" id="sidebar">
     <div class="sidebar-content">
@@ -1132,121 +964,85 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Shell ready!');
 });
 
-        // 🔐 ENHANCED SHELL INITIALIZATION WITH LOADING
+       // 🏎️ FAST SHELL INITIALIZATION  
 async function initializeShell() {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const loadingProgress = document.getElementById('loadingProgress');
-    const loadingStatus = document.getElementById('loadingStatus');
-    const loadingSubstatus = document.getElementById('loadingSubstatus');
-    
-    // 🎬 Loading sequence
-    const loadingSteps = [
-        { progress: 10, status: 'Initializing...', substatus: 'Connecting to servers' },
-        { progress: 30, status: 'Authenticating...', substatus: 'Verifying credentials' },
-        { progress: 50, status: 'Loading profile...', substatus: 'Fetching user data' },
-        { progress: 70, status: 'Setting up workspace...', substatus: 'Preparing dashboard' },
-        { progress: 90, status: 'Almost ready...', substatus: 'Final touches' },
-        { progress: 100, status: 'Welcome!', substatus: 'Launching SteadyManager' }
-    ];
-    
     try {
-        console.log('🔐 Initializing shell with loading screen...');
+        console.log('Initializing shell...');
         
-        // 🎪 Animate through loading steps
-        for (let i = 0; i < loadingSteps.length; i++) {
-            const step = loadingSteps[i];
-            
-            // Update progress bar
-            if (loadingProgress) {
-                loadingProgress.style.width = `${step.progress}%`;
-            }
-            
-            // Update status text
-            if (loadingStatus) {
-                loadingStatus.textContent = step.status;
-            }
-            if (loadingSubstatus) {
-                loadingSubstatus.textContent = step.substatus;
-            }
-            
-            // Wait between steps for smooth UX
-            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 300));
-            
-            // Perform actual work during key steps
-if (i === 1) {
-    // Authentication step
-    const authResponse = await API.checkAuth();
-    if (!authResponse.authenticated) {
-        throw new Error('Authentication failed');
-    }
-} else if (i === 2) {
-    // Load profile step
-    await loadUserProfile();
-} else if (i === 3) {
-    // Initialize ALL modules step
-console.log('🔥 Initializing all modules...');
-const moduleInitPromises = [];
-
-// if (window.DashboardController?.init) {
-//     moduleInitPromises.push(window.DashboardController.init('dashboard-content'));
-// }
-if (window.AddLeadModule?.init) {
-    moduleInitPromises.push(window.AddLeadModule.init('leads-content'));
-}
-if (window.PipelineModule?.init) {
-    moduleInitPromises.push(window.PipelineModule.init('pipeline-content'));
-}
-if (window.SchedulingModule?.init) {
-    moduleInitPromises.push(window.SchedulingModule.init('tasks-content'));
-}
-// if (window.SettingsModule?.init) {
-//     moduleInitPromises.push(window.SettingsModule.init('settings-content'));
-// }
-// if (window.UpgradeModule?.init) {
-//     moduleInitPromises.push(window.UpgradeModule.init('upgrade-content'));
-// }
-
-    await Promise.all(moduleInitPromises);
-    console.log('✅ All modules initialized!');
-}
+        // Quick auth check
+        const authResponse = await API.checkAuth();
+        if (!authResponse.authenticated) {
+            window.location.href = '/login';
+            return;
         }
         
-        // 🎉 Success! Hide loading screen
-        setTimeout(() => {
-            if (loadingOverlay) {
-                loadingOverlay.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingOverlay.style.display = 'none';
-                }, 800);
-            }
-            
-            if (window.SteadyUtils) {
-                SteadyUtils.showToast('Welcome to SteadyManager! 🚀', 'success', {
-                    duration: 3000,
-                    position: 'bottom-right'
-                });
-            }
-        }, 800);
+        // Load user profile
+        await loadUserProfile();
         
-        console.log('✅ Shell initialized successfully with epic loading!');
+        // Register modules for lazy loading
+        window.currentActiveModule = null;
+        window.moduleRegistry = {
+            leads: window.AddLeadModule,
+            pipeline: window.PipelineModule,
+            tasks: window.SchedulingModule
+        };
+        
+        console.log('Shell ready');
         
     } catch (error) {
-        console.error('❌ Shell initialization failed:', error);
+        console.error('Shell initialization failed:', error);
+        showInitializationError(error.message);
+    }
+}
+
+// Add this new function for lazy module loading
+async function loadPageModule(pageName) {
+    try {
+        console.log(`🚀 Loading module: ${pageName}`);
         
-        // 💥 Error state
-        if (loadingProgress) loadingProgress.style.width = '100%';
-        if (loadingStatus) loadingStatus.textContent = 'Connection Error';
-        if (loadingSubstatus) loadingSubstatus.textContent = 'Retrying in 3 seconds...';
+        // Initialize active modules registry if it doesn't exist
+        if (!window.activeModules) {
+            window.activeModules = new Set();
+        }
         
-        setTimeout(() => {
-            if (loadingOverlay) {
-                loadingOverlay.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingOverlay.style.display = 'none';
-                    showInitializationError(error.message);
-                }, 800);
+        const moduleMap = {
+            leads: window.AddLeadModule,
+            pipeline: window.PipelineModule,
+            tasks: window.SchedulingModule,
+            dashboard: null,
+            settings: null,
+            upgrade: null
+        };
+        
+        const targetModule = moduleMap[pageName];
+        
+        if (targetModule?.init) {
+            // Check if module is already active
+            if (window.activeModules.has(targetModule)) {
+                console.log(`📦 ${pageName} module already active, skipping init`);
+                return;
             }
-        }, 3000);
+            
+            console.log(`📦 Initializing ${pageName} module...`);
+            await targetModule.init(`${pageName}-content`);
+            
+            // Add to active modules set
+            window.activeModules.add(targetModule);
+            
+            // Keep backward compatibility for modules that check currentActiveModule
+            window.currentActiveModule = targetModule;
+            
+            console.log(`✅ ${pageName} module loaded and activated`);
+            console.log(`📊 Active modules: ${window.activeModules.size}`);
+        } else if (pageName === 'dashboard') {
+            console.log('🏠 Dashboard view - no module needed');
+        } else {
+            console.log(`⚠️ No module found for ${pageName}`);
+        }
+        
+    } catch (error) {
+        console.error(`❌ Failed to load module ${pageName}:`, error);
+        throw error;
     }
 }
 
@@ -1293,8 +1089,19 @@ async function loadUserProfile() {
     }
 }
 
+window.moduleEvents = {
+    emit: function(event, data) {
+        if (window.SchedulingModule && window.SchedulingModule.handleEvent) {
+            window.SchedulingModule.handleEvent(event, data);
+        }
+        if (window.AddLeadModule && window.AddLeadModule.handleEvent) {
+            window.AddLeadModule.handleEvent(event, data);
+        }
+    }
+};
         async function loadPage(pageName, triggerSource = null) {
-    console.log(`🧭 Loading page: ${pageName}`);
+    console.log(`Loading page: ${pageName}`);
+    window.moduleEvents.emit('navigation', { targetPage: pageName });
     
     // Hide all pages
     document.querySelectorAll('.page-content').forEach(content => {
@@ -1334,11 +1141,42 @@ async function loadUserProfile() {
         pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
     }
     
+    // 🔥 THIS IS THE KEY ADDITION - LAZY LOAD THE MODULE
+    try {
+        await loadPageModule(pageName);
+    } catch (error) {
+        console.error(`Failed to load ${pageName} module:`, error);
+    }
+    
     // Re-setup mobile title click after navigation
     setTimeout(() => {
         setupMobileTitleClick();
     }, 100);
 }
+
+// Add helper function to cleanup a specific module
+window.cleanupModule = function(module) {
+    if (module && window.activeModules?.has(module)) {
+        if (module.cleanup) {
+            module.cleanup();
+        }
+        window.activeModules.delete(module);
+        console.log(`🧹 Cleaned up module, ${window.activeModules.size} remaining`);
+    }
+};
+
+// Add helper to cleanup all modules (useful for logout/page refresh)
+window.cleanupAllModules = function() {
+    if (window.activeModules) {
+        window.activeModules.forEach(module => {
+            if (module.cleanup) {
+                module.cleanup();
+            }
+        });
+        window.activeModules.clear();
+        console.log('🧹 All modules cleaned up');
+    }
+};
 
         // 🔤 GENERATE INITIALS
         function generateInitials(email) {

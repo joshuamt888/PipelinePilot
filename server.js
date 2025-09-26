@@ -1054,7 +1054,8 @@ const authenticateFromCookie = async (req, res, next) => {
     
     if (!user) {
       // Clear invalid cookie
-      res.clearCookie('authToken', getCookieConfig());
+      const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
       return res.status(401).json({ error: 'User not found' });
     }
     
@@ -1065,7 +1066,8 @@ const authenticateFromCookie = async (req, res, next) => {
     next();
   } catch (err) {
     // Clear invalid/expired cookie
-    res.clearCookie('authToken', getCookieConfig());
+    const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
@@ -1133,7 +1135,8 @@ app.get('/dashboard/tiers/:tier/*', async (req, res, next) => {
     
     if (!user) {
       console.log('❌ Invalid user for direct tier access');
-      res.clearCookie('authToken', getCookieConfig());
+      const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
       return res.redirect('/login?error=user_not_found');
     }
     
@@ -1196,23 +1199,26 @@ app.get('/dashboard', async (req, res) => {
       
       if (!user) {
         console.log('❌ User not found for userId:', decoded.userId);
-        res.clearCookie('authToken', getCookieConfig());
+        const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
         return res.redirect('/login?error=user_not_found');
       }
     } catch (err) {
       console.log('❌ Token verification failed:', err.message);
-      res.clearCookie('authToken', getCookieConfig());
+      const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
       return res.redirect('/login?error=session_expired');
     }
     
     // If token came from URL parameter, set it as cookie for future requests
-    if (req.query.token && !req.cookies.authToken) {
-      res.cookie('authToken', token, getCookieConfig());
-      res.cookie('isLoggedIn', 'true', {
-        ...getCookieConfig(),
-        httpOnly: false
-      });
-    }
+if (req.query.token && !req.cookies.authToken) {
+  // Use default cookie config for URL-based tokens (24 hours)
+  res.cookie('authToken', token, getCookieConfig());
+  res.cookie('isLoggedIn', 'true', {
+    ...getCookieConfig(),
+    httpOnly: false
+  });
+}
     
     // Determine tier path based on subscription
     const tierPath = getTierPath( user.user_type);
@@ -1277,7 +1283,8 @@ app.get('/api/auth/check', async (req, res) => {
     const user = await findUserById(decoded.userId);
     
     if (!user) {
-      res.clearCookie('authToken', getCookieConfig());
+      const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
       return res.json({ authenticated: false });
     }
     
@@ -1296,7 +1303,8 @@ app.get('/api/auth/check', async (req, res) => {
       }
     });
   } catch (err) {
-    res.clearCookie('authToken', getCookieConfig());
+    const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
     res.json({ authenticated: false });
   }
 });
@@ -1874,8 +1882,9 @@ app.post('/api/login',
 app.post('/api/logout', (req, res) => {
   const cookieConfig = getCookieConfig();
   
-  res.clearCookie('authToken', cookieConfig);
-  res.clearCookie('isLoggedIn', cookieConfig);
+  const { maxAge, ...clearConfig } = getCookieConfig();
+res.clearCookie('authToken', clearConfig);
+res.clearCookie('isLoggedIn', clearConfig);
   
   console.log('🚪 User logged out, cookies cleared');
   res.json({ message: 'Logged out successfully' });
@@ -3334,7 +3343,6 @@ app.get('*', (req, res) => {
 // 🚀 Start server
 async function startServer() {
   try {
-    await initializeDatabase();
     initializeEmailTransporter();
     
     app.listen(PORT, '0.0.0.0', () => {

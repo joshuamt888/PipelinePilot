@@ -450,37 +450,56 @@ window.AddLeadModule = {
         `;
     },
 
-    // ⚡ Event Listeners Setup
-    setupEventListeners() {
-        // Form submission
-        const addForm = document.getElementById('addLeadForm');
-    if (addForm && !addForm.hasAttribute('data-listener-added')) {
-        addForm.addEventListener('submit', (e) => this.handleSubmit(e));
-        addForm.setAttribute('data-listener-added', 'true');
+   // ⚡ Event Listeners Setup with Proper Cleanup
+setupEventListeners() {
+    // Clean up any existing listeners first
+    if (this.eventListeners) {
+        this.eventListeners.forEach(({ element, type, handler }) => {
+            element.removeEventListener(type, handler);
+        });
     }
-        
+    
+    // Initialize event listeners array
+    this.eventListeners = [];
+    
+    // Form submission
+    const addForm = document.getElementById('addLeadForm');
+    if (addForm && !addForm.hasAttribute('data-listener-added')) {
+        const submitHandler = (e) => this.handleSubmit(e);
+        addForm.addEventListener('submit', submitHandler);
+        addForm.setAttribute('data-listener-added', 'true');
+        this.eventListeners.push({ element: addForm, type: 'submit', handler: submitHandler });
+    }
 
-        // Search input
-        const searchInput = document.getElementById('leadSearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => this.handleSearch(e));
+    // Search input
+    const searchInput = document.getElementById('leadSearch');
+    if (searchInput) {
+        const searchHandler = (e) => this.handleSearch(e);
+        searchInput.addEventListener('input', searchHandler);
+        this.eventListeners.push({ element: searchInput, type: 'input', handler: searchHandler });
+    }
+
+    // ESC key - SCOPED to only work when this module is active
+    this.escKeyHandler = (e) => {
+        if (e.key === 'Escape' && window.currentActiveModule === this) {
+            this.hideAllModals();
         }
+    };
+    document.addEventListener('keydown', this.escKeyHandler);
+    this.eventListeners.push({ element: document, type: 'keydown', handler: this.escKeyHandler });
 
-        // ESC key to close modals
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.hideAllModals();
-            }
-        });
-
-        // Close dropdowns on outside click
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.actions-dropdown')) {
-                document.querySelectorAll('.actions-menu.show').forEach(menu => {
-                    menu.classList.remove('show');
-                });
-            }
-        });
+    // Global click - SCOPED to only work when this module is active
+    this.globalClickHandler = (e) => {
+        if (window.currentActiveModule === this && !e.target.closest('.actions-dropdown')) {
+            document.querySelectorAll('.actions-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        }
+    };
+    document.addEventListener('click', this.globalClickHandler);
+    this.eventListeners.push({ element: document, type: 'click', handler: this.globalClickHandler });
+    
+    // Setup validation and interactive elements
     this.setupSimpleEmailValidation();
     this.setupSimplePhoneValidation();
     this.setupQualitySliders();
@@ -1255,6 +1274,16 @@ setupSimpleEmailValidation() {
     });
 },
 
+handleEvent(eventType, data) {
+    if (eventType === 'navigation') {
+        if (data.targetPage !== 'leads') {
+            this.currentView = 'dashboard'; 
+            this.hideAllModals();
+            this.render(); // Add this line
+            console.log('AddLeadModule: Reset to main view');
+        }
+    }
+},
 
 setupSimplePhoneValidation() {
     const phoneInputs = document.querySelectorAll('input[name="phone"]:not([data-phone-validated])');

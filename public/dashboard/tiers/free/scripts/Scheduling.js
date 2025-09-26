@@ -133,6 +133,8 @@ window.SchedulingModule = {
         </div>
     `;
     this.setupEventListeners();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
 },
 
     // 🏠 Dashboard View (Action Bubbles + Calendar)
@@ -240,9 +242,10 @@ renderCalendarDay(dayData) {
     <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="text"
-               class="search-input"
-               placeholder="Search tasks..."
-               id="taskSearch">
+       class="search-input"
+       placeholder="Search tasks..."
+       id="taskSearch"
+       value="${this.searchTerm || ''}">
     </div>
     <button class="add-task-btn" onclick="SchedulingModule.showAddTaskModal()">
         + Add Task
@@ -821,28 +824,36 @@ renderIndividualTaskView() {
     `;
 },
 
-    setupEventListeners() {
+   setupEventListeners() {
     // Clean up existing listeners first
     this.removeDocumentListeners();
+    
+    // Initialize event listeners array for tracking
+    this.eventListeners = this.eventListeners || [];
     
     // Form submission
     const addForm = document.getElementById('addTaskForm');
     if (addForm && !addForm.hasAttribute('data-listener-added')) {
-        addForm.addEventListener('submit', (e) => this.handleSubmit(e));
+        const submitHandler = (e) => this.handleSubmit(e);
+        addForm.addEventListener('submit', submitHandler);
         addForm.setAttribute('data-listener-added', 'true');
+        this.eventListeners.push({ element: addForm, type: 'submit', handler: submitHandler });
     }
-
+    
     // Search input
     const searchInput = document.getElementById('taskSearch');
     if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
+        const searchHandler = (e) => {
             this.searchTerm = e.target.value.toLowerCase();
             this.updateTableContent();
-        });
+        };
+        searchInput.addEventListener('input', searchHandler);
+        this.eventListeners.push({ element: searchInput, type: 'input', handler: searchHandler });
     }
-
-    // Store handler references for cleanup
+    
+    // SCOPED document handlers - only work when this module is active
     this.documentChangeHandler = (e) => {
+        
         // Priority dropdown glow effects
         if (e.target.name === 'priority') {
             const dropdown = e.target;
@@ -854,14 +865,16 @@ renderIndividualTaskView() {
         }
     };
     document.addEventListener('change', this.documentChangeHandler);
-
-    // Close filters when clicking outside
-    document.addEventListener('click', () => {
+    
+    // SCOPED click handler
+    this.documentClickHandler = (e) => {
         this.hideAllFilters();
-    });
-
-    // Form validation handlers
+    };
+    document.addEventListener('click', this.documentClickHandler);
+    
+    // SCOPED form validation handlers
     this.documentInputHandler = (e) => {
+        
         if (e.target.name === 'title') {
             this.validateTitleInput(e.target);
         } else if (e.target.name === 'description') {
@@ -869,22 +882,36 @@ renderIndividualTaskView() {
         }
     };
     document.addEventListener('input', this.documentInputHandler);
-
-    // Focus/blur validation
+    
+    // SCOPED focus/blur validation
     this.documentFocusHandler = (e) => {
+        
         if (e.target.name === 'title' || e.target.name === 'description') {
             this.validateTitleInput?.(e.target) || this.validateNotesInput?.(e.target);
         }
     };
     document.addEventListener('focus', this.documentFocusHandler, true);
-
+    
     this.documentBlurHandler = (e) => {
+        
         if (e.target.name === 'title' || e.target.name === 'description') {
             this.validateTitleInput?.(e.target) || this.validateNotesInput?.(e.target);
         }
     };
     document.addEventListener('blur', this.documentBlurHandler, true);
-
+    
+    // SCOPED ESC key modal closing
+    this.documentKeydownHandler = (e) => {
+        
+        if (e.key === 'Escape') {
+            if (this.showingDeleteConfirm) this.cancelDelete();
+            else if (this.showingTaskView) this.closeTaskView();
+            else if (this.showingDayPopup) this.closeDayPopup();
+            else this.hideAllModals();
+        }
+    };
+    document.addEventListener('keydown', this.documentKeydownHandler);
+    
     // Priority glow setup
     setTimeout(() => {
         document.querySelectorAll('select[name="priority"]').forEach(dropdown => {
@@ -894,23 +921,16 @@ renderIndividualTaskView() {
             }
         });
     }, 100);
-
-    // ESC key modal closing
-this.documentKeydownHandler = (e) => {
-    if (e.key === 'Escape') {
-        if (this.showingDeleteConfirm) this.cancelDelete();
-        else if (this.showingTaskView) this.closeTaskView();
-        else if (this.showingDayPopup) this.closeDayPopup();
-        else this.hideAllModals();
-    }
-};
-document.addEventListener('keydown', this.documentKeydownHandler);
 },
 
 removeDocumentListeners() {
     if (this.documentChangeHandler) {
         document.removeEventListener('change', this.documentChangeHandler);
         this.documentChangeHandler = null;
+    }
+    if (this.documentClickHandler) {
+        document.removeEventListener('click', this.documentClickHandler);
+        this.documentClickHandler = null;
     }
     if (this.documentInputHandler) {
         document.removeEventListener('input', this.documentInputHandler);
@@ -927,6 +947,14 @@ removeDocumentListeners() {
     if (this.documentKeydownHandler) {
         document.removeEventListener('keydown', this.documentKeydownHandler);
         this.documentKeydownHandler = null;
+    }
+    
+    // Clean up any form-specific listeners
+    if (this.eventListeners) {
+        this.eventListeners.forEach(({ element, type, handler }) => {
+            element.removeEventListener(type, handler);
+        });
+        this.eventListeners = [];
     }
 },
 
@@ -2104,6 +2132,18 @@ setEditLoadingState(isLoading) {
     }
 },
 
+handleEvent(eventType, data) {
+    if (eventType === 'navigation') {
+        if (data.targetPage !== 'tasks') {
+            // Reset to dashboard view but keep module loaded
+            this.currentView = 'dashboard';
+            this.hideAllModals();
+            this.hideAllDropdowns();
+            this.render(); // This was missing - actually update the DOM
+            console.log('SchedulingModule: Reset to dashboard view');
+        }
+    }
+},
 
     formatPopupDate(dateString) {
     if (!dateString) return '';

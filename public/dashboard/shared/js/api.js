@@ -41,6 +41,17 @@ class TierScalingAPI {
     }
 }
 
+// 🛡️ XSS PROTECTION - Universal HTML Escaping
+  static escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+  }
+
   // =============================================
   // 🆓 FREE TIER - FOUNDATION TOOLS
   // =============================================
@@ -108,7 +119,7 @@ class TierScalingAPI {
   static async getUserSubscriptionInfo() {
     const profile = await this.getUserProfile();
     return {
-      tier: profile.subscriptionTier,
+      tier: profile.userType,
       leadLimit: profile.currentLeadLimit,
       currentLeads: profile.currentLeads,
       isAdmin: profile.isAdmin
@@ -214,10 +225,10 @@ class TierScalingAPI {
     return {
       ...stats,
       monthlyProgress: {
-        current: monthStats.currentLeads,
-        limit: monthStats.currentLeadLimit,
-        remaining: monthStats.leadsRemaining,
-        percentage: monthStats.percentageUsed
+        current: currentStats.currentLeads,
+        limit: currentStats.currentLeadLimit,
+        remaining: currentStats.leadsRemaining,
+        percentage: currentStats.percentageUsed
       }
     };
   }
@@ -982,7 +993,7 @@ static async getTrialStatus() {
   const profile = await this.getUserProfile();
   
   // Check current subscription
-  const isOnTrial = profile.subscriptionTier === 'PROFESSIONAL_TRIAL';
+  const isOnTrial = profile.userType === 'PROFESSIONAL_TRIAL';
   const hasUsedTrial = profile.trialUsed || false;
   
   // Determine trial state
@@ -999,7 +1010,7 @@ static async getTrialStatus() {
     hasUsedTrial,
     isCurrentlyOnTrial: isOnTrial,
     canStartTrial: !hasUsedTrial && !isOnTrial,
-    subscriptionTier: profile.subscriptionTier
+    userType: profile.userType
   };
 }
 
@@ -1123,6 +1134,7 @@ static async getTrialStatus() {
 
 // 🌍 GLOBAL EXPORT
 const API = TierScalingAPI;
+window.escapeHtml = TierScalingAPI.escapeHtml;
 
 if (typeof window !== 'undefined') {
   window.API = API;
