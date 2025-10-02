@@ -42,9 +42,9 @@ window.SchedulingModule = {
     isTransitioning: false,
     searchTerm: '',
     currentFilters: {
-        type: '',
-        date: '',
-        priority: ''
+        types: [],  
+        priorities: [], 
+        date: ''    
     },
 
     // Event listener references for cleanup
@@ -1128,6 +1128,7 @@ updateTaskButtonLoading(taskId, isLoading) {
 
     // 🎯 View Management (AddLeadModule Style)
     showDashboard() {
+    if (this.isTransitioning) return;
     this.isTransitioning = true;
     this.currentView = 'dashboard';
     this.hideAllModals();
@@ -1136,6 +1137,7 @@ updateTaskButtonLoading(taskId, isLoading) {
 },
 
     showTableView() {
+    if (this.isTransitioning) return;
     this.isTransitioning = true;
     this.currentView = 'table';
     this.hideAllModals();
@@ -1174,6 +1176,7 @@ updateTaskButtonLoading(taskId, isLoading) {
     },
 
     showDayTasks(date) {
+    if (this.isTransitioning) return;
     this.selectedDate = date;
     this.showingDayPopup = true;
     
@@ -1199,6 +1202,7 @@ updateTaskButtonLoading(taskId, isLoading) {
 },
 
     showTaskView(taskId) {
+    if (this.isTransitioning) return;
     const task = this.tasks.find(t => t.id.toString() === taskId.toString());
     if (task) {
         this.currentViewTask = task;
@@ -1923,23 +1927,33 @@ updateActiveFiltersPanel() {
         }
         
         if (filtersTextElement) {
-            // Rebuild the active filters description
+            // 🔥 FIXED: Use new multi-select field names
             const activeFilterTexts = [];
             
-            if (this.currentFilters.type) {
-                activeFilterTexts.push(`Type: ${this.formatTaskType(this.currentFilters.type)}`);
+            // Multi-select filters (use arrays)
+            if (this.currentFilters.types.length > 0) {
+                if (this.currentFilters.types.length === 1) {
+                    activeFilterTexts.push(`Type: ${this.formatTaskType(this.currentFilters.types[0])}`);
+                } else {
+                    activeFilterTexts.push(`Types: ${this.currentFilters.types.length} selected`);
+                }
             }
             
+            if (this.currentFilters.priorities.length > 0) {
+                if (this.currentFilters.priorities.length === 1) {
+                    activeFilterTexts.push(`Priority: ${this.formatPriority(this.currentFilters.priorities[0])}`);
+                } else {
+                    activeFilterTexts.push(`Priorities: ${this.currentFilters.priorities.length} selected`);
+                }
+            }
+            
+            // Single-select filter (stays the same)
             if (this.currentFilters.date) {
                 const dateLabels = {
                     'completed_only': 'Completed Only',
                     'pending_only': 'Pending Only'
                 };
                 activeFilterTexts.push(`Status: ${dateLabels[this.currentFilters.date]}`);
-            }
-            
-            if (this.currentFilters.priority) {
-                activeFilterTexts.push(`Priority: ${this.formatPriority(this.currentFilters.priority)}`);
             }
             
             filtersTextElement.textContent = activeFilterTexts.join(', ');
@@ -2139,8 +2153,27 @@ handleEvent(eventType, data) {
             this.currentView = 'dashboard';
             this.hideAllModals();
             this.hideAllDropdowns();
-            this.render(); // This was missing - actually update the DOM
+            this.render();
             console.log('SchedulingModule: Reset to dashboard view');
+        } else {
+            // We're navigating TO this module - clear filters and reset state
+            this.currentFilters = {
+                types: [],
+                priorities: [],
+                date: ''
+            };
+            this.searchTerm = '';
+            
+            // Clear search input if it exists
+            const searchInput = document.getElementById('taskSearch');
+            if (searchInput) searchInput.value = '';
+            
+            // Set transition protection
+            this.isTransitioning = true;
+            setTimeout(() => {
+                this.isTransitioning = false;
+                console.log('SchedulingModule: Ready for interactions');
+            }, 600);
         }
     }
 },
@@ -2193,23 +2226,23 @@ handleHeaderFilter(column, value) {
 },
 
 showTypeFilter(event) {
-    this.showFilterDropdown('type', event, [
-        { value: '', label: '📋 All Types', action: 'clear' },
-        { value: '', label: '──────────', divider: true },
-        { value: 'call', label: '📞 Calls Only' },
-        { value: 'email', label: '📧 Emails Only' },
-        { value: 'meeting', label: '🤝 Meetings Only' },
-        { value: 'follow_up', label: '📋 Follow-ups Only' },
-        { value: 'demo', label: '🎥 Demos Only' },
-        { value: 'research', label: '🔍 Research Only' },
-        { value: 'proposal', label: '📊 Proposals Only' },
-        { value: 'contract', label: '📄 Contracts Only' },
-        { value: 'task', label: '📝 Tasks Only' }
-    ]);
-},
+        this.showMultiFilterDropdown('types', event, [
+            { value: '', label: '📋 All Types', action: 'clear' },
+            { value: '', label: '──────────', divider: true },
+            { value: 'call', label: '📞 Call' },
+            { value: 'email', label: '📧 Email' },
+            { value: 'meeting', label: '🤝 Meeting' },
+            { value: 'follow_up', label: '📋 Follow-up' },
+            { value: 'demo', label: '🎥 Demo' },
+            { value: 'research', label: '🔍 Research' },
+            { value: 'proposal', label: '📊 Proposal' },
+            { value: 'contract', label: '📄 Contract' },
+            { value: 'task', label: '📝 Task' }
+        ]);
+    },
 
 showDateFilter(event) {
-    this.showFilterDropdown('date', event, [
+    this.showSingleFilterDropdown('date', event, [
         { value: '', label: '📅 All Tasks', action: 'clear' },
         { value: '', label: '──────────', divider: true },
         { value: 'completed_only', label: '✅ Completed Only' },
@@ -2218,124 +2251,197 @@ showDateFilter(event) {
 },
 
 showPriorityFilter(event) {
-    this.showFilterDropdown('priority', event, [
-        { value: '', label: '⚡ All Priorities', action: 'clear' },
-        { value: '', label: '──────────', divider: true },
-        { value: 'urgent', label: 'Urgent Only' },
-        { value: 'high', label: 'High Only' },
-        { value: 'medium', label: 'Medium Only' },
-        { value: 'low', label: 'Low Only' }
-    ]);
-},
+        this.showMultiFilterDropdown('priorities', event, [
+            { value: '', label: '⚡ All Priorities', action: 'clear' },
+            { value: '', label: '──────────', divider: true },
+            { value: 'urgent', label: 'Urgent' },
+            { value: 'high', label: 'High' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'low', label: 'Low' }
+        ]);
+    },
 
-showFilterDropdown(column, event, options) {
-    if (event) event.stopPropagation();
-    
-    // Remove any existing dropdown
-    this.hideFilterDropdown();
-    
-    // Make arrow blue and point up
-    event.target.closest('.simple-header-filter').classList.add('active');
-    
-    // Create dropdown HTML
-    const dropdown = document.createElement('div');
-    dropdown.className = 'unified-filter-dropdown active';
-    dropdown.innerHTML = `
-        <div class="filter-options">
-            ${options.map(option => {
-                if (option.divider) {
-                    return `<div class="filter-divider"></div>`;
-                }
-                const isActive = this.currentFilters[column] === option.value && option.value !== '';
-                return `
-                    <div class="filter-option ${isActive ? 'active' : ''}" 
-                         onclick="SchedulingModule.applyFilter('${column}', '${option.value}', event)"
-                        <span class="option-text">${option.label}</span>
-                        ${isActive ? '<span class="active-check">✓</span>' : ''}
-                    </div>
-                `;
-            }).join('')}
-        </div>
-    `;
-    
-    // Position dropdown
-    const rect = event.target.getBoundingClientRect();
-    dropdown.style.position = 'fixed';
-    dropdown.style.top = `${rect.bottom + 5}px`;
-    dropdown.style.left = `${rect.left}px`;
-    dropdown.style.zIndex = '10000';
-    
-    // Add to page with animation
-    document.body.appendChild(dropdown);
-    requestAnimationFrame(() => {
-        dropdown.classList.add('show');
-    });
-    
-    // Auto-close when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', () => this.hideFilterDropdown(), { once: true });
-    }, 100);
-},
+    showMultiFilterDropdown(column, event, options) {
+        if (event) event.stopPropagation();
+        this.hideAllFilterDropdowns();
+        
+        event.target.closest('.simple-header-filter').classList.add('active');
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'unified-filter-dropdown multi-select active';
+        dropdown.innerHTML = `
+            <div class="filter-options">
+                ${options.map(option => {
+                    if (option.divider) {
+                        return `<div class="filter-divider"></div>`;
+                    } else if (option.action === 'clear') {
+                        return `
+                            <div class="filter-option clear-option" onclick="SchedulingModule.clearMultiFilter('${column}')">
+                                <span class="option-text">${option.label}</span>
+                            </div>
+                        `;
+                    } else {
+                        const isChecked = this.currentFilters[column].includes(option.value);
+                        return `
+                            <div class="filter-checkbox-option" onclick="SchedulingModule.toggleMultiFilter('${column}', '${option.value}', event)">
+                                <div class="custom-checkbox ${isChecked ? 'checked' : ''}">
+                                    ${isChecked ? '✓' : ''}
+                                </div>
+                                <span class="option-text">${option.label}</span>
+                            </div>
+                        `;
+                    }
+                }).join('')}
+            </div>
+        `;
+        
+        this.positionAndShowDropdown(dropdown, event.target);
+    },
 
-applyFilter(column, value, event) {
-    // Prevent event bubbling
-    if (event) event.stopPropagation();
-    
-    this.currentFilters[column] = value;
-    this.hideFilterDropdown();
-    this.updateTableContent();
-    
-    // Visual feedback
-    this.updateHeaderIndicators();
-    
-    // Show notification
-    if (value) {
-        let filterLabel;
-        if (column === 'type') {
-            filterLabel = this.formatTaskType(value);
-        } else if (column === 'priority') {
-            filterLabel = this.formatPriority(value);
-        } else if (column === 'date') {
-            const dateLabels = {
-                'completed_only': 'Completed Tasks',
-                'pending_only': 'Pending Tasks'
-            };
-            filterLabel = dateLabels[value] || value;
+    // Keep single-select dropdown for date/status
+    showSingleFilterDropdown(column, event, options) {
+        if (event) event.stopPropagation();
+        this.hideAllFilterDropdowns();
+        
+        event.target.closest('.simple-header-filter').classList.add('active');
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'unified-filter-dropdown single-select active';
+        dropdown.innerHTML = `
+            <div class="filter-options">
+                ${options.map(option => {
+                    if (option.divider) {
+                        return `<div class="filter-divider"></div>`;
+                    }
+                    const isActive = this.currentFilters[column] === option.value && option.value !== '';
+                    return `
+                        <div class="filter-option ${isActive ? 'active' : ''}" 
+                             onclick="SchedulingModule.applySingleFilter('${column}', '${option.value}', event)">
+                            <span class="option-text">${option.label}</span>
+                            ${isActive ? '<span class="active-check">✓</span>' : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        this.positionAndShowDropdown(dropdown, event.target);
+    },
+
+    // 🔥 NEW: Multi-select toggle logic
+    toggleMultiFilter(column, value, event) {
+        if (event) event.stopPropagation();
+        
+        const currentValues = this.currentFilters[column];
+        const index = currentValues.indexOf(value);
+        
+        if (index > -1) {
+            this.currentFilters[column] = currentValues.filter(v => v !== value);
+        } else {
+            this.currentFilters[column].push(value);
         }
-        this.showNotification(`Filtered by ${column}: ${filterLabel}`, 'info');
-    } else {
-        this.showNotification(`${column} filter cleared`, 'info');
-    }
-},
+        
+        // Update checkbox visual immediately
+        const checkbox = event.target.querySelector('.custom-checkbox') || 
+                         event.target.closest('.filter-checkbox-option').querySelector('.custom-checkbox');
+        const isChecked = this.currentFilters[column].includes(value);
+        
+        if (isChecked) {
+            checkbox.classList.add('checked');
+            checkbox.textContent = '✓';
+        } else {
+            checkbox.classList.remove('checked');
+            checkbox.textContent = '';
+        }
+        
+        this.updateTableContent();
+        this.updateHeaderIndicators();
+        this.updateActiveFiltersPanel();
+    },
 
-hideFilterDropdown() {
-    const dropdown = document.querySelector('.unified-filter-dropdown');
-    if (dropdown) {
-        dropdown.classList.remove('show');
-        setTimeout(() => dropdown.remove(), 200);
-    }
-    
-    // Remove active state from all headers
-    document.querySelectorAll('.simple-header-filter').forEach(filter => {
-        filter.classList.remove('active');
-    });
-},
+    clearMultiFilter(column) {
+        this.currentFilters[column] = [];
+        this.hideAllFilterDropdowns();
+        this.updateTableContent();
+        this.updateHeaderIndicators();
+        this.updateActiveFiltersPanel();
+    },
 
-updateHeaderIndicators() {
-    // Update arrow states based on active filters
-    ['type', 'date', 'priority'].forEach(column => {
-        const arrow = document.querySelector(`[onclick*="show${column.charAt(0).toUpperCase() + column.slice(1)}Filter"] .simple-arrow`);
-        if (arrow) {
-            if (this.currentFilters[column]) {
-                arrow.textContent = '▲';
-                arrow.style.color = 'var(--primary)';
+    // Keep single filter for date/status
+    applySingleFilter(column, value, event) {
+        if (event) event.stopPropagation();
+        
+        this.currentFilters[column] = value;
+        this.hideAllFilterDropdowns();
+        this.updateTableContent();
+        this.updateHeaderIndicators();
+        this.updateActiveFiltersPanel();
+    },
+
+    // 🔥 UPDATED: Position dropdown helper
+    positionAndShowDropdown(dropdown, trigger) {
+        const rect = trigger.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.top = `${rect.bottom + 5}px`;
+        dropdown.style.left = `${rect.left}px`;
+        dropdown.style.zIndex = '10000';
+        
+        document.body.appendChild(dropdown);
+        requestAnimationFrame(() => {
+            dropdown.classList.add('show');
+        });
+        
+        setTimeout(() => {
+            document.addEventListener('click', () => this.hideAllFilterDropdowns(), { once: true });
+        }, 100);
+    },
+
+    hideAllFilterDropdowns() {
+        document.querySelectorAll('.unified-filter-dropdown').forEach(dropdown => {
+            dropdown.classList.remove('show');
+            setTimeout(() => dropdown.remove(), 200);
+        });
+        
+        document.querySelectorAll('.simple-header-filter').forEach(filter => {
+            filter.classList.remove('active');
+        });
+    },
+
+
+
+// 🔥 UPDATED: Header indicators for multi-select
+    updateHeaderIndicators() {
+        // Multi-select indicators (types and priorities)
+        ['types', 'priorities'].forEach(column => {
+            let methodName = column.replace('s', ''); // Remove plural
+            methodName = methodName.charAt(0).toUpperCase() + methodName.slice(1); // Capitalize
+            
+            const arrow = document.querySelector(`[onclick*="show${methodName}Filter"] .simple-arrow`);
+            if (arrow) {
+                const hasFilters = this.currentFilters[column].length > 0;
+                
+                if (hasFilters) {
+                    arrow.textContent = '▲';
+                    arrow.style.color = 'var(--primary)';
+                } else {
+                    arrow.textContent = '▼';
+                    arrow.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+        
+        // Single-select indicator (date)
+        const dateArrow = document.querySelector(`[onclick*="showDateFilter"] .simple-arrow`);
+        if (dateArrow) {
+            if (this.currentFilters.date) {
+                dateArrow.textContent = '▲';
+                dateArrow.style.color = 'var(--primary)';
             } else {
-                arrow.textContent = '▼';
-                arrow.style.color = 'var(--text-secondary)';
+                dateArrow.textContent = '▼';
+                dateArrow.style.color = 'var(--text-secondary)';
             }
         }
-    });
-},
+    },
 
 // 🔥 ADD MISSING getTaskDateCategory method (simplified)
 getTaskDateCategory(dateString) {
@@ -2358,149 +2464,140 @@ getTaskDateCategory(dateString) {
 },
 
 hideAllFilters() {
-    this.hideFilterDropdown();
+    this.hideAllFilterDropdowns();
 },
 
 getFilteredAndSortedTasks() {
-    // 📋 Start with all tasks
-    let filtered = [...this.tasks];
+        let filtered = [...this.tasks];
 
-    // STEP 1: Apply search filter (searches title and lead name only)
-if (this.searchTerm) {
-    filtered = filtered.filter(task => {
-        const searchText = `${task.title} ${this.getLeadName(task.lead_id) || ''}`.toLowerCase();
-        return searchText.includes(this.searchTerm);
-    });
-}
-    
-    // 🏷️ STEP 2: Apply TYPE filter (call, email, meeting, etc.)
-    if (this.currentFilters.type) {
-        filtered = filtered.filter(task => task.task_type === this.currentFilters.type);
-    }
-    
-    // ⚡ STEP 3: Apply PRIORITY filter (low, medium, high, urgent)
-    if (this.currentFilters.priority) {
-        filtered = filtered.filter(task => (task.priority || 'medium') === this.currentFilters.priority);
-    }
-    
-    // 📅 STEP 4: Apply DATE STATUS filters (completed/pending only)
-    if (this.currentFilters.date === 'completed_only') {
-        filtered = filtered.filter(task => task.status === 'completed');
-    } else if (this.currentFilters.date === 'pending_only') {
-        filtered = filtered.filter(task => task.status !== 'completed');
-    }
-    
-    // 🔄 STEP 5: SMART AUTO-SORTING
-    return filtered.sort((a, b) => {
-        const aCompleted = a.status === 'completed';
-        const bCompleted = b.status === 'completed';
+        // Apply search filter
+        if (this.searchTerm) {
+            filtered = filtered.filter(task => {
+                const searchText = `${task.title} ${this.getLeadName(task.lead_id) || ''}`.toLowerCase();
+                return searchText.includes(this.searchTerm);
+            });
+        }
         
-        // Step 1: Non-completed always come before completed
-        if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+        // 🔥 UPDATED: Multi-select TYPE filter
+        if (this.currentFilters.types.length > 0) {
+            filtered = filtered.filter(task => 
+                this.currentFilters.types.includes(task.task_type)
+            );
+        }
         
-        // Handle missing dates
-        const aDate = a.due_date || '9999-12-31';
-        const bDate = b.due_date || '9999-12-31';
+        // 🔥 UPDATED: Multi-select PRIORITY filter
+        if (this.currentFilters.priorities.length > 0) {
+            filtered = filtered.filter(task => 
+                this.currentFilters.priorities.includes(task.priority || 'medium')
+            );
+        }
         
-        // Normalize dates (remove time if present)
-        const aDateOnly = aDate.split('T')[0];
-        const bDateOnly = bDate.split('T')[0];
+        // Keep single-select DATE STATUS filters
+        if (this.currentFilters.date === 'completed_only') {
+            filtered = filtered.filter(task => task.status === 'completed');
+        } else if (this.currentFilters.date === 'pending_only') {
+            filtered = filtered.filter(task => task.status !== 'completed');
+        }
         
-        if (!aCompleted && !bCompleted) {
-            // NON-COMPLETED TASKS: Overdue first (oldest), then upcoming (nearest first)
-            const today = new Date().toISOString().split('T')[0];
-            const aOverdue = aDateOnly < today;
-            const bOverdue = bDateOnly < today;
+        // Keep existing sorting logic
+        return filtered.sort((a, b) => {
+            const aCompleted = a.status === 'completed';
+            const bCompleted = b.status === 'completed';
             
-            if (aOverdue && !bOverdue) return -1; // A is overdue, B isn't
-            if (!aOverdue && bOverdue) return 1;  // B is overdue, A isn't
+            if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
             
-            if (aOverdue && bOverdue) {
-                // Both overdue: oldest overdue first
-                return aDateOnly.localeCompare(bDateOnly);
+            const aDate = a.due_date || '9999-12-31';
+            const bDate = b.due_date || '9999-12-31';
+            const aDateOnly = aDate.split('T')[0];
+            const bDateOnly = bDate.split('T')[0];
+            
+            if (!aCompleted && !bCompleted) {
+                const today = new Date().toISOString().split('T')[0];
+                const aOverdue = aDateOnly < today;
+                const bOverdue = bDateOnly < today;
+                
+                if (aOverdue && !bOverdue) return -1;
+                if (!aOverdue && bOverdue) return 1;
+                
+                if (aOverdue && bOverdue) {
+                    return aDateOnly.localeCompare(bDateOnly);
+                } else {
+                    return aDateOnly.localeCompare(bDateOnly);
+                }
             } else {
-                // Both upcoming: nearest due date first  
-                return aDateOnly.localeCompare(bDateOnly);
+                if (aDate === '9999-12-31' && bDate !== '9999-12-31') return 1;
+                if (bDate === '9999-12-31' && aDate !== '9999-12-31') return -1;
+                if (aDate === '9999-12-31' && bDate === '9999-12-31') return 0;
+                
+                return bDateOnly.localeCompare(aDateOnly);
             }
-        } else {
-    // COMPLETED TASKS: Most recent due date first, BUT no-date tasks go to bottom
-    if (aDate === '9999-12-31' && bDate !== '9999-12-31') return 1;  // A has no date, goes down
-    if (bDate === '9999-12-31' && aDate !== '9999-12-31') return -1; // B has no date, goes down
-    if (aDate === '9999-12-31' && bDate === '9999-12-31') return 0;  // Both no date, equal
-    
-    // Both have dates: Most recent due date first (Aug 14 before Aug 17)
-    return bDateOnly.localeCompare(aDateOnly); // Reversed for recent-first
-}
-    });
-},
+        });
+    },
 
-hasActiveFilters() {
-    return Object.values(this.currentFilters).some(filter => filter !== '') || this.searchTerm !== '';
-},
+// 🔥 UPDATED: Check for active filters
+    hasActiveFilters() {
+        return this.currentFilters.types.length > 0 || 
+               this.currentFilters.priorities.length > 0 || 
+               this.currentFilters.date !== '' || 
+               this.searchTerm !== '';
+    },
 
-clearAllHeaderFilters() {
-    this.currentFilters = {
-        type: '',
-        date: '',
-        priority: ''
-    };
-    this.searchTerm = ''; // Also clear search
-    this.updateTableContent();
-},
-
-renderActiveFiltersPanel() {
-    if (!this.hasActiveFilters()) return '';
-    
-    const filtered = this.getFilteredAndSortedTasks();
-    const activeFilterTexts = [];
-    
-    // Build active filter descriptions
-    if (this.currentFilters.type) {
-        if (this.currentFilters.type.startsWith('type_')) {
-            activeFilterTexts.push(`Sorted by Type (${this.currentFilters.type === 'type_asc' ? 'A-Z' : 'Z-A'})`);
-        } else {
-            activeFilterTexts.push(`Type: ${this.formatTaskType(this.currentFilters.type)}`);
-        }
-    }
-    
-    if (this.currentFilters.date) {
-    if (this.currentFilters.date.startsWith('date_')) {
-        const sortLabels = {
-            'date_oldest': 'Oldest First',
-            'date_newest': 'Newest First'
+    // 🔥 UPDATED: Clear all filters
+    clearAllHeaderFilters() {
+        this.currentFilters = {
+            types: [],
+            priorities: [],
+            date: ''
         };
-        activeFilterTexts.push(`Sorted by Date (${sortLabels[this.currentFilters.date]})`);
-    } else {
-        const dateLabels = {
-            'this_week': 'This Week',
-            'this_month': 'This Month',
-            'completed_only': 'Completed Only',
-            'pending_only': 'Pending Only'
-        };
-        activeFilterTexts.push(`Status: ${dateLabels[this.currentFilters.date]}`);
-    }
-}
-    
-    if (this.currentFilters.priority) {
-        if (this.currentFilters.priority.startsWith('priority_')) {
-            activeFilterTexts.push(`Sorted by Priority (${this.currentFilters.priority === 'priority_high_to_low' ? 'High to Low' : 'Low to High'})`);
-        } else {
-            activeFilterTexts.push(`Priority: ${this.formatPriority(this.currentFilters.priority)}`);
+        this.searchTerm = '';
+        this.updateTableContent();
+    },
+
+    // 🔥 UPDATED: Active filters panel text
+    renderActiveFiltersPanel() {
+        if (!this.hasActiveFilters()) return '';
+        
+        const filtered = this.getFilteredAndSortedTasks();
+        const activeFilterTexts = [];
+        
+        // Multi-select filters
+        if (this.currentFilters.types.length > 0) {
+            if (this.currentFilters.types.length === 1) {
+                activeFilterTexts.push(`Type: ${this.formatTaskType(this.currentFilters.types[0])}`);
+            } else {
+                activeFilterTexts.push(`Types: ${this.currentFilters.types.length} selected`);
+            }
         }
-    }
-    
-    return `
-        <div class="active-filters-panel">
-            <div class="filters-info">
-                <span class="filter-count">Showing ${filtered.length} of ${this.tasks.length} tasks</span>
-                <span class="active-filters-text">${activeFilterTexts.join(', ')}</span>
+        
+        if (this.currentFilters.priorities.length > 0) {
+            if (this.currentFilters.priorities.length === 1) {
+                activeFilterTexts.push(`Priority: ${this.formatPriority(this.currentFilters.priorities[0])}`);
+            } else {
+                activeFilterTexts.push(`Priorities: ${this.currentFilters.priorities.length} selected`);
+            }
+        }
+        
+        // Single-select filter
+        if (this.currentFilters.date) {
+            const dateLabels = {
+                'completed_only': 'Completed Only',
+                'pending_only': 'Pending Only'
+            };
+            activeFilterTexts.push(`Status: ${dateLabels[this.currentFilters.date]}`);
+        }
+        
+        return `
+            <div class="active-filters-panel">
+                <div class="filters-info">
+                    <span class="filter-count">Showing ${filtered.length} of ${this.tasks.length} tasks</span>
+                    <span class="active-filters-text">${activeFilterTexts.join(', ')}</span>
+                </div>
+                <button class="clear-filters-btn" onclick="SchedulingModule.clearAllHeaderFilters()">
+                    Clear All
+                </button>
             </div>
-            <button class="clear-filters-btn" onclick="SchedulingModule.clearAllHeaderFilters()">
-                Clear All
-            </button>
-        </div>
-    `;
-},
+        `;
+    },
 
     formatMonth(date) {
         return date.toLocaleDateString('en-US', { 
@@ -3392,7 +3489,91 @@ renderActiveFiltersPanel() {
     }
 }
 
+/* 🔥 MULTI-SELECT CHECKBOX SYSTEM CSS - ADD TO YOUR EXISTING STYLES */
 
+/* Multi-select dropdown container */
+.unified-filter-dropdown.multi-select {
+    min-width: 220px;
+}
+
+/* Multi-select checkbox options */
+.filter-checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.filter-checkbox-option:hover {
+    background: var(--surface-hover);
+    border-left-color: var(--primary);
+    transform: translateX(2px);
+}
+
+/* Custom checkbox styling */
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--background);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    color: white;
+}
+
+.custom-checkbox.checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.filter-checkbox-option:hover .custom-checkbox {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Clear option styling */
+.filter-option.clear-option {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.filter-option.clear-option:hover {
+    background: var(--surface-hover);
+    color: var(--primary);
+}
+
+/* Option text */
+.option-text {
+    flex: 1;
+}
+
+/* Mobile responsive for checkboxes */
+@media (max-width: 768px) {
+    .unified-filter-dropdown {
+        min-width: 200px;
+        max-height: 300px;
+    }
+    
+    .filter-checkbox-option {
+        padding: 1rem;
+        font-size: 1rem;
+    }
+    
+    .custom-checkbox {
+        width: 20px;
+        height: 20px;
+    }
+}
 
             /* 🎪 ACTION BUBBLES (AddLeadModule Style) */
             .action-bubbles {

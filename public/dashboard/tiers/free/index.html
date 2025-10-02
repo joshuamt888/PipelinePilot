@@ -1091,11 +1091,23 @@ async function loadUserProfile() {
 
 window.moduleEvents = {
     emit: function(event, data) {
+        // Clear transition flags when navigating (preserves other state)
+        if (event === 'navigation') {
+            [window.SchedulingModule, window.AddLeadModule, window.PipelineModule].forEach(module => {
+                if (module) {
+                    module.isTransitioning = false;
+                }
+            });
+        }
+        
         if (window.SchedulingModule && window.SchedulingModule.handleEvent) {
             window.SchedulingModule.handleEvent(event, data);
         }
         if (window.AddLeadModule && window.AddLeadModule.handleEvent) {
             window.AddLeadModule.handleEvent(event, data);
+        }
+        if (window.PipelineModule && window.PipelineModule.handleEvent) {
+            window.PipelineModule.handleEvent(event, data);
         }
     }
 };

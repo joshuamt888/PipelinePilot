@@ -6,8 +6,6 @@
     <title>Create Account - SteadyManager</title>
     <meta name="description" content="Create your free SteadyManager account and start managing leads today.">
     
-    <!-- CDN Resources -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     
     <style>
@@ -346,7 +344,6 @@
             line-height: 1.4;
         }
 
-        /* EMAIL VERIFICATION SECTION */
         .verification-section {
             display: none;
             text-align: center;
@@ -378,29 +375,6 @@
             font-weight: 600;
             color: #15803d;
             word-break: break-word;
-        }
-
-        .resend-btn {
-            background: #16a34a;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
-
-        .resend-btn:hover {
-            background: #15803d;
-            transform: translateY(-1px);
-        }
-
-        .resend-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
         }
 
         .verification-help {
@@ -471,31 +445,6 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-            justify-content: center;
-        }
-
-        .action-btn {
-            background: #667eea;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            display: inline-block;
-        }
-
-        .action-btn:hover {
-            background: #4f46e5;
-            transform: translateY(-1px);
-        }
-
         .upgrade-notice {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -507,7 +456,6 @@
             color: #64748b;
         }
 
-        /* Mobile optimizations */
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
@@ -540,19 +488,8 @@
                 grid-template-columns: 1fr;
                 gap: 0.5rem;
             }
-
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .action-btn {
-                width: 200px;
-                text-align: center;
-            }
         }
 
-        /* Animation classes */
         .fadeInUp {
             animation: fadeInUp 0.6s ease-out;
         }
@@ -570,14 +507,14 @@
     </style>
 </head>
 <body>
-    <a href="javascript:history.back()" class="back-home">
+    <a href="/" class="back-home">
         <span>←</span>
         <span>Back</span>
     </a>
     
     <div class="auth-container fadeInUp">
         <div class="logo">
-            <a href="javascript:history.back()" class="mobile-back-btn">←</a>
+            <a href="/" class="mobile-back-btn">←</a>
             <div class="logo-content">
                 <h1>SteadyManager</h1>
                 <p>A Steady Scaling LLC Product</p>
@@ -589,29 +526,27 @@
             <p class="form-subtitle">Start managing leads today - no credit card required</p>
         </div>
 
-        <!-- Registration Form -->
         <div id="registrationForm">
-            <!-- Trial CTA -->
             <div class="trial-cta">
-                <div class="trial-cta-title">🎁 Want more features?</div>
+                <div class="trial-cta-title">Want more features?</div>
                 <div class="trial-cta-text">
-                    Get a 14-day free trial of Professional with 1,000 leads and advanced analytics. No credit card required!
+                    Get a 14-day free trial of Professional with 5,000 leads and advanced analytics. No credit card required!
                 </div>
-                <a href="/trial" class="trial-cta-btn">Start Free Trial →</a>
+                <a href="/auth/trial.html" class="trial-cta-btn">Start Free Trial →</a>
             </div>
 
-            <!-- Free Plan Features -->
             <div class="free-features">
                 <div class="free-features-title">What You Get for Free</div>
                 <div class="features-grid">
-                    <div class="feature-item">50 leads/month</div>
+                    <div class="feature-item">50 leads</div>
                     <div class="feature-item">Basic dashboard</div>
                     <div class="feature-item">Lead tracking</div>
-                    <div class="feature-item">Email support</div>
-                    <div class="feature-item">Data export</div>
-                    <div class="feature-item">Goal setting</div>
+                    <div class="feature-item">Task scheduling</div>
                 </div>
             </div>
+
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
 
             <form id="registerForm">
                 <div class="form-group">
@@ -636,7 +571,7 @@
                         class="form-input" 
                         required 
                         autocomplete="new-password"
-                        placeholder="Create a strong password"
+                        placeholder="Create a strong password (min. 8 characters)"
                     >
                     <div id="passwordStrength" class="password-strength"></div>
                 </div>
@@ -663,28 +598,22 @@
             <div class="upgrade-notice">
                 You can upgrade to paid plans anytime from your dashboard
             </div>
-
-            <div id="errorMessage" class="error-message"></div>
-            <div id="successMessage" class="success-message"></div>
         </div>
 
-        <!-- Email Verification Section -->
         <div class="verification-section" id="verificationSection">
-            <h3>📧 Check Your Email!</h3>
+            <h3>Check Your Email!</h3>
             <p>We've sent a verification link to:</p>
             <p class="verification-email" id="verificationEmail"></p>
             <p>Click the link in your email to activate your free account and access your dashboard.</p>
-            
-            <button class="resend-btn" id="resendBtn">Resend Verification Email</button>
             
             <div class="verification-help">
                 <p><strong>Didn't receive the email?</strong></p>
                 <p>• Check your spam/junk folder</p>
                 <p>• Make sure you entered the correct email address</p>
-                <p>• Wait a few minutes and try resending</p>
+                <p>• Wait a few minutes for the email to arrive</p>
                 <p style="margin-top: 1rem;">
                     Still having trouble? 
-                    <a href="/contact">Contact our support team</a>
+                    <a href="/pages/contact.html">Contact support</a>
                 </p>
             </div>
         </div>
@@ -692,16 +621,18 @@
         <div class="auth-links" id="authLinks">
             <p>
                 Already have an account? 
-                <a href="/login" class="auth-link">Sign in</a>
+                <a href="/auth/login.html" class="auth-link">Sign in</a>
             </p>
             <p style="margin-top: 0.5rem;">
                 Want the trial instead? 
-                <a href="/trial" class="auth-link">Start 14-day free trial</a>
+                <a href="/auth/trial.html" class="auth-link">Start 14-day free trial</a>
             </p>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import API from '/dashboard/shared/js/api.js';
+
         let currentEmail = '';
 
         // Password strength checker
@@ -733,7 +664,6 @@
             else feedback.push('number');
             
             if (/[^A-Za-z0-9]/.test(password)) score++;
-            else feedback.push('special character');
             
             if (score < 3) {
                 strengthDiv.className = 'password-strength strength-weak';
@@ -747,7 +677,6 @@
             }
         }
 
-        // Show verification section
         function showVerificationSection(email) {
             currentEmail = email;
             document.getElementById('registrationForm').style.display = 'none';
@@ -756,35 +685,20 @@
             document.getElementById('authLinks').style.display = 'none';
         }
 
-        // Enhanced message functions
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
-            
-            if (message.includes('<')) {
-                errorDiv.innerHTML = message;
-            } else {
-                errorDiv.textContent = message;
-            }
-            
+            errorDiv.innerHTML = message;
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
             
-            if (!message.includes('<')) {
-                setTimeout(() => {
-                    errorDiv.style.display = 'none';
-                }, 8000);
-            }
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 10000);
         }
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMessage');
-            
-            if (message.includes('<')) {
-                successDiv.innerHTML = message;
-            } else {
-                successDiv.textContent = message;
-            }
-            
+            successDiv.textContent = message;
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
             
@@ -827,109 +741,7 @@
             }
         }
 
-        // Validation function
-        function validateForm(data) {
-            if (!data.email || !data.password || !data.confirmPassword) {
-                showError('Please fill in all fields.');
-                if (!data.email) setFieldError('email');
-                if (!data.password) setFieldError('password');
-                if (!data.confirmPassword) setFieldError('confirmPassword');
-                return false;
-            }
-            
-            if (!data.email.includes('@')) {
-                showError('Please enter a valid email address.');
-                setFieldError('email');
-                return false;
-            }
-            
-            if (data.password !== data.confirmPassword) {
-                showError('Passwords do not match.');
-                setFieldError('password');
-                setFieldError('confirmPassword');
-                return false;
-            }
-            
-            if (data.password.length < 8) {
-                showError('Password must be at least 8 characters long.');
-                setFieldError('password');
-                return false;
-            }
-            
-            return true;
-        }
-
-        // Handle user already exists scenario
-        function handleUserExists(data) {
-            const errorMessage = `
-                <div style="margin-bottom: 1rem;">
-                    ${data.error}
-                </div>
-                <div class="action-buttons">
-                    <a href="/login" class="action-btn">Sign In Instead</a>
-                </div>
-            `;
-            
-            showError(errorMessage);
-            setFieldError('email');
-        }
-
-        // Handle registration error scenarios
-        function handleRegistrationError(response, data) {
-            if (response.status === 429) {
-                showError(data.error || 'Too many registration attempts. Please wait and try again.');
-            } 
-            else if (response.status === 400) {
-                if (data.shouldSignIn) {
-                    handleUserExists(data);
-                } 
-                else {
-                    showError(data.error || 'Registration failed.');
-                    if (data.error && data.error.toLowerCase().includes('email')) {
-                        setFieldError('email');
-                    }
-                }
-            } 
-            else {
-                showError(data.error || 'Registration failed. Please try again.');
-            }
-        }
-
-        // Resend verification email
-        document.getElementById('resendBtn').addEventListener('click', async () => {
-            if (!currentEmail) return;
-
-            const resendBtn = document.getElementById('resendBtn');
-            resendBtn.disabled = true;
-            resendBtn.textContent = 'Sending...';
-
-            try {
-                const response = await fetch('/api/resend-verification', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: currentEmail }),
-                    credentials: 'include'
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showSuccess('Verification email resent! Check your inbox.');
-                } else {
-                    showError(data.error || 'Failed to resend email. Please try again.');
-                }
-            } catch (error) {
-                console.error('Resend error:', error);
-                showError('Network error. Please try again.');
-            } finally {
-                resendBtn.disabled = false;
-                resendBtn.textContent = 'Resend Verification Email';
-            }
-        });
-
-        // Main form submission handler
+        // Form submission
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -937,51 +749,62 @@
             clearFieldErrors();
             setLoading(true);
             
-            const formData = new FormData(e.target);
-            const registerData = {
-                email: formData.get('email').trim(),
-                password: formData.get('password'),
-                confirmPassword: formData.get('confirmPassword')
-                // No plan selection - always free!
-            };
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // Client-side validation
-            if (!validateForm(registerData)) {
+            // Validation
+            if (!email || !password || !confirmPassword) {
+                showError('Please fill in all fields.');
+                setLoading(false);
+                if (!email) setFieldError('email');
+                if (!password) setFieldError('password');
+                if (!confirmPassword) setFieldError('confirmPassword');
+                return;
+            }
+            
+            if (!API.isValidEmail(email)) {
+                showError('Please enter a valid email address.');
+                setFieldError('email');
+                setLoading(false);
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError('Passwords do not match.');
+                setFieldError('password');
+                setFieldError('confirmPassword');
+                setLoading(false);
+                return;
+            }
+            
+            if (password.length < 8) {
+                showError('Password must be at least 8 characters long.');
+                setFieldError('password');
                 setLoading(false);
                 return;
             }
             
             try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(registerData),
-                    credentials: 'include'
-                });
+                await API.register(email, password, 'free');
                 
-                const data = await response.json();
+                // Success - show verification screen
+                showVerificationSection(email);
+                showSuccess('Account created! Check your email to verify your account.');
                 
-                if (response.ok && data.success) {
-                    if (data.requiresVerification) {
-                        // Show email verification screen
-                        showVerificationSection(registerData.email);
-                        showSuccess('Free account created! Please check your email to verify your account.');
-                    } else {
-                        // Admin account - no verification needed
-                        showSuccess('Admin account created! Redirecting to dashboard...');
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 2000);
-                    }
-                } else {
-                    handleRegistrationError(response, data);
-                }
             } catch (error) {
                 console.error('Registration error:', error);
-                showError('Network error. Please check your connection and try again.');
-            } finally {
+                
+                // Check for "already registered" error
+                if (error.message.includes('already registered') || 
+                    error.message.includes('already exists') ||
+                    error.message.includes('User already registered')) {
+                    showError(`This email is already registered. <a href="/auth/login.html" class="auth-link" style="color: #667eea; text-decoration: underline;">Sign in instead?</a>`);
+                    setFieldError('email');
+                } else {
+                    showError(API.handleAPIError(error, 'Registration'));
+                }
+                
                 setLoading(false);
             }
         });
@@ -993,33 +816,13 @@
             });
         });
 
-        // Check URL parameters for verification results
-        function checkUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.get('verified') === 'success') {
-                showSuccess('Email verified successfully! You can now sign in.');
-                // Hide registration form and show login link
-                document.getElementById('registrationForm').style.display = 'none';
-                const authLinks = document.getElementById('authLinks');
-                authLinks.innerHTML = `
-                    <p>Your email has been verified!</p>
-                    <p><a href="/login" class="auth-link">Click here to sign in →</a></p>
-                `;
-            } else if (urlParams.get('verified') === 'error') {
-                showError('Email verification failed. Please try registering again.');
-            }
-        }
-
-        // Initialize everything on page load
+        // Focus first input on load
         document.addEventListener('DOMContentLoaded', () => {
-            checkUrlParams();
             document.getElementById('email').focus();
         });
 
-        console.log('🚀 SteadyManager Registration Page Loaded');
-        console.log('📧 Simplified free account registration only!');
-        console.log('💰 Upgrades handled in dashboard - much cleaner!');
+        console.log('SteadyManager Registration Page Loaded');
+        console.log('Supabase authentication ready');
     </script>
 </body>
 </html>

@@ -20,11 +20,17 @@ window.AddLeadModule = {
     // 🎬 Core State
     leads: [],
     isLoading: false,
+    isTransitioning: false,
     searchTerm: '',
     currentView: 'dashboard', // 'dashboard' | 'table'
     currentEditLead: null,
     targetContainer: 'leads-content',
     version: '1.0.0',
+    currentFilters: {
+    statuses: [], // Multi-select: ['new', 'contacted']
+    sources: [],  // Multi-select: ['🌐 Website', '💼 LinkedIn'] 
+    value: ''     // Single-select: 'highest', 'lowest', etc.
+},
 
     // 🚀 Simple Initialization (with Pipeline-style loading)
     async init(targetContainer = 'leads-content') {
@@ -97,6 +103,8 @@ window.AddLeadModule = {
         `;
 
         this.setupEventListeners();
+        this.updateHeaderIndicators();
+        this.updateActiveFiltersPanel();
     },
 
     // 🏠 Dashboard View (Simple Bubbles)
@@ -193,15 +201,27 @@ window.AddLeadModule = {
         return `
             <table class="leads-table">
                 <thead>
-                    <tr>
-                        <th>Lead</th>
-                        <th>Contact</th>
-                        <th>Status</th>
-                        <th>Source</th>
-                        <th>Value</th>
-                        <th>Added</th>
-                    </tr>
-                </thead>
+    <tr>
+        <th>Lead</th>
+        <th>Contact</th>
+        <th>
+            <div class="simple-header-filter" onclick="AddLeadModule.showStatusFilter(event)">
+                Status <span class="simple-arrow">▼</span>
+            </div>
+        </th>
+        <th>
+            <div class="simple-header-filter" onclick="AddLeadModule.showSourceFilter(event)">
+                Source <span class="simple-arrow">▼</span>
+            </div>
+        </th>
+        <th>
+            <div class="simple-header-filter" onclick="AddLeadModule.showValueFilter(event)">
+                Value <span class="simple-arrow">▼</span>
+            </div>
+        </th>
+        <th>Added</th>
+    </tr>
+</thead>
                 <tbody>
                     ${leads.map(lead => this.renderTableRow(lead)).join('')}
                 </tbody>
@@ -236,7 +256,7 @@ window.AddLeadModule = {
                     <span class="status-badge ${statusClass}">${this.formatStatus(lead.status)}</span>
                 </td>
                 <td class="source-cell">
-                    <span class="source-badge">${this.formatSource(lead.source)}</span>
+                    <span class="source-badge">${this.formatSource(lead.source || null)}</span>
                 </td>
                 <td class="value-cell">
                     ${lead.potential_value > 0 ? 
@@ -1277,10 +1297,25 @@ setupSimpleEmailValidation() {
 handleEvent(eventType, data) {
     if (eventType === 'navigation') {
         if (data.targetPage !== 'leads') {
-            this.currentView = 'dashboard'; 
+            this.currentView = 'dashboard';
             this.hideAllModals();
-            this.render(); // Add this line
+            this.render();
             console.log('AddLeadModule: Reset to main view');
+        } else {
+            // We're navigating TO this module - clear filters and reset state
+            this.currentFilters = {
+                statuses: [],
+                sources: [],
+                value: ''
+            };
+            this.searchTerm = '';
+            
+            // Set transition protection
+            this.isTransitioning = true;
+            setTimeout(() => {
+                this.isTransitioning = false;
+                console.log('AddLeadModule: Ready for interactions');
+            }, 600);
         }
     }
 },
@@ -2162,18 +2197,28 @@ addSimilarPopupStyles() {
         this.updateTableContent();
     },
 
-    // 🎯 View Management
-    showDashboard() {
-        this.currentView = 'dashboard';
-        this.render();
-    },
+    // Replace your existing showDashboard method
+showDashboard() {
+    if (this.isTransitioning) return; // Block spam clicks
+    this.isTransitioning = true;
+    this.currentView = 'dashboard';
+    this.hideAllModals();
+    this.render();
+    setTimeout(() => { this.isTransitioning = false; }, 600); // Clear after animation
+},
 
-    showTableView() {
-        this.currentView = 'table';
-        this.render();
-    },
+// Replace your existing showTableView method  
+showTableView() {
+    if (this.isTransitioning) return; // Block spam clicks
+    this.isTransitioning = true;
+    this.currentView = 'table';
+    this.hideAllModals();
+    this.render();
+    setTimeout(() => { this.isTransitioning = false; }, 600); // Clear after animation
+},
 
     showAddLeadModal() {
+    if (this.isTransitioning) return;
     const modal = document.getElementById('addLeadModal');
     if (modal) {
         modal.classList.add('show');
@@ -2825,30 +2870,417 @@ addSimilarPopupStyles() {
 
     // 🔄 Update Table Content
     updateTableContent() {
-        const tableContainer = document.querySelector('.table-container');
-        if (tableContainer) {
-            const filteredLeads = this.getFilteredLeads();
-            tableContainer.innerHTML = filteredLeads.length > 0 ? 
-                this.renderTable(filteredLeads) : 
-                this.renderEmptyState();
-            
-            // Update header count
-            const tableTitle = document.querySelector('.table-title');
-            if (tableTitle) {
-                tableTitle.textContent = `All Leads (${filteredLeads.length})`;
-            }
+    const tableContainer = document.querySelector('.table-container');
+    if (tableContainer) {
+        const filteredLeads = this.getFilteredLeads();
+        tableContainer.innerHTML = filteredLeads.length > 0 ? 
+            this.renderTable(filteredLeads) : 
+            this.renderEmptyState();
+        
+        const tableTitle = document.querySelector('.table-title');
+        if (tableTitle) {
+            tableTitle.textContent = `All Leads (${filteredLeads.length})`;
         }
-    },
+        
+        // 🔥 ADD THESE LINES
+        this.setupEventListeners();
+        this.updateActiveFiltersPanel();
+        this.updateHeaderIndicators();
+    }
+},
 
     // 🔍 Get Filtered Leads
     getFilteredLeads() {
-        if (!this.searchTerm) return this.leads;
-        
-        return this.leads.filter(lead => {
+    let filtered = [...this.leads];
+    
+    // Apply search filter
+    if (this.searchTerm) {
+        filtered = filtered.filter(lead => {
             const searchText = `${lead.name} ${lead.company} ${lead.email} ${lead.phone || ''}`.toLowerCase();
             return searchText.includes(this.searchTerm);
         });
-    },
+    }
+    
+    // Apply status filters (multi-select)
+    if (this.currentFilters.statuses.length > 0) {
+        filtered = filtered.filter(lead => 
+            this.currentFilters.statuses.includes(lead.status)
+        );
+    }
+    
+    // Apply source filters (multi-select)  
+if (this.currentFilters.sources.length > 0) {
+    filtered = filtered.filter(lead => {
+        // Handle null/undefined source as "unknown"
+        const leadSource = lead.source || null;
+        return this.currentFilters.sources.includes(leadSource);
+    });
+}
+    
+    // Apply value filter (single-select)
+    if (this.currentFilters.value) {
+        if (this.currentFilters.value === 'has_value') {
+            filtered = filtered.filter(lead => lead.potential_value > 0);
+        } else if (this.currentFilters.value === 'no_value') {
+            filtered = filtered.filter(lead => !lead.potential_value || lead.potential_value === 0);
+        }
+        
+        // Sort by value
+if (this.currentFilters.value === 'highest') {
+    filtered.sort((a, b) => (b.potential_value || 0) - (a.potential_value || 0));
+} else if (this.currentFilters.value === 'lowest') {
+    filtered.sort((a, b) => {
+        const aValue = a.potential_value || 0;
+        const bValue = b.potential_value || 0;
+        
+        // If both have no value, keep original order
+        if (aValue === 0 && bValue === 0) return 0;
+        
+        // If A has no value but B does, A goes to end
+        if (aValue === 0 && bValue > 0) return 1;
+        
+        // If B has no value but A does, B goes to end  
+        if (bValue === 0 && aValue > 0) return -1;
+        
+        // Both have values, sort lowest first
+        return aValue - bValue;
+    });
+}
+    }
+    
+    return filtered;
+},
+
+clearAllFilters() {
+    this.currentFilters = {
+        statuses: [],
+        sources: [],
+        value: ''
+    };
+    this.searchTerm = '';
+    
+    // Clear search input
+    const searchInput = document.getElementById('leadSearch');
+    if (searchInput) searchInput.value = '';
+    
+    this.updateTableContent();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+hasActiveFilters() {
+    return this.currentFilters.statuses.length > 0 || 
+           this.currentFilters.sources.length > 0 || 
+           this.currentFilters.value !== '' || 
+           this.searchTerm !== '';
+},
+
+updateActiveFiltersPanel() {
+    const existingPanel = document.querySelector('.active-filters-panel');
+    const tableView = document.querySelector('.table-view');
+    const hasFilters = this.hasActiveFilters();
+    
+    if (hasFilters && !existingPanel) {
+        const panelHTML = this.renderActiveFiltersPanel();
+        if (tableView) {
+            const tableContainer = tableView.querySelector('.table-container');
+            if (tableContainer) {
+                tableContainer.insertAdjacentHTML('beforebegin', panelHTML);
+            }
+        }
+    } else if (!hasFilters && existingPanel) {
+        existingPanel.style.transition = 'opacity 0.2s ease';
+        existingPanel.style.opacity = '0';
+        setTimeout(() => existingPanel.remove(), 200);
+    } else if (hasFilters && existingPanel) {
+        const countElement = existingPanel.querySelector('.filter-count');
+        const filtersTextElement = existingPanel.querySelector('.active-filters-text');
+        
+        if (countElement) {
+            const filtered = this.getFilteredLeads();
+            countElement.textContent = `Showing ${filtered.length} of ${this.leads.length} leads`;
+        }
+        
+        if (filtersTextElement) {
+            const activeFilterTexts = [];
+            
+            if (this.currentFilters.statuses.length > 0) {
+                activeFilterTexts.push(`Status: ${this.currentFilters.statuses.length} selected`);
+            }
+            
+            if (this.currentFilters.sources.length > 0) {
+                activeFilterTexts.push(`Sources: ${this.currentFilters.sources.length} selected`);
+            }
+            
+            if (this.currentFilters.value) {
+                const valueLabels = {
+                    'highest': 'Highest First',
+                    'lowest': 'Lowest First',
+                    'has_value': 'Has Value Only',
+                    'no_value': 'No Value Only'
+                };
+                activeFilterTexts.push(`Value: ${valueLabels[this.currentFilters.value]}`);
+            }
+            
+            filtersTextElement.textContent = activeFilterTexts.join(', ');
+        }
+    }
+},
+
+renderActiveFiltersPanel() {
+    if (!this.hasActiveFilters()) return '';
+    
+    const filtered = this.getFilteredLeads();
+    const activeFilterTexts = [];
+    
+    if (this.currentFilters.statuses.length > 0) {
+        activeFilterTexts.push(`Status: ${this.currentFilters.statuses.length} selected`);
+    }
+    
+    if (this.currentFilters.sources.length > 0) {
+        activeFilterTexts.push(`Sources: ${this.currentFilters.sources.length} selected`);
+    }
+    
+    if (this.currentFilters.value) {
+        const valueLabels = {
+            'highest': 'Highest First',
+            'lowest': 'Lowest First',
+            'has_value': 'Has Value Only',
+            'no_value': 'No Value Only'
+        };
+        activeFilterTexts.push(`Value: ${valueLabels[this.currentFilters.value]}`);
+    }
+    
+    return `
+        <div class="active-filters-panel">
+            <div class="filters-info">
+                <span class="filter-count">Showing ${filtered.length} of ${this.leads.length} leads</span>
+                <span class="active-filters-text">${activeFilterTexts.join(', ')}</span>
+            </div>
+            <button class="clear-filters-btn" onclick="AddLeadModule.clearAllFilters()">
+                Clear All
+            </button>
+        </div>
+    `;
+},
+
+    showStatusFilter(event) {
+    this.showMultiFilterDropdown('statuses', event, [
+        { value: '', label: '📋 All Statuses', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: 'new', label: '🆕 New' },
+        { value: 'contacted', label: '📞 Contacted' },
+        { value: 'qualified', label: '✅ Qualified' },
+        { value: 'negotiation', label: '🤝 Negotiation' },
+        { value: 'closed', label: '🎉 Closed' },
+        { value: 'lost', label: '❌ Lost' }
+    ]);
+},
+
+showSourceFilter(event) {
+    this.showMultiFilterDropdown('sources', event, [
+        { value: '', label: '🔍 All Sources', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: '🌐 Website', label: '🌐 Website' },
+        { value: '💼 LinkedIn', label: '💼 LinkedIn' },
+        { value: '📘 Facebook', label: '📘 Facebook' },
+        { value: '📸 Instagram', label: '📸 Instagram' },
+        { value: '🐦 Twitter', label: '🐦 Twitter' },
+        { value: '👥 Referral', label: '👥 Referral' },
+        { value: '📧 Email', label: '📧 Email' },
+        { value: '📞 Phone', label: '📞 Phone' },
+        { value: '🎪 Event', label: '🎪 Event' },
+        { value: '📢 Advertisement', label: '📢 Advertisement' },
+        { value: '🎯 Direct', label: '🎯 Direct' },
+        { value: '🔍 Google', label: '🔍 Google' },
+        { value: '🌱 Organic', label: '🌱 Organic' },
+        { value: '💰 Paid Ads', label: '💰 Paid Ads' },
+        { value: '❄️ Cold Call', label: '❄️ Cold Call' },
+        { value: '🏢 Trade Show', label: '🏢 Trade Show' },
+        { value: '💻 Webinar', label: '💻 Webinar' },
+        { value: '📝 Content', label: '📝 Content' },
+        { value: '🤝 Partnership', label: '🤝 Partnership' },
+        { value: null, label: '❓ Unknown' }
+        
+    ]);
+},
+
+showValueFilter(event) {
+    this.showSingleFilterDropdown('value', event, [
+        { value: '', label: '💰 All Values', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: 'highest', label: '💰 Highest First' },
+        { value: 'lowest', label: '💸 Lowest First' },
+        { value: 'has_value', label: '💵 Has Value Only' },
+        { value: 'no_value', label: '🚫 No Value Only' }
+    ]);
+},
+
+showMultiFilterDropdown(column, event, options) {
+    if (event) event.stopPropagation();
+    this.hideAllFilterDropdowns();
+    
+    event.target.closest('.simple-header-filter').classList.add('active');
+    
+    const dropdown = document.createElement('div');
+    dropdown.className = 'unified-filter-dropdown multi-select active';
+    dropdown.innerHTML = `
+        <div class="filter-options">
+            ${options.map(option => {
+                if (option.divider) {
+                    return `<div class="filter-divider"></div>`;
+                } else if (option.action === 'clear') {
+                    return `
+                        <div class="filter-option clear-option" onclick="AddLeadModule.clearMultiFilter('${column}')">
+                            <span class="option-text">${option.label}</span>
+                        </div>
+                    `;
+                } else {
+                    const isChecked = this.currentFilters[column].includes(option.value);
+                    return `
+                        <div class="filter-checkbox-option" onclick="AddLeadModule.toggleMultiFilter('${column}', '${option.value}', event)">
+                            <div class="custom-checkbox ${isChecked ? 'checked' : ''}">
+                                ${isChecked ? '✓' : ''}
+                            </div>
+                            <span class="option-text">${option.label}</span>
+                        </div>
+                    `;
+                }
+            }).join('')}
+        </div>
+    `;
+    
+    this.positionAndShowDropdown(dropdown, event.target);
+},
+
+showSingleFilterDropdown(column, event, options) {
+    if (event) event.stopPropagation();
+    this.hideAllFilterDropdowns();
+    
+    event.target.closest('.simple-header-filter').classList.add('active');
+    
+    const dropdown = document.createElement('div');
+    dropdown.className = 'unified-filter-dropdown single-select active';
+    dropdown.innerHTML = `
+        <div class="filter-options">
+            ${options.map(option => {
+                if (option.divider) {
+                    return `<div class="filter-divider"></div>`;
+                }
+                const isActive = this.currentFilters[column] === option.value && option.value !== '';
+                return `
+                    <div class="filter-option ${isActive ? 'active' : ''}" 
+                         onclick="AddLeadModule.applySingleFilter('${column}', '${option.value}', event)">
+                        <span class="option-text">${option.label}</span>
+                        ${isActive ? '<span class="active-check">✓</span>' : ''}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    
+    this.positionAndShowDropdown(dropdown, event.target);
+},
+
+toggleMultiFilter(column, value, event) {
+    if (event) event.stopPropagation();
+    if (value === "null") value = null;
+    
+    const currentValues = this.currentFilters[column];
+    const index = currentValues.indexOf(value);
+    
+    if (index > -1) {
+        this.currentFilters[column] = currentValues.filter(v => v !== value);
+    } else {
+        this.currentFilters[column].push(value);
+    }
+    
+    // Update checkbox visual immediately
+    const checkbox = event.target.querySelector('.custom-checkbox') || event.target.closest('.filter-checkbox-option').querySelector('.custom-checkbox');
+    const isChecked = this.currentFilters[column].includes(value);
+    
+    if (isChecked) {
+        checkbox.classList.add('checked');
+        checkbox.textContent = '✓';
+    } else {
+        checkbox.classList.remove('checked');
+        checkbox.textContent = '';
+    }
+    
+    this.updateTableContent();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+clearMultiFilter(column) {
+    this.currentFilters[column] = [];
+    this.hideAllFilterDropdowns();
+    this.updateTableContent();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+applySingleFilter(column, value, event) {
+    if (event) event.stopPropagation();
+    
+    this.currentFilters[column] = value;
+    this.hideAllFilterDropdowns();
+    this.updateTableContent();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+positionAndShowDropdown(dropdown, trigger) {
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${rect.bottom + 5}px`;
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.zIndex = '10000';
+    
+    document.body.appendChild(dropdown);
+    requestAnimationFrame(() => {
+        dropdown.classList.add('show');
+    });
+    
+    setTimeout(() => {
+        document.addEventListener('click', () => this.hideAllFilterDropdowns(), { once: true });
+    }, 100);
+},
+
+hideAllFilterDropdowns() {
+    document.querySelectorAll('.unified-filter-dropdown').forEach(dropdown => {
+        dropdown.classList.remove('show');
+        setTimeout(() => dropdown.remove(), 200);
+    });
+    
+    document.querySelectorAll('.simple-header-filter').forEach(filter => {
+        filter.classList.remove('active');
+    });
+},
+
+updateHeaderIndicators() {
+    ['statuses', 'sources', 'value'].forEach(column => {
+        let methodName = column;
+        if (column === 'statuses') methodName = 'Status';
+        if (column === 'sources') methodName = 'Source'; 
+        if (column === 'value') methodName = 'Value';
+        
+        const arrow = document.querySelector(`[onclick*="show${methodName}Filter"] .simple-arrow`);
+        if (arrow) {
+            const hasFilters = Array.isArray(this.currentFilters[column]) ? 
+                this.currentFilters[column].length > 0 : 
+                this.currentFilters[column] !== '';
+                
+            if (hasFilters) {
+                arrow.textContent = '▲';
+                arrow.style.color = 'var(--primary)';
+            } else {
+                arrow.textContent = '▼';
+                arrow.style.color = 'var(--text-secondary)';
+            }
+        }
+    });
+},
 
     setLoadingState(isLoading) {
     const submitBtn = document.getElementById('submitBtn');
@@ -3055,9 +3487,9 @@ setEditLoadingState(isLoading) {
     },
 
     formatSource(source) {
-        if (!source) return 'Unknown';
-        return source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    },
+    if (!source || source === null) return '❓ Unknown';
+    return source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+},
 
     formatTimeAgo(dateString) {
         if (!dateString) return 'Unknown';
@@ -3755,6 +4187,308 @@ setEditLoadingState(isLoading) {
                     visibility: visible;
                     transform: translateY(0) scale(1);
                 }
+
+                /* 🔥 ENHANCED FILTER SYSTEM - PIPELINE BOX STYLE */
+
+.filters-section-streamlined {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.search-group {
+    flex: 1;
+    min-width: 300px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+}
+
+.search-input-streamlined {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 2.5rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.search-input-streamlined:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.filter-controls-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+/* Header filter buttons - Enhanced box style */
+.simple-header-filter {
+    cursor: pointer;
+    border-radius: 6px;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.3s ease, transform 0.3s ease;
+    padding: 0.75rem 1.25rem;
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    min-width: 120px;
+}
+
+.simple-header-filter:hover {
+    background: var(--surface-hover);
+    transform: translateY(-1px);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.simple-header-filter.active {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+/* Arrow styling */
+.simple-arrow {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: color 0.3s ease, transform 0.3s ease;
+    margin-left: auto;
+}
+
+.simple-header-filter:hover .simple-arrow {
+    color: var(--primary);
+}
+
+.simple-header-filter.active .simple-arrow {
+    color: var(--primary);
+    transform: rotate(180deg);
+}
+
+/* Dropdown container */
+.unified-filter-dropdown {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    max-height: 400px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    position: fixed;
+    z-index: 10000;
+}
+
+.unified-filter-dropdown.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.unified-filter-dropdown.multi-select {
+    min-width: 220px;
+}
+
+/* Dropdown options */
+.filter-options {
+    padding: 0.5rem 0;
+}
+
+.filter-option {
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: background 0.2s ease;
+}
+
+.filter-option:hover {
+    background: var(--surface-hover);
+    color: var(--primary);
+}
+
+.filter-option.clear-option {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Multi-select checkbox options */
+.filter-checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.filter-checkbox-option:hover {
+    background: var(--surface-hover);
+    border-left-color: var(--primary);
+    transform: translateX(2px);
+}
+
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--background);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    color: white;
+}
+
+.custom-checkbox.checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.filter-checkbox-option:hover .custom-checkbox {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.filter-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 1rem;
+}
+
+.option-text {
+    flex: 1;
+}
+
+/* Active filters panel */
+.active-filters-panel {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideInDown 0.3s ease;
+}
+
+.filters-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.filter-count {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.active-filters-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.clear-filters-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.clear-filters-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile responsive filters */
+@media (max-width: 768px) {
+    .filters-section-streamlined {
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: stretch;
+    }
+    
+    .filter-controls-group {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .search-group {
+        min-width: auto;
+    }
+    
+    .unified-filter-dropdown {
+        min-width: 200px;
+        max-height: 300px;
+    }
+    
+    .active-filters-panel {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        text-align: center;
+    }
+}
 
                 /* 🎯 SMART POSITIONING CLASSES */
                 .actions-menu.position-above {

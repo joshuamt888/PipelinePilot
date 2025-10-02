@@ -36,11 +36,12 @@ window.PipelineModule = {
         { id: 'lost', name: 'Lost', icon: '❌', color: 'var(--danger)', row: 'outcome' }
     ],
     filters: {
-        search: '',
-        type: 'all',
-        platform: 'all',
-        score: 'all'
-    },
+    search: '',
+    types: [],     // Multi-select: ['cold', 'warm']
+    sources: [],   // Multi-select: ['🌐 Website', '💼 LinkedIn'] 
+    scores: [],    // Multi-select: ['high', 'medium', 'low']
+    value: ''      // Single-select for sorting
+},
     dragState: {
         isDragging: false,
         draggedLead: null,
@@ -78,13 +79,13 @@ window.PipelineModule = {
         
         // Setup all interactions
         this.setupDragAndDrop();
-        this.setupFilters();
         this.setupEditingSystem();
         this.setupAnimations();
         this.setupClickToActivate();
+        this.setupEventListeners()
 
         // Just clear filters - no analytics nonsense
-        this.clearFilters();
+        this.clearAllFilters();
         
         console.log('✅ Streamlined Pipeline Module ready!');
         
@@ -205,50 +206,13 @@ window.PipelineModule = {
     }
 },
 
-    // 🔍 Apply Current Filters
-    applyFilters() {
-        const { search, type, source, score } = this.filters;
-        
-        this.stages.forEach(stage => {
-            const stageLeads = this.leads.filter(lead => (lead.status || 'new') === stage.id);
-            
-            let filtered = stageLeads.filter(lead => {
-                // Search filter
-                if (search) {
-                    const searchTerm = search.toLowerCase();
-                    const matchesSearch = 
-                        lead.name?.toLowerCase().includes(searchTerm) ||
-                        lead.company?.toLowerCase().includes(searchTerm) ||
-                        lead.email?.toLowerCase().includes(searchTerm);
-                    if (!matchesSearch) return false;
-                }
-                
-                // Type filter
-                if (type !== 'all' && lead.type !== type) return false;
-                
-                // Source filter  
-                if (source !== 'all' && lead.platform !== source) return false;
-                
-                // Score filter
-                if (score !== 'all') {
-                    const leadScore = lead.qualityScore || 5;
-                    if (score === 'high' && leadScore < 8) return false;
-                    if (score === 'medium' && (leadScore < 5 || leadScore > 7)) return false;
-                    if (score === 'low' && leadScore > 4) return false;
-                }
-                
-                return true;
-            });
-            
-            this.filteredLeads[stage.id] = filtered;
-        });
-    },
+    
 
     // 🎨 Render Streamlined Pipeline Interface
-    render() {
-        const container = document.getElementById(this.targetContainer); 
-        if (!container) return;    
-        container.innerHTML = `
+render() {
+    const container = document.getElementById(this.targetContainer); 
+    if (!container) return;    
+    container.innerHTML = `
         <div class="addlead-container fade-in"> 
             <div class="streamlined-pipeline-container fade-in">
                 <!-- 🎯 STREAMLINED HEADER -->
@@ -269,40 +233,35 @@ window.PipelineModule = {
                     </div>
                     
                     <!-- 🔍 ENHANCED FILTERS -->
-                    <div class="filters-section-streamlined">
-                        <div class="search-group">
-                            <div class="search-input-wrapper">
-                                <input 
-                                    type="text" 
-                                    id="pipelineSearch" 
-                                    class="search-input-streamlined" 
-                                    placeholder="Search leads, companies, or emails..."
-                                    value="${this.filters.search}"
-                                >
-                                <div class="search-icon">🔍</div>
-                            </div>
-                        </div>
-                        
-                        <div class="filter-controls-group">
-                            ${this.renderCustomDropdown('typeFilter', 'All Temperatures', [
-    { value: 'all', label: 'All Temperatures', icon: '🌡️' },
-    { value: 'cold', label: 'Cold Leads', icon: '❄️' },
-    { value: 'hot', label: 'Hot Leads', icon: '🔥' }
-], this.filters.type)}
+<div class="filters-section-streamlined">
+    <div class="search-group">
+        <div class="search-input-wrapper">
+            <input 
+                type="text" 
+                id="pipelineSearch" 
+                class="search-input-streamlined" 
+                placeholder="Search leads, companies, or emails..."
+                value="${this.filters.search}"
+            >
+            <div class="search-icon">🔍</div>
+        </div>
+    </div>
+    
+    <div class="filter-controls-group">
+        <div class="simple-header-filter" onclick="PipelineModule.showTypeFilter(event)">
+            Temperature <span class="simple-arrow">▼</span>
+        </div>
+        <div class="simple-header-filter" onclick="PipelineModule.showScoreFilter(event)">
+            Score <span class="simple-arrow">▼</span>
+        </div>
+        <div class="simple-header-filter" onclick="PipelineModule.showSourceFilter(event)">
+            Source <span class="simple-arrow">▼</span>
+        </div>
+    </div>
+</div>
 
-${this.renderCustomDropdown('scoreFilter', 'All Scores', [
-    { value: 'all', label: 'All Scores', icon: '⭐' },
-    { value: 'high', label: 'High (8-10)', icon: '🌟' },
-    { value: 'medium', label: 'Medium (5-7)', icon: '⚡' },
-    { value: 'low', label: 'Low (1-4)', icon: '📈' }
-], this.filters.score)}
-                            <button class="clear-filters-btn" id="clearFilters">
-                                <span class="btn-icon">🔄</span>
-                                <span class="btn-text">Reset</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <!-- 📊 FILTER RESULTS PANEL -->
+                ${this.hasActiveFilters() ? this.renderActiveFiltersPanel() : ''}
 
                 <!-- 🏢 STREAMLINED PIPELINE BOARD -->
                 <div class="pipeline-board-streamlined">
@@ -384,6 +343,7 @@ ${this.renderCustomDropdown('scoreFilter', 'All Scores', [
     setTimeout(() => {
         this.dragAndDropInitialized = false;
         this.setupDragAndDrop();
+        this.setupEventListeners();
     }, 100);
     },
 
@@ -1252,87 +1212,6 @@ showPipelineSelector(leadId) {
                     color: var(--primary);
                     font-weight: 700;
                     font-size: 0.8rem;
-                }
-
-                /* 🔍 ENHANCED FILTERS */
-                .filters-section-streamlined {
-                    display: grid;
-                    grid-template-columns: 1fr auto;
-                    gap: 2rem;
-                    align-items: center;
-                }
-
-                .search-group {
-                    display: flex;
-                    gap: 1rem;
-                }
-
-                .search-input-wrapper {
-                    position: relative;
-                    flex: 1;
-                    max-width: 400px;
-                }
-
-                .search-input-streamlined {
-                    width: 100%;
-                    padding: 1rem 1rem 1rem 3rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    font-size: 1rem;
-                    background: var(--background);
-                    color: var(--text-primary);
-                    transition: var(--pipeline-transition);
-                    font-weight: 500;
-                }
-
-                .search-input-streamlined:focus {
-                    outline: none;
-                    border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-                    transform: translateY(-1px);
-                }
-
-                .search-input-streamlined::placeholder {
-                    color: var(--text-tertiary);
-                }
-
-                .search-icon {
-                    position: absolute;
-                    left: 1rem;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    color: var(--text-tertiary);
-                    font-size: 1.125rem;
-                    pointer-events: none;
-                }
-
-                .filter-controls-group {
-                    display: flex;
-                    gap: 1rem;
-                    align-items: center;
-                }
-
-                .clear-filters-btn {
-                    padding: 1rem 1.5rem;
-                    background: var(--surface-hover);
-                    border: 1px solid var(--border);
-                    border-radius: var(--radius);
-                    color: var(--text-secondary);
-                    cursor: pointer;
-                    transition: var(--pipeline-transition);
-                    font-size: 0.9rem;
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-
-                .clear-filters-btn:hover {
-                    background: var(--primary);
-                    color: white;
-                    border-color: var(--primary);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
                 }
 
                 /* 🏢 STREAMLINED PIPELINE BOARD */
@@ -2623,16 +2502,6 @@ showPipelineSelector(leadId) {
                         padding: 1.5rem;
                     }
 
-                    .filters-section-streamlined {
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                    }
-
-                    .filter-controls-group {
-                        justify-content: center;
-                        flex-wrap: wrap;
-                    }
-
                     .stages-grid {
                         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
                     }
@@ -2692,6 +2561,8 @@ showPipelineSelector(leadId) {
                         min-width: auto;
                     }
                 }
+
+                /* Header filter buttons */
 
                 /* 🎪 ANIMATIONS */
                 .fade-in {
@@ -3495,6 +3366,379 @@ async addDealValue(leadId) {
             popup.remove();
         }
     });
+},
+
+showTypeFilter(event) {
+    this.showMultiFilterDropdown('types', event, [
+        { value: '', label: '🌡️ All Temperatures', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: 'cold', label: '❄️ Cold Leads' },
+        { value: 'warm', label: '🔥 Warm Leads' }
+    ]);
+},
+
+showScoreFilter(event) {
+    this.showMultiFilterDropdown('scores', event, [
+        { value: '', label: '⭐ All Scores', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: 'high', label: '🌟 High (8-10)' },
+        { value: 'medium', label: '⚡ Medium (5-7)' },
+        { value: 'low', label: '📈 Low (1-4)' }
+    ]);
+},
+
+showSourceFilter(event) {
+    this.showMultiFilterDropdown('sources', event, [
+        { value: '', label: '🔍 All Sources', action: 'clear' },
+        { value: '', label: '──────────', divider: true },
+        { value: '🌐 Website', label: '🌐 Website' },
+        { value: '💼 LinkedIn', label: '💼 LinkedIn' },
+        { value: '📘 Facebook', label: '📘 Facebook' },
+        { value: '📸 Instagram', label: '📸 Instagram' },
+        { value: '🐦 Twitter', label: '🐦 Twitter' },
+        { value: '👥 Referral', label: '👥 Referral' },
+        { value: '📧 Email', label: '📧 Email' },
+        { value: '📞 Phone', label: '📞 Phone' },
+        { value: '🎪 Event', label: '🎪 Event' },
+        { value: '🎯 Direct', label: '🎯 Direct' },
+        { value: '🔍 Google', label: '🔍 Google' },
+        { value: '🌱 Organic', label: '🌱 Organic' },
+        { value: '💰 Paid Ads', label: '💰 Paid Ads' },
+        { value: '❄️ Cold Call', label: '❄️ Cold Call' },
+        { value: null, label: '❓ Unknown' }
+    ]);
+},
+
+showMultiFilterDropdown(column, event, options) {
+    if (event) event.stopPropagation();
+    this.hideAllFilterDropdowns();
+    
+    event.target.closest('.simple-header-filter').classList.add('active');
+    
+    const dropdown = document.createElement('div');
+    dropdown.className = 'unified-filter-dropdown multi-select active';
+    dropdown.innerHTML = `
+        <div class="filter-options">
+            ${options.map(option => {
+                if (option.divider) {
+                    return `<div class="filter-divider"></div>`;
+                } else if (option.action === 'clear') {
+                    return `
+                        <div class="filter-option clear-option" onclick="PipelineModule.clearMultiFilter('${column}')">
+                            <span class="option-text">${option.label}</span>
+                        </div>
+                    `;
+                } else {
+                    const isChecked = this.filters[column].includes(option.value);
+                    return `
+                        <div class="filter-checkbox-option" onclick="PipelineModule.toggleMultiFilter('${column}', '${option.value}', event)">
+                            <div class="custom-checkbox ${isChecked ? 'checked' : ''}">
+                                ${isChecked ? '✓' : ''}
+                            </div>
+                            <span class="option-text">${option.label}</span>
+                        </div>
+                    `;
+                }
+            }).join('')}
+        </div>
+    `;
+    
+    this.positionAndShowDropdown(dropdown, event.target);
+},
+
+toggleMultiFilter(column, value, event) {
+    if (event) event.stopPropagation();
+    if (value === "null") value = null;
+    
+    const currentValues = this.filters[column];
+    const index = currentValues.indexOf(value);
+    
+    if (index > -1) {
+        this.filters[column] = currentValues.filter(v => v !== value);
+    } else {
+        this.filters[column].push(value);
+    }
+    
+    // Update checkbox visual immediately
+    const checkbox = event.target.querySelector('.custom-checkbox') || event.target.closest('.filter-checkbox-option').querySelector('.custom-checkbox');
+    const isChecked = this.filters[column].includes(value);
+    
+    if (isChecked) {
+        checkbox.classList.add('checked');
+        checkbox.textContent = '✓';
+    } else {
+        checkbox.classList.remove('checked');
+        checkbox.textContent = '';
+    }
+    
+    this.applyFiltersAndRerender();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+clearMultiFilter(column) {
+    this.filters[column] = [];
+    this.hideAllFilterDropdowns();
+    this.applyFiltersAndRerender();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+positionAndShowDropdown(dropdown, trigger) {
+    const rect = trigger.getBoundingClientRect();
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${rect.bottom + 5}px`;
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.zIndex = '10000';
+    
+    document.body.appendChild(dropdown);
+    requestAnimationFrame(() => {
+        dropdown.classList.add('show');
+    });
+    
+    setTimeout(() => {
+        document.addEventListener('click', () => this.hideAllFilterDropdowns(), { once: true });
+    }, 100);
+},
+
+hideAllFilterDropdowns() {
+    document.querySelectorAll('.unified-filter-dropdown').forEach(dropdown => {
+        dropdown.classList.remove('show');
+        setTimeout(() => dropdown.remove(), 200);
+    });
+    
+    document.querySelectorAll('.simple-header-filter').forEach(filter => {
+        filter.classList.remove('active');
+    });
+},
+
+updateHeaderIndicators() {
+    ['types', 'sources', 'scores'].forEach(column => {
+        let methodName = column;
+        if (column === 'types') methodName = 'Type';
+        if (column === 'sources') methodName = 'Source'; 
+        if (column === 'scores') methodName = 'Score';
+        
+        const arrow = document.querySelector(`[onclick*="show${methodName}Filter"] .simple-arrow`);
+        if (arrow) {
+            const hasFilters = this.filters[column].length > 0;
+                
+            if (hasFilters) {
+                arrow.textContent = '▲';
+                arrow.style.color = 'var(--primary)';
+            } else {
+                arrow.textContent = '▼';
+                arrow.style.color = 'var(--text-secondary)';
+            }
+        }
+    });
+},
+
+hasActiveFilters() {
+    return this.filters.search !== '' ||
+           this.filters.types.length > 0 ||
+           this.filters.sources.length > 0 ||
+           this.filters.scores.length > 0;
+},
+
+updateActiveFiltersPanel() {
+    const existingPanel = document.querySelector('.active-filters-panel');
+    const pipelineBoard = document.querySelector('.pipeline-board-streamlined');
+    const hasFilters = this.hasActiveFilters();
+    
+    if (hasFilters && !existingPanel) {
+        const panelHTML = this.renderActiveFiltersPanel();
+        if (pipelineBoard) {
+            pipelineBoard.insertAdjacentHTML('beforebegin', panelHTML);
+        }
+    } else if (!hasFilters && existingPanel) {
+        existingPanel.style.transition = 'opacity 0.2s ease';
+        existingPanel.style.opacity = '0';
+        setTimeout(() => existingPanel.remove(), 200);
+    } else if (hasFilters && existingPanel) {
+        this.updateExistingFilterPanel(existingPanel);
+    }
+},
+
+renderActiveFiltersPanel() {
+    if (!this.hasActiveFilters()) return '';
+    
+    const filteredCount = this.getFilteredLeadsCount();
+    const totalCount = this.leads.length;
+    const activeFilterTexts = [];
+    
+    if (this.filters.types.length > 0) {
+        activeFilterTexts.push(`Types: ${this.filters.types.length} selected`);
+    }
+    
+    if (this.filters.sources.length > 0) {
+        activeFilterTexts.push(`Sources: ${this.filters.sources.length} selected`);
+    }
+    
+    if (this.filters.scores.length > 0) {
+        activeFilterTexts.push(`Scores: ${this.filters.scores.length} selected`);
+    }
+    
+    return `
+        <div class="active-filters-panel">
+            <div class="filters-info">
+                <span class="filter-count">Showing ${filteredCount} of ${totalCount} leads</span>
+                <span class="active-filters-text">${activeFilterTexts.join(', ')}</span>
+            </div>
+            <button class="clear-filters-btn" onclick="PipelineModule.clearAllFilters()">
+                Clear All
+            </button>
+        </div>
+    `;
+},
+
+clearAllFilters() {
+    this.filters = {
+        search: '',
+        types: [],
+        sources: [],
+        scores: []
+    };
+
+    const searchInput = document.getElementById('pipelineSearch');
+    if (searchInput) searchInput.value = '';
+
+    this.applyFiltersAndRerender();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
+getFilteredLeadsCount() {
+    if (!this.filteredLeads || typeof this.filteredLeads !== 'object') {
+        return 0;
+    }
+    let count = 0;
+    this.stages.forEach(stage => {
+        const stageLeads = this.filteredLeads[stage.id] || [];
+        count += stageLeads.length;
+    });
+    return count;
+},
+
+applyFilters() {
+    const { 
+    search = '', 
+    types = [], 
+    sources = [], 
+    scores = [] 
+} = this.filters || {};
+    
+    this.stages.forEach(stage => {
+        const stageLeads = this.leads.filter(lead => (lead.status || 'new') === stage.id);
+        
+        let filtered = stageLeads.filter(lead => {
+            // Search filter
+            if (search) {
+                const searchTerm = search.toLowerCase();
+                const matchesSearch = 
+                    lead.name?.toLowerCase().includes(searchTerm) ||
+                    lead.company?.toLowerCase().includes(searchTerm) ||
+                    lead.email?.toLowerCase().includes(searchTerm);
+                if (!matchesSearch) return false;
+            }
+            
+            // Type filter (multi-select)
+            if (types.length > 0 && !types.includes(lead.type)) return false;
+            
+            // Source filter (multi-select)
+            if (sources.length > 0) {
+                const leadSource = lead.platform || lead.source || null;
+                if (!sources.includes(leadSource)) return false;
+            }
+            
+            // Score filter (multi-select)
+            if (scores.length > 0) {
+                const leadScore = lead.qualityScore || 5;
+                let scoreCategory = 'medium';
+                if (leadScore >= 8) scoreCategory = 'high';
+                else if (leadScore <= 4) scoreCategory = 'low';
+                
+                if (!scores.includes(scoreCategory)) return false;
+            }
+            
+            return true;
+        });
+        
+        this.filteredLeads[stage.id] = filtered;
+    });
+},
+
+updateExistingFilterPanel(existingPanel) {
+    const countElement = existingPanel.querySelector('.filter-count');
+    const filtersTextElement = existingPanel.querySelector('.active-filters-text');
+    
+    if (countElement) {
+        const filtered = this.getFilteredLeadsCount();
+        countElement.textContent = `Showing ${filtered} of ${this.leads.length} leads`;
+    }
+    
+    if (filtersTextElement) {
+        const activeFilterTexts = [];
+        
+        if (this.filters.types.length > 0) {
+            activeFilterTexts.push(`Types: ${this.filters.types.length} selected`);
+        }
+        
+        if (this.filters.sources.length > 0) {
+            activeFilterTexts.push(`Sources: ${this.filters.sources.length} selected`);
+        }
+        
+        if (this.filters.scores.length > 0) {
+            activeFilterTexts.push(`Scores: ${this.filters.scores.length} selected`);
+        }
+        
+        filtersTextElement.textContent = activeFilterTexts.join(', ');
+    }
+},
+
+getFilteredActiveLeadsCount() {
+    const activeStages = ['new', 'contacted', 'negotiation'];
+    return activeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
+},
+
+getFilteredOutcomeLeadsCount() {
+    const outcomeStages = ['qualified', 'closed', 'lost'];
+    return outcomeStages.reduce((total, stage) => total + (this.filteredLeads[stage]?.length || 0), 0);
+},
+
+calculateFilteredOutcomeValue() {
+    const outcomeStages = ['qualified', 'closed', 'lost'];
+    let total = 0;
+    
+    outcomeStages.forEach(stage => {
+        const stageLeads = this.filteredLeads[stage] || [];
+        stageLeads.forEach(lead => {
+            const value = Number(lead.potential_value) || 0;
+            total += value;
+        });
+    });
+    
+    return total;
+},
+
+setupEventListeners() {
+    // Search input with debounce
+    const searchInput = document.getElementById('pipelineSearch');
+    if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
+        let searchTimeout;
+        const searchHandler = (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.filters.search = e.target.value;
+                this.applyFiltersAndRerender();
+            }, 300);
+        };
+        
+        searchInput.addEventListener('input', searchHandler);
+        searchInput.setAttribute('data-listener-added', 'true'); // Prevent duplicate listeners
+    }
+    
+    console.log('Pipeline event listeners setup');
 },
 
 // Helper function to set deal value from quick buttons
@@ -5025,6 +5269,8 @@ async editLossReason(leadId) {
     });
 },
 
+
+
 // 🗑️ Show Delete Confirmation Modal  <-- ADD THE METHOD HERE
 showDeleteConfirmation(leadId) {
     const lead = this.leads.find(l => l.id.toString() === leadId.toString());
@@ -5257,13 +5503,12 @@ showDeleteConfirmation(leadId) {
 
     // 🔧 Helper Methods
     getTypeIcon(type) {
-        const icons = {
-            warm: '🔥',
-            cold: '❄️',
-            hot: '🔥',
-        };
-        return icons[type] || '';
-    },
+    const icons = {
+        warm: '🔥',
+        cold: '❄️'
+    };
+    return icons[type] || '';
+},
 
     getSourceIcon(source) {
     const icons = {
@@ -6126,6 +6371,22 @@ if (hasActiveFilters) {
 }
 },
 
+applyFiltersAndRerender() {
+    this.applyFilters(); // Use the new multi-select filter logic
+    this.stages.forEach(stage => {
+        const container = document.querySelector(`[data-leads-container="${stage.id}"]`);
+        const stageContent = document.querySelector(`[data-stage-content="${stage.id}"]`);
+        if (container && stageContent) {
+            const stageLeads = this.filteredLeads[stage.id] || [];
+            container.innerHTML = this.renderLeads(stageLeads, stage);
+        }
+    });
+    this.updateStageCounts();
+    this.setupDragAndDrop();
+    this.updateHeaderIndicators();
+    this.updateActiveFiltersPanel();
+},
+
   async updateLeadStatusDirect(leadId, newStatus) {
     try {
         const stageName = this.stages.find(s => s.id === newStatus)?.name || newStatus;
@@ -6162,67 +6423,6 @@ if (hasActiveFilters) {
         
         this.showNotification('Failed to update lead status. Please try again.', 'error');
     }
-},
-
-    // 🔍 Setup Filters
-    setupFilters() {
-        const searchInput = document.getElementById('pipelineSearch');
-        const clearBtn = document.getElementById('clearFilters');
-
-        let searchTimeout;
-        searchInput?.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.filters.search = e.target.value;
-                this.applyFiltersAndRerender();
-            }, 300);
-        });
-
-        clearBtn?.addEventListener('click', () => {
-            this.clearFilters();
-        });
-
-        console.log('🔍 Filter event listeners setup');
-    },
-
-    applyFiltersAndRerender() {
-    this.organizeLeads();
-    
-    this.stages.forEach(stage => {
-        const container = document.querySelector(`[data-leads-container="${stage.id}"]`);
-        const stageContent = document.querySelector(`[data-stage-content="${stage.id}"]`);
-        
-        if (container && stageContent) {
-            const stageLeads = this.filteredLeads[stage.id] || [];
-            container.innerHTML = this.renderLeads(stageLeads, stage);
-        }
-    });
-
-    // This will now show filtered counts when filters are active
-    this.updateStageCounts();
-    
-    this.setupDragAndDrop();
-},
-
-    clearFilters() {
-    this.filters = {
-        search: '',
-        type: 'all',
-        source: 'all',
-        score: 'all'
-    };
-
-    const searchInput = document.getElementById('pipelineSearch');
-    if (searchInput) searchInput.value = '';
-
-    // 🔥 RESET SIMPLIFIED DROPDOWNS
-    const typeFilter = document.getElementById('typeFilter');
-    const scoreFilter = document.getElementById('scoreFilter');
-    
-    if (typeFilter) typeFilter.value = 'all';
-    if (scoreFilter) scoreFilter.value = 'all';
-
-    this.applyFiltersAndRerender();
 },
 
     // ✏️ Setup Editing System
@@ -6275,15 +6475,15 @@ renderEditForm(lead) {
             <div class="temperature-section">
                 <label class="section-label">Lead Temperature</label>
                 <div class="temperature-toggle">
-                    <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold">
-                        <span class="temp-icon">❄️</span>
-                        <span class="temp-label">Cold</span>
-                    </button>
-                    <button type="button" class="temp-btn ${lead.type === 'hot' ? 'active' : ''}" data-temp="hot">
-                        <span class="temp-icon">🔥</span>
-                        <span class="temp-label">Hot</span>
-                    </button>
-                </div>
+    <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold">
+        <span class="temp-icon">❄️</span>
+        <span class="temp-label">Cold</span>
+    </button>
+    <button type="button" class="temp-btn ${lead.type === 'warm' ? 'active' : ''}" data-temp="warm">
+        <span class="temp-icon">🔥</span>
+        <span class="temp-label">Warm</span>
+    </button>
+</div>
                 <input type="hidden" id="editType" value="${lead.type || ''}">
             </div>
 
@@ -6633,6 +6833,89 @@ renderEditForm(lead) {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
+
+            /* Pipeline Filter Panel */
+            .pipeline-filter-panel {
+                background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+                border: 1px solid rgba(102, 126, 234, 0.2);
+                border-radius: 12px;
+                padding: 1rem 1.5rem;
+                margin-bottom: 2rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                animation: slideInDown 0.3s ease;
+            }
+
+            .filter-results-info {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .result-count {
+                font-weight: 700;
+                color: var(--primary);
+                font-size: 1rem;
+            }
+
+            .filter-details {
+                font-size: 0.85rem;
+                color: var(--text-secondary);
+            }
+
+            .clear-all-filters-btn {
+                background: var(--primary);
+                color: white;
+                border: none;
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: all 0.3s ease;
+            }
+
+            .clear-all-filters-btn:hover {
+                background: var(--primary-dark);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            }
+
+            /* Mobile responsive */
+@media (max-width: 768px) {
+    .pipeline-filter-panel {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .filter-results-info {
+        align-items: center;
+    }
+    
+    .clear-all-filters-btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+    }
+    
+    .filter-details {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+}
+
+@media (max-width: 480px) {
+    .result-count {
+        font-size: 0.9rem;
+    }
+    
+    .filter-details {
+        font-size: 0.75rem;
+    }
+}
         </style>
     `;
 },
@@ -6832,6 +7115,7 @@ async simpleRefresh() {
         this.setupFilters();
         this.setupEditingSystem();
         this.setupClickToActivate();
+        this.setupEventListeners()
         
         console.log('✅ Simple refresh complete');
     } catch (error) {
@@ -6884,6 +7168,50 @@ async refreshPipeline() {
     } finally {
         this.isLoading = false;
     }
+},
+
+handleEvent(eventType, data) {
+    if (eventType === 'navigation') {
+        if (data.targetPage !== 'pipeline') {
+            this.hideAllModals();
+            this.hideAllFilterDropdowns();
+            console.log('PipelineModule: Clean view on navigation away');
+        } else {
+            // We're navigating TO this module - clear filters and reset state
+            this.filters = {
+                search: '',
+                types: [],
+                sources: [],
+                scores: [],
+                value: ''
+            };
+            
+            // Clear search input if it exists
+            const searchInput = document.getElementById('pipelineSearch');
+            if (searchInput) searchInput.value = '';
+            
+            // FORCE APPLY THE CLEARED FILTERS
+            this.applyFiltersAndRerender();
+            this.updateHeaderIndicators();
+            this.updateActiveFiltersPanel();
+            
+            // Set transition protection
+            this.isTransitioning = true;
+            setTimeout(() => {
+                this.isTransitioning = false;
+                console.log('PipelineModule: Ready for interactions');
+            }, 600);
+        }
+    }
+},
+
+hideAllModals() {
+    // Hide any open modals/dropdowns
+    this.hideAllFilterDropdowns();
+    const editModal = document.getElementById('editModal');
+    if (editModal) editModal.classList.remove('show');
+    const pipelineModal = document.getElementById('pipelineSelectorModal');
+    if (pipelineModal) pipelineModal.classList.remove('show');
 },
 
     // 🔧 System Utilities

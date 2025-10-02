@@ -9,7 +9,6 @@
     <!-- CDN Resources -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
         * {
@@ -107,6 +106,7 @@
             font-size: 0.95rem;
             position: relative;
             overflow: hidden;
+            display: inline-block;
         }
 
         .btn::before {
@@ -140,7 +140,6 @@
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            position: relative;
         }
 
         .btn-primary:hover {
@@ -218,7 +217,6 @@
             padding: 1rem 2rem;
             font-size: 1.1rem;
             border-radius: 12px;
-            position: relative;
         }
 
         .btn-white {
@@ -300,10 +298,6 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .problem-icon {
-            display: none;
-        }
-
         .problem-card-title {
             font-size: 1.5rem;
             font-weight: 700;
@@ -380,10 +374,6 @@
             transform: translateY(-4px);
             box-shadow: 0 20px 40px rgba(34, 197, 94, 0.15);
             border-color: rgba(34, 197, 94, 0.2);
-        }
-
-        .solution-icon {
-            display: none;
         }
 
         .solution-card-title {
@@ -490,106 +480,6 @@
 
         .step-description {
             color: #4a5568;
-        }
-
-        /* Pricing Section */
-        .pricing {
-            padding: 6rem 2rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #e6f3ff 100%);
-        }
-
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 4rem;
-            max-width: 1000px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .pricing-card {
-            background: white;
-            border-radius: 20px;
-            padding: 3rem;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
-            border: 2px solid rgba(102, 126, 234, 0.1);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .pricing-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 30px 60px rgba(102, 126, 234, 0.25);
-        }
-
-        .pricing-card.featured {
-            border-color: #667eea;
-            transform: scale(1.05);
-        }
-
-        .pricing-card.featured::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-        }
-
-        .pricing-badge {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            display: inline-block;
-        }
-
-        .pricing-plan-name {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1a202c;
-            margin-bottom: 1rem;
-        }
-
-        .pricing-amount {
-            font-size: 4rem;
-            font-weight: 900;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-        }
-
-        .pricing-period {
-            color: #4a5568;
-            margin-bottom: 2rem;
-        }
-
-        .pricing-features {
-            list-style: none;
-            margin-bottom: 2rem;
-            text-align: left;
-        }
-
-        .pricing-features li {
-            padding: 0.5rem 0;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .pricing-features li::before {
-            content: '✓';
-            color: #48bb78;
-            font-weight: bold;
-            width: 20px;
-            text-align: center;
         }
 
         /* CTA Section */
@@ -708,6 +598,38 @@
             cursor: pointer;
         }
 
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-menu.active {
+            display: block;
+        }
+
+        .mobile-menu ul {
+            list-style: none;
+        }
+
+        .mobile-menu li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-menu a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            display: block;
+            padding: 0.5rem;
+        }
+
         /* Animation Classes */
         @keyframes fadeInUp {
             from {
@@ -734,6 +656,10 @@
         /* Responsive */
         @media (max-width: 768px) {
             .nav-menu {
+                display: none;
+            }
+
+            .nav-cta {
                 display: none;
             }
 
@@ -773,14 +699,6 @@
             .problem-grid {
                 grid-template-columns: 1fr;
             }
-
-            .pricing-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .pricing-card.featured {
-                transform: none;
-            }
         }
     </style>
 </head>
@@ -792,20 +710,33 @@
             
             <ul class="nav-menu">
                 <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
-                <li><a href="/pricing" class="nav-link">Pricing</a></li>
-                <li><a href="/about" class="nav-link">About</a></li>
-                <li><a href="/contact" class="nav-link">Contact</a></li>
+                <li><a href="/pages/features.html" class="nav-link">Features</a></li>
+                <li><a href="/pages/pricing.html" class="nav-link">Pricing</a></li>
+                <li><a href="/pages/about.html" class="nav-link">About</a></li>
+                <li><a href="/pages/contact.html" class="nav-link">Contact</a></li>
             </ul>
 
             <div class="nav-cta">
-                <a href="/login" class="btn btn-outline">Sign In</a>
-                <a href="/trial" class="btn btn-primary">Start Free Trial</a>
+                <a href="/auth/login.html" class="btn btn-outline">Sign In</a>
+                <a href="/auth/trial.html" class="btn btn-primary">Start Free Trial</a>
             </div>
 
-            <button class="mobile-menu-btn">☰</button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
         </div>
     </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/pages/features.html">Features</a></li>
+            <li><a href="/pages/pricing.html">Pricing</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/auth/login.html">Sign In</a></li>
+            <li><a href="/auth/trial.html">Start Free Trial</a></li>
+        </ul>
+    </div>
 
     <!-- Hero Section -->
     <section class="hero">
@@ -825,7 +756,7 @@
             </p>
 
             <div class="hero-cta">
-                <a href="/trial" class="btn btn-white btn-hero">Start Free Trial</a>
+                <a href="/auth/trial.html" class="btn btn-white btn-hero">Start Free Trial</a>
                 <a href="#demo" class="btn btn-outline-white btn-hero">See How It Works</a>
             </div>
 
@@ -957,8 +888,8 @@
                 No credit card required.
             </p>
             <div class="hero-cta">
-                <a href="/trial" class="btn btn-white btn-hero">Start Free Trial</a>
-                <a href="/register" class="btn btn-outline-white btn-hero">Create Free Account</a>
+                <a href="/auth/trial.html" class="btn btn-white btn-hero">Start Free Trial</a>
+                <a href="/auth/register.html" class="btn btn-outline-white btn-hero">Create Free Account</a>
             </div>
         </div>
     </section>
@@ -977,8 +908,8 @@
             <div>
                 <h4 class="footer-title">Product</h4>
                 <ul class="footer-links">
-                    <li><a href="/features">Features</a></li>
-                    <li><a href="/pricing">Pricing</a></li>
+                    <li><a href="/pages/features.html">Features</a></li>
+                    <li><a href="/pages/pricing.html">Pricing</a></li>
                     <li><a href="#demo">How It Works</a></li>
                 </ul>
             </div>
@@ -986,34 +917,35 @@
             <div>
                 <h4 class="footer-title">Company</h4>
                 <ul class="footer-links">
-                    <li><a href="/about">About</a></li>
-                    <li><a href="/contact">Contact</a></li>
-                    <li><a href="/privacy">Privacy</a></li>
-                    <li><a href="/terms">Terms</a></li>
-                    <li><a href="/auth/login">Sign In</a></li>
+                    <li><a href="/pages/about.html">About</a></li>
+                    <li><a href="/pages/contact.html">Contact</a></li>
+                    <li><a href="/pages/privacy.html">Privacy</a></li>
+                    <li><a href="/pages/terms.html">Terms</a></li>
+                    <li><a href="/auth/login.html">Sign In</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="footer-bottom">
-            <p>© 2025 SteadyManager - A Steady Scaling LLC Product. Built to help you scale steadily.</p>
+            <p>&copy; 2025 SteadyManager - A Steady Scaling LLC Product. Built to help you scale steadily.</p>
         </div>
     </footer>
 
     <script>
-        // Simple event tracking
-        function trackEvent(eventName, data = {}) {
-            console.log(`Event: ${eventName}`, data);
-            // This is where you'd send to your analytics platform
-        }
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
 
-        // Track CTA clicks
-        document.querySelectorAll('a[href*="trial"], a[href*="register"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                trackEvent('cta_click', {
-                    button_text: btn.textContent.trim(),
-                    button_location: btn.closest('section')?.className || 'unknown'
-                });
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('active');
+            this.textContent = mobileMenu.classList.contains('active') ? '✕' : '☰';
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+                mobileMenuBtn.textContent = '☰';
             });
         });
 
@@ -1041,18 +973,6 @@
                 navbar.style.background = 'rgba(255, 255, 255, 0.95)';
                 navbar.style.boxShadow = 'none';
             }
-        });
-
-        // Mobile menu (placeholder)
-        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
-            // Simple alert for now - will be replaced with actual menu
-            alert('Mobile menu coming soon! For now, try our free trial at /trial');
-        });
-
-        // Initialize
-        trackEvent('page_loaded', {
-            page: 'landing',
-            referrer: document.referrer
         });
 
         console.log('SteadyManager - Simple Lead Management That Scales');
