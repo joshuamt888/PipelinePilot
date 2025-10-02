@@ -258,7 +258,7 @@
             color: #16a34a;
         }
 
-        .submit-btn {
+        .submit-btn, .resend-btn {
             width: 100%;
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
@@ -273,7 +273,7 @@
             overflow: hidden;
         }
 
-        .submit-btn::before {
+        .submit-btn::before, .resend-btn::before {
             content: '';
             position: absolute;
             top: 0;
@@ -284,23 +284,23 @@
             transition: left 0.5s;
         }
 
-        .submit-btn:hover::before {
+        .submit-btn:hover::before, .resend-btn:hover::before {
             left: 100%;
         }
 
-        .submit-btn:hover {
+        .submit-btn:hover, .resend-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
         }
 
-        .submit-btn:disabled {
+        .submit-btn:disabled, .resend-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
         }
 
-        .submit-btn:disabled::before {
+        .submit-btn:disabled::before, .resend-btn:disabled::before {
             display: none;
         }
 
@@ -392,6 +392,12 @@
 
         .verification-help a:hover {
             text-decoration: underline;
+        }
+
+        .resend-btn {
+            margin-top: 1rem;
+            width: auto;
+            padding: 0.75rem 1.5rem;
         }
 
         .auth-links {
@@ -611,9 +617,14 @@
                 <p>• Check your spam/junk folder</p>
                 <p>• Make sure you entered the correct email address</p>
                 <p>• Wait a few minutes for the email to arrive</p>
+                
+                <button id="resendBtn" class="resend-btn">
+                    Resend Verification Email
+                </button>
+                
                 <p style="margin-top: 1rem;">
                     Still having trouble? 
-                    <a href="/pages/contact.html">Contact support</a>
+                    <a href="mailto:josh@steadyscaling.com">Contact support</a>
                 </p>
             </div>
         </div>
@@ -632,10 +643,10 @@
 
     <script type="module">
         import API from '/dashboard/shared/js/api.js';
+        import { supabase } from '/dashboard/shared/js/supabase.js';
 
         let currentEmail = '';
 
-        // Password strength checker
         document.getElementById('password').addEventListener('input', (e) => {
             checkPasswordStrength(e.target.value);
         });
@@ -685,15 +696,30 @@
             document.getElementById('authLinks').style.display = 'none';
         }
 
-        function showError(message) {
+        function showErrorWithLink(message, linkText, linkHref) {
             const errorDiv = document.getElementById('errorMessage');
-            errorDiv.innerHTML = message;
+            errorDiv.textContent = '';
+            errorDiv.innerHTML = '';
+            
+            const textNode = document.createTextNode(message);
+            const link = document.createElement('a');
+            link.href = linkHref;
+            link.className = 'auth-link';
+            link.style.color = '#667eea';
+            link.style.textDecoration = 'underline';
+            link.textContent = linkText;
+            
+            errorDiv.appendChild(textNode);
+            errorDiv.appendChild(link);
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
-            
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 10000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('successMessage').style.display = 'none';
         }
 
         function showSuccess(message) {
@@ -701,10 +727,6 @@
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
-            
-            setTimeout(() => {
-                successDiv.style.display = 'none';
-            }, 10000);
         }
 
         function clearMessages() {
@@ -741,88 +763,137 @@
             }
         }
 
-        // Form submission
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            clearMessages();
-            clearFieldErrors();
-            setLoading(true);
-            
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            // Validation
-            if (!email || !password || !confirmPassword) {
-                showError('Please fill in all fields.');
-                setLoading(false);
-                if (!email) setFieldError('email');
-                if (!password) setFieldError('password');
-                if (!confirmPassword) setFieldError('confirmPassword');
-                return;
-            }
-            
-            if (!API.isValidEmail(email)) {
-                showError('Please enter a valid email address.');
-                setFieldError('email');
-                setLoading(false);
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showError('Passwords do not match.');
-                setFieldError('password');
-                setFieldError('confirmPassword');
-                setLoading(false);
-                return;
-            }
-            
-            if (password.length < 8) {
-                showError('Password must be at least 8 characters long.');
-                setFieldError('password');
-                setLoading(false);
-                return;
-            }
-            
-            try {
-                await API.register(email, password, 'free');
-                
-                // Success - show verification screen
-                showVerificationSection(email);
-                showSuccess('Account created! Check your email to verify your account.');
-                
-            } catch (error) {
-                console.error('Registration error:', error);
-                
-                // Check for "already registered" error
-                if (error.message.includes('already registered') || 
-                    error.message.includes('already exists') ||
-                    error.message.includes('User already registered')) {
-                    showError(`This email is already registered. <a href="/auth/login.html" class="auth-link" style="color: #667eea; text-decoration: underline;">Sign in instead?</a>`);
-                    setFieldError('email');
-                } else {
-                    showError(API.handleAPIError(error, 'Registration'));
-                }
-                
-                setLoading(false);
-            }
-        });
+    e.preventDefault();
+    
+    clearMessages();
+    clearFieldErrors();
+    setLoading(true);
+    
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (!email || !password || !confirmPassword) {
+        showError('Please fill in all fields.');
+        setLoading(false);
+        if (!email) setFieldError('email');
+        if (!password) setFieldError('password');
+        if (!confirmPassword) setFieldError('confirmPassword');
+        return;
+    }
+    
+    if (!API.isValidEmail(email)) {
+        showError('Please enter a valid email address.');
+        setFieldError('email');
+        setLoading(false);
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showError('Passwords do not match.');
+        setFieldError('password');
+        setFieldError('confirmPassword');
+        setLoading(false);
+        return;
+    }
+    
+    if (password.length < 8) {
+        showError('Password must be at least 8 characters long.');
+        setFieldError('password');
+        setLoading(false);
+        return;
+    }
+    
+    // STEP 1: Check if account already exists
+    const { data: checkData, error: checkError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+    
+    if (!checkError && checkData?.user) {
+        // Account exists with correct password
+        const isVerified = checkData.user.email_confirmed_at;
+        await supabase.auth.signOut();
+        
+        if (isVerified) {
+            showErrorWithLink('Account already exists and is verified. ', 'Sign in instead?', '/auth/login.html');
+            setFieldError('email');
+            setLoading(false);
+            return;
+        } else {
+            showVerificationSection(email);
+            showError('Account exists but email not verified. Click resend below.');
+            setLoading(false);
+            return;
+        }
+    }
+    
+    // STEP 2: Account doesn't exist or wrong password - try to register
+    try {
+        await API.register(email, password, 'free');
+        
+        // Only show verification for NEW accounts
+        showVerificationSection(email);
+        showSuccess('Account created! Check your email to verify your account.');
+        setLoading(false);
+        
+    } catch (error) {
+        // Registration failed
+        if (error.message.includes('already registered') || 
+            error.message.includes('already exists') ||
+            error.message.includes('User already registered')) {
+            // Email exists but they used wrong password
+            showErrorWithLink('This email is already registered. ', 'Sign in instead?', '/auth/login.html');
+            setFieldError('email');
+            setLoading(false);
+            return; // ADD THIS RETURN
+        } else {
+            showError(API.handleAPIError(error, 'Registration'));
+            setLoading(false);
+            return; // ADD THIS RETURN
+        }
+    }
+});
 
-        // Clear error styling on input
-        document.querySelectorAll('.form-input').forEach(input => {
-            input.addEventListener('input', () => {
-                input.classList.remove('error');
-            });
+document.getElementById('resendBtn').addEventListener('click', async () => {
+    if (!currentEmail) {
+        showError('No email address found.');
+        return;
+    }
+    
+    const resendBtn = document.getElementById('resendBtn');
+    resendBtn.disabled = true;
+    resendBtn.textContent = 'Sending...';
+    
+    try {
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email: currentEmail
         });
+        
+        if (error) throw error;
+        showSuccess('Verification email sent! Check your inbox.');
+        
+    } catch (error) {
+        showError('Could not resend email. Contact support at josh@steadyscaling.com');
+    } finally {
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend Verification Email';
+    }
+});
 
-        // Focus first input on load
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('email').focus();
-        });
+document.querySelectorAll('.form-input').forEach(input => {
+    input.addEventListener('input', () => {
+        input.classList.remove('error');
+    });
+});
 
-        console.log('SteadyManager Registration Page Loaded');
-        console.log('Supabase authentication ready');
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('email').focus();
+});
+
+console.log('SteadyManager Registration Page Loaded');
     </script>
 </body>
 </html>

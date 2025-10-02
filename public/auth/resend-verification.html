@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resend Verification - SteadyManager</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 20px 20px 0 0;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        p {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            background: #f9fafb;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.875rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .success {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .success-section {
+            display: none;
+            text-align: center;
+        }
+
+        .success-section.show {
+            display: block;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .verified-notice {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            display: none;
+        }
+
+        .verified-notice.show {
+            display: block;
+        }
+
+        .verified-notice h1 {
+            color: #166534;
+        }
+
+        .verified-notice p {
+            color: #166534;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="form-section">
+            <h1>Resend Verification Email</h1>
+            <p>Enter your email address and we'll send you a new verification link.</p>
+
+            <div id="error" class="error"></div>
+            <div id="success" class="success"></div>
+
+            <form id="resendForm">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="Enter your email">
+                </div>
+
+                <button type="submit" id="submitBtn">Send Verification Email</button>
+            </form>
+
+            <p style="margin-top: 2rem;">
+                <a href="/auth/login.html" class="link">Back to Sign In</a>
+            </p>
+        </div>
+
+        <div id="success-section" class="success-section">
+            <h1>Check Your Email</h1>
+            <p>We've sent a verification link to <strong id="sent-email"></strong></p>
+            <p>Click the link in your email to verify your account.</p>
+            <p style="margin-top: 2rem;">
+                <a href="/auth/login.html" class="link">Back to Sign In</a>
+            </p>
+        </div>
+
+        <div id="verified-section" class="verified-notice">
+            <h1>Already Verified!</h1>
+            <p>This email address is already verified.</p>
+            <p style="margin-top: 2rem;">
+                <a href="/auth/login.html" class="link">Go to Sign In</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase } from '/dashboard/shared/js/supabase.js';
+        import API from '/dashboard/shared/js/api.js';
+
+        // Get email from sessionStorage
+        const savedEmail = sessionStorage.getItem('unverified_email');
+        if (savedEmail) {
+            document.getElementById('email').value = savedEmail;
+            sessionStorage.removeItem('unverified_email');
+        }
+
+        document.getElementById('resendForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.style.display = 'none';
+
+            if (!API.isValidEmail(email)) {
+                errorDiv.textContent = 'Please enter a valid email address.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Checking...';
+
+            try {
+                // First, check if account is already verified
+                const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password: 'dummy-password-just-checking'
+                });
+
+                // If sign-in succeeds (shouldn't with dummy password), check verification
+                if (!signInError && data?.user?.email_confirmed_at) {
+                    await supabase.auth.signOut();
+                    document.getElementById('form-section').style.display = 'none';
+                    document.getElementById('verified-section').classList.add('show');
+                    return;
+                }
+
+                // Account doesn't exist or not verified - send verification email
+                submitBtn.textContent = 'Sending...';
+                const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: email
+                });
+
+                if (error) throw error;
+
+                // Show success screen
+                document.getElementById('form-section').style.display = 'none';
+                document.getElementById('success-section').classList.add('show');
+                document.getElementById('sent-email').textContent = email;
+
+            } catch (error) {
+                console.error('Resend error:', error);
+                errorDiv.textContent = 'Could not send verification email. Please try again.';
+                errorDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Verification Email';
+            }
+        });
+    </script>
+</body>
+</html>

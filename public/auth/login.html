@@ -446,6 +446,7 @@
         }
 
         function showError(message) {
+            sessionStorage.setItem('unverified_email', email);
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
@@ -539,23 +540,40 @@
                 }, 1000);
                 
             } catch (error) {
-                console.error('Login error:', error);
-                const errorMessage = API.handleAPIError(error, 'Login');
-                showError(errorMessage);
-                
-                // Highlight fields based on error
-                if (errorMessage.includes('email')) {
-                    setFieldError('email');
-                } else if (errorMessage.includes('password')) {
-                    setFieldError('password');
-                } else {
-                    // Generic error - highlight both
-                    setFieldError('email');
-                    setFieldError('password');
-                }
-                
-                setLoading(false);
-            }
+    console.error('Login error:', error);
+    
+    // Check if error is about unverified email
+    if (error.message.includes('Email not confirmed') ||  // ADD THIS LINE
+        error.message.includes('verify your email') || 
+        error.message.includes('email_confirmed_at')) {
+        
+        // Specific message for unverified accounts
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = '';
+        errorDiv.innerHTML = '';
+        
+        const textNode = document.createTextNode('Please verify your email before logging in. ');
+        const link = document.createElement('a');
+        link.href = '/auth/resend-verification.html';
+        link.className = 'auth-link';
+        link.style.color = '#667eea';
+        link.style.textDecoration = 'underline';
+        link.textContent = 'Resend verification email?';
+        
+        errorDiv.appendChild(textNode);
+        errorDiv.appendChild(link);
+        errorDiv.style.display = 'block';
+        
+        setFieldError('email');
+    } else {
+        // Generic error for wrong password/non-existent account
+        showError('Invalid email or password.');
+        setFieldError('email');
+        setFieldError('password');
+    }
+    
+    setLoading(false);
+}
         });
 
         // Clear error styling on input

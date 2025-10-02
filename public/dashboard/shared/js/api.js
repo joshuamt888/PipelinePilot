@@ -45,6 +45,13 @@ class TierScalingAPI {
     });
     
     if (error) throw error;
+    
+    // Check if this is a duplicate registration attempt
+    // Supabase returns success but with identities: [] for existing users
+    if (data?.user && !data.user.identities?.length) {
+      throw new Error('User already registered');
+    }
+    
     return { success: true, message: 'Check your email to verify your account!' };
   }
 
