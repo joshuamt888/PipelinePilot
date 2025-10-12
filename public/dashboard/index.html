@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Dashboard - SteadyManager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h1 { font-size: 1.75rem; font-weight: 700; color: #1a202c; margin-bottom: 1rem; }
+        p { color: #6b7280; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1>Loading Dashboard</h1>
+        <p>Routing you to the right place...</p>
+    </div>
+
+    <script type="module">
+    import { supabase } from './shared/js/supabase.js';
+    import API from './shared/js/api.js';
+    
+    async function routeToDashboard() {
+        try {
+            // Check authentication
+            const { authenticated, user } = await API.checkAuth();
+            
+            if (!authenticated) {
+                window.location.href = '/auth/login.html';
+                return;
+            }
+
+            // XSS safe - email_confirmed_at is a timestamp from Supabase
+            if (!user.email_confirmed_at) {
+                window.location.href = '/auth/resend-verification.html';
+                return;
+            }
+
+            // Get user profile
+            const profile = await API.getProfile();
+
+            // Route based on tier
+            const routes = {
+                'free': '/dashboard/tiers/free/index.html',
+                'professional': '/dashboard/tiers/professional/index.html',
+                'professional_trial': '/dashboard/tiers/professional/index.html',
+                'business': '/dashboard/tiers/business/index.html',
+                'enterprise': '/dashboard/tiers/enterprise/index.html',
+                'admin': '/dashboard/tiers/admin/index.html'
+            };
+
+            window.location.href = routes[profile.user_type] || routes.free;
+
+        } catch (error) {
+            console.error('Routing error:', error);
+            window.location.href = '/auth/login.html?error=routing_failed';
+        }
+    }
+
+    routeToDashboard();
+</script>
+</body>
+</html>

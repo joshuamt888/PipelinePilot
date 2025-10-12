@@ -108,62 +108,6 @@
             font-size: 1rem;
         }
 
-        .trial-cta {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            border: 1px solid #bbf7d0;
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .trial-cta-title {
-            font-weight: 700;
-            color: #166534;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
-        }
-
-        .trial-cta-text {
-            color: #166534;
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-            line-height: 1.4;
-        }
-
-        .trial-cta-btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #16a34a, #22c55e);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .trial-cta-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-        }
-
-        .trial-cta-btn:hover::before {
-            left: 100%;
-        }
-
-        .trial-cta-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
-        }
-
         .free-features {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
@@ -330,6 +274,12 @@
             margin-bottom: 1.5rem;
             display: none;
             line-height: 1.4;
+        }
+
+        .error-message a {
+            color: #667eea;
+            text-decoration: underline;
+            font-weight: 500;
         }
 
         .success-message {
@@ -533,13 +483,6 @@
         </div>
 
         <div id="registrationForm">
-            <div class="trial-cta">
-                <div class="trial-cta-title">Want more features?</div>
-                <div class="trial-cta-text">
-                    Get a 14-day free trial of Professional with 5,000 leads and advanced analytics. No credit card required!
-                </div>
-                <a href="/auth/trial.html" class="trial-cta-btn">Start Free Trial →</a>
-            </div>
 
             <div class="free-features">
                 <div class="free-features-title">What You Get for Free</div>
@@ -610,7 +553,8 @@
             <h3>Check Your Email!</h3>
             <p>We've sent a verification link to:</p>
             <p class="verification-email" id="verificationEmail"></p>
-            <p>Click the link in your email to activate your free account and access your dashboard.</p>
+            <p>Click the link in your email to verify your account.</p>
+            <p><strong>After verifying, return to the login page to access your dashboard.</strong></p>
             
             <div class="verification-help">
                 <p><strong>Didn't receive the email?</strong></p>
@@ -633,10 +577,6 @@
             <p>
                 Already have an account? 
                 <a href="/auth/login.html" class="auth-link">Sign in</a>
-            </p>
-            <p style="margin-top: 0.5rem;">
-                Want the trial instead? 
-                <a href="/auth/trial.html" class="auth-link">Start 14-day free trial</a>
             </p>
         </div>
     </div>
@@ -678,6 +618,7 @@
             
             if (score < 3) {
                 strengthDiv.className = 'password-strength strength-weak';
+                // XSS safe - using textContent
                 strengthDiv.textContent = `Weak - needs: ${feedback.slice(0, 2).join(', ')}`;
             } else if (score < 4) {
                 strengthDiv.className = 'password-strength strength-medium';
@@ -692,22 +633,30 @@
             currentEmail = email;
             document.getElementById('registrationForm').style.display = 'none';
             document.getElementById('verificationSection').classList.add('show');
+            // XSS safe - using textContent
             document.getElementById('verificationEmail').textContent = email;
             document.getElementById('authLinks').style.display = 'none';
         }
 
+        // SECURE: Whitelist allowed internal URLs only
         function showErrorWithLink(message, linkText, linkHref) {
             const errorDiv = document.getElementById('errorMessage');
-            errorDiv.textContent = '';
-            errorDiv.innerHTML = '';
             
+            // Whitelist: Only allow internal auth pages
+            const allowedPaths = ['/auth/login.html', '/auth/resend-verification.html'];
+            if (!allowedPaths.includes(linkHref)) {
+                console.error('Blocked unsafe redirect:', linkHref);
+                linkHref = '/auth/login.html'; // Fallback to safe default
+            }
+            
+            errorDiv.innerHTML = ''; // Clear previous content
+            
+            // XSS safe - using textContent and createElement
             const textNode = document.createTextNode(message);
             const link = document.createElement('a');
-            link.href = linkHref;
+            link.href = linkHref; // Now validated against whitelist
             link.className = 'auth-link';
-            link.style.color = '#667eea';
-            link.style.textDecoration = 'underline';
-            link.textContent = linkText;
+            link.textContent = linkText; // XSS safe
             
             errorDiv.appendChild(textNode);
             errorDiv.appendChild(link);
@@ -717,6 +666,7 @@
 
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
+            // XSS safe - using textContent
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             document.getElementById('successMessage').style.display = 'none';
@@ -724,6 +674,7 @@
 
         function showSuccess(message) {
             const successDiv = document.getElementById('successMessage');
+            // XSS safe - using textContent
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
@@ -764,136 +715,116 @@
         }
 
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    clearMessages();
-    clearFieldErrors();
-    setLoading(true);
-    
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    
-    if (!email || !password || !confirmPassword) {
-        showError('Please fill in all fields.');
-        setLoading(false);
-        if (!email) setFieldError('email');
-        if (!password) setFieldError('password');
-        if (!confirmPassword) setFieldError('confirmPassword');
-        return;
-    }
-    
-    if (!API.isValidEmail(email)) {
-        showError('Please enter a valid email address.');
-        setFieldError('email');
-        setLoading(false);
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showError('Passwords do not match.');
-        setFieldError('password');
-        setFieldError('confirmPassword');
-        setLoading(false);
-        return;
-    }
-    
-    if (password.length < 8) {
-        showError('Password must be at least 8 characters long.');
-        setFieldError('password');
-        setLoading(false);
-        return;
-    }
-    
-    // STEP 1: Check if account already exists
-    const { data: checkData, error: checkError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
-    
-    if (!checkError && checkData?.user) {
-        // Account exists with correct password
-        const isVerified = checkData.user.email_confirmed_at;
-        await supabase.auth.signOut();
-        
-        if (isVerified) {
-            showErrorWithLink('Account already exists and is verified. ', 'Sign in instead?', '/auth/login.html');
-            setFieldError('email');
-            setLoading(false);
-            return;
-        } else {
-            showVerificationSection(email);
-            showError('Account exists but email not verified. Click resend below.');
-            setLoading(false);
-            return;
-        }
-    }
-    
-    // STEP 2: Account doesn't exist or wrong password - try to register
-    try {
-        await API.register(email, password, 'free');
-        
-        // Only show verification for NEW accounts
-        showVerificationSection(email);
-        showSuccess('Account created! Check your email to verify your account.');
-        setLoading(false);
-        
-    } catch (error) {
-        // Registration failed
-        if (error.message.includes('already registered') || 
-            error.message.includes('already exists') ||
-            error.message.includes('User already registered')) {
-            // Email exists but they used wrong password
-            showErrorWithLink('This email is already registered. ', 'Sign in instead?', '/auth/login.html');
-            setFieldError('email');
-            setLoading(false);
-            return; // ADD THIS RETURN
-        } else {
-            showError(API.handleAPIError(error, 'Registration'));
-            setLoading(false);
-            return; // ADD THIS RETURN
-        }
-    }
-});
-
-document.getElementById('resendBtn').addEventListener('click', async () => {
-    if (!currentEmail) {
-        showError('No email address found.');
-        return;
-    }
-    
-    const resendBtn = document.getElementById('resendBtn');
-    resendBtn.disabled = true;
-    resendBtn.textContent = 'Sending...';
-    
-    try {
-        const { error } = await supabase.auth.resend({
-            type: 'signup',
-            email: currentEmail
+            e.preventDefault();
+            
+            clearMessages();
+            clearFieldErrors();
+            setLoading(true);
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validation
+            if (!email || !password || !confirmPassword) {
+                showError('Please fill in all fields.');
+                setLoading(false);
+                if (!email) setFieldError('email');
+                if (!password) setFieldError('password');
+                if (!confirmPassword) setFieldError('confirmPassword');
+                return;
+            }
+            
+            if (!API.isValidEmail(email)) {
+                showError('Please enter a valid email address.');
+                setFieldError('email');
+                setLoading(false);
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showError('Passwords do not match.');
+                setFieldError('password');
+                setFieldError('confirmPassword');
+                setLoading(false);
+                return;
+            }
+            
+            if (password.length < 8) {
+                showError('Password must be at least 8 characters long.');
+                setFieldError('password');
+                setLoading(false);
+                return;
+            }
+            
+            // SIMPLIFIED: Just try to register
+            // Supabase will handle duplicate detection
+            try {
+                await API.register(email, password, 'free');
+                
+                // Success - show verification screen
+                showVerificationSection(email);
+                showSuccess('Account created! Check your email to verify your account.');
+                setLoading(false);
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                
+                // Check for duplicate account
+                if (error.message.includes('already registered') || 
+                    error.message.includes('User already registered')) {
+                    showErrorWithLink('This email is already registered. ', 'Sign in instead?', '/auth/login.html');
+                    setFieldError('email');
+                } else {
+                    // Generic error
+                    showError('Registration failed. Please try again or contact support.');
+                }
+                
+                setLoading(false);
+            }
         });
-        
-        if (error) throw error;
-        showSuccess('Verification email sent! Check your inbox.');
-        
-    } catch (error) {
-        showError('Could not resend email. Contact support at josh@steadyscaling.com');
-    } finally {
-        resendBtn.disabled = false;
-        resendBtn.textContent = 'Resend Verification Email';
-    }
-});
 
-document.querySelectorAll('.form-input').forEach(input => {
-    input.addEventListener('input', () => {
-        input.classList.remove('error');
-    });
-});
+        document.getElementById('resendBtn').addEventListener('click', async () => {
+            if (!currentEmail) {
+                showError('No email address found.');
+                return;
+            }
+            
+            const resendBtn = document.getElementById('resendBtn');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending...';
+            
+            try {
+                const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: currentEmail
+                });
+                
+                if (error) throw error;
+                showSuccess('Verification email sent! Check your inbox.');
+                
+            } catch (error) {
+                console.error('Resend error:', error);
+                showError('Could not resend email. Please try again or contact support.');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend Verification Email';
+            }
+        });
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('email').focus();
-});
+        // Clear field errors on input
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+            });
+        });
 
-console.log('SteadyManager Registration Page Loaded');
+        // Focus email field on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('email').focus();
+        });
+
+        console.log('SteadyManager Registration Page Loaded');
     </script>
 </body>
 </html>

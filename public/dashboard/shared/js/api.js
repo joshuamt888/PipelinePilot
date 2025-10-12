@@ -1,6 +1,7 @@
 /**
- * SUPABASE-POWERED API TOOLBOX
+ * SUPABASE-POWERED API TOOLBOX v2.0
  * Direct database calls with automatic security via RLS
+ * Now with 2FA, Account Management, and Export features
  */
 
 import { supabase } from './supabase.js'
@@ -45,34 +46,48 @@ class TierScalingAPI {
     });
     
     if (error) throw error;
-    
-    // Check if this is a duplicate registration attempt
-    // Supabase returns success but with identities: [] for existing users
-    if (data?.user && !data.user.identities?.length) {
-      throw new Error('User already registered');
-    }
-    
     return { success: true, message: 'Check your email to verify your account!' };
   }
 
-  static async startTrial(email, password) {
+  static async upgradeToTrial() {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Check if user already used their trial
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('trial_end_date, user_type')
+      .eq('id', user.id)
+      .single();
+    
+    if (profileError) throw profileError;
+    
+    // Block if trial was already used (trial_end_date is not null)
+    if (profile.trial_end_date !== null) {
+      throw new Error('You have already used your free trial. Upgrade to a paid plan to unlock Pro features.');
+    }
+    
+    // Block if already on a paid tier
+    if (profile.user_type === 'professional' || 
+        profile.user_type === 'business' || 
+        profile.user_type === 'enterprise') {
+      throw new Error('You are already on a paid plan.');
+    }
+    
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 14);
     
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback.html`,
-        data: { 
-          user_type: 'professional_trial',
-          trial_end_date: trialEndDate.toISOString()
-        }
-      }
-    });
+    const { error } = await supabase
+      .from('users')
+      .update({
+        user_type: 'professional_trial',
+        trial_start_date: new Date().toISOString(),
+        trial_end_date: trialEndDate.toISOString(),
+        current_lead_limit: 5000
+      })
+      .eq('id', user.id);
     
     if (error) throw error;
-    return { success: true, message: 'Check your email to activate your 14-day trial!' };
+    return { success: true };
   }
 
   static async checkAuth() {
@@ -175,21 +190,42 @@ class TierScalingAPI {
   }
 
   static async createLead(leadData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([{ ...leadData, user_id: user.id }])
-      .select();
-    
-    if (error) {
-      if (error.message.includes('violates row-level security')) {
-        throw new Error('Lead limit reached. Upgrade to add more leads!');
-      }
-      throw error;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        // Get user's current lead count and limit
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('user_type, current_lead_limit, current_leads')
+            .eq('id', user.id)
+            .single();
+        
+        if (userError) throw userError;
+        
+        const { current_leads, current_lead_limit, user_type } = userData;
+        
+        // Check if at limit
+        if (current_leads >= current_lead_limit) {
+            if (user_type === 'free') {
+                throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${current_lead_limit} leads. Upgrade to Pro for 5,000 leads!`);
+            } else {
+                throw new Error(`PRO_TIER_LIMIT:You've reached the tier limit of ${current_lead_limit} leads.`);
+            }
+        }
+        
+        // Insert lead and increment counter in a transaction
+        const { data, error } = await supabase.rpc('create_lead_with_increment', {
+            lead_data: { ...leadData, user_id: user.id }
+        });
+        
+        if (error) throw error;
+        return data;
+        
+    } catch (error) {
+        console.error('Create lead error:', error);
+        throw error;
     }
-    
-    return data[0];
   }
 
   static async updateLead(leadId, updates) {
@@ -204,13 +240,22 @@ class TierScalingAPI {
   }
 
   static async deleteLead(leadId) {
-    const { error } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', leadId);
-    
-    if (error) throw error;
-    return { success: true };
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        const { error } = await supabase.rpc('delete_lead_with_decrement', {
+            lead_id: leadId,
+            user_id_val: user.id
+        });
+        
+        if (error) throw error;
+        return { success: true };
+        
+    } catch (error) {
+        console.error('Delete lead error:', error);
+        throw error;
+    }
   }
 
   static async getLeadById(leadId) {
@@ -277,17 +322,24 @@ class TierScalingAPI {
   static async createTask(taskData) {
     const { data: { user } } = await supabase.auth.getUser();
     
+    // Check task count first
+    const { count, error: countError } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+    
+    if (countError) throw countError;
+    
+    if (count >= 10000) {
+      throw new Error('Task limit reached (10,000 max)');
+    }
+    
     const { data, error } = await supabase
       .from('tasks')
       .insert([{ ...taskData, user_id: user.id }])
       .select();
     
-    if (error) {
-      if (error.message.includes('violates row-level security')) {
-        throw new Error('Task limit reached (10,000 max)');
-      }
-      throw error;
-    }
+    if (error) throw error;
     
     return data[0];
   }
@@ -440,6 +492,231 @@ class TierScalingAPI {
       ...basic,
       monthlyProgress: current
     };
+  }
+
+    // =====================================================
+// 2FA / MULTI-FACTOR AUTHENTICATION (PRO TIER OPTIMIZED)
+// =====================================================
+
+/**
+ * Enable 2FA with smart caching - only makes API calls when necessary
+ * Caches setup data in localStorage for 15 minutes to avoid redundant calls
+ */
+static async enable2FA() {
+    try {
+        // Check if we already have a pending 2FA setup in cache
+        const cached = localStorage.getItem('steady_pending_2fa');
+        
+        if (cached) {
+            const { factorId, qrCode, secret, timestamp } = JSON.parse(cached);
+            
+            // Use cached data if less than 15 minutes old
+            const ageMinutes = (Date.now() - timestamp) / (1000 * 60);
+            if (ageMinutes < 15) {
+                console.log('✅ Using cached 2FA setup (age: ' + Math.round(ageMinutes) + ' min)');
+                return {
+                    success: true,
+                    factorId,
+                    qrCode,
+                    secret,
+                    fromCache: true
+                };
+            }
+            
+            // Cache expired - clean up the old factor
+            console.log('🧹 Cache expired, cleaning up old factor...');
+            try {
+                await supabase.auth.mfa.unenroll({ factorId });
+            } catch (e) {
+                console.log('Old factor already removed:', e.message);
+            }
+        }
+        
+        // No valid cache - create NEW factor
+        console.log('🆕 Creating new 2FA factor...');
+        
+        // Step 1: Clean up any unverified factors
+        const { data: existingFactors } = await supabase.auth.mfa.listFactors();
+        const unverified = existingFactors?.totp?.filter(f => f.status !== 'verified') || [];
+        
+        if (unverified.length > 0) {
+            console.log(`Removing ${unverified.length} unverified factors...`);
+            for (const factor of unverified) {
+                try {
+                    await supabase.auth.mfa.unenroll({ factorId: factor.id });
+                } catch (e) {
+                    console.log('Skip cleanup:', e.message);
+                }
+            }
+        }
+        
+        // Step 2: Create new factor with unique name
+        const uniqueName = `SteadyManager 2FA ${Date.now()}`;
+        const { data, error } = await supabase.auth.mfa.enroll({
+            factorType: 'totp',
+            friendlyName: uniqueName
+        });
+        
+        if (error) throw error;
+        
+        const setupData = {
+            factorId: data.id,
+            qrCode: data.totp.qr_code,
+            secret: data.totp.secret,
+            timestamp: Date.now()
+        };
+        
+        // Cache for 15 minutes
+        localStorage.setItem('steady_pending_2fa', JSON.stringify(setupData));
+        console.log('💾 Cached 2FA setup for 15 minutes');
+        
+        return {
+            success: true,
+            ...setupData,
+            fromCache: false
+        };
+        
+    } catch (error) {
+        console.error('Enable 2FA error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Verify 2FA code and complete setup
+ * Clears cache on successful verification
+ */
+static async verify2FA(factorId, code) {
+    try {
+        // Step 1: Create MFA challenge
+        const { data: challenge, error: challengeError } =
+            await supabase.auth.mfa.challenge({ factorId });
+        
+        if (challengeError) throw challengeError;
+        
+        // Step 2: Verify the code
+        const { data, error: verifyError } = await supabase.auth.mfa.verify({
+            factorId,
+            challengeId: challenge.id,
+            code
+        });
+        
+        if (verifyError) throw verifyError;
+        
+        // Success! Clear the cache since setup is complete
+        localStorage.removeItem('steady_pending_2fa');
+        console.log('✅ 2FA verified and cache cleared');
+        
+        return { success: true, data };
+        
+    } catch (error) {
+        console.error('Verify 2FA error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Disable 2FA and clean up cache
+ */
+static async disable2FA(factorId) {
+    try {
+        const { error } = await supabase.auth.mfa.unenroll({ factorId });
+        if (error) throw error;
+        
+        // Clear any pending setup cache
+        localStorage.removeItem('steady_pending_2fa');
+        console.log('✅ 2FA disabled and cache cleared');
+        
+        return { success: true };
+        
+    } catch (error) {
+        console.error('Disable 2FA error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Cancel pending 2FA setup
+ * Removes the unverified factor and clears cache
+ */
+static async cancel2FASetup() {
+    try {
+        const cached = localStorage.getItem('steady_pending_2fa');
+        
+        if (cached) {
+            const { factorId } = JSON.parse(cached);
+            
+            // Remove the unverified factor from Supabase
+            try {
+                await supabase.auth.mfa.unenroll({ factorId });
+                console.log('🗑️ Cancelled 2FA setup, factor removed');
+            } catch (e) {
+                console.log('Factor already removed:', e.message);
+            }
+            
+            // Clear cache
+            localStorage.removeItem('steady_pending_2fa');
+        }
+        
+        return { success: true };
+        
+    } catch (error) {
+        console.error('Cancel 2FA setup error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Get current 2FA status
+ */
+static async get2FAStatus() {
+    try {
+        const { data, error } = await supabase.auth.mfa.listFactors();
+        if (error) throw error;
+        
+        const totpFactors = data?.totp || [];
+        const verifiedFactors = totpFactors.filter(f => f.status === 'verified');
+        const enabled = verifiedFactors.length > 0;
+        
+        return {
+            enabled,
+            factors: verifiedFactors,
+            factorId: enabled ? verifiedFactors[0].id : null
+        };
+        
+    } catch (error) {
+        console.error('Get 2FA status error:', error);
+        return { enabled: false, factors: [], factorId: null };
+    }
+}
+
+  // =====================================================
+  // ACCOUNT MANAGEMENT
+  // =====================================================
+  
+  static async deleteAccount() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // This deletes the user from Supabase Auth
+      // Your database should have CASCADE DELETE set up to:
+      // - Delete all leads associated with user
+      // - Delete all tasks associated with user
+      // - Delete user profile from users table
+      
+      const { error } = await supabase.rpc('delete_user_account');
+      
+      if (error) throw error;
+      
+      // Sign out after successful deletion
+      await supabase.auth.signOut();
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Delete account error:', error);
+      throw error;
+    }
   }
 
   // =====================================================
@@ -611,5 +888,5 @@ window.escapeHtml = TierScalingAPI.escapeHtml;
 
 export default API;
 
-console.log('Supabase-powered API loaded');
-console.log('Direct database calls with automatic RLS security');
+console.log('Supabase-powered API v2.0 loaded');
+console.log('✅ Direct database calls with RLS security');

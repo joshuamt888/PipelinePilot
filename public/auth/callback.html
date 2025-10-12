@@ -78,7 +78,7 @@
     </div>
 
     <script type="module">
-        import { supabase } from '/dashboard/shared/js/supabase.js';
+        import { supabase } from '../dashboard/shared/js/supabase.js';
 
         async function handleEmailVerification() {
             const spinner = document.getElementById('spinner');
@@ -86,32 +86,50 @@
             const message = document.getElementById('message');
             
             try {
-                // Get current session (Supabase automatically handles hash from email link)
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                // Check if there's a hash in the URL (Supabase puts tokens here)
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                const type = hashParams.get('type');
                 
-                if (sessionError) throw sessionError;
-                
-                // Verify we have a session
-                if (!session || !session.user) {
-                    throw new Error('No session found. Please try clicking the verification link again.');
+                // If we have tokens in the hash, this is an email verification callback
+                if (accessToken && type === 'signup') {
+                    // Set the session manually from the tokens
+                    const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    });
+                    
+                    if (sessionError) throw sessionError;
+                    
+                    if (!session?.user?.email_confirmed_at) {
+                        throw new Error('Email verification incomplete. Please try again.');
+                    }
+                    
+                    // Success - email verified and logged in
+                    spinner.style.borderTopColor = '#16a34a';
+                    title.textContent = 'Email Verified!';
+                    title.className = 'success';
+                    // XSS safe - uses textContent
+                    message.textContent = 'Your account is now active. Redirecting to dashboard...';
+                    message.className = 'success';
+                    
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                    
+                } else {
+                    // No tokens in URL - check if already logged in
+                    const { data: { session } } = await supabase.auth.getSession();
+                    
+                    if (session?.user?.email_confirmed_at) {
+                        // Already verified and logged in - redirect
+                        window.location.href = '/dashboard';
+                    } else {
+                        throw new Error('Invalid verification link. Please try again.');
+                    }
                 }
-                
-                // CRITICAL: Verify email is actually confirmed
-                if (!session.user.email_confirmed_at) {
-                    throw new Error('Email verification incomplete. Please try again.');
-                }
-                
-                // Success - email verified and logged in
-                spinner.style.borderTopColor = '#16a34a';
-                title.textContent = 'Email Verified!';
-                title.className = 'success';
-                message.textContent = 'Your account is now active. Redirecting to dashboard...';
-                message.className = 'success';
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1500);
                 
             } catch (error) {
                 console.error('Verification error:', error);
@@ -120,6 +138,7 @@
                 spinner.style.display = 'none';
                 title.textContent = 'Verification Failed';
                 title.className = 'error';
+                // XSS safe - uses textContent
                 message.textContent = error.message || 'Something went wrong. Please try again or contact support.';
                 message.className = 'error';
                 

@@ -3,6 +3,29 @@ const express = require('express');
 const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
+const cron = require('node-cron');
+
+// VALIDATION - Add this block
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID',
+  'STRIPE_PROFESSIONAL_YEARLY_PRICE_ID',
+  'FRONTEND_URL'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ FATAL: Missing required environment variables:');
+  missingVars.forEach(varName => console.error(`   - ${varName}`));
+  console.error('\nServer cannot start. Check your .env file or Railway dashboard.');
+  process.exit(1); // Exit immediately
+}
+
+console.log('✅ All required environment variables present');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -174,7 +197,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', 'free', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
 });
 
 // 404 handler
@@ -187,6 +210,63 @@ app.use((req, res) => {
 });
 
 // =====================================================
+// CRON JOB - TRIAL EXPIRATION CHECK
+// =====================================================
+// Runs every day at 2:00 AM (server time)
+cron.schedule('0 2 * * *', async () => {
+    console.log('⏰ Running trial expiration check...');
+    
+    try {
+        const { data, error } = await supabase.rpc('downgrade_expired_trials');
+        
+        if (error) {
+            console.error('❌ Trial downgrade error:', error);
+        } else {
+            const count = data && data.length > 0 ? data[0].downgraded_count : 0;
+            console.log(`✅ Trial expiration check complete. Downgraded ${count} user(s).`);
+        }
+    } catch (err) {
+        console.error('❌ Cron job error:', err);
+    }
+});
+
+console.log('✅ Cron job scheduled: Trial expiration check runs daily at 2:00 AM');
+
+// =====================================================
+// TEST ENDPOINT - REMOVE AFTER TESTING
+// =====================================================
+app.get('/api/test-trial-expiration', async (req, res) => {
+    try {
+        console.log('Manual trial expiration test triggered');
+        
+        const { data, error } = await supabase.rpc('downgrade_expired_trials');
+        
+        if (error) {
+            console.error('Test error:', error);
+            return res.status(500).json({ 
+                success: false, 
+                error: error.message 
+            });
+        }
+        
+        const count = data && data.length > 0 ? data[0].downgraded_count : 0;
+        
+        res.json({ 
+            success: true, 
+            downgraded: count,
+            message: `Downgraded ${count} expired trial user(s)`,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        console.error('Test error:', err);
+        res.status(500).json({ 
+            success: false, 
+            error: err.message 
+        });
+    }
+});
+
+// =====================================================
 // START SERVER
 // =====================================================
 
@@ -195,4 +275,5 @@ app.listen(PORT, () => {
   console.log('Supabase connected');
   console.log('Stripe webhooks ready');
   console.log('Auth handled by Supabase');
+  console.log('Cron jobs active');
 });

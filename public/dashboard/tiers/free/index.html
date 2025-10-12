@@ -3,13 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 SteadyManager - Dashboard</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('dashboard-theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+        })();
+    </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
+    <title>SteadyManager - Dashboard</title>
     
-    <!-- CDN Resources -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
-        /* 🎨 DESIGN SYSTEM */
         :root {
             --primary: #667eea;
             --primary-dark: #4f46e5;
@@ -38,89 +45,36 @@
             --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* 🌙 DARK MODE */
         [data-theme="dark"] {
             --background: #0a0f1c;
             --surface: #1a1f2e;
             --surface-hover: #242938;
-            --surface-elevated: #2d3142;
-            
             --text-primary: #f1f5f9;
             --text-secondary: #cbd5e1;
             --text-tertiary: #94a3b8;
-            
             --border: #374151;
-            --border-light: #4b5563;
-            --border-accent: #6366f1;
-            
             --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-            
             --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            --gradient-surface: linear-gradient(135deg, #1a1f2e 0%, #242938 100%);
-            --gradient-card: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
             --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            
-            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
         }
 
-        /* 🔒 RESET & LOCK */
-        /* 🔒 SELECTIVE RESET - Drag & Drop Friendly */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* Apply no-select only where needed */
-.no-select {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
-
-/* Apply no-drag only to specific elements */
-.no-drag {
-    -webkit-user-drag: none;
-    -moz-user-drag: none;
-    user-drag: none;
-}
-
-/* Enable dragging for draggable elements */
-[draggable="true"] {
-    -webkit-user-drag: element;
-    -moz-user-drag: element;
-    user-drag: element;
-    cursor: grab;
-}
-
-[draggable="true"]:active {
-    cursor: grabbing;
-}
-
-/* Allow text selection in inputs and textareas */
-input, textarea, [contenteditable] {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
 
         input, textarea, [contenteditable] {
             -webkit-user-select: text;
             -moz-user-select: text;
-            -ms-user-select: text;
             user-select: text;
         }
 
@@ -141,7 +95,6 @@ input, textarea, [contenteditable] {
             transition: var(--transition);
         }
 
-        /* 🗂️ SIDEBAR */
         .sidebar {
             position: fixed;
             left: 0;
@@ -198,7 +151,6 @@ input, textarea, [contenteditable] {
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: var(--transition);
-            position: relative;
             font-weight: 500;
             cursor: pointer;
             margin: 0 0.75rem;
@@ -222,22 +174,6 @@ input, textarea, [contenteditable] {
             font-size: 1.2rem;
         }
 
-        .pro-badge {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            color: white;
-            font-size: 0.6rem;
-            font-weight: 700;
-            padding: 0.15rem 0.4rem;
-            border-radius: 9999px;
-            margin-left: auto;
-            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-        }
-
-        .nav-link.disabled {
-            color: rgba(255, 255, 255, 0.4);
-            cursor: pointer;
-        }
-
         .upgrade-nav-item {
             margin: 1.5rem 0.75rem 1rem;
         }
@@ -257,26 +193,13 @@ input, textarea, [contenteditable] {
             font-size: 0.95rem;
             transition: var(--transition);
             cursor: pointer;
-            text-align: center;
         }
 
         .upgrade-nav-link:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
         }
 
-        .upgrade-emoji {
-            font-size: 1.2rem;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        /* 📊 MAIN CONTENT */
         .main-content {
             margin-left: 280px;
             height: 100vh;
@@ -287,41 +210,27 @@ input, textarea, [contenteditable] {
             overflow: hidden;
         }
 
-        /* 📄 Page Content System */
-.page-content {
-    display: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    min-height: 400px;
-}
+        .page-content {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-.page-content.active {
-    display: block;
-    opacity: 1;
-}
+        .page-content.active {
+            display: block;
+            opacity: 1;
+        }
 
-        /* 📋 HEADER */
         .header {
             background: var(--surface);
             padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            backdrop-filter: blur(20px);
-            transition: var(--transition);
             border-bottom: 1px solid var(--border);
             height: 80px;
-            min-height: 80px;
-            max-height: 80px;
             flex-shrink: 0;
-            position: relative;
             z-index: 100;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
         }
 
         .header-title {
@@ -331,19 +240,12 @@ input, textarea, [contenteditable] {
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-lg);
             transition: var(--transition);
         }
 
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            position: relative;
-            z-index: 999999;
-        }
-
-        /* 👤 USER MENU */
         .user-menu-container {
             position: relative;
             z-index: 999999;
@@ -359,13 +261,10 @@ input, textarea, [contenteditable] {
             cursor: pointer;
             transition: var(--transition);
             border: 1px solid var(--border);
-            position: relative;
-            z-index: 999999;
         }
 
         .user-menu:hover {
             border-color: var(--primary);
-            box-shadow: var(--shadow);
             transform: translateY(-1px);
         }
 
@@ -380,7 +279,6 @@ input, textarea, [contenteditable] {
             color: white;
             font-weight: 700;
             font-size: 0.9rem;
-            box-shadow: var(--shadow);
         }
 
         .user-info {
@@ -400,19 +298,6 @@ input, textarea, [contenteditable] {
             font-weight: 500;
         }
 
-        .chevron-down {
-            width: 16px;
-            height: 16px;
-            opacity: 0.5;
-            transition: var(--transition);
-        }
-
-        .user-menu:hover .chevron-down {
-            opacity: 1;
-            transform: rotate(180deg);
-        }
-
-        /* 🚀 NUCLEAR DROPDOWN - BULLETPROOF */
         .profile-dropdown {
             position: fixed !important;
             top: 80px !important;
@@ -426,31 +311,14 @@ input, textarea, [contenteditable] {
             z-index: 2147483647 !important;
             opacity: 0 !important;
             visibility: hidden !important;
-            transform: translateY(-10px) scale(0.95) !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            pointer-events: auto !important;
+            transform: translateY(-10px) !important;
+            transition: all 0.3s ease !important;
         }
 
         .profile-dropdown.show {
             opacity: 1 !important;
             visibility: visible !important;
-            transform: translateY(0) scale(1) !important;
-        }
-
-        .profile-dropdown::before {
-            content: '' !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            z-index: -1 !important;
-            background: transparent !important;
-            pointer-events: none !important;
-        }
-
-        .profile-dropdown.show::before {
-            pointer-events: auto !important;
+            transform: translateY(0) !important;
         }
 
         .dropdown-item {
@@ -462,36 +330,15 @@ input, textarea, [contenteditable] {
             cursor: pointer !important;
             transition: var(--transition) !important;
             font-size: 0.875rem !important;
-            font-weight: 500 !important;
-            background: transparent !important;
-            border: none !important;
-            position: relative !important;
         }
 
         .dropdown-item:hover {
             background: var(--surface-hover) !important;
-            color: var(--primary) !important;
         }
 
         .logout-item {
             color: var(--danger) !important;
             border-top: 1px solid var(--border) !important;
-        }
-
-        .logout-item:hover {
-            background: rgba(239, 68, 68, 0.1) !important;
-            color: var(--danger) !important;
-        }
-
-        .dropdown-icon {
-            width: 18px !important;
-            height: 18px !important;
-            stroke-width: 2 !important;
-            flex-shrink: 0 !important;
-        }
-
-        .dropdown-toggle {
-            margin-left: auto !important;
         }
 
         .toggle-switch {
@@ -500,9 +347,7 @@ input, textarea, [contenteditable] {
             height: 20px !important;
             background: var(--border) !important;
             border-radius: 9999px !important;
-            cursor: pointer !important;
-            transition: var(--transition) !important;
-            flex-shrink: 0 !important;
+            margin-left: auto !important;
         }
 
         .toggle-slider {
@@ -511,10 +356,9 @@ input, textarea, [contenteditable] {
             left: 2px !important;
             width: 16px !important;
             height: 16px !important;
-            background: var(--surface) !important;
+            background: white !important;
             border-radius: 50% !important;
             transition: var(--transition) !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
 
         [data-theme="dark"] .toggle-switch {
@@ -525,23 +369,18 @@ input, textarea, [contenteditable] {
             transform: translateX(20px) !important;
         }
 
-        /* 📱 CONTENT AREA */
         .dashboard-content {
             flex: 1;
             overflow-y: auto;
-            overflow-x: hidden;
             padding: 2rem;
-            transition: var(--transition);
             background: var(--background);
         }
 
         .content-container {
             max-width: 1200px;
             margin: 0 auto;
-            height: 100%;
         }
 
-        /* 🖥️ DESKTOP SIDEBAR TOGGLE */
         .sidebar.desktop-hidden {
             transform: translateX(-100%);
         }
@@ -550,11 +389,9 @@ input, textarea, [contenteditable] {
             margin-left: 0;
         }
 
-        /* 📱 MOBILE RESPONSIVE */
         @media (max-width: 1024px) {
             .sidebar {
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
             }
             
             .sidebar.mobile-open {
@@ -564,202 +401,6 @@ input, textarea, [contenteditable] {
             .main-content {
                 margin-left: 0;
             }
-            
-            /* Force desktop classes off on mobile */
-            .sidebar.desktop-hidden {
-                transform: translateX(-100%);
-            }
-            
-            .main-content.sidebar-hidden {
-                margin-left: 0;
-            }
-            
-            .header {
-                padding: 1rem;
-            }
-            
-            .dashboard-content {
-                padding: 1rem;
-            }
-            
-            .user-info {
-                display: flex !important;
-            }
-            
-            .user-menu {
-                padding: 0.25rem 0.5rem;
-            }
-            
-            .user-name {
-                font-size: 0.75rem;
-            }
-            
-            .user-tier {
-                font-size: 0.65rem;
-            }
-            
-            .header-title {
-                cursor: pointer !important;
-                padding: 0.75rem 1rem !important;
-                border: 2px solid transparent !important;
-                border-radius: var(--radius-lg) !important;
-                transition: var(--transition) !important;
-                position: relative !important;
-                display: flex !important;
-                align-items: center !important;
-                gap: 0.5rem !important;
-                z-index: 1000 !important;
-                pointer-events: auto !important;
-                user-select: none !important;
-                box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.1) !important;
-            }
-            
-            .header-title::after {
-                content: '📱' !important;
-                font-size: 1rem !important;
-                opacity: 0.7 !important;
-                color: var(--text-secondary) !important;
-                -webkit-text-fill-color: var(--text-secondary) !important;
-            }
-            
-            .header-title:hover {
-                border-color: var(--primary) !important;
-                transform: translateY(-1px) !important;
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
-                background: var(--primary) !important;
-                -webkit-background-clip: unset !important;
-                -webkit-text-fill-color: white !important;
-                background-clip: unset !important;
-                color: white !important;
-            }
-            
-            .header-title:hover::after {
-                color: white !important;
-                -webkit-text-fill-color: white !important;
-                opacity: 0.8 !important;
-            }
-            
-            .header-title:active {
-                transform: scale(0.98) !important;
-            }
-
-            .profile-dropdown {
-                right: 1rem !important;
-                top: 60px !important;
-                width: 200px !important;
-            }
-        }
-
-        @media (min-width: 1025px) {
-            /* 🖥️ DESKTOP TITLE IS ALSO CLICKABLE NOW! */
-            .header-title {
-                cursor: pointer !important;
-                padding: 0.5rem 1rem !important;
-                border: 2px solid transparent !important;
-                border-radius: var(--radius-lg) !important;
-                transition: var(--transition) !important;
-                position: relative !important;
-                display: flex !important;
-                align-items: center !important;
-                gap: 0.5rem !important;
-                box-shadow: none !important;
-                background: var(--gradient-primary) !important;
-                -webkit-background-clip: text !important;
-                -webkit-text-fill-color: transparent !important;
-                background-clip: text !important;
-            }
-            
-            .header-title::after {
-                content: '🔽' !important;
-                font-size: 0.8rem !important;
-                opacity: 0.6 !important;
-                color: var(--text-secondary) !important;
-                -webkit-text-fill-color: var(--text-secondary) !important;
-                transition: var(--transition) !important;
-            }
-            
-            .header-title.sidebar-hidden::after {
-                content: '🔼' !important;
-                opacity: 0.8 !important;
-            }
-            
-            .header-title:hover {
-                border-color: var(--primary) !important;
-                transform: translateY(-1px) !important;
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15) !important;
-            }
-            
-            .header-title:hover::after {
-                opacity: 1 !important;
-                transform: scale(1.1) !important;
-            }
-            
-            .header-title:active {
-                transform: scale(0.98) !important;
-            }
-        }
-
-        /* 🌙 DARK MODE */
-        [data-theme="dark"] .sidebar {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 30%, #1e293b 70%, #0f172a 100%);
-            border-right: 1px solid var(--border);
-            box-shadow: var(--shadow-xl), inset 0 1px 0 rgba(148, 163, 184, 0.1);
-        }
-
-        [data-theme="dark"] .sidebar-logo {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
-        }
-
-        [data-theme="dark"] .nav-link:hover {
-            background: rgba(99, 102, 241, 0.1);
-            border-left: 2px solid var(--primary);
-            box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.1);
-        }
-
-        [data-theme="dark"] .nav-link.active {
-            background: rgba(99, 102, 241, 0.2);
-            border-left: 3px solid var(--primary);
-            box-shadow: var(--glow-primary), inset 0 0 20px rgba(99, 102, 241, 0.1);
-        }
-
-        [data-theme="dark"] .header {
-            background: rgba(26, 31, 46, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        }
-
-        [data-theme="dark"] .header-title {
-            color: white !important;
-            background: none !important;
-            -webkit-background-clip: unset !important;
-            -webkit-text-fill-color: white !important;
-            background-clip: unset !important;
-        }
-
-        [data-theme="dark"] .header-title:hover {
-            background: var(--primary) !important;
-            color: white !important;
-        }
-
-        [data-theme="dark"] .profile-dropdown {
-            background: var(--surface) !important;
-            border-color: var(--border) !important;
-            box-shadow: var(--shadow-xl), 0 0 30px rgba(0, 0, 0, 0.5) !important;
-        }
-
-        /* 🎪 ANIMATIONS */
-        .fade-in {
-            animation: fadeIn 0.6s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .loading-spinner {
@@ -769,34 +410,24 @@ input, textarea, [contenteditable] {
             border: 2px solid rgba(102, 126, 234, 0.3);
             border-radius: 50%;
             border-top-color: var(--primary);
-            animation: spin 0.8s ease-in-out infinite;
+            animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        * {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-
-        html {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        [data-theme="dark"] .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
         }
     </style>
 </head>
 <body data-theme="light">
-    <!-- 🗂️ SIDEBAR -->
-<div class="sidebar no-select" id="sidebar">
-    <div class="sidebar-content">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">SteadyManager</div>
-        </div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">SteadyManager</div>
+            </div>
 
             <nav>
                 <ul class="sidebar-nav">
@@ -825,13 +456,6 @@ input, textarea, [contenteditable] {
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link disabled" data-page="upgrade" data-upgrade-trigger="analytics">
-                            <span class="nav-emoji">📈</span>
-                            <span>Analytics</span>
-                            <span class="pro-badge">PRO</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="#" class="nav-link" data-page="settings">
                             <span class="nav-emoji">⚙️</span>
                             <span>Settings</span>
@@ -842,734 +466,313 @@ input, textarea, [contenteditable] {
 
             <div class="upgrade-nav-item">
                 <a href="#" class="upgrade-nav-link" data-page="upgrade">
-                    <span class="upgrade-emoji">🚀</span>
-                    <span>Upgrade Plan</span>
+                    <span>🚀 Upgrade Plan</span>
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- 📊 MAIN CONTENT -->
     <div class="main-content">
         <header class="header">
-            <div class="header-left">
-                <h1 class="header-title" id="pageTitle">Dashboard</h1>
-            </div>
+            <h1 class="header-title" id="pageTitle">Dashboard</h1>
             
-            <div class="header-right">
-                <div class="user-menu-container">
-                    <div class="user-menu" id="userMenu">
-                        <div class="user-avatar" id="userAvatar">
-                            <div class="loading-spinner"></div>
-                        </div>
-                        <div class="user-info">
-                            <div class="user-name" id="userName">Loading...</div>
-                            <div class="user-tier" id="userTier">Free Plan</div>
-                        </div>
-                        <i data-lucide="chevron-down" class="chevron-down"></i>
+            <div class="user-menu-container">
+                <div class="user-menu" id="userMenu">
+                    <div class="user-avatar" id="userAvatar">
+                        <div class="loading-spinner"></div>
                     </div>
-                    
-                    <div class="profile-dropdown" id="profileDropdown">
-                        <div class="dropdown-item" id="darkModeToggle">
-                            <i data-lucide="moon" class="dropdown-icon"></i>
-                            <span>Dark Mode</span>
-                            <div class="dropdown-toggle">
-                                <div class="toggle-switch">
-                                    <div class="toggle-slider"></div>
-                                </div>
-                            </div>
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Loading...</div>
+                        <div class="user-tier" id="userTier">Free Plan</div>
+                    </div>
+                </div>
+                
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="dropdown-item" id="darkModeToggle">
+                        <span>🌙 Dark Mode</span>
+                        <div class="toggle-switch">
+                            <div class="toggle-slider"></div>
                         </div>
-                        <div class="dropdown-item" data-page="settings">
-                            <i data-lucide="settings" class="dropdown-icon"></i>
-                            <span>Settings</span>
-                        </div>
-                        <div class="dropdown-item logout-item" id="logoutBtn">
-                            <i data-lucide="log-out" class="dropdown-icon"></i>
-                            <span>Logout</span>
-                        </div>
+                    </div>
+                    <div class="dropdown-item" data-page="settings">
+                        <span>⚙️ Settings</span>
+                    </div>
+                    <div class="dropdown-item logout-item" id="logoutBtn">
+                        <span>🚪 Logout</span>
                     </div>
                 </div>
             </div>
         </header>
 
         <main class="dashboard-content">
-    <div class="content-container">
-        <div id="dashboard-content" class="page-content active">
-            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    SteadyManager Ready
-                </h2>
-                <p>Select a page from the sidebar to get started!</p>
+            <div class="content-container">
+                <div id="dashboard-content" class="page-content active"></div>
+                <div id="leads-content" class="page-content"></div>
+                <div id="pipeline-content" class="page-content"></div>
+                <div id="tasks-content" class="page-content"></div>
+                <div id="settings-content" class="page-content"></div>
+                <div id="upgrade-content" class="page-content"></div>
             </div>
-        </div>
-        <div id="leads-content" class="page-content"></div>
-        <div id="pipeline-content" class="page-content"></div>
-        <div id="tasks-content" class="page-content"></div>
-        <div id="settings-content" class="page-content"></div>
-        <div id="upgrade-content" class="page-content"></div>
-    </div>
-</main>
+        </main>
     </div>
 
-    <script>
-       // 🚫 SELECTIVE SECURITY - Allow drag & drop for draggable elements
-document.addEventListener('contextmenu', (e) => e.preventDefault());
+    <script type="module">
+        import { supabase } from '/dashboard/shared/js/supabase.js';
+        import API from '/dashboard/shared/js/api.js';
 
-// Only prevent drag/drop on non-draggable elements
-document.addEventListener('dragstart', (e) => {
-    if (!e.target.closest('[draggable="true"]')) {
-        e.preventDefault();
-    }
-});
+        window.API = API;
+        window.supabase = supabase;
 
-document.addEventListener('drop', (e) => {
-    // Allow drops only in designated drop zones
-    if (!e.target.closest('.stage-content') && !e.target.closest('[data-droppable="true"]')) {
-        e.preventDefault();
-    }
-});
-
-document.addEventListener('dragover', (e) => {
-    // Allow dragover only in designated drop zones
-    if (!e.target.closest('.stage-content') && !e.target.closest('[data-droppable="true"]')) {
-        e.preventDefault();
-    }
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F12' || 
-        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-        (e.ctrlKey && e.shiftKey && e.key === 'C') ||
-        (e.ctrlKey && e.key === 'u') ||
-        (e.ctrlKey && e.key === 's')) {
-        e.preventDefault();
-    }
-});
-
-// 🎬 INITIALIZE
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 SteadyManager Shell loading...');
-    
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-    
-    applySavedTheme();
-    setupNavigation();
-    setupUserMenu();
-    setupMobileTitleClick();
-    initializeShell();
-    
-    console.log('✅ Shell ready!');
-});
-
-       // 🏎️ FAST SHELL INITIALIZATION  
-async function initializeShell() {
-    try {
-        console.log('Initializing shell...');
-        
-        // Quick auth check
-        const authResponse = await API.checkAuth();
-        if (!authResponse.authenticated) {
-            window.location.href = '/login';
-            return;
-        }
-        
-        // Load user profile
-        await loadUserProfile();
-        
-        // Register modules for lazy loading
-        window.currentActiveModule = null;
-        window.moduleRegistry = {
-            leads: window.AddLeadModule,
-            pipeline: window.PipelineModule,
-            tasks: window.SchedulingModule
+        // App state
+        const appState = {
+            currentPage: null,
+            loadedModules: new Set(),
+            profile: null
         };
-        
-        console.log('Shell ready');
-        
-    } catch (error) {
-        console.error('Shell initialization failed:', error);
-        showInitializationError(error.message);
-    }
-}
 
-// Add this new function for lazy module loading
-async function loadPageModule(pageName) {
-    try {
-        console.log(`🚀 Loading module: ${pageName}`);
-        
-        // Initialize active modules registry if it doesn't exist
-        if (!window.activeModules) {
-            window.activeModules = new Set();
+        // Security
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('dragstart', (e) => {
+            if (!e.target.closest('[draggable="true"]')) e.preventDefault();
+        });
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔒 SteadyManager Shell initializing...');
+            
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            setupNavigation();
+            setupUserMenu();
+            setupMobileTitleClick();
+            
+            await initializeShell();
+        });
+
+        async function initializeShell() {
+            try {
+                if (!API) throw new Error('API failed to load');
+                
+                const { authenticated } = await API.checkAuth();
+                if (!authenticated) {
+                    window.location.href = '/auth/login.html';
+                    return;
+                }
+                
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.user?.email_confirmed_at) {
+                    window.location.href = '/auth/resend-verification.html';
+                    return;
+                }
+                
+                const profile = await API.getProfile();
+                if (!profile?.id) throw new Error('Invalid profile');
+                
+                appState.profile = profile;
+                loadUserProfile(profile);
+                
+                console.log('✅ Shell initialized');
+                await loadPage('dashboard');
+                
+            } catch (error) {
+                console.error('❌ Shell init failed:', error);
+                showError(API.handleAPIError(error, 'Shell'));
+            }
         }
-        
-        const moduleMap = {
-            leads: window.AddLeadModule,
-            pipeline: window.PipelineModule,
-            tasks: window.SchedulingModule,
-            dashboard: null,
-            settings: null,
-            upgrade: null
-        };
-        
-        const targetModule = moduleMap[pageName];
-        
-        if (targetModule?.init) {
-            // Check if module is already active
-            if (window.activeModules.has(targetModule)) {
-                console.log(`📦 ${pageName} module already active, skipping init`);
+
+        async function loadPage(pageName) {
+            // Skip if already on this page
+            if (appState.currentPage === pageName) {
+                console.log(`Already on ${pageName}`);
                 return;
             }
             
-            console.log(`📦 Initializing ${pageName} module...`);
-            await targetModule.init(`${pageName}-content`);
+            console.log(`Loading: ${pageName}`);
             
-            // Add to active modules set
-            window.activeModules.add(targetModule);
+            // Update UI
+            document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${pageName}-content`)?.classList.add('active');
             
-            // Keep backward compatibility for modules that check currentActiveModule
-            window.currentActiveModule = targetModule;
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(l => l.classList.remove('active'));
+            if (pageName === 'upgrade') {
+                document.querySelector('.upgrade-nav-link')?.classList.add('active');
+            } else {
+                document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+            }
             
-            console.log(`✅ ${pageName} module loaded and activated`);
-            console.log(`📊 Active modules: ${window.activeModules.size}`);
-        } else if (pageName === 'dashboard') {
-            console.log('🏠 Dashboard view - no module needed');
-        } else {
-            console.log(`⚠️ No module found for ${pageName}`);
+            const titles = {
+                dashboard: 'Dashboard',
+                leads: 'Add Leads',
+                pipeline: 'Pipeline',
+                tasks: 'Tasks',
+                settings: 'Settings',
+                upgrade: 'Upgrade Plan'
+            };
+            document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
+            
+            // Update state
+            appState.currentPage = pageName;
+            
+            // Load module
+            await loadModule(pageName);
         }
-        
-    } catch (error) {
-        console.error(`❌ Failed to load module ${pageName}:`, error);
-        throw error;
-    }
-}
 
-// 👤 LOAD USER PROFILE
-async function loadUserProfile() {
-    try {
-        const authResponse = await API.checkAuth();
-        if (authResponse.authenticated && authResponse.user) {
-            const user = authResponse.user;
-            
-            const email = user.email || 'User';
+        async function loadModule(pageName) {
+            try {
+                const modules = {
+                    dashboard: window.DashboardModule,
+                    leads: window.AddLeadModule,
+                    pipeline: window.PipelineModule,
+                    tasks: window.SchedulingModule,
+                    settings: window.SettingsModule
+                };
+                
+                const module = modules[pageName];
+                if (!module?.init) return;
+                
+                // Always reload to get fresh data
+                await module.init(`${pageName}-content`);
+                appState.loadedModules.add(pageName);
+                console.log(`📦 ${pageName} loaded`);
+                
+            } catch (error) {
+                console.error(`Module load error:`, error);
+            }
+        }
+
+        function loadUserProfile(profile) {
+            const email = profile.email || 'User';
             const initials = generateInitials(email);
-            const displayName = email;
             
-            const tierDisplayNames = {
-                'FREE': 'Free Plan',
-                'PROFESSIONAL': 'Professional',
-                'PROFESSIONAL_TRIAL': 'Trial',
-                'BUSINESS': 'Business',
-                'ENTERPRISE': 'Enterprise',
-                'ADMIN': 'Admin'
+            const tierNames = {
+                'free': 'Free Plan',
+                'professional': 'Professional',
+                'professional_trial': 'Trial',
+                'business': 'Business',
+                'enterprise': 'Enterprise',
+                'admin': 'Admin'
             };
             
-            const tierDisplay = tierDisplayNames[user.userType] || 'Free Plan';
+            document.getElementById('userName').textContent = email;
+            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Free Plan';
             
-            updateUserInfo({
-                name: displayName,
-                initials: initials,
-                tier: tierDisplay
-            });
-            
-            console.log(`👤 User loaded: ${displayName} (${tierDisplay})`);
-        } else {
-            console.error('❌ Auth check failed in loadUserProfile');
+            const avatar = document.getElementById('userAvatar');
+            avatar.innerHTML = '';
+            avatar.textContent = initials;
         }
-        
-    } catch (error) {
-        console.error('❌ Failed to load user profile:', error);
-        updateUserInfo({
-            name: 'User',
-            initials: 'U',
-            tier: 'Free Plan'
-        });
-    }
-}
 
-window.moduleEvents = {
-    emit: function(event, data) {
-        // Clear transition flags when navigating (preserves other state)
-        if (event === 'navigation') {
-            [window.SchedulingModule, window.AddLeadModule, window.PipelineModule].forEach(module => {
-                if (module) {
-                    module.isTransitioning = false;
-                }
-            });
-        }
-        
-        if (window.SchedulingModule && window.SchedulingModule.handleEvent) {
-            window.SchedulingModule.handleEvent(event, data);
-        }
-        if (window.AddLeadModule && window.AddLeadModule.handleEvent) {
-            window.AddLeadModule.handleEvent(event, data);
-        }
-        if (window.PipelineModule && window.PipelineModule.handleEvent) {
-            window.PipelineModule.handleEvent(event, data);
-        }
-    }
-};
-        async function loadPage(pageName, triggerSource = null) {
-    console.log(`Loading page: ${pageName}`);
-    window.moduleEvents.emit('navigation', { targetPage: pageName });
-    
-    // Hide all pages
-    document.querySelectorAll('.page-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // Show target page
-    const targetContent = document.getElementById(`${pageName}-content`);
-    if (targetContent) {
-        targetContent.classList.add('active');
-    }
-    
-    // Update navigation active states
-    document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    
-    if (pageName === 'upgrade') {
-        document.querySelector('.upgrade-nav-link')?.classList.add('active');
-    } else {
-        document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-    }
-    
-    // Update page title
-    const pageTitles = {
-        dashboard: 'Dashboard',
-        leads: 'Add Leads', 
-        pipeline: 'Pipeline',
-        tasks: 'Tasks',
-        analytics: 'Analytics',
-        settings: 'Settings',
-        upgrade: 'Upgrade Plan'
-    };
-    
-    const pageTitle = document.getElementById('pageTitle');
-    if (pageTitle) {
-        pageTitle.textContent = pageTitles[pageName] || pageName.charAt(0).toUpperCase() + pageName.slice(1);
-    }
-    
-    // 🔥 THIS IS THE KEY ADDITION - LAZY LOAD THE MODULE
-    try {
-        await loadPageModule(pageName);
-    } catch (error) {
-        console.error(`Failed to load ${pageName} module:`, error);
-    }
-    
-    // Re-setup mobile title click after navigation
-    setTimeout(() => {
-        setupMobileTitleClick();
-    }, 100);
-}
-
-// Add helper function to cleanup a specific module
-window.cleanupModule = function(module) {
-    if (module && window.activeModules?.has(module)) {
-        if (module.cleanup) {
-            module.cleanup();
-        }
-        window.activeModules.delete(module);
-        console.log(`🧹 Cleaned up module, ${window.activeModules.size} remaining`);
-    }
-};
-
-// Add helper to cleanup all modules (useful for logout/page refresh)
-window.cleanupAllModules = function() {
-    if (window.activeModules) {
-        window.activeModules.forEach(module => {
-            if (module.cleanup) {
-                module.cleanup();
-            }
-        });
-        window.activeModules.clear();
-        console.log('🧹 All modules cleaned up');
-    }
-};
-
-        // 🔤 GENERATE INITIALS
         function generateInitials(email) {
             if (!email) return 'U';
-            
-            const namePart = email.split('@')[0];
-            const parts = namePart.split(/[._-]/);
-            
-            if (parts.length >= 2) {
-                return (parts[0][0] + parts[1][0]).toUpperCase();
-            } else {
-                return namePart.substring(0, 2).toUpperCase();
-            }
-        }
-
-        function showInitializationError(errorMessage) {
-    const container = document.getElementById('dashboard-content');
-    if (container) {
-        container.innerHTML = `
-            <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-                <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                    Connection Error
-                </h2>
-                <p>Unable to load dashboard data. Please check your connection and try refreshing.</p>
-                <button onclick="location.reload()" style="
-                    margin-top: 1rem; 
-                    padding: 0.75rem 1.5rem; 
-                    background: var(--primary); 
-                    color: white; 
-                    border: none; 
-                    border-radius: var(--radius); 
-                    cursor: pointer;
-                    font-weight: 600;
-                    transition: var(--transition);
-                " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                    🔄 Retry
-                </button>
-            </div>
-        `;
-    }
-}
-
-        // 🎨 THEME MANAGEMENT
-        function applySavedTheme() {
-            const savedTheme = window.SteadyUtils ? 
-                SteadyUtils.storage.get('dashboard-theme', 'light') : 
-                localStorage.getItem('dashboard-theme') || 'light';
-                
-            document.documentElement.setAttribute('data-theme', savedTheme);
+            const name = email.split('@')[0];
+            const parts = name.split(/[._-]/);
+            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+            return name.substring(0, 2).toUpperCase();
         }
 
         function toggleTheme() {
-            if (window.SteadyUtils && SteadyUtils.theme) {
-                const newTheme = SteadyUtils.theme.toggle();
-                
-                SteadyUtils.showToast(`Switched to ${newTheme} mode! 🎨`, 'success', {
-                    duration: 2000,
-                    position: 'bottom-right'
-                });
-                
-                return;
-            }
-            
             const current = document.documentElement.getAttribute('data-theme');
             const newTheme = current === 'dark' ? 'light' : 'dark';
-            
             document.documentElement.setAttribute('data-theme', newTheme);
-            
-            try {
-                localStorage.setItem('dashboard-theme', newTheme);
-            } catch (error) {
-                console.warn('Failed to save theme:', error);
+            localStorage.setItem('dashboard-theme', newTheme);
+            if (window.SteadyUtils?.showToast) {
+                SteadyUtils.showToast(`Switched to ${newTheme} mode`, 'success');
             }
         }
 
-        // 📱 SICK TITLE CLICK HANDLER - MOBILE & DESKTOP MAGIC
-        function setupMobileTitleClick() {
-            const headerTitle = document.getElementById('pageTitle');
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.main-content');
-            
-            if (!headerTitle || !sidebar || !mainContent) return;
-            
-            if (headerTitle._titleHandler) {
-                headerTitle.removeEventListener('click', headerTitle._titleHandler);
-            }
-            
-            headerTitle._titleHandler = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                if (window.innerWidth <= 1024) {
-                    // 📱 MOBILE: Toggle sidebar
-                    sidebar.classList.toggle('mobile-open');
-                    
-                    if (window.SteadyUtils) {
-                        SteadyUtils.pulse(headerTitle, { scale: 0.95, duration: 200 });
-                    }
-                    
-                    console.log('📱 Mobile sidebar toggled');
-                } else {
-                    // 🖥️ DESKTOP: Sick slide toggle
-                    const isHidden = sidebar.classList.contains('desktop-hidden');
-                    
-                    if (isHidden) {
-                        // Show sidebar
-                        sidebar.classList.remove('desktop-hidden');
-                        mainContent.classList.remove('sidebar-hidden');
-                        headerTitle.classList.remove('sidebar-hidden');
-                        console.log('🖥️ Desktop sidebar REVEALED!');
-                    } else {
-                        // Hide sidebar
-                        sidebar.classList.add('desktop-hidden');
-                        mainContent.classList.add('sidebar-hidden');
-                        headerTitle.classList.add('sidebar-hidden');
-                        console.log('🖥️ Desktop sidebar HIDDEN!');
-                    }
-                    
-                    if (window.SteadyUtils) {
-                        SteadyUtils.pulse(headerTitle, { scale: 0.95, duration: 200 });
-                    }
-                }
-            };
-            
-            headerTitle.addEventListener('click', headerTitle._titleHandler);
-            
-            if (!window._globalClickSetup) {
-                document.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 1024) {
-                        const currentTitle = document.getElementById('pageTitle');
-                        const currentSidebar = document.getElementById('sidebar');
-                        
-                        if (currentSidebar && !currentSidebar.contains(e.target) && 
-                            !currentTitle?.contains(e.target)) {
-                            currentSidebar.classList.remove('mobile-open');
-                        }
-                    }
-                });
-                window._globalClickSetup = true;
-            }
-        }
-
-        // 🧭 SICK NAVIGATION WITH AUTO-CLOSE
         function setupNavigation() {
             document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
-                    const upgradeTrigger = link.getAttribute('data-upgrade-trigger');
                     
-                    if (window.SteadyUtils) {
-                        SteadyUtils.pulse(link, { scale: 0.95, duration: 200 });
-                    }
-                    
-                    // 🔥 MOBILE MAGIC: Auto-close sidebar after nav click
                     if (window.innerWidth <= 1024) {
-                        const sidebar = document.getElementById('sidebar');
-                        if (sidebar) {
-                            setTimeout(() => {
-                                sidebar.classList.remove('mobile-open');
-                                console.log('📱 Mobile sidebar auto-closed after navigation!');
-                            }, 150); // Small delay for smooth UX
-                        }
+                        setTimeout(() => {
+                            document.getElementById('sidebar')?.classList.remove('mobile-open');
+                        }, 150);
                     }
                     
-                    if (page) {
-                        if (link.classList.contains('disabled') && page === 'upgrade') {
-                            loadPage('upgrade', upgradeTrigger || 'navigation');
-                        } else if (link.classList.contains('upgrade-nav-link')) {
-                            loadPage('upgrade');
-                        } else {
-                            loadPage(page);
-                        }
-                    }
+                    if (page) loadPage(page);
                 });
             });
         }
 
-        function showModuleNotFound(pageName) {
-    const container = document.getElementById(`${pageName}-content`);
-    if (container) {
-                const emoji = {
-                    dashboard: '📊',
-                    leads: '👥', 
-                    pipeline: '🌿',
-                    tasks: '📋',
-                    analytics: '📈',
-                    settings: '⚙️',
-                    upgrade: '🚀'
-                }[pageName] || '📦';
-                
-                mainContent.innerHTML = `
-                    <div class="fade-in" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">${emoji}</div>
-                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                            ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} Module
-                        </h2>
-                        <p>Module not loaded yet. Check that the script is included.</p>
-                    </div>
-                `;
-            }
-        }
-
-        // 👤 USER MENU
         function setupUserMenu() {
-            const userMenu = document.getElementById('userMenu');
-            const profileDropdown = document.getElementById('profileDropdown');
-            const darkModeToggle = document.getElementById('darkModeToggle');
+            const menu = document.getElementById('userMenu');
+            const dropdown = document.getElementById('profileDropdown');
             
-            userMenu?.addEventListener('click', (e) => {
+            menu.onclick = (e) => {
                 e.stopPropagation();
-                profileDropdown?.classList.toggle('show');
-                
-                if (window.SteadyUtils) {
-                    SteadyUtils.pulse(userMenu, { scale: 0.95, duration: 200 });
-                }
-            });
+                dropdown.classList.toggle('show');
+            };
             
-            document.addEventListener('click', () => {
-                profileDropdown?.classList.remove('show');
-            });
+            document.addEventListener('click', () => dropdown.classList.remove('show'));
             
-            darkModeToggle?.addEventListener('click', (e) => {
+            document.getElementById('darkModeToggle').onclick = (e) => {
                 e.stopPropagation();
                 toggleTheme();
-            });
+            };
             
-            profileDropdown?.querySelector('[data-page="settings"]')?.addEventListener('click', () => {
+            dropdown.querySelector('[data-page="settings"]').addEventListener('click', () => {
                 loadPage('settings');
-                profileDropdown.classList.remove('show');
+                dropdown.classList.remove('show');
             });
+            
+            document.getElementById('logoutBtn').onclick = async () => {
+                if (!confirm('Logout?')) return;
+                try {
+                    await API.logout();
+                } catch (e) {
+                    console.error('Logout error:', e);
+                }
+                window.location.href = '/auth/login.html';
+            };
+        }
 
-            const logoutBtn = document.getElementById('logoutBtn');
-            logoutBtn?.addEventListener('click', async () => {
-                if (window.SteadyUtils) {
-                    const modal = SteadyUtils.createModal(
-                        'Confirm Logout',
-                        'Are you sure you want to logout?',
-                        {
-                            size: 'small',
-                            buttons: [
-                                {
-                                    text: 'Cancel',
-                                    type: 'secondary',
-                                    onClick: () => true
-                                },
-                                {
-                                    text: 'Logout',
-                                    type: 'danger',
-                                    onClick: async () => {
-                                        await performLogout();
-                                        return true;
-                                    }
-                                }
-                            ]
-                        }
-                    );
+        function setupMobileTitleClick() {
+            const title = document.getElementById('pageTitle');
+            const sidebar = document.getElementById('sidebar');
+            const main = document.querySelector('.main-content');
+            
+            title.onclick = () => {
+                if (window.innerWidth <= 1024) {
+                    sidebar.classList.toggle('mobile-open');
                 } else {
-                    await performLogout();
+                    sidebar.classList.toggle('desktop-hidden');
+                    main.classList.toggle('sidebar-hidden');
                 }
-                
-                profileDropdown.classList.remove('show');
+            };
+            
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 1024 && 
+                    !sidebar.contains(e.target) && 
+                    !title.contains(e.target)) {
+                    sidebar.classList.remove('mobile-open');
+                }
             });
         }
 
-        async function performLogout() {
-            try {
-                if (window.SteadyUtils) {
-                    SteadyUtils.showToast('Logging out... 👋', 'info', {
-                        duration: 2000
-                    });
-                }
-                
-                await API.logout();
-                console.log('🚪 Logged out successfully');
-                window.location.href = '/login';
-            } catch (error) {
-                console.error('Logout error:', error);
-                window.location.href = '/login';
-            }
+        function showError(msg) {
+            const container = document.getElementById('dashboard-content');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <div style="text-align: center; padding: 4rem;">
+                    <h2>Connection Error</h2>
+                    <p style="margin: 1rem 0;">${API.escapeHtml(msg)}</p>
+                    <button onclick="location.reload()" style="padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Retry</button>
+                </div>
+            `;
         }
 
-        // 🔒 GLOBALS
         window.loadPage = loadPage;
-        
-        window.updatePageTitle = (title) => {
-            const pageTitle = document.getElementById('pageTitle');
-            if (pageTitle) {
-                if (window.SteadyUtils) {
-                    SteadyUtils.animateOut(pageTitle, { duration: 200 }).then(() => {
-                        pageTitle.textContent = title;
-                        SteadyUtils.animateIn(pageTitle, { duration: 300 });
-                    });
-                } else {
-                    pageTitle.textContent = title;
-                }
-            }
-        };
-        
-        function updateUserInfo(user) {
-            const userName = document.getElementById('userName');
-            const userAvatar = document.getElementById('userAvatar');
-            const userTier = document.getElementById('userTier');
-            
-            if (user.name && userName) {
-                if (window.SteadyUtils) {
-                    SteadyUtils.animateOut(userName, { duration: 200 }).then(() => {
-                        userName.textContent = user.name;
-                        SteadyUtils.animateIn(userName, { duration: 300 });
-                    });
-                } else {
-                    userName.textContent = user.name;
-                }
-            }
-            
-            if (user.initials && userAvatar) {
-                if (window.SteadyUtils) {
-                    SteadyUtils.animateOut(userAvatar, { duration: 200 }).then(() => {
-                        userAvatar.innerHTML = '';
-                        userAvatar.textContent = user.initials;
-                        
-                        userAvatar.style.background = 'var(--gradient-primary)';
-                        userAvatar.style.color = 'white';
-                        userAvatar.style.fontSize = '0.9rem';
-                        userAvatar.style.fontWeight = '700';
-                        userAvatar.style.display = 'flex';
-                        userAvatar.style.alignItems = 'center';
-                        userAvatar.style.justifyContent = 'center';
-                        
-                        SteadyUtils.animateIn(userAvatar, { duration: 300 });
-                    });
-                } else {
-                    userAvatar.innerHTML = '';
-                    userAvatar.textContent = user.initials;
-                    
-                    userAvatar.style.background = 'var(--gradient-primary)';
-                    userAvatar.style.color = 'white';
-                    userAvatar.style.fontSize = '0.9rem';
-                    userAvatar.style.fontWeight = '700';
-                    userAvatar.style.display = 'flex';
-                    userAvatar.style.alignItems = 'center';
-                    userAvatar.style.justifyContent = 'center';
-                }
-            }
-            
-            if (user.tier && userTier) {
-                if (window.SteadyUtils) {
-                    SteadyUtils.animateOut(userTier, { duration: 200 }).then(() => {
-                        userTier.textContent = user.tier;
-                        SteadyUtils.animateIn(userTier, { duration: 300 });
-                    });
-                } else {
-                    userTier.textContent = user.tier;
-                }
-            }
-        }
-
-        // 🎉 WELCOME
-        if (window.SteadyUtils) {
-            setTimeout(() => {
-                SteadyUtils.showToast('Welcome to SteadyManager! 🚀', 'success', {
-                    duration: 3000,
-                    position: 'bottom-right'
-                });
-            }, 1000);
-        }
-
-        console.log('🔥 SteadyManager Shell ready for modules!');
-        console.log('✨ Enhanced with locked viewport and clean interactions!');
     </script>
 
-    <!-- 🔧 MODULE LOADER -->
     <script src="/dashboard/shared/js/utils.js"></script>
-    <script src="/dashboard/shared/js/api.js"></script>
     <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
     <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
     <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
     <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
     <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
     <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
-
 </body>
 </html>
