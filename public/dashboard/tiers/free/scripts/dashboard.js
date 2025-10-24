@@ -420,7 +420,7 @@ window.DashboardModule = {
                     <div class="dashboard-upgrade-icon">🚀</div>
                     <div class="dashboard-upgrade-text">
                         <h3 class="dashboard-upgrade-title">Ready to scale?</h3>
-                        <p class="dashboard-upgrade-subtitle">Upgrade to Pro for 5,000 leads, advanced analytics, and automation</p>
+                        <p class="dashboard-upgrade-subtitle">Upgrade to Pro for 5,000 leads and advanced analytics</p>
                     </div>
                 </div>
                 <button class="dashboard-upgrade-btn" data-action="upgrade">

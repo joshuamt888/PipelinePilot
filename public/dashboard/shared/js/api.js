@@ -690,6 +690,30 @@ static async get2FAStatus() {
     }
 }
 
+static async checkTosAcceptance() {
+    const profile = await this.getProfile();
+    return {
+        accepted: !!profile.tos_accepted_at,
+        acceptedAt: profile.tos_accepted_at,
+        version: profile.tos_version || '1.0'
+    };
+}
+
+static async acceptTos(version = '1.0') {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase
+        .from('users')
+        .update({
+            tos_accepted_at: new Date().toISOString(),
+            tos_version: version
+        })
+        .eq('id', user.id);
+    
+    if (error) throw error;
+    return { success: true };
+}
+
   // =====================================================
   // ACCOUNT MANAGEMENT
   // =====================================================
@@ -752,47 +776,95 @@ static async get2FAStatus() {
     const duplicates = { exact: [], similar: [] };
     
     try {
-      const existingLeads = await this.getLeads();
-      const allLeads = existingLeads.all || [];
-      
-      for (const existing of allLeads) {
-        // Exact email match
-        if (leadData.email && existing.email && 
-            leadData.email.toLowerCase() === existing.email.toLowerCase()) {
-          duplicates.exact.push({
-            lead: existing,
-            reason: 'Exact email match',
-            confidence: 100
-          });
-          continue;
+        const existingLeads = await this.getLeads();
+        const allLeads = existingLeads.all || [];
+        
+        for (const existing of allLeads) {
+            // EXACT MATCHES
+            
+            // Exact email match
+            if (leadData.email && existing.email &&
+                leadData.email.toLowerCase() === existing.email.toLowerCase()) {
+                duplicates.exact.push({
+                    lead: existing,
+                    reason: 'Exact email match',
+                    confidence: 100
+                });
+                continue;
+            }
+            
+            // Exact name + company match
+            if (leadData.name && existing.name && leadData.company && existing.company) {
+                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
+                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
+                
+                if (nameMatch && companyMatch) {
+                    duplicates.exact.push({
+                        lead: existing,
+                        reason: 'Exact name and company match',
+                        confidence: 100
+                    });
+                    continue;
+                }
+            }
+            
+            // SIMILAR MATCHES (NEW - Simple approach)
+            
+            let confidence = 0;
+            const reasons = [];
+            
+            // Same name = 70% confidence
+            if (leadData.name && existing.name) {
+                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
+                if (nameMatch) {
+                    confidence = 70;
+                    reasons.push('Same name');
+                }
+            }
+            
+            // Same company adds +20% confidence
+            if (leadData.company && existing.company && confidence > 0) {
+                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
+                if (companyMatch) {
+                    confidence += 20;
+                    reasons.push('same company');
+                }
+            }
+            
+            // Same phone adds +30% confidence
+            if (leadData.phone && existing.phone) {
+                const phone1 = leadData.phone.replace(/\D/g, '');
+                const phone2 = existing.phone.replace(/\D/g, '');
+                if (phone1 === phone2 && phone1.length >= 10) {
+                    confidence += 30;
+                    reasons.push('same phone');
+                }
+            }
+            
+            // If confidence is 60% or higher, it's a similar lead
+            if (confidence >= 60) {
+                duplicates.similar.push({
+                    lead: existing,
+                    reason: reasons.join(', '),
+                    confidence: confidence
+                });
+            }
         }
         
-        // Exact name + company match
-        if (leadData.name && existing.name && leadData.company && existing.company) {
-          const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
-          const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
-          
-          if (nameMatch && companyMatch) {
-            duplicates.exact.push({
-              lead: existing,
-              reason: 'Exact name and company match',
-              confidence: 100
-            });
-            continue;
-          }
-        }
-      }
-      
-      return {
-        hasExactDuplicates: duplicates.exact.length > 0,
-        hasSimilarLeads: duplicates.similar.length > 0,
-        ...duplicates
-      };
+        // Sort similar leads by confidence (highest first)
+        duplicates.similar.sort((a, b) => b.confidence - a.confidence);
+        
+        return {
+            hasExactDuplicates: duplicates.exact.length > 0,
+            hasSimilarLeads: duplicates.similar.length > 0,
+            ...duplicates
+        };
+        
     } catch (error) {
-      console.error('Duplicate check failed:', error);
-      return { hasExactDuplicates: false, hasSimilarLeads: false };
+        console.error('Duplicate check failed:', error);
+        return { hasExactDuplicates: false, hasSimilarLeads: false };
     }
-  }
+}
 
   // =====================================================
   // UTILITY FUNCTIONS

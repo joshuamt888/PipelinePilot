@@ -2733,8 +2733,14 @@ modal.addEventListener('mouseup', (e) => {
                     border: 1px solid var(--border);
                 }
 
+                .scheduling-table-scroll-wrapper {
+                    overflow-x: auto;
+                    overflow-y: visible;
+                }
+
                 .scheduling-tasks-table {
                     width: 100%;
+                    min-width: 800px;
                     border-collapse: separate;
                     border-spacing: 0;
                     background: var(--surface);
@@ -2748,6 +2754,7 @@ modal.addEventListener('mouseup', (e) => {
                     color: var(--text-primary);
                     border-bottom: none;
                     font-size: 0.9rem;
+                    white-space: nowrap;
                 }
 
                 /* Center specific columns */
@@ -2925,10 +2932,12 @@ modal.addEventListener('mouseup', (e) => {
                     color: var(--text-secondary);
                     font-size: 0.8rem;
                     font-weight: 500;
+                    white-space: nowrap;
                 }
 
                 .scheduling-date-cell {
                     color: var(--text-secondary);
+                    white-space: nowrap;
                 }
 
                 .scheduling-overdue-date {
@@ -2942,6 +2951,7 @@ modal.addEventListener('mouseup', (e) => {
                     gap: 0.5rem;
                     font-size: 0.8rem;
                     font-weight: 600;
+                    white-space: nowrap;
                 }
 
                 /* Header Filters */
@@ -4515,207 +4525,266 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 /* Mobile Responsive */
-                @media (max-width: 768px) {
-                    .scheduling-action-bubbles {
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                    }
+@media (max-width: 768px) {
+    .scheduling-action-bubbles {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 
-                    .scheduling-action-bubble {
-                        padding: 1.5rem;
-                        flex-direction: column;
-                        text-align: center;
-                        gap: 1rem;
-                    }
+    .scheduling-action-bubble {
+        padding: 1.5rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
 
-                    .scheduling-bubble-icon {
-                        width: 60px;
-                        height: 60px;
-                        font-size: 2rem;
-                    }
+    .scheduling-bubble-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
 
-                    .scheduling-calendar-section {
-                        padding: 1rem;
-                    }
+    .scheduling-calendar-section {
+        padding: 1rem;
+    }
 
-                    .scheduling-calendar-header {
-                        flex-direction: column;
-                        gap: 1rem;
-                        align-items: stretch;
-                    }
+    .scheduling-calendar-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
 
-                    .scheduling-calendar-nav {
-                        justify-content: center;
-                    }
+    .scheduling-calendar-nav {
+        justify-content: center;
+    }
 
-                    .scheduling-calendar-day {
-                        min-height: 80px;
-                        padding: 0.5rem;
-                    }
+    .scheduling-calendar-day {
+        min-height: 80px;
+        padding: 0.5rem;
+    }
 
-                    .scheduling-day-number {
-                        font-size: 1rem;
-                    }
+    .scheduling-day-number {
+        font-size: 1rem;
+    }
 
-                    .scheduling-table-view {
-                        padding: 1rem;
-                    }
+    .scheduling-table-view {
+        padding: 1rem;
+    }
 
-                    .scheduling-table-container {
-                        overflow-x: auto;
-                        -webkit-overflow-scrolling: touch;
-                    }
+    .scheduling-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 
-                    .scheduling-tasks-table {
-                        min-width: 700px;
-                        font-size: 0.85rem;
-                    }
+    .scheduling-tasks-table {
+        min-width: 700px;
+        font-size: 0.85rem;
+    }
 
-                    .scheduling-tasks-table th,
-                    .scheduling-tasks-table td {
-                        padding: 0.75rem 0.5rem;
-                        white-space: nowrap;
-                    }
+    .scheduling-tasks-table th,
+    .scheduling-tasks-table td {
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
 
-                    .scheduling-table-header {
-                        flex-direction: column;
-                        gap: 1rem;
-                        align-items: stretch;
-                    }
+    /* IMPROVED TABLE HEADER LAYOUT */
+    .scheduling-table-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+        padding: 1rem;
+    }
 
-                    .scheduling-table-header-left {
-                        flex-direction: column;
-                        gap: 0.75rem;
-                        align-items: stretch;
-                    }
+    .scheduling-table-header-left {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.75rem;
+        align-items: center;
+    }
 
-                    .scheduling-table-header-right {
-                        flex-direction: column;
-                        gap: 0.75rem;
-                    }
+     .scheduling-back-btn {
+        grid-column: 1;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+        font-weight: 500;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-                    .scheduling-search-input {
-                        width: 100%;
-                    }
+    .scheduling-table-title {
+        grid-column: 2;
+        font-size: 1.1rem;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-                    .scheduling-modal {
-                        margin: 1rem;
-                        max-width: none;
-                    }
+    .scheduling-table-header-right {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+    }
 
-                    .scheduling-modal-body {
-                        padding: 1rem;
-                    }
+    .scheduling-search-box {
+        grid-column: 1 / -1;
+        order: 1;
+    }
 
-                    .scheduling-form-grid {
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                    }
+    .scheduling-search-input {
+        width: 100%;
+        font-size: 16px;
+    }
 
-                    .scheduling-form-actions {
-                        flex-direction: column;
-                        gap: 1rem;
-                    }
+    .scheduling-refresh-table-btn {
+        order: 2;
+        padding: 0.75rem 1rem;
+        white-space: nowrap;
+    }
 
-                    .scheduling-form-actions-right {
-                        width: 100%;
-                        flex-direction: column;
-                    }
+    .scheduling-add-task-btn {
+        order: 3;
+        padding: 0.75rem 1.25rem;
+        white-space: nowrap;
+    }
+    /* END IMPROVED TABLE HEADER */
 
-                    .scheduling-btn-primary,
-                    .scheduling-btn-secondary,
-                    .scheduling-btn-danger {
-                        width: 100%;
-                        justify-content: center;
-                    }
+    .scheduling-modal {
+        margin: 1rem;
+        max-width: none;
+    }
 
-                    .scheduling-day-popup,
-                    .scheduling-task-view,
-                    .scheduling-lead-picker-popup,
-                    .scheduling-delete-confirm-modal,
-                    .scheduling-upgrade-prompt {
-                        margin: 1rem;
-                        max-width: none;
-                    }
+    .scheduling-modal-body {
+        padding: 1rem;
+    }
 
-                    .scheduling-task-details-grid {
-                        grid-template-columns: 1fr;
-                        gap: 1rem;
-                    }
+    .scheduling-form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 
-                    .scheduling-quick-actions-grid {
-                        grid-template-columns: 1fr;
-                    }
+    .scheduling-form-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-                    .scheduling-task-view-actions {
-                        flex-direction: column;
-                    }
+    .scheduling-form-actions-right {
+        width: 100%;
+        flex-direction: column;
+    }
 
-                    .scheduling-lead-picker-overlay {
-                        padding: 1rem;
-                    }
+    .scheduling-btn-primary,
+    .scheduling-btn-secondary,
+    .scheduling-btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
 
-                    .scheduling-lead-picker-popup {
-                        max-width: 95vw;
-                        max-height: 85vh;
-                    }
+    .scheduling-day-popup,
+    .scheduling-task-view,
+    .scheduling-lead-picker-popup,
+    .scheduling-delete-confirm-modal,
+    .scheduling-upgrade-prompt {
+        margin: 1rem;
+        max-width: none;
+    }
 
-                    .scheduling-lead-picker-header {
-                        padding: 1.25rem 1.5rem;
-                    }
+    .scheduling-task-details-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 
-                    .scheduling-lead-picker-search {
-                        padding: 1rem 1.5rem 0.75rem;
-                    }
+    .scheduling-quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
 
-                    .scheduling-lead-picker-item {
-                        padding: 1rem;
-                        margin: 0.25rem 0;
-                    }
+    .scheduling-task-view-actions {
+        flex-direction: column;
+    }
 
-                    .scheduling-lead-name {
-                        font-size: 1rem;
-                        max-width: 120px;
-                    }
+    .scheduling-lead-picker-overlay {
+        padding: 1rem;
+    }
 
-                    .scheduling-lead-company {
-                        max-width: 140px;
-                    }
+    .scheduling-lead-picker-popup {
+        max-width: 95vw;
+        max-height: 85vh;
+    }
 
-                    .scheduling-lead-email {
-                        max-width: 120px;
-                    }
+    .scheduling-lead-picker-header {
+        padding: 1.25rem 1.5rem;
+    }
 
-                    .scheduling-selected-lead-name {
-                        max-width: 80px;
-                    }
+    .scheduling-lead-picker-search {
+        padding: 1rem 1.5rem 0.75rem;
+    }
 
-                    .scheduling-selected-lead-company {
-                        max-width: 90px;
-                    }
+    .scheduling-lead-picker-item {
+        padding: 1rem;
+        margin: 0.25rem 0;
+    }
 
-                    .scheduling-delete-confirm-overlay {
-                        padding: 1rem;
-                    }
+    .scheduling-lead-name {
+        font-size: 1rem;
+        max-width: 120px;
+    }
 
-                    .scheduling-confirm-header {
-                        padding: 1.5rem;
-                    }
+    .scheduling-lead-company {
+        max-width: 140px;
+    }
 
-                    .scheduling-confirm-body {
-                        padding: 1.5rem;
-                    }
+    .scheduling-lead-email {
+        max-width: 120px;
+    }
 
-                    .scheduling-confirm-actions {
-                        flex-direction: column;
-                        padding: 1rem 1.5rem 1.5rem;
-                    }
+    .scheduling-selected-lead-name {
+        max-width: 80px;
+    }
 
-                    .scheduling-btn-cancel-delete,
-                    .scheduling-btn-confirm-delete {
-                        width: 100%;
-                        justify-content: center;
-                    }
+    .scheduling-selected-lead-company {
+        max-width: 90px;
+    }
+
+    .scheduling-delete-confirm-overlay {
+        padding: 1rem;
+    }
+
+    .scheduling-confirm-header {
+        padding: 1.5rem;
+    }
+
+    .scheduling-confirm-body {
+        padding: 1.5rem;
+    }
+
+    .scheduling-confirm-actions {
+        flex-direction: column;
+        padding: 1rem 1.5rem 1.5rem;
+    }
+
+    .scheduling-btn-cancel-delete,
+    .scheduling-btn-confirm-delete {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Extra Small Mobile - Stack Everything */
+@media (max-width: 480px) {
+    .scheduling-table-header-right {
+        grid-template-columns: 1fr;
+    }
+
+    .scheduling-refresh-table-btn {
+        grid-column: 1;
+    }
+
+    .scheduling-add-task-btn {
+        grid-column: 1;
+    }
+}
             </style>
         `;
     }

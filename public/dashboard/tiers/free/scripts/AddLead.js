@@ -183,18 +183,9 @@ window.AddLeadModule = {
                         <span class="addlead-recent-company">${safeCompany}</span>
                         <span class="addlead-recent-time">${timeAgo}</span>
                     </div>
-                    <div class="addlead-recent-contact">
-                        ${safeEmail ? `📧 ${safeEmail}` : ''}
-                        ${safePhone ? ` 📞 ${safePhone}` : ''}
-                    </div>
                 </div>
                 <div class="addlead-recent-status">
                     <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
-                </div>
-                <div class="addlead-recent-actions">
-                    <button class="addlead-action-btn" onclick="event.stopPropagation(); AddLeadModule.addlead_editLead('${lead.id}')" title="Edit">✏️</button>
-                    <button class="addlead-action-btn" onclick="event.stopPropagation(); AddLeadModule.addlead_quickCall('${lead.id}')" title="Call">📞</button>
-                    <button class="addlead-action-btn" onclick="event.stopPropagation(); AddLeadModule.addlead_quickEmail('${lead.id}')" title="Email">📧</button>
                 </div>
             </div>
         `;
@@ -2637,14 +2628,13 @@ addlead_showCustomSourceInput(targetInput) {
                 .addlead-recent-name {
                     font-weight: 700;
                     color: var(--text-primary);
-                    margin-bottom: 0.25rem;
+                    margin-bottom: 0.4rem;
                 }
 
                 .addlead-recent-meta {
                     display: flex;
                     align-items: center;
                     gap: 1rem;
-                    margin-bottom: 0.5rem;
                 }
 
                 .addlead-recent-company {
@@ -2657,45 +2647,10 @@ addlead_showCustomSourceInput(targetInput) {
                     font-size: 0.85rem;
                 }
 
-                .addlead-recent-contact {
-                    font-size: 0.8rem;
-                    color: var(--text-secondary);
-                }
-
                 .addlead-recent-status {
                     display: flex;
                     align-items: center;
                     flex-shrink: 0;
-                }
-
-                .addlead-recent-actions {
-                    display: flex;
-                    gap: 0.25rem;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-
-                .addlead-recent-item:hover .addlead-recent-actions {
-                    opacity: 1;
-                }
-
-                .addlead-action-btn {
-                    width: 2rem;
-                    height: 2rem;
-                    border: none;
-                    border-radius: var(--radius);
-                    background: rgba(255, 255, 255, 0.9);
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 0.8rem;
-                }
-
-                .addlead-action-btn:hover {
-                    transform: scale(1.1);
-                    box-shadow: var(--shadow);
                 }
 
                 /* Table View */
@@ -3650,197 +3605,219 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             /* Duplicate/Similar Modals */
-            .addlead-duplicate-popup-overlay,
-            .addlead-similar-popup-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10002;
-                padding: 1rem;
-            }
+.addlead-duplicate-popup-overlay,
+.addlead-similar-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    padding: 1rem;
+}
 
-            .addlead-duplicate-popup,
-            .addlead-similar-popup {
-                background: var(--surface);
-                border-radius: 16px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                width: 100%;
-                max-width: 500px;
-                max-height: 80vh;
-                overflow: hidden;
-                border: 1px solid var(--border);
-            }
+.addlead-duplicate-popup,
+.addlead-similar-popup {
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
 
-            .addlead-duplicate-popup-header {
-                background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-                color: white;
-                padding: 1.5rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.addlead-duplicate-popup-header {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-            .addlead-similar-popup-header {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                color: white;
-                padding: 1.5rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.addlead-duplicate-popup-header .addlead-popup-close,
+.addlead-similar-popup-header .addlead-popup-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
 
-            .addlead-duplicate-popup-content,
-            .addlead-similar-popup-content {
-                padding: 1.5rem;
-                max-height: 60vh;
-                overflow-y: auto;
-            }
+.addlead-popup-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
 
-            .addlead-duplicate-message,
-            .addlead-similar-message {
-                margin: 0 0 1.5rem 0;
-                color: var(--text-primary);
-                font-weight: 600;
-            }
+.addlead-similar-popup-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-            .addlead-duplicate-lead-card,
-            .addlead-similar-lead-card {
-                padding: 1.25rem;
-                background: var(--surface-hover);
-                border: 2px solid var(--border);
-                border-radius: var(--radius);
-                transition: all 0.3s ease;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                margin-bottom: 1rem;
-            }
+.addlead-duplicate-popup-content,
+.addlead-similar-popup-content {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
 
-            .addlead-duplicate-lead-card:hover,
-            .addlead-similar-lead-card:hover {
-                border-color: var(--primary);
-                background: rgba(102, 126, 234, 0.1);
-                transform: translateY(-2px);
-            }
+.addlead-duplicate-message,
+.addlead-similar-message {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-primary);
+    font-weight: 600;
+}
 
-            .addlead-lead-info-simple {
-                flex: 1;
-            }
+.addlead-duplicate-lead-card,
+.addlead-similar-lead-card {
+    padding: 1.25rem;
+    background: var(--surface-hover);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
 
-            .addlead-lead-info-simple h4 {
-                margin: 0 0 0.75rem 0;
-                font-size: 1.1rem;
-                font-weight: 700;
-                color: var(--text-primary);
-            }
+.addlead-duplicate-lead-card:hover,
+.addlead-similar-lead-card:hover {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+}
 
-            .addlead-lead-details p {
-                margin: 0;
-                font-size: 0.9rem;
-                color: var(--text-secondary);
-                line-height: 1.4;
-            }
+.addlead-lead-info-simple {
+    flex: 1;
+}
 
-            .addlead-added-time {
-                font-size: 0.8rem !important;
-                color: var(--text-tertiary) !important;
-            }
+.addlead-lead-info-simple h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
 
-            .addlead-lead-avatar-right {
-                width: 48px;
-                height: 48px;
-                border-radius: 10px;
-                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: 700;
-                font-size: 1rem;
-                flex-shrink: 0;
-            }
+.addlead-lead-details p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
 
-            .addlead-similarity-section {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 0.75rem;
-            }
+.addlead-added-time {
+    font-size: 0.8rem !important;
+    color: var(--text-tertiary) !important;
+}
 
-            .addlead-confidence-badge {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-                color: white;
-                padding: 0.25rem 0.75rem;
-                border-radius: 12px;
-                font-size: 0.75rem;
-                font-weight: 600;
-            }
+.addlead-lead-avatar-right {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
 
-            .addlead-similar-leads-list {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-                margin-bottom: 1.5rem;
-            }
+.addlead-similarity-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
 
-            .addlead-similar-question {
-                margin: 0;
-                font-weight: 600;
-                color: var(--text-primary);
-                text-align: center;
-                padding: 1rem;
-                background: var(--surface-hover);
-                border-radius: var(--radius);
-                border: 1px solid var(--border);
-            }
+.addlead-confidence-badge {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
 
-            .addlead-duplicate-popup-actions,
-            .addlead-similar-popup-actions {
-                display: flex;
-                gap: 1rem;
-                padding: 1rem 1.5rem 1.5rem;
-                background: var(--surface-hover);
-            }
+.addlead-similar-leads-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
 
-            .addlead-cancel-duplicate,
-            .addlead-edit-duplicate,
-            .addlead-cancel-similar,
-            .addlead-continue-similar {
-                flex: 1;
-                padding: 0.875rem 1.5rem;
-                border-radius: var(--radius);
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                border: none;
-            }
+.addlead-similar-question {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    padding: 1rem;
+    background: var(--surface-hover);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
 
-            .addlead-cancel-duplicate,
-            .addlead-cancel-similar {
-                background: var(--surface-hover);
-                color: var(--text-primary);
-                border: 1px solid var(--border);
-            }
+.addlead-duplicate-popup-actions,
+.addlead-similar-popup-actions {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem;
+    background: var(--surface-hover);
+}
 
-            .addlead-edit-duplicate,
-            .addlead-continue-similar {
-                background: var(--primary);
-                color: white;
-            }
+.addlead-cancel-duplicate,
+.addlead-edit-duplicate,
+.addlead-cancel-similar,
+.addlead-continue-similar {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
 
-            .addlead-edit-duplicate:hover,
-            .addlead-continue-similar:hover {
-                background: var(--primary-dark);
-                transform: translateY(-1px);
-            }
+.addlead-cancel-duplicate,
+.addlead-cancel-similar {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.addlead-edit-duplicate,
+.addlead-continue-similar {
+    background: var(--primary);
+    color: white;
+}
+
+.addlead-edit-duplicate:hover,
+.addlead-continue-similar:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
 
             /* Upgrade Prompt */
             .addlead-upgrade-prompt-overlay {
@@ -4014,10 +3991,6 @@ addlead_showCustomSourceInput(targetInput) {
                 .addlead-recent-item {
                     flex-direction: column;
                     align-items: flex-start;
-                }
-
-                .addlead-recent-actions {
-                    opacity: 1;
                 }
 
                 .addlead-search-input {

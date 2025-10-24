@@ -88,7 +88,23 @@ window.PipelineModule = {
                 }
                 
                 if (types.length && !types.includes(lead.type)) return false;
-                if (sources.length && !sources.includes(lead.source || null)) return false;
+                if (sources.length) {
+                const leadSource = lead.source || null;
+                const hasCustomFilter = sources.includes('custom');
+    
+                // Predefined sources (from your dropdown)
+                const predefined = ['🌐 Website', '💼 LinkedIn', '📘 Facebook', '📸 Instagram',
+                    '🐦 Twitter', '👥 Referral', '📧 Email', '📞 Phone', '🎪 Event',
+                    '📢 Advertisement', '🎯 Direct', '🔍 Google', '🌱 Organic', '💰 Paid Ads',
+                    '❄️ Cold Call', '🏢 Trade Show', '💻 Webinar', '📝 Content', '🤝 Partnership'];
+    
+                // Check if it matches a predefined source OR is a custom source when custom filter is active
+                const matchesPredefined = sources.includes(leadSource);
+                const isCustom = leadSource && !predefined.includes(leadSource);
+                const matchesCustom = hasCustomFilter && isCustom;
+    
+                if (!matchesPredefined && !matchesCustom) return false;
+                }
                 
                 if (scores.length) {
                     const score = lead.quality_score || 5;
