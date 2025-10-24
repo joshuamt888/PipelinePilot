@@ -424,7 +424,7 @@
                 <a href="/auth/register.html" class="btn btn-primary">Start Free Trial</a>
             </div>
 
-            <button class="mobile-menu-btn" id="mobileMenuBtn">0</button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
         </div>
     </nav>
 
@@ -650,14 +650,14 @@
 
         mobileMenuBtn.addEventListener('click', function() {
             mobileMenu.classList.toggle('active');
-            this.textContent = mobileMenu.classList.contains('active') ? '' : '0';
+            this.textContent = mobileMenu.classList.contains('active') ? '✕' : '☰';
         });
 
         // Close mobile menu when clicking a link
         document.querySelectorAll('.mobile-menu a').forEach(link => {
             link.addEventListener('click', () => {
                 mobileMenu.classList.remove('active');
-                mobileMenuBtn.textContent = '0';
+                mobileMenuBtn.textContent = '☰';
             });
         });
 
