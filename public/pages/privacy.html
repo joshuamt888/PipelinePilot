@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - SteadyManager</title>
+    <meta name="description" content="Privacy Policy for SteadyManager - How we collect, use, and protect your data">
+
+    <!-- CDN Resources -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: #1a202c;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: #667eea;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-outline {
+            color: #667eea;
+            border: 2px solid #667eea;
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Content Section */
+        .content-section {
+            padding: 4rem 2rem;
+            background: #f8fafc;
+        }
+
+        .content-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .content-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1a202c;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content-subtitle {
+            font-size: 1.125rem;
+            color: #4a5568;
+            margin-bottom: 2rem;
+        }
+
+        .content-section-heading {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content-section-heading:first-of-type {
+            margin-top: 1rem;
+        }
+
+        .content-text {
+            color: #4a5568;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .content-list {
+            color: #4a5568;
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .content-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a202c;
+            color: white;
+            padding: 3rem 2rem 2rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-brand {
+            margin-bottom: 2rem;
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-description {
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .footer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #2d3748;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        /* Mobile Menu */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #4a5568;
+            cursor: pointer;
+        }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-menu.active {
+            display: block;
+        }
+
+        .mobile-menu ul {
+            list-style: none;
+        }
+
+        .mobile-menu li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-menu a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            display: block;
+            padding: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-menu {
+                display: none;
+            }
+
+            .nav-cta {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .content-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .content-title {
+                font-size: 1.5rem;
+            }
+
+            .content-section-heading {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">SteadyManager</a>
+
+            <ul class="nav-menu">
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/pages/features.html" class="nav-link">Features</a></li>
+                <li><a href="/pages/pricing.html" class="nav-link">Pricing</a></li>
+                <li><a href="/pages/about.html" class="nav-link">About</a></li>
+                <li><a href="/pages/contact.html" class="nav-link">Contact</a></li>
+            </ul>
+
+            <div class="nav-cta">
+                <a href="/auth/login.html" class="btn btn-outline">Sign In</a>
+                <a href="/auth/register.html" class="btn btn-primary">Start Free Trial</a>
+            </div>
+
+            <button class="mobile-menu-btn" id="mobileMenuBtn">0</button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/pages/features.html">Features</a></li>
+            <li><a href="/pages/pricing.html">Pricing</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/auth/login.html">Sign In</a></li>
+            <li><a href="/auth/register.html">Start Free Trial</a></li>
+        </ul>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <h1 class="hero-title">Privacy Policy</h1>
+            <p class="hero-subtitle">
+                Your privacy matters. Learn how we collect, use, and protect your data.
+            </p>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="content-section">
+        <div class="content-container">
+            <div class="highlight">
+                <strong>Effective Date:</strong> January 1, 2025<br>
+                <strong>Last Updated:</strong> January 1, 2025
+            </div>
+
+            <p class="content-text">
+                At SteadyManager, operated by Steady Scaling LLC, we take your privacy seriously. This Privacy Policy explains how we collect, use, store, and protect your personal information when you use our service. By using SteadyManager, you agree to the practices described in this policy.
+            </p>
+
+            <h2 class="content-section-heading">1. Information We Collect</h2>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">1.1 Information You Provide</h3>
+            <p class="content-text">When you create an account or use SteadyManager, we collect:</p>
+            <ul class="content-list">
+                <li><strong>Account Information:</strong> Email address, password (encrypted), and account preferences</li>
+                <li><strong>Lead Data:</strong> Names, contact information, companies, notes, and other details you add about your prospects</li>
+                <li><strong>Task Information:</strong> Task titles, descriptions, due dates, and completion notes</li>
+                <li><strong>Settings and Preferences:</strong> Theme preferences, notification settings, and account goals</li>
+            </ul>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">1.2 Automatically Collected Information</h3>
+            <p class="content-text">When you use our service, we automatically collect:</p>
+            <ul class="content-list">
+                <li><strong>Usage Data:</strong> Pages visited, features used, time spent on the platform</li>
+                <li><strong>Device Information:</strong> Browser type, operating system, IP address, and device identifiers</li>
+                <li><strong>Session Information:</strong> Login times, session duration, and activity logs for security purposes</li>
+                <li><strong>Cookies:</strong> Authentication cookies and preference storage (see Section 6)</li>
+            </ul>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">1.3 Payment Information</h3>
+            <p class="content-text">
+                We use Stripe to process payments for Professional subscriptions. We do not store your credit card information on our servers. Stripe collects and processes your payment information in accordance with their <a href="https://stripe.com/privacy" target="_blank" rel="noopener" style="color: #667eea; text-decoration: underline;">Privacy Policy</a>.
+            </p>
+
+            <h2 class="content-section-heading">2. How We Use Your Information</h2>
+            <p class="content-text">We use the information we collect to:</p>
+            <ul class="content-list">
+                <li><strong>Provide the Service:</strong> Create and manage your account, store your leads and tasks, and deliver core CRM functionality</li>
+                <li><strong>Improve User Experience:</strong> Personalize your dashboard, remember your preferences, and optimize performance</li>
+                <li><strong>Send Communications:</strong> Email verification, password resets, billing notifications, and important service updates</li>
+                <li><strong>Security and Fraud Prevention:</strong> Detect and prevent unauthorized access, abuse, and fraudulent activity</li>
+                <li><strong>Analytics and Development:</strong> Understand how users interact with the platform and identify areas for improvement</li>
+                <li><strong>Legal Compliance:</strong> Comply with applicable laws, regulations, and legal processes</li>
+            </ul>
+
+            <h2 class="content-section-heading">3. How We Share Your Information</h2>
+            <p class="content-text">
+                We do not sell your personal information to third parties. We may share your information in the following limited circumstances:
+            </p>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">3.1 Service Providers</h3>
+            <ul class="content-list">
+                <li><strong>Supabase:</strong> Our database and authentication provider (see <a href="https://supabase.com/privacy" target="_blank" rel="noopener" style="color: #667eea; text-decoration: underline;">Supabase Privacy Policy</a>)</li>
+                <li><strong>Stripe:</strong> Our payment processor for subscriptions</li>
+                <li><strong>Railway:</strong> Our hosting provider for the backend server</li>
+            </ul>
+            <p class="content-text">
+                These providers are bound by contractual obligations to protect your data and only use it to provide services to us.
+            </p>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">3.2 Legal Requirements</h3>
+            <p class="content-text">
+                We may disclose your information if required to do so by law, court order, subpoena, or to protect the rights, property, or safety of Steady Scaling LLC, our users, or the public.
+            </p>
+
+            <h3 class="content-text" style="font-weight: 600; color: #1a202c;">3.3 Business Transfers</h3>
+            <p class="content-text">
+                In the event of a merger, acquisition, or sale of assets, your information may be transferred to the new owner. We will notify you via email or dashboard notification before your information is transferred and becomes subject to a different privacy policy.
+            </p>
+
+            <h2 class="content-section-heading">4. Data Security</h2>
+            <p class="content-text">
+                We implement industry-standard security measures to protect your information, including:
+            </p>
+            <ul class="content-list">
+                <li><strong>Encryption:</strong> All data transmitted to and from SteadyManager is encrypted using HTTPS/TLS</li>
+                <li><strong>Password Protection:</strong> Passwords are hashed using bcrypt before storage</li>
+                <li><strong>Row-Level Security (RLS):</strong> Database policies ensure users can only access their own data</li>
+                <li><strong>Email Verification:</strong> Required before accessing the dashboard to prevent unauthorized account creation</li>
+                <li><strong>XSS Protection:</strong> All user-generated content is sanitized to prevent cross-site scripting attacks</li>
+                <li><strong>Regular Monitoring:</strong> Automated systems detect and respond to suspicious activity</li>
+            </ul>
+            <p class="content-text">
+                However, no system is 100% secure. While we strive to protect your data, we cannot guarantee absolute security. You use the service at your own risk.
+            </p>
+
+            <h2 class="content-section-heading">5. Data Retention</h2>
+            <p class="content-text">
+                We retain your information for as long as your account is active or as needed to provide the service. If you delete your account, we will permanently delete your data within 30 days, except where we are required to retain it for legal or compliance purposes.
+            </p>
+            <p class="content-text">
+                You can export your data at any time through the dashboard before deleting your account.
+            </p>
+
+            <h2 class="content-section-heading">6. Cookies and Tracking</h2>
+            <p class="content-text">
+                We use cookies to provide essential functionality:
+            </p>
+            <ul class="content-list">
+                <li><strong>Authentication Cookies:</strong> To keep you logged in and verify your identity (required)</li>
+                <li><strong>Preference Cookies:</strong> To remember your theme and settings (optional)</li>
+            </ul>
+            <p class="content-text">
+                We do not use third-party advertising or tracking cookies. You can disable cookies in your browser settings, but this may limit your ability to use certain features.
+            </p>
+
+            <h2 class="content-section-heading">7. Your Rights and Choices</h2>
+            <p class="content-text">
+                You have the following rights regarding your personal information:
+            </p>
+            <ul class="content-list">
+                <li><strong>Access:</strong> View your profile and account information in the dashboard</li>
+                <li><strong>Update:</strong> Edit your account settings, leads, and tasks at any time</li>
+                <li><strong>Export:</strong> Download your leads and tasks as CSV files</li>
+                <li><strong>Delete:</strong> Permanently delete your account and all associated data through the dashboard</li>
+                <li><strong>Opt-Out:</strong> Unsubscribe from non-essential emails (verification and billing emails cannot be opted out of)</li>
+            </ul>
+            <p class="content-text">
+                To exercise these rights, visit your account settings or contact us at <strong>support@steadymanager.com</strong>.
+            </p>
+
+            <h2 class="content-section-heading">8. Children's Privacy</h2>
+            <p class="content-text">
+                SteadyManager is not intended for users under the age of 18. We do not knowingly collect personal information from children. If we discover that we have inadvertently collected information from a child, we will delete it immediately. If you believe a child has provided us with personal information, please contact us at <strong>support@steadymanager.com</strong>.
+            </p>
+
+            <h2 class="content-section-heading">9. International Data Transfers</h2>
+            <p class="content-text">
+                SteadyManager is operated in the United States. If you are accessing the service from outside the U.S., your information may be transferred to, stored, and processed in the United States. By using the service, you consent to the transfer of your information to the United States.
+            </p>
+
+            <h2 class="content-section-heading">10. Changes to This Privacy Policy</h2>
+            <p class="content-text">
+                We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements. When we make changes, we will update the "Last Updated" date at the top of this page and notify you via email or dashboard notification. Your continued use of the service after changes constitutes acceptance of the updated policy.
+            </p>
+
+            <h2 class="content-section-heading">11. Contact Us</h2>
+            <p class="content-text">
+                If you have questions or concerns about this Privacy Policy or our data practices, please contact us:
+            </p>
+            <ul class="content-list">
+                <li><strong>Email:</strong> support@steadymanager.com</li>
+                <li><strong>Company:</strong> Steady Scaling LLC</li>
+                <li><strong>Contact Page:</strong> <a href="/pages/contact.html" style="color: #667eea; text-decoration: underline;">Contact Us</a></li>
+            </ul>
+
+            <div class="last-updated">
+                Last Updated: January 1, 2025 | Version 1.0
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">SteadyManager</div>
+                <p class="footer-description">
+                    Simple lead management that scales with your business.
+                    Built by Steady Scaling LLC for real sales professionals.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Product</h4>
+                <ul class="footer-links">
+                    <li><a href="/pages/features.html">Features</a></li>
+                    <li><a href="/pages/pricing.html">Pricing</a></li>
+                    <li><a href="/#demo">How It Works</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Company</h4>
+                <ul class="footer-links">
+                    <li><a href="/pages/about.html">About</a></li>
+                    <li><a href="/pages/contact.html">Contact</a></li>
+                    <li><a href="/pages/privacy.html">Privacy</a></li>
+                    <li><a href="/pages/terms.html">Terms</a></li>
+                    <li><a href="/auth/login.html">Sign In</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2025 SteadyManager - A Steady Scaling LLC Product. Built to help you scale steadily.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('active');
+            this.textContent = mobileMenu.classList.contains('active') ? '' : '0';
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+                mobileMenuBtn.textContent = '0';
+            });
+        });
+
+        // Enhanced navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 100) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                navbar.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.1)';
+            } else {
+                navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.boxShadow = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
