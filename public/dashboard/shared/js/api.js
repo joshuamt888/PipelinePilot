@@ -109,6 +109,19 @@ class TierScalingAPI {
   }
 
   /**
+   * Check if user has accepted Terms of Service
+   * Returns acceptance status and timestamp
+   */
+  static async checkTosAcceptance() {
+    const profile = await this.getProfile();
+    return {
+      accepted: profile.tos_accepted_at !== null,
+      acceptedAt: profile.tos_accepted_at,
+      version: profile.tos_version
+    };
+  }
+
+  /**
    * Accept Terms of Service
    * Calls secure database function that updates tos_accepted_at field
    * This field is protected and can only be set once via SECURITY DEFINER function
