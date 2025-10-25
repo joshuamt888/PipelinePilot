@@ -669,11 +669,8 @@ modal.addEventListener('mouseup', (e) => {
     addlead_closeLeadView() {
         const leadView = document.querySelector('.addlead-lead-view-overlay');
         if (leadView) {
-            leadView.style.opacity = '0';
-            setTimeout(() => {
-                leadView.remove();
-                this.addlead_state.currentViewLead = null;
-            }, 300);
+            leadView.remove();
+            this.addlead_state.currentViewLead = null;
         }
     },
 
@@ -3763,8 +3760,6 @@ addlead_showCustomSourceInput(targetInput) {
                 justify-content: center;
                 z-index: 10002;
                 padding: 2rem;
-                opacity: 1;
-                transition: opacity 0.3s ease;
             }
 
             .addlead-lead-view {
