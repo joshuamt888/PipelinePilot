@@ -1,64 +1,84 @@
 # Analytics Setup (Optional)
 
-PostHog analytics is disabled by default. To enable it:
+PostHog analytics is ready to use - just add your key!
 
-## Step 1: Add Environment Variable to Railway
+## Quick Setup (3 Steps)
 
-In your Railway project dashboard:
+### Step 1: Sign Up for PostHog
+- Go to [posthog.com](https://posthog.com) and create a free account
+- Free tier includes: 1M events/month, unlimited seats, session replays
 
-```bash
-POSTHOG_API_KEY=phc_your_actual_key_here
-```
+### Step 2: Get Your API Key
+- In PostHog dashboard, go to Project Settings
+- Copy your "Project API Key" (starts with `phc_`)
 
-## Step 2: Create Backend Endpoint
-
-Add this to your Railway Node.js backend (e.g., `server.js` or `index.js`):
-
+### Step 3: Add Key to Code
+Open `/public/dashboard/shared/js/analytics.js` and replace this line:
 ```javascript
-// GET /api/config/analytics
-app.get('/api/config/analytics', (req, res) => {
-  const posthogKey = process.env.POSTHOG_API_KEY;
-
-  if (!posthogKey) {
-    return res.status(404).json({ error: 'Analytics not configured' });
-  }
-
-  res.json({
-    posthogKey: posthogKey
-  });
-});
+const POSTHOG_KEY = 'YOUR_POSTHOG_KEY_HERE';
 ```
 
-## Step 3: Enable Analytics in Frontend
-
-Uncomment the code in `/public/dashboard/shared/js/analytics.js`
-
-## Step 4: Import in Your Pages
-
-Add to registration page (`/public/auth/register.html`):
-
-```html
-<script type="module">
-  import { initAnalytics } from '/dashboard/shared/js/analytics.js';
-  initAnalytics();
-</script>
+With your actual key:
+```javascript
+const POSTHOG_KEY = 'phc_your_actual_key_here_from_posthog';
 ```
 
-## Why This Approach?
+That's it! Deploy and analytics will work.
 
-- ✅ No hardcoded keys in public files
-- ✅ Key stored securely in Railway env vars
-- ✅ Backend serves key only when configured
-- ✅ Easy to enable/disable analytics
-- ✅ Follows security best practices
+## How It Works
 
-## PostHog Public Key Notes
+**Local Development:**
+- Analytics auto-disabled when running on `localhost` or `127.0.0.1`
+- No events sent to PostHog during local testing
 
-PostHog's public API key (`phc_*`) is designed for client-side use and is safe to expose (it only allows sending events, not reading data). However, using env vars is still better practice for:
-- Easier key rotation
-- Centralized config management
-- Avoiding accidental key commits to Git
+**Production:**
+- Analytics enabled automatically when deployed
+- Respects "Do Not Track" browser settings
+- Tracks pageviews, button clicks, user flows
 
-## Legal Disclosure
+## Why PostHog Keys Are Safe to Hardcode
 
-The Terms of Service and Privacy Policy already include PostHog disclosure (Section 6 in both files), so you're covered legally when you enable it.
+PostHog's public API keys (`phc_*`) are **write-only**:
+- ✅ Can ONLY send events to PostHog
+- ✅ CANNOT read your analytics data
+- ✅ CANNOT modify your PostHog settings
+- ✅ Designed to be in frontend code
+
+This is different from secret keys (API keys, database passwords, etc.) which should NEVER be hardcoded.
+
+## Legal Compliance
+
+Your Terms of Service and Privacy Policy already disclose PostHog usage:
+- ✅ Terms Section 6: Analytics disclosure
+- ✅ Privacy Section 3.1: PostHog listed as service provider
+- ✅ Privacy Section 6: Analytics cookies explained
+
+You're legally covered when you enable analytics!
+
+## Features You Can Use
+
+Once enabled, PostHog provides:
+- **Event Tracking**: See what features users click
+- **Session Replays**: Watch how users navigate your app (privacy-friendly)
+- **Funnels**: Track conversion rates (signup → trial → paid)
+- **Feature Flags**: A/B test new features
+- **User Cohorts**: Segment users by behavior
+
+All included in the free tier!
+
+## Privacy Settings
+
+The analytics.js file is configured with privacy-first defaults:
+```javascript
+respect_dnt: true,              // Respects "Do Not Track" browser setting
+disable_session_recording: false // Session replays enabled (can disable if needed)
+```
+
+To disable session recording, change to:
+```javascript
+disable_session_recording: true
+```
+
+## Questions?
+
+PostHog docs: https://posthog.com/docs

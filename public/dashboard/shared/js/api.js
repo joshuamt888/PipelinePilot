@@ -523,29 +523,6 @@ class TierScalingAPI {
   // Reserved for Professional tier in future releases
   // Free tier users do not have access to 2FA features
 
-static async checkTosAcceptance() {
-    const profile = await this.getProfile();
-    return {
-        accepted: !!profile.tos_accepted_at,
-        acceptedAt: profile.tos_accepted_at,
-        version: profile.tos_version || '1.0'
-    };
-}
-
-static async acceptTos(version = '1.0') {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { error } = await supabase
-        .from('users')
-        .update({
-            tos_accepted_at: new Date().toISOString(),
-            tos_version: version
-        })
-        .eq('id', user.id);
-    
-    if (error) throw error;
-    return { success: true };
-}
 
   // =====================================================
   // ACCOUNT MANAGEMENT
