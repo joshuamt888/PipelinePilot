@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - SteadyManager</title>
     <meta name="description" content="Create your free SteadyManager account and start managing leads today.">
-    
+
+    <!-- PostHog Analytics -->
+    <script>
+        !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+        posthog.init('YOUR_POSTHOG_KEY',{api_host:'https://app.posthog.com'})
+    </script>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     
     <style>
@@ -412,6 +418,39 @@
             color: #64748b;
         }
 
+        .tos-checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .tos-checkbox {
+            margin-top: 0.25rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .tos-text {
+            color: #374151;
+        }
+
+        .tos-text a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .tos-text a:hover {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
@@ -536,6 +575,16 @@
                         autocomplete="new-password"
                         placeholder="Confirm your password"
                     >
+                </div>
+
+                <div class="form-group">
+                    <label class="tos-checkbox-label">
+                        <input type="checkbox" id="tosAccept" class="tos-checkbox" required>
+                        <span class="tos-text">
+                            I agree to the <a href="/pages/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                            and <a href="/pages/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                        </span>
+                    </label>
                 </div>
 
                 <button type="submit" class="submit-btn" id="submitBtn">
@@ -757,11 +806,27 @@
                 return;
             }
             
+            // Check ToS acceptance
+            const tosCheckbox = document.getElementById('tosAccept');
+            if (!tosCheckbox.checked) {
+                showError('You must accept the Terms of Service and Privacy Policy to continue.');
+                setLoading(false);
+                return;
+            }
+
             // SIMPLIFIED: Just try to register
             // Supabase will handle duplicate detection
             try {
                 await API.register(email, password, 'free');
-                
+
+                // Accept ToS after successful registration
+                try {
+                    await API.acceptTos('1.0');
+                } catch (tosError) {
+                    console.error('ToS acceptance error (non-fatal):', tosError);
+                    // Non-fatal - continue with registration flow
+                }
+
                 // Success - show verification screen
                 showVerificationSection(email);
                 showSuccess('Account created! Check your email to verify your account.');
