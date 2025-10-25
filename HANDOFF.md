@@ -33,6 +33,14 @@ All auth pages migrated to Supabase:
 - Secure session handling via Supabase Auth
 - CSP headers blocking inline scripts
 
+**Terms of Service Acceptance (100% ✅):**
+- Required checkbox on registration page (cannot register without acceptance)
+- Calls `API.acceptTos('1.0')` after successful account creation
+- Uses secure database function: `accept_terms_of_service(version)`
+- `tos_accepted_at` field protected by RLS - can only be set via SECURITY DEFINER function
+- Backend verification prevents client-side bypass
+- Legal docs updated with PostHog disclosure and periodic review language
+
 ### Dashboard Core (100% ✅)
 
 - **Main Router**: `/dashboard/index.html` - Tier detection & trial expiration handling
@@ -57,6 +65,38 @@ All auth pages migrated to Supabase:
 - Trial upgrade with abuse prevention
 
 **Supabase Client**: `/public/dashboard/shared/js/supabase.js` - Initialized and ready
+
+### Analytics (Ready for Launch 🎯)
+
+**Location**: `/public/dashboard/shared/js/analytics.js`
+
+**Status**: Configured and ready to enable before launch
+
+**Setup**:
+- PostHog analytics framework implemented
+- Auto-disables on localhost (no events sent during local dev)
+- Privacy-first defaults (respects "Do Not Track")
+- Legal disclosure already in Terms & Privacy pages
+
+**To Enable Before Launch**:
+1. Sign up at posthog.com (free tier: 1M events/month)
+2. Get project API key (starts with `phc_`)
+3. Replace `YOUR_POSTHOG_KEY_HERE` in analytics.js with actual key
+4. Deploy - analytics will start tracking production usage
+
+**Why PostHog keys are safe to hardcode**:
+- PostHog public keys are write-only (cannot read data)
+- Designed for client-side use
+- Different from actual secrets (DB passwords, API keys)
+
+**Features Available**:
+- Event tracking (button clicks, feature usage)
+- Session replays (privacy-friendly)
+- Funnels (signup → trial → paid conversion)
+- Feature flags (A/B testing)
+- User cohorts (behavior segmentation)
+
+**See**: `ANALYTICS_SETUP.md` for detailed instructions
 
 ### Frontend Modules (5/5 Complete ✅)
 
@@ -642,7 +682,84 @@ Railway automatically:
 - ✅ Open Pipeline modal, select text, drag outside, release → Modal stays open
 - ✅ Open Settings modal, select text, drag outside, release → Modal stays open
 
-### Phase 4: Create PRO Tier Files (4-6 hours)
+### Phase 4: Trial & Upgrade Testing (CRITICAL - Test Before Launch)
+
+**Trial Upgrade Flow:**
+- ❌ Login as free tier user (current_lead_limit: 50, user_type: 'free')
+- ❌ Navigate to Settings → Trial Upgrade section
+- ❌ Click "Start 14-Day Free Trial"
+- ❌ Verify database updates:
+  - `user_type` → 'professional_trial'
+  - `trial_start_date` → today's date
+  - `trial_end_date` → today + 14 days
+  - `current_lead_limit` → 5000
+- ❌ Verify dashboard shows trial badge/indicator
+- ❌ Verify can now add more than 50 leads (test adding 100 leads)
+- ❌ Dashboard stats should reflect new 5,000 limit
+
+**Trial Abuse Prevention:**
+- ❌ Try to start trial again → should be blocked with error message
+- ❌ Verify `trial_end_date` field is never null after trial starts
+- ❌ Verify `upgrade_to_trial()` database function blocks repeat trials
+- ❌ Test with fresh account → trial should work
+- ❌ Test with account that previously had trial → should be blocked
+
+**Trial Expiration Testing (AUTOMATED):**
+- ❌ Manually set `trial_end_date` to yesterday in database
+- ❌ Wait for cron job (runs daily at 2:00 AM) OR call test endpoint
+- ❌ Verify database updates:
+  - `user_type` → 'free'
+  - `current_lead_limit` → 50
+  - `trial_end_date` → stays set (not erased - prevents re-trial)
+- ❌ Verify can no longer add >50 leads
+- ❌ Verify dashboard shows free tier limits
+
+**Trial Expiration Test Endpoint** (FOR TESTING ONLY - REMOVE BEFORE PRODUCTION):
+```bash
+# Call this to trigger trial expiration check without waiting for cron
+curl -X POST http://localhost:3000/test/expire-trials
+```
+
+**Upgrade to Paid (Manual SQL for now):**
+- ❌ Test upgrading trial user to paid professional:
+  ```sql
+  UPDATE users
+  SET user_type = 'professional',
+      current_lead_limit = 5000
+  WHERE email = 'test@example.com';
+  ```
+- ❌ Verify 5,000 lead limit persists
+- ❌ Verify dashboard shows professional tier
+- ❌ Verify trial badge removed
+
+**Downgrade Testing:**
+- ❌ User with 100 leads downgrades to free tier
+- ❌ Verify `current_lead_limit` → 50
+- ❌ Verify can still VIEW all 100 existing leads
+- ❌ Verify CANNOT add new lead (51st) → shows upgrade message
+- ❌ Verify existing leads remain intact (no data loss)
+
+**Edge Cases:**
+- ❌ User with exactly 50 leads upgrades to trial → should work
+- ❌ User with 0 leads upgrades to trial → should work
+- ❌ User cancels trial mid-way (manual SQL) → should revert to free
+- ❌ Trial user tries to delete account → should work (test cascade delete)
+
+**Database Function Testing:**
+```sql
+-- Test upgrade_to_trial() function
+SELECT upgrade_to_trial();
+
+-- Test expire_trials() function
+SELECT expire_trials();
+
+-- Check user state after each call
+SELECT user_type, trial_start_date, trial_end_date, current_lead_limit
+FROM users
+WHERE email = 'test@example.com';
+```
+
+### Phase 5: Create PRO Tier Files (4-6 hours)
 
 **Directory Structure:**
 ```
@@ -667,7 +784,7 @@ Railway automatically:
 - Subscription management in Settings
 - 5,000 lead capacity
 
-### Phase 5: Test PRO Tier (1 hour)
+### Phase 6: Test PRO Tier (1 hour)
 
 Similar to Free tier testing, but verify:
 - ❌ Pro tier loads correct dashboard
@@ -676,6 +793,91 @@ Similar to Free tier testing, but verify:
 - ❌ Subscription management works
 - ❌ Can downgrade to free (via Stripe webhook)
 - ❌ Trial users see trial expiration date
+
+---
+
+## 🚀 PRE-LAUNCH CHECKLIST
+
+**Complete these tasks before going live:**
+
+### 1. Analytics Setup (Optional but Recommended)
+- ❌ Sign up for PostHog at posthog.com
+- ❌ Get project API key (starts with `phc_`)
+- ❌ Replace `YOUR_POSTHOG_KEY_HERE` in `/public/dashboard/shared/js/analytics.js`
+- ❌ Deploy and verify analytics events are being tracked
+- ❌ Set up key funnels: Registration → Email Verify → Dashboard → Trial → Paid
+
+### 2. Trial & Upgrade Testing
+- ❌ Complete ALL Phase 4 trial testing checklist above
+- ❌ Verify trial upgrade works end-to-end
+- ❌ Verify trial expiration automation works
+- ❌ Test abuse prevention (can't retake trial)
+- ❌ **CRITICAL**: Remove test endpoint from server.js before production:
+  ```javascript
+  // DELETE THIS BEFORE PRODUCTION:
+  app.post('/test/expire-trials', async (req, res) => { ... })
+  ```
+
+### 3. Security Audit
+- ❌ Verify all ToS acceptance working (registration checkbox + backend function)
+- ❌ Test XSS protection on all user inputs
+- ❌ Verify RLS policies block unauthorized access
+- ❌ Check for console errors in production
+- ❌ Verify CSP headers are enforced
+- ❌ Test password reset flow for security issues
+- ❌ Verify email verification is enforced
+
+### 4. Legal & Compliance
+- ✅ Terms of Service page complete with PostHog disclosure
+- ✅ Privacy Policy page complete with PostHog disclosure
+- ✅ ToS acceptance enforced at registration
+- ✅ "Check periodically" language added to legal pages
+- ❌ Review legal docs one final time before launch
+- ❌ Update "Last Updated" dates in Terms & Privacy if needed
+
+### 5. Environment Variables Check
+- ❌ Verify all Railway env vars are set:
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `PORT` (optional, defaults to 3000)
+- ❌ Verify Stripe webhook endpoint is configured
+- ❌ Test Stripe webhooks in test mode before going live
+
+### 6. Mobile Testing
+- ❌ Complete Phase 2 mobile testing checklist
+- ❌ Test on real iPhone
+- ❌ Test on real Android device
+- ❌ Test on iPad/tablet
+- ❌ Verify all touch interactions work
+- ❌ Check responsive design at all breakpoints
+
+### 7. Performance Check
+- ❌ Dashboard loads in < 2 seconds
+- ❌ No memory leaks (test prolonged usage)
+- ❌ API calls are optimized (not making duplicate requests)
+- ❌ Images are optimized
+- ❌ Check Lighthouse score (aim for 90+ performance)
+
+### 8. Final Code Cleanup
+- ❌ Remove all console.log() debug statements
+- ❌ Remove test endpoints from server.js
+- ❌ Remove commented-out code
+- ❌ Verify no hardcoded test data
+- ❌ Check for TODO comments and address them
+
+### 9. Documentation
+- ✅ HANDOFF.md updated with latest changes
+- ✅ ANALYTICS_SETUP.md created
+- ❌ Create simple user guide (optional)
+- ❌ Document any known limitations
+
+### 10. Backup & Rollback Plan
+- ❌ Document current production state
+- ❌ Have rollback plan if launch issues occur
+- ❌ Backup Supabase database before major changes
+- ❌ Know how to quickly disable new user registrations if needed
 
 ---
 
@@ -725,7 +927,17 @@ Similar to Free tier testing, but verify:
    - Cron job running daily at 2:00 AM
    - Test endpoint added (remove after testing)
 
-4. **Mobile Optimization (2-3 hours)** - CURRENT PRIORITY
+4. **✅ ToS Acceptance at Registration** - COMPLETE
+   - Required checkbox added to registration
+   - Backend verification via secure database function
+   - Legal pages updated with PostHog disclosure
+
+5. **✅ Analytics Framework** - COMPLETE (Ready to Enable)
+   - PostHog integration implemented
+   - Auto-disables on localhost
+   - Just need to add API key before launch
+
+6. **Mobile Optimization (2-3 hours)** - CURRENT PRIORITY
    - ❌ Add responsive CSS to Dashboard.js (metrics grid)
    - ❌ Add touch support to Pipeline.js drag-and-drop
    - ❌ Optimize AddLead.js forms for mobile
@@ -734,52 +946,97 @@ Similar to Free tier testing, but verify:
    - ❌ Test sidebar hamburger menu behavior
    - ❌ Verify all touch targets are 44px minimum
 
-5. **Test Free Tier Mobile (1 hour)**
+7. **Test Free Tier Mobile (1 hour)**
    - ❌ Complete mobile testing checklist above
    - ❌ Fix any mobile-specific bugs
    - ❌ Document any issues
 
-6. **Create Pro Tier Files (4-6 hours)**
+8. **CRITICAL: Trial & Upgrade Testing (2-3 hours)** - TEST BEFORE LAUNCH
+   - ❌ Complete ALL Phase 4 trial testing checklist
+   - ❌ Test trial upgrade flow end-to-end
+   - ❌ Test trial expiration automation
+   - ❌ Test abuse prevention (can't retake trial)
+   - ❌ Test downgrade scenarios
+   - ❌ Verify database functions work correctly
+   - ❌ Remove test endpoint from server.js before production
+
+9. **Pre-Launch Checklist (1-2 hours)**
+   - ❌ Set up PostHog analytics (optional but recommended)
+   - ❌ Complete security audit
+   - ❌ Verify all environment variables
+   - ❌ Test Stripe webhooks
+   - ❌ Final code cleanup
+   - ❌ Remove console.log statements
+   - ❌ Remove test endpoints
+
+10. **Create Pro Tier Files (4-6 hours)** - FUTURE
    - ❌ Copy free tier structure
    - ❌ Add pro-only features
    - ❌ Increase limits to 5,000
    - ❌ Add subscription management
    - ❌ Test pro tier
 
-7. **Final Testing (1 hour)** - LAUNCH READY
+11. **Final Testing & Launch (1 hour)**
+   - ❌ Complete pre-launch checklist
    - ❌ Test both tiers
    - ❌ Test tier transitions
-   - ❌ Test trial expiration (quick endpoint test)
    - ❌ Security audit
    - ❌ Deploy to production
+   - ❌ Monitor for issues
 
 ---
 
 ## 📊 CURRENT STATUS SUMMARY
 
-**Total Estimated Time to Launch**: ~6-8 hours remaining
+**Total Estimated Time to Launch**: ~10-15 hours remaining
 
 **Current Blocker**: Mobile responsiveness optimization
 
-**Next Milestone**: Free tier mobile-optimized and production-ready
+**Critical Pre-Launch Tasks**: Trial testing, analytics setup, security audit
+
+**Next Milestone**: Free tier production-ready with trial/upgrade fully tested
 
 ### What's Working:
 - ✅ Backend infrastructure (Supabase + Railway)
 - ✅ Authentication system (all flows)
+- ✅ ToS acceptance at registration (legally compliant)
 - ✅ Dashboard core (all 5 modules)
-- ✅ API layer (600 lines, secure)
+- ✅ API layer (~700 lines, secure, XSS-protected)
 - ✅ Desktop experience (fully functional)
-- ✅ Modal bug fixed
-- ✅ Settings page complete
-- ✅ Trial expiration automation (cron job)
+- ✅ Modal bug fixed (text selection safe)
+- ✅ Settings page complete (password, exports, delete account)
+- ✅ Trial expiration automation (cron job, database function)
+- ✅ Analytics framework ready (PostHog - just add key)
+- ✅ Legal pages updated (Terms & Privacy with PostHog disclosure)
 
-### What Needs Work:
-- ❌ Mobile responsive design
+### What Needs Testing Before Launch:
+- ❌ **CRITICAL**: Trial upgrade flow (Phase 4 checklist)
+- ❌ **CRITICAL**: Trial expiration automation (test with real data)
+- ❌ **CRITICAL**: Trial abuse prevention (can't retake trial)
+- ❌ Mobile responsive design (Phase 2 checklist)
 - ❌ Touch interaction optimization
-- ❌ Pro tier files (future)
+- ❌ Security audit (XSS, RLS, auth flows)
+- ❌ PostHog analytics setup (optional but recommended)
+- ❌ Remove test endpoint from server.js before production
+
+### What's Future Work (Post-Launch):
+- ❌ Pro tier files (copy + enhance from free)
+- ❌ Stripe subscription management UI
+- ❌ Advanced pro-only features
+
+### Key Reminders:
+- 🔴 **REMOVE** test endpoint `/test/expire-trials` before production
+- 🟡 **TEST** trial upgrade/downgrade thoroughly (Phase 4 checklist)
+- 🟢 **OPTIONAL** but recommended: Enable PostHog analytics
 
 ---
 
-**Document Version**: 2.2
-**Last Updated**: Post-Cron Job Implementation
+**Document Version**: 2.3
+**Last Updated**: Added Analytics, ToS, Trial Testing, Pre-Launch Checklist
+**Key Changes**:
+- Added ToS acceptance section
+- Added Analytics (PostHog) section
+- Added comprehensive trial/upgrade testing procedures (Phase 4)
+- Added 10-point pre-launch checklist
+- Updated priorities to emphasize trial testing before launch
 **Status**: Free Tier Desktop Complete + Trial Automation Live, Mobile Optimization In Progress
