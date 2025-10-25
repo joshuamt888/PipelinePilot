@@ -2070,19 +2070,27 @@ addlead_showCustomSourceInput(targetInput) {
     addlead_showDashboard() {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (container) {
+            // Fade out + scale down
             container.style.opacity = '0';
-            
+            container.style.transform = 'scale(0.95)';
+            container.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
             setTimeout(() => {
                 this.addlead_state.currentView = 'dashboard';
                 this.addlead_hideAllModals();
                 this.addlead_render();
-                
+
+                // Fade in + scale up from slightly larger
+                container.style.transform = 'scale(1.05)';
                 setTimeout(() => {
                     container.style.opacity = '1';
-                    this.addlead_state.isTransitioning = false;
+                    container.style.transform = 'scale(1)';
+                    setTimeout(() => {
+                        this.addlead_state.isTransitioning = false;
+                    }, 300);
                 }, 50);
             }, 300);
         }
@@ -2091,19 +2099,27 @@ addlead_showCustomSourceInput(targetInput) {
     addlead_showTableView() {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (container) {
+            // Fade out + scale down
             container.style.opacity = '0';
-            
+            container.style.transform = 'scale(0.95)';
+            container.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
             setTimeout(() => {
                 this.addlead_state.currentView = 'table';
                 this.addlead_hideAllModals();
                 this.addlead_render();
-                
+
+                // Fade in + scale up from slightly larger
+                container.style.transform = 'scale(1.05)';
                 setTimeout(() => {
                     container.style.opacity = '1';
-                    this.addlead_state.isTransitioning = false;
+                    container.style.transform = 'scale(1)';
+                    setTimeout(() => {
+                        this.addlead_state.isTransitioning = false;
+                    }, 300);
                 }, 50);
             }, 300);
         }
@@ -2439,8 +2455,8 @@ addlead_showCustomSourceInput(targetInput) {
     addlead_renderStyles() {
         return `
             <style>
-                /* AddLead Module v3.0 - Sharp Edition Styles */
-                
+                /* AddLead Module v4.0 - SICK AS FUCK Edition 🔥 */
+
                 .addlead-container {
                     max-width: 1400px;
                     margin: 0 auto;
@@ -2448,7 +2464,7 @@ addlead_showCustomSourceInput(targetInput) {
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 }
 
-                /* Action Bubbles */
+                /* Action Bubbles with INSANE gradients and floating animation */
                 .addlead-action-bubbles {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
@@ -2457,8 +2473,13 @@ addlead_showCustomSourceInput(targetInput) {
                 }
 
                 .addlead-action-bubble {
-                    background: var(--surface);
-                    border: 1px solid var(--border);
+                    position: relative;
+                    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-hover) 100%);
+                    border: 2px solid transparent;
+                    background-image: linear-gradient(var(--surface), var(--surface)),
+                                      linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+                    background-origin: border-box;
+                    background-clip: padding-box, border-box;
                     border-radius: var(--radius-lg);
                     padding: 2rem;
                     cursor: pointer;
@@ -2466,22 +2487,45 @@ addlead_showCustomSourceInput(targetInput) {
                     display: flex;
                     align-items: center;
                     gap: 2rem;
+                    overflow: hidden;
+                    animation: addlead-float 6s ease-in-out infinite;
+                }
+
+                @keyframes addlead-float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+
+                .addlead-action-bubble::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    pointer-events: none;
+                    z-index: 0;
                 }
 
                 .addlead-action-bubble:hover {
-                    transform: translateY(-4px);
-                    box-shadow: var(--shadow-xl);
-                    border-color: var(--primary);
+                    transform: translateY(-12px) scale(1.02);
+                    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+                    animation-play-state: paused;
+                }
+
+                .addlead-action-bubble:hover::before {
+                    opacity: 1;
                 }
 
                 .addlead-bubble-primary {
-                    border-color: rgba(102, 126, 234, 0.3);
-                    background: rgba(102, 126, 234, 0.02);
+                    animation-delay: 0s;
                 }
 
                 .addlead-bubble-secondary {
-                    border-color: rgba(16, 185, 129, 0.3);
-                    background: rgba(16, 185, 129, 0.02);
+                    animation-delay: 0.5s;
                 }
 
                 .addlead-bubble-icon {
@@ -2489,21 +2533,35 @@ addlead_showCustomSourceInput(targetInput) {
                     width: 80px;
                     height: 80px;
                     border-radius: var(--radius-lg);
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
+                    position: relative;
+                    z-index: 1;
+                    transition: all 0.3s ease;
+                }
+
+                .addlead-action-bubble:hover .addlead-bubble-icon {
+                    transform: scale(1.1) rotate(5deg);
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
                 }
 
                 .addlead-bubble-content {
                     flex: 1;
+                    position: relative;
+                    z-index: 1;
                 }
 
                 .addlead-bubble-title {
                     font-size: 1.5rem;
                     font-weight: 700;
                     margin-bottom: 0.5rem;
-                    color: var(--text-primary);
+                    background: var(--gradient-primary);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
                 }
 
                 .addlead-bubble-subtitle {
@@ -2517,6 +2575,7 @@ addlead_showCustomSourceInput(targetInput) {
                     align-items: center;
                     gap: 0.75rem;
                     background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background-size: 200% 200%;
                     color: white;
                     padding: 0.875rem 1.75rem;
                     border-radius: var(--radius);
@@ -2524,11 +2583,29 @@ addlead_showCustomSourceInput(targetInput) {
                     border: none;
                     cursor: pointer;
                     transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .addlead-bubble-button::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    transition: left 0.5s;
+                }
+
+                .addlead-bubble-button:hover::before {
+                    left: 100%;
                 }
 
                 .addlead-bubble-button:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+                    background-position: right center;
                 }
 
                 .addlead-arrow {
@@ -2809,12 +2886,36 @@ addlead_showCustomSourceInput(targetInput) {
                 }
 
                 .addlead-table-row {
-                    transition: background-color 0.3s ease;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     cursor: pointer;
+                    position: relative;
+                    border-left: 3px solid transparent;
+                }
+
+                .addlead-table-row::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 3px;
+                    background: var(--gradient-primary);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
                 }
 
                 .addlead-table-row:hover {
                     background: var(--surface-hover);
+                    transform: translateY(-2px) translateX(4px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+                }
+
+                .addlead-table-row:hover::before {
+                    opacity: 1;
+                }
+
+                .addlead-table-row:active {
+                    transform: translateY(0) translateX(2px);
                 }
 
                 .addlead-clickable-row {
@@ -2880,14 +2981,51 @@ addlead_showCustomSourceInput(targetInput) {
                     font-size: 0.8rem;
                     font-weight: 600;
                     text-transform: capitalize;
+                    transition: all 0.3s ease;
+                    border: 1px solid transparent;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
 
-                .addlead-status-new { background: rgba(59, 130, 246, 0.1); color: var(--info); }
-                .addlead-status-contacted { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-                .addlead-status-qualified { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-                .addlead-status-negotiation { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-                .addlead-status-closed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-                .addlead-status-lost { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+                .addlead-status-new {
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.25));
+                    color: var(--info);
+                    border-color: rgba(59, 130, 246, 0.3);
+                }
+
+                .addlead-status-contacted {
+                    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.25));
+                    color: var(--warning);
+                    border-color: rgba(245, 158, 11, 0.3);
+                }
+
+                .addlead-status-qualified {
+                    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.25));
+                    color: var(--success);
+                    border-color: rgba(16, 185, 129, 0.3);
+                }
+
+                .addlead-status-negotiation {
+                    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.25));
+                    color: #8b5cf6;
+                    border-color: rgba(139, 92, 246, 0.3);
+                }
+
+                .addlead-status-closed {
+                    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.25));
+                    color: var(--success);
+                    border-color: rgba(16, 185, 129, 0.3);
+                }
+
+                .addlead-status-lost {
+                    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.25));
+                    color: var(--danger);
+                    border-color: rgba(239, 68, 68, 0.3);
+                }
+
+                .addlead-table-row:hover .addlead-status-badge {
+                    transform: scale(1.05);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                }
 
                 .addlead-source-badge {
                     background: var(--surface-hover);
@@ -3126,22 +3264,22 @@ addlead_showCustomSourceInput(targetInput) {
                 box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
             }
 
-            /* Modals - INSTANT STYLE */
+            /* Modals - GLASSMORPHISM 🪟 */
             .addlead-modal-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(12px);
                 z-index: 10000;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 2rem;
                 opacity: 0;
-                transition: opacity 0.2s ease;
+                transition: all 0.3s ease;
             }
 
             .addlead-modal-overlay.addlead-show {
@@ -3149,14 +3287,32 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-modal {
-                background: var(--surface);
-                border-radius: var(--radius-lg);
-                box-shadow: var(--shadow-xl);
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(20px);
+                border-radius: 20px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
+                           0 0 80px rgba(102, 126, 234, 0.3);
                 width: 100%;
                 max-width: 600px;
                 max-height: 90vh;
                 overflow: hidden;
-                border: 1px solid var(--border);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                position: relative;
+            }
+
+            [data-theme="dark"] .addlead-modal {
+                background: rgba(26, 31, 46, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .addlead-modal::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: var(--gradient-primary);
             }
 
             .addlead-modal-header {
@@ -3230,12 +3386,26 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-form-textarea {
                 padding: 0.875rem 1rem;
                 border: 2px solid var(--border);
-                border-radius: var(--radius);
+                border-radius: 12px;
                 font-size: 0.95rem;
                 background: var(--background);
                 color: var(--text-primary);
-                transition: all 0.3s ease;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 font-family: inherit;
+                position: relative;
+            }
+
+            .addlead-form-input:focus,
+            .addlead-form-textarea:focus {
+                outline: none;
+                border: 2px solid transparent;
+                background-image: linear-gradient(var(--background), var(--background)),
+                                  var(--gradient-primary);
+                background-origin: border-box;
+                background-clip: padding-box, border-box;
+                box-shadow: 0 0 20px rgba(102, 126, 234, 0.6),
+                           0 0 40px rgba(102, 126, 234, 0.3);
+                transform: translateY(-1px);
             }
 
             .addlead-form-select {
@@ -3256,26 +3426,25 @@ addlead_showCustomSourceInput(targetInput) {
                 background-position: right 1rem center;
                 background-repeat: no-repeat;
                 background-size: 1.25rem;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
 
             .addlead-form-select:hover {
                 border-color: var(--primary);
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
             }
 
             .addlead-form-select:focus {
                 outline: none;
-                border-color: var(--primary);
-                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
-            }
-
-            .addlead-form-input:focus,
-            .addlead-form-textarea:focus {
-                outline: none;
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border: 2px solid transparent;
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"),
+                                  linear-gradient(var(--background), var(--background)),
+                                  var(--gradient-primary);
+                background-position: right 1rem center, border-box, border-box;
+                background-repeat: no-repeat, no-repeat, no-repeat;
+                background-origin: padding-box, border-box, border-box;
+                background-clip: padding-box, padding-box, border-box;
+                box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
             }
 
             /* Input Validation States */
@@ -3437,19 +3606,41 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-primary {
-                background: var(--primary);
+                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
                 color: white;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .addlead-btn-primary::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                animation: addlead-button-shine 3s infinite;
+            }
+
+            @keyframes addlead-button-shine {
+                0%, 100% { left: -100%; }
+                50% { left: 100%; }
             }
 
             .addlead-btn-primary:hover:not(:disabled) {
-                background: var(--primary-dark);
-                transform: translateY(-1px);
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
             }
 
             .addlead-btn-primary:disabled {
                 opacity: 0.6;
                 cursor: not-allowed;
+            }
+
+            .addlead-btn-primary:disabled::before {
+                display: none;
             }
 
             .addlead-btn-secondary {
