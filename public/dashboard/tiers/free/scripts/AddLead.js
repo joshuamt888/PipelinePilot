@@ -159,7 +159,7 @@ window.AddLeadModule = {
         const safePhone = API.escapeHtml(lead.phone || '');
         
         return `
-            <div class="addlead-recent-item addlead-clickable-item" onclick="AddLeadModule.addlead_editLead('${lead.id}')">
+            <div class="addlead-recent-item addlead-clickable-item" onclick="AddLeadModule.addlead_showLeadView('${lead.id}')">
                 <div class="addlead-recent-avatar">
                     <span class="addlead-avatar-text">${initials}</span>
                 </div>
@@ -262,7 +262,7 @@ window.AddLeadModule = {
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
         
         return `
-            <tr class="addlead-table-row addlead-clickable-row" onclick="AddLeadModule.addlead_editLead('${lead.id}')">
+            <tr class="addlead-table-row addlead-clickable-row" onclick="AddLeadModule.addlead_showLeadView('${lead.id}')">
                 <td class="addlead-lead-cell">
                     <div class="addlead-lead-info">
                         <div class="addlead-lead-avatar">
@@ -517,6 +517,142 @@ modal.addEventListener('mouseup', (e) => {
                 </div>
             </form>
         `;
+    },
+
+    // LEAD DETAIL VIEW - Shows full lead info with edit/delete options
+    addlead_showLeadView(leadId) {
+        if (this.addlead_state.isTransitioning) return;
+        const lead = this.addlead_state.leads.find(l => l.id.toString() === leadId.toString());
+        if (!lead) return;
+
+        this.addlead_state.currentViewLead = lead;
+
+        const initials = this.addlead_getInitials(lead.name);
+        const statusClass = this.addlead_getStatusClass(lead.status);
+        const qualityLabel = this.addlead_getQualityLabel(lead.quality_score || 5);
+
+        const safeName = API.escapeHtml(lead.name);
+        const safeCompany = API.escapeHtml(lead.company || '');
+        const safeEmail = API.escapeHtml(lead.email || '');
+        const safePhone = API.escapeHtml(lead.phone || '');
+        const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
+        const safeNotes = API.escapeHtml(lead.notes || '');
+        const safeType = lead.type === 'warm' ? '🔥 Warm Lead' : '❄️ Cold Lead';
+
+        const leadView = document.createElement('div');
+        leadView.className = 'addlead-lead-view-overlay';
+        leadView.innerHTML = `
+            <div class="addlead-lead-view" onclick="event.stopPropagation()">
+                <button class="addlead-close-btn" onclick="AddLeadModule.addlead_closeLeadView()">×</button>
+
+                <div class="addlead-lead-view-body">
+                    <div class="addlead-lead-header-section">
+                        <div class="addlead-lead-avatar-large">
+                            <span class="addlead-avatar-text-large">${initials}</span>
+                        </div>
+                        <div class="addlead-lead-header-info">
+                            <h2 class="addlead-main-lead-name">${safeName}</h2>
+                            ${safeCompany ? `<div class="addlead-lead-company-text">${safeCompany}</div>` : ''}
+                            <div class="addlead-lead-status-display">
+                                <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="addlead-lead-details-grid">
+                        ${safeEmail ? `
+                            <div class="addlead-detail-item">
+                                <div class="addlead-detail-label">Email:</div>
+                                <div class="addlead-detail-value">
+                                    <a href="mailto:${safeEmail}" class="addlead-contact-link">📧 ${safeEmail}</a>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${safePhone ? `
+                            <div class="addlead-detail-item">
+                                <div class="addlead-detail-label">Phone:</div>
+                                <div class="addlead-detail-value">
+                                    <a href="tel:${safePhone}" class="addlead-contact-link">📞 ${safePhone}</a>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="addlead-detail-item">
+                            <div class="addlead-detail-label">Lead Type:</div>
+                            <div class="addlead-detail-value">${safeType}</div>
+                        </div>
+
+                        <div class="addlead-detail-item">
+                            <div class="addlead-detail-label">Source:</div>
+                            <div class="addlead-detail-value">${safeSource}</div>
+                        </div>
+
+                        <div class="addlead-detail-item">
+                            <div class="addlead-detail-label">Potential Value:</div>
+                            <div class="addlead-detail-value addlead-value-highlight">
+                                ${lead.potential_value > 0 ? `$${lead.potential_value.toLocaleString()}` : '-'}
+                            </div>
+                        </div>
+
+                        <div class="addlead-detail-item">
+                            <div class="addlead-detail-label">Lead Quality:</div>
+                            <div class="addlead-detail-value">
+                                <span class="addlead-quality-badge">${lead.quality_score || 5}/10</span>
+                                <span class="addlead-quality-text">(${qualityLabel})</span>
+                            </div>
+                        </div>
+
+                        <div class="addlead-detail-item">
+                            <div class="addlead-detail-label">Added:</div>
+                            <div class="addlead-detail-value">${this.addlead_formatTimeAgo(lead.created_at)}</div>
+                        </div>
+                    </div>
+
+                    ${safeNotes ? `
+                        <div class="addlead-detail-item addlead-notes-section">
+                            <div class="addlead-detail-label">Notes:</div>
+                            <div class="addlead-detail-value addlead-notes-text">${safeNotes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="addlead-lead-view-actions">
+                    <button class="addlead-edit-lead-btn" id="leadViewEditBtn">
+                        ✏️ Edit Lead
+                    </button>
+                    <button class="addlead-delete-lead-btn" id="leadViewDeleteBtn">
+                        🗑️ Delete Lead
+                    </button>
+                </div>
+            </div>
+        `;
+
+        leadView.onclick = () => this.addlead_closeLeadView();
+
+        document.body.appendChild(leadView);
+
+        // Attach handlers after insertion
+        document.getElementById('leadViewEditBtn').onclick = () => {
+            this.addlead_closeLeadView();
+            this.addlead_editLead(lead.id);
+        };
+
+        document.getElementById('leadViewDeleteBtn').onclick = () => {
+            this.addlead_closeLeadView();
+            this.addlead_showDeleteConfirmation(lead.id);
+        };
+    },
+
+    addlead_closeLeadView() {
+        const leadView = document.querySelector('.addlead-lead-view-overlay');
+        if (leadView) {
+            leadView.style.opacity = '0';
+            setTimeout(() => {
+                leadView.remove();
+                this.addlead_state.currentViewLead = null;
+            }, 300);
+        }
     },
 
     // INSTANT EDIT LEAD MODAL - Dynamic creation
@@ -3663,6 +3799,238 @@ addlead_showCustomSourceInput(targetInput) {
 
             @keyframes addlead-spin {
                 to { transform: rotate(360deg); }
+            }
+
+            /* Lead Detail View Popup */
+            .addlead-lead-view-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(4px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10002;
+                padding: 2rem;
+                opacity: 1;
+                transition: opacity 0.3s ease;
+            }
+
+            .addlead-lead-view {
+                background: var(--surface);
+                border-radius: 20px;
+                position: relative;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                width: 100%;
+                max-width: 700px;
+                max-height: 90vh;
+                overflow: hidden;
+                border: 1px solid var(--border);
+            }
+
+            .addlead-close-btn {
+                background: transparent;
+                border: 1px solid var(--border);
+                color: var(--text-secondary);
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1.25rem;
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                z-index: 10;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .addlead-close-btn:hover {
+                background: var(--danger);
+                color: white;
+                border-color: var(--danger);
+            }
+
+            .addlead-lead-view-body {
+                padding: 1.5rem;
+                overflow-y: auto;
+                max-height: 65vh;
+            }
+
+            .addlead-lead-header-section {
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1.5rem;
+                border-bottom: 1px solid var(--border);
+                padding-right: 40px;
+            }
+
+            .addlead-lead-avatar-large {
+                width: 80px;
+                height: 80px;
+                border-radius: var(--radius-lg);
+                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 700;
+                font-size: 1.75rem;
+                flex-shrink: 0;
+            }
+
+            .addlead-avatar-text-large {
+                font-size: 1.75rem;
+            }
+
+            .addlead-lead-header-info {
+                flex: 1;
+            }
+
+            .addlead-main-lead-name {
+                font-size: 1.5rem;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin: 0 0 0.5rem 0;
+                line-height: 1.3;
+            }
+
+            .addlead-lead-company-text {
+                font-size: 0.95rem;
+                color: var(--text-secondary);
+                margin-bottom: 0.75rem;
+            }
+
+            .addlead-lead-status-display {
+                margin-top: 0.5rem;
+            }
+
+            .addlead-lead-details-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.25rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .addlead-detail-item {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .addlead-detail-label {
+                font-weight: 600;
+                color: var(--text-secondary);
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .addlead-detail-value {
+                font-weight: 400;
+                color: var(--text-primary);
+                font-size: 0.95rem;
+                line-height: 1.4;
+                word-wrap: break-word;
+            }
+
+            .addlead-contact-link {
+                color: var(--primary);
+                text-decoration: none;
+                transition: color 0.2s ease;
+            }
+
+            .addlead-contact-link:hover {
+                color: var(--primary-dark);
+                text-decoration: underline;
+            }
+
+            .addlead-value-highlight {
+                color: var(--success);
+                font-weight: 600;
+                font-size: 1.1rem;
+            }
+
+            .addlead-quality-badge {
+                display: inline-block;
+                background: rgba(102, 126, 234, 0.1);
+                color: var(--primary);
+                padding: 0.25rem 0.5rem;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+
+            .addlead-quality-text {
+                color: var(--text-secondary);
+                font-size: 0.85rem;
+                margin-left: 0.5rem;
+            }
+
+            .addlead-notes-section {
+                grid-column: 1 / -1;
+                padding-top: 1rem;
+                border-top: 1px solid var(--border);
+            }
+
+            .addlead-notes-text {
+                background: var(--surface-hover);
+                padding: 0.75rem;
+                border-radius: var(--radius);
+                border: 1px solid var(--border);
+                white-space: pre-wrap;
+            }
+
+            .addlead-lead-view-actions {
+                padding: 1rem 1.5rem;
+                background: var(--surface-hover);
+                border-top: 1px solid var(--border);
+                display: flex;
+                gap: 0.75rem;
+                justify-content: flex-end;
+            }
+
+            .addlead-edit-lead-btn,
+            .addlead-delete-lead-btn {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: var(--radius);
+                font-weight: 600;
+                font-size: 0.9rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .addlead-edit-lead-btn {
+                background: var(--primary);
+                color: white;
+            }
+
+            .addlead-edit-lead-btn:hover {
+                background: var(--primary-dark);
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+                transform: translateY(-1px);
+            }
+
+            .addlead-delete-lead-btn {
+                background: var(--danger);
+                color: white;
+            }
+
+            .addlead-delete-lead-btn:hover {
+                background: #dc2626;
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+                transform: translateY(-1px);
             }
 
             /* Delete Confirmation Modal */
