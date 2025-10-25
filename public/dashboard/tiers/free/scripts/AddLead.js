@@ -32,7 +32,7 @@ window.AddLeadModule = {
 
     // Init with fade-in
     async init(targetContainer = 'leads-content') {
-        console.log('AddLead v3.0 - Sharp Edition initializing...');
+        console.log('AddLead module loading');
         
         try {
             this.addlead_state.targetContainer = targetContainer;
@@ -52,7 +52,7 @@ window.AddLeadModule = {
                 if (container) container.style.opacity = '1';
             }, 50);
             
-            console.log('AddLead v3.0 ready');
+            console.log('AddLead module ready');
             
         } catch (error) {
             console.error('AddLead init failed:', error);
@@ -4023,5 +4023,5 @@ addlead_showCustomSourceInput(targetInput) {
 // Initialize
 if (typeof window !== 'undefined') {
 window.AddLeadModule = AddLeadModule;
-console.log('AddLead v3.0 - Sharp Edition loaded');
+console.log('AddLead module loaded');
 }

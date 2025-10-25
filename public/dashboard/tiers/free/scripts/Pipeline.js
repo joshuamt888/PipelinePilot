@@ -34,7 +34,7 @@ window.PipelineModule = {
 
     // Initialize
     async pipeline_init(targetContainer = 'pipeline-content') {
-        console.log('Pipeline v2.1 initializing...');
+        console.log('Pipeline module loading');
         
         this.showLoading();
         
@@ -42,7 +42,7 @@ window.PipelineModule = {
             await this.loadData();
             this.render();
             this.attachEvents();
-            console.log('Pipeline v2.1 ready');
+            console.log('Pipeline module ready');
         } catch (error) {
             console.error('Pipeline init failed:', error);
             this.showError('Failed to load pipeline');
@@ -1701,5 +1701,5 @@ if (typeof window !== 'undefined') {
     PipelineModule.init = function(targetContainer) {
         return this.pipeline_init(targetContainer);
     };
-    console.log('Pipeline Module v2.1 Final loaded - Modal Bug Fixed');
+    console.log('Pipeline module loaded');
 }
