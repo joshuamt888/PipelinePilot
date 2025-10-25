@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing - SteadyManager | Simple Lead Management That Scales</title>
-    <meta name="description" content="Choose the perfect SteadyManager plan for your business. Start free, upgrade when ready. Professional features from $6.99/month.">
-    
+    <title>Pricing - SteadyManager | Start Free, Upgrade When Ready</title>
+    <meta name="description" content="Simple, honest pricing. Start with 50 leads for free. Upgrade to 5,000 leads with Professional when you're ready. No hidden fees.">
+
     <!-- CDN Resources -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
         * {
             margin: 0;
@@ -153,7 +153,7 @@
         .hero {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 8rem 2rem 2rem;
+            padding: 8rem 2rem 3rem;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -182,63 +182,20 @@
             font-weight: 900;
             margin-bottom: 1rem;
             line-height: 1.1;
-            animation: fadeInUp 1s ease-out;
         }
 
         .hero-subtitle {
             font-size: 1.25rem;
             opacity: 0.9;
-            margin-bottom: 2rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            animation: fadeInUp 1s ease-out 0.2s both;
-        }
-
-        .company-info {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-            max-width: 600px;
-            margin: 0 auto;
-            animation: fadeInUp 1s ease-out 0.4s both;
-        }
-
-        .company-logo {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .company-tagline {
-            font-size: 0.9rem;
-            opacity: 0.85;
+            max-width: 700px;
+            margin: 0 auto 2rem;
         }
 
         /* Billing Toggle */
         .billing-section {
             background: #f8fafc;
-            padding: 3rem 2rem;
+            padding: 3rem 2rem 2rem;
             text-align: center;
-        }
-
-        .billing-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .billing-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #1a202c;
-            margin-bottom: 1rem;
-        }
-
-        .billing-subtitle {
-            color: #6b7280;
-            margin-bottom: 2rem;
         }
 
         .billing-toggle {
@@ -246,7 +203,7 @@
             align-items: center;
             justify-content: center;
             gap: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 0;
         }
 
         .billing-switch {
@@ -303,26 +260,26 @@
 
         /* Pricing Section */
         .pricing {
-            padding: 4rem 2rem;
-            background: white;
+            padding: 3rem 2rem 6rem;
+            background: #f8fafc;
         }
 
         .pricing-container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
         }
 
         .pricing-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 3rem;
             margin-top: 2rem;
         }
 
         .pricing-card {
             background: white;
             border-radius: 20px;
-            padding: 2.5rem;
+            padding: 3rem 2.5rem;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             border: 2px solid #e5e7eb;
@@ -332,14 +289,18 @@
         }
 
         .pricing-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
 
         .pricing-card.featured {
             border-color: #667eea;
             transform: scale(1.05);
-            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.25);
+        }
+
+        .pricing-card.featured:hover {
+            transform: scale(1.05) translateY(-8px);
         }
 
         .pricing-card.featured::before {
@@ -348,14 +309,14 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
+            height: 5px;
             background: linear-gradient(90deg, #667eea, #764ba2);
         }
 
         .pricing-badge {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 1.25rem;
             border-radius: 50px;
             font-size: 0.875rem;
             font-weight: 600;
@@ -364,14 +325,14 @@
         }
 
         .pricing-plan-name {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: #1a202c;
             margin-bottom: 1rem;
         }
 
         .pricing-amount {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: 900;
             color: #1a202c;
             margin-bottom: 0.5rem;
@@ -380,38 +341,41 @@
         .pricing-period {
             color: #6b7280;
             margin-bottom: 2rem;
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
 
         .pricing-features {
             list-style: none;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             text-align: left;
         }
 
         .pricing-features li {
-            padding: 0.75rem 0;
+            padding: 0.875rem 0;
             color: #4a5568;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            font-size: 0.95rem;
+            gap: 0.875rem;
+            font-size: 1rem;
+            border-bottom: 1px solid #f3f4f6;
         }
 
-        .pricing-features li::before {
-            content: '✓';
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features li i {
             color: #16a34a;
-            font-weight: bold;
+            font-size: 1.1rem;
             width: 20px;
             text-align: center;
-            font-size: 1.1rem;
         }
 
         .pricing-cta {
             width: 100%;
-            padding: 1rem 2rem;
+            padding: 1.125rem 2rem;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -442,23 +406,77 @@
             transform: translateY(-2px);
         }
 
+        /* Comparison Section */
+        .comparison {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .comparison-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            color: #1a202c;
+            margin-bottom: 3rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .comparison-table thead {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .comparison-table th {
+            padding: 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .comparison-table td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .check-icon {
+            color: #16a34a;
+            font-size: 1.3rem;
+        }
+
+        .cross-icon {
+            color: #dc2626;
+            font-size: 1.3rem;
+        }
+
         /* FAQ Section */
         .faq {
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
             background: #f8fafc;
         }
 
         .faq-container {
             max-width: 800px;
             margin: 0 auto;
-        }
-
-        .faq-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            text-align: center;
-            color: #1a202c;
-            margin-bottom: 3rem;
         }
 
         .faq-item {
@@ -511,13 +529,8 @@
         .cta-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
             text-align: center;
-        }
-
-        .cta-container {
-            max-width: 800px;
-            margin: 0 auto;
         }
 
         .cta-title {
@@ -532,44 +545,69 @@
             margin-bottom: 2rem;
         }
 
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+        .btn-white {
+            background: white;
+            color: #667eea;
+            padding: 1.125rem 2.5rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .btn-white:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
         }
 
         /* Footer */
         .footer {
             background: #1a202c;
             color: white;
-            padding: 2rem;
-            text-align: center;
+            padding: 3rem 2rem 2rem;
         }
 
-        .footer-content {
+        .footer-container {
             max-width: 1200px;
             margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-brand {
+            margin-bottom: 2rem;
         }
 
         .footer-logo {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 800;
+            margin-bottom: 1rem;
             background: linear-gradient(135deg, #667eea, #764ba2);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
+        .footer-description {
+            color: #a0aec0;
+            margin-bottom: 2rem;
+        }
+
+        .footer-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
         .footer-links {
-            display: flex;
-            gap: 2rem;
             list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
         }
 
         .footer-links a {
@@ -582,6 +620,14 @@
             color: white;
         }
 
+        .footer-bottom {
+            border-top: 1px solid #2d3748;
+            padding-top: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: #a0aec0;
+        }
+
         /* Mobile Menu */
         .mobile-menu-btn {
             display: none;
@@ -592,21 +638,46 @@
             cursor: pointer;
         }
 
-        /* Animation Classes */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 999;
         }
 
-        /* Mobile Responsive */
+        .mobile-menu.active {
+            display: block;
+        }
+
+        .mobile-menu ul {
+            list-style: none;
+        }
+
+        .mobile-menu li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-menu a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            display: block;
+            padding: 0.5rem;
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
             .nav-menu {
+                display: none;
+            }
+
+            .nav-cta {
                 display: none;
             }
 
@@ -626,19 +697,22 @@
                 transform: none;
             }
 
+            .pricing-card.featured:hover {
+                transform: translateY(-8px);
+            }
+
             .billing-toggle {
                 flex-direction: column;
                 gap: 1rem;
             }
 
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
+            .comparison-table {
+                font-size: 0.9rem;
             }
 
-            .footer-content {
-                flex-direction: column;
-                text-align: center;
+            .comparison-table th,
+            .comparison-table td {
+                padding: 1rem 0.75rem;
             }
         }
     </style>
@@ -648,50 +722,58 @@
     <nav class="navbar">
         <div class="nav-container">
             <a href="/" class="logo">SteadyManager</a>
-            
+
             <ul class="nav-menu">
                 <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
-                <li><a href="/pricing" class="nav-link active">Pricing</a></li>
-                <li><a href="/about" class="nav-link">About</a></li>
-                <li><a href="/contact" class="nav-link">Contact</a></li>
+                <li><a href="/pages/features.html" class="nav-link">Features</a></li>
+                <li><a href="/pages/pricing.html" class="nav-link active">Pricing</a></li>
+                <li><a href="/pages/about.html" class="nav-link">About</a></li>
+                <li><a href="/pages/contact.html" class="nav-link">Contact</a></li>
             </ul>
 
             <div class="nav-cta">
-                <a href="/login" class="btn btn-outline">Sign In</a>
-                <a href="/auth/trial" class="btn btn-primary">Start Free Trial</a>
+                <a href="/auth/login.html" class="btn btn-outline">Sign In</a>
+                <a href="/auth/register.html" class="btn btn-primary">Sign Up Free</a>
             </div>
 
-            <button class="mobile-menu-btn">☰</button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
         </div>
     </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/pages/features.html">Features</a></li>
+            <li><a href="/pages/pricing.html">Pricing</a></li>
+            <li><a href="/pages/about.html">About</a></li>
+            <li><a href="/pages/contact.html">Contact</a></li>
+            <li><a href="/auth/login.html">Sign In</a></li>
+            <li><a href="/auth/register.html">Sign Up Free</a></li>
+        </ul>
+    </div>
 
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-container">
             <h1 class="hero-title">
-                Simple Pricing That Scales With You
+                Simple Pricing That Grows With You
             </h1>
-            
+
             <p class="hero-subtitle">
-                Start free, upgrade when ready. No hidden fees, no complex contracts. 
-                Just powerful lead management that grows with your business.
+                Start free with 50 leads. Upgrade to 5,000 when you're ready.
+                No hidden fees, no surprises. Just honest pricing for real sales pros.
             </p>
         </div>
     </section>
 
     <!-- Billing Toggle -->
     <section class="billing-section">
-        <div class="billing-container">
-            <h2 class="billing-title">Choose Your Billing Cycle</h2>
-            <p class="billing-subtitle">Save 20% with yearly billing</p>
-            
-            <div class="billing-toggle">
-                <span class="billing-label active">Monthly</span>
-                <div class="billing-switch" id="billingSwitch"></div>
-                <span class="billing-label">Yearly</span>
-                <span class="savings-badge">Save 20%</span>
-            </div>
+        <div class="billing-toggle">
+            <span class="billing-label active" id="monthlyLabel">Monthly</span>
+            <div class="billing-switch" id="billingSwitch"></div>
+            <span class="billing-label" id="yearlyLabel">Yearly</span>
+            <span class="savings-badge">Save 17%</span>
         </div>
     </section>
 
@@ -704,17 +786,18 @@
                     <div class="pricing-plan-name">Free</div>
                     <div class="pricing-amount">$0</div>
                     <div class="pricing-period">forever</div>
-                    
+
                     <ul class="pricing-features">
-                        <li>50 leads per month</li>
-                        <li>Basic pipeline tracking</li>
-                        <li>Core dashboard</li>
-                        <li>Mobile access</li>
-                        <li>Email support</li>
-                        <li>Lead management</li>
+                        <li><i class="fas fa-check-circle"></i> 50 leads maximum</li>
+                        <li><i class="fas fa-check-circle"></i> Core pipeline tracking</li>
+                        <li><i class="fas fa-check-circle"></i> Task scheduling</li>
+                        <li><i class="fas fa-check-circle"></i> Basic analytics</li>
+                        <li><i class="fas fa-check-circle"></i> Mobile access</li>
+                        <li><i class="fas fa-check-circle"></i> Email support</li>
+                        <li><i class="fas fa-check-circle"></i> CSV export</li>
                     </ul>
 
-                    <a href="/register" class="pricing-cta pricing-cta-outline">Get Started Free</a>
+                    <a href="/auth/register.html" class="pricing-cta pricing-cta-outline">Get Started Free</a>
                 </div>
 
                 <!-- Professional Plan -->
@@ -723,113 +806,150 @@
                     <div class="pricing-plan-name">Professional</div>
                     <div class="pricing-amount" id="professionalPrice">$6.99</div>
                     <div class="pricing-period" id="professionalPeriod">/month</div>
-                    
+
                     <ul class="pricing-features">
-                        <li>1,000 leads per month</li>
-                        <li>Advanced analytics</li>
-                        <li>Data export</li>
-                        <li>Goal tracking</li>
-                        <li>Priority support</li>
-                        <li>Advanced dashboard</li>
-                        <li>Lead insights</li>
+                        <li><i class="fas fa-check-circle"></i> 5,000 leads maximum</li>
+                        <li><i class="fas fa-check-circle"></i> Advanced pipeline</li>
+                        <li><i class="fas fa-check-circle"></i> Unlimited tasks</li>
+                        <li><i class="fas fa-check-circle"></i> Advanced analytics</li>
+                        <li><i class="fas fa-check-circle"></i> Goal tracking</li>
+                        <li><i class="fas fa-check-circle"></i> Priority support</li>
+                        <li><i class="fas fa-check-circle"></i> Full data export</li>
+                        <li><i class="fas fa-check-circle"></i> 14-day free trial</li>
                     </ul>
 
-                    <a href="/auth/trial" class="pricing-cta pricing-cta-primary">Start Free Trial</a>
-                </div>
-
-                <!-- Business Plan -->
-                <div class="pricing-card">
-                    <div class="pricing-plan-name">Business</div>
-                    <div class="pricing-amount" id="businessPrice">$19.99</div>
-                    <div class="pricing-period" id="businessPeriod">/month</div>
-                    
-                    <ul class="pricing-features">
-                        <li>10,000 leads per month</li>
-                        <li>AI lead scoring</li>
-                        <li>Automation workflows</li>
-                        <li>Team collaboration</li>
-                        <li>Advanced reporting</li>
-                        <li>Pipeline management</li>
-                        <li>Activity tracking</li>
-                    </ul>
-
-                    <a href="/register" class="pricing-cta pricing-cta-outline">Start Business Plan</a>
-                </div>
-
-                <!-- Enterprise Plan -->
-                <div class="pricing-card">
-                    <div class="pricing-plan-name">Enterprise</div>
-                    <div class="pricing-amount" id="enterprisePrice">$49.99</div>
-                    <div class="pricing-period" id="enterprisePeriod">/month</div>
-                    
-                    <ul class="pricing-features">
-                        <li>Unlimited leads</li>
-                        <li>White-label options</li>
-                        <li>Custom integrations</li>
-                        <li>Dedicated support</li>
-                        <li>API access</li>
-                        <li>Custom features</li>
-                        <li>Priority onboarding</li>
-                    </ul>
-
-                    <a href="/register" class="pricing-cta pricing-cta-outline">Start Enterprise Plan</a>
+                    <a href="/auth/register.html" class="pricing-cta pricing-cta-primary">Start Free Trial</a>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Comparison Table -->
+    <section class="comparison">
+        <div class="comparison-container">
+            <h2 class="section-title">Feature Comparison</h2>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Feature</th>
+                        <th>Free</th>
+                        <th>Professional</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 600;">Lead Capacity</td>
+                        <td style="text-align: center;">50</td>
+                        <td style="text-align: center;">5,000</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Pipeline Management</td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Task Scheduling</td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Basic Analytics</td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Advanced Analytics</td>
+                        <td style="text-align: center;"><i class="fas fa-times cross-icon"></i></td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Goal Tracking</td>
+                        <td style="text-align: center;"><i class="fas fa-times cross-icon"></i></td>
+                        <td style="text-align: center;"><i class="fas fa-check check-icon"></i></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Data Export</td>
+                        <td style="text-align: center;">CSV only</td>
+                        <td style="text-align: center;">All formats</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Support</td>
+                        <td style="text-align: center;">Email</td>
+                        <td style="text-align: center;">Priority</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 600;">Free Trial</td>
+                        <td style="text-align: center;"><i class="fas fa-times cross-icon"></i></td>
+                        <td style="text-align: center;">14 days</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </section>
 
     <!-- FAQ Section -->
     <section class="faq">
         <div class="faq-container">
-            <h2 class="faq-title">Frequently Asked Questions</h2>
-            
+            <h2 class="section-title">Frequently Asked Questions</h2>
+
             <div class="faq-item">
                 <button class="faq-question">
-                    Can I change plans anytime?
-                    <span class="faq-icon">▼</span>
+                    Can I upgrade or downgrade anytime?
+                    <i class="fas fa-chevron-down faq-icon"></i>
                 </button>
                 <div class="faq-answer">
-                    Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any billing differences.
+                    Yes! You can upgrade from Free to Professional anytime. If you downgrade from Professional to Free, you'll keep access until the end of your current billing period, then your account will be limited to 50 leads.
                 </div>
             </div>
 
             <div class="faq-item">
                 <button class="faq-question">
                     What happens if I exceed my lead limit?
-                    <span class="faq-icon">▼</span>
+                    <span class="faq-icon"><i class="fas fa-chevron-down"></i></span>
                 </button>
                 <div class="faq-answer">
-                    We'll notify you when you're approaching your limit. You can upgrade to add more leads, or wait until next month when your limit resets.
+                    On the Free tier, you'll be prompted to upgrade when you reach 50 leads. On Professional (5,000 leads), you'll receive a notification as you approach the limit. We'll never lock you out - you'll always have access to view and export your data.
                 </div>
             </div>
 
             <div class="faq-item">
                 <button class="faq-question">
-                    Is there a free trial for paid plans?
-                    <span class="faq-icon">▼</span>
+                    Is there really a 14-day free trial?
+                    <span class="faq-icon"><i class="fas fa-chevron-down"></i></span>
                 </button>
                 <div class="faq-answer">
-                    Yes! Professional plans include a 14-day free trial with no credit card required. Experience all Premium features risk-free.
+                    Yes! The Professional tier includes a one-time 14-day free trial (available only once per account). No credit card required for the trial. After 14 days, you'll automatically revert to the Free tier unless you subscribe.
                 </div>
             </div>
 
             <div class="faq-item">
                 <button class="faq-question">
                     How secure is my data?
-                    <span class="faq-icon">▼</span>
+                    <span class="faq-icon"><i class="fas fa-chevron-down"></i></span>
                 </button>
                 <div class="faq-answer">
-                    Very secure! We use enterprise-grade encryption, secure data centers, and follow industry best practices to protect your information.
+                    Very secure! We use Supabase (built on PostgreSQL) with Row-Level Security policies, HTTPS encryption for all data in transit, and industry-standard security practices. Your data is backed up daily and you can export it anytime.
                 </div>
             </div>
 
             <div class="faq-item">
                 <button class="faq-question">
                     Can I cancel anytime?
-                    <span class="faq-icon">▼</span>
+                    <span class="faq-icon"><i class="fas fa-chevron-down"></i></span>
                 </button>
                 <div class="faq-answer">
-                    Absolutely! Cancel anytime with one click. No long-term contracts, no cancellation fees. Your data remains accessible during your billing period.
+                    Absolutely! Cancel anytime with one click from your dashboard settings. No long-term contracts, no cancellation fees. Your data remains accessible until the end of your billing period, and you can always export everything before you go.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">
+                    Do you offer refunds?
+                    <span class="faq-icon"><i class="fas fa-chevron-down"></i></span>
+                </button>
+                <div class="faq-answer">
+                    All payments are non-refundable as stated in our Terms of Service. However, we may offer refunds on a case-by-case basis at our discretion. Contact support at josh@steadyscaling.com if you believe you deserve a refund.
                 </div>
             </div>
         </div>
@@ -837,31 +957,49 @@
 
     <!-- CTA Section -->
     <section class="cta-section">
-        <div class="cta-container">
+        <div class="pricing-container">
             <h2 class="cta-title">Ready to Get Organized?</h2>
             <p class="cta-subtitle">
-                Join thousands of sales professionals who've chosen simplicity over complexity.
+                Start with 50 leads for free. No credit card required. Upgrade when you're ready.
             </p>
-            <div class="cta-buttons">
-                <a href="/auth/trial" class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;">Start Free Trial</a>
-                <a href="/register" class="btn btn-outline" style="padding: 1rem 2rem; font-size: 1.1rem; color: white; border-color: rgba(255,255,255,0.5);">Create Free Account</a>
-            </div>
+            <a href="/auth/register.html" class="btn-white">Sign Up Free</a>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-logo">SteadyManager</div>
-            <ul class="footer-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/features">Features</a></li>
-                <li><a href="/about">About</a></li>
-                <li><a href="/contact">Contact</a></li>
-                <li><a href="/privacy">Privacy</a></li>
-                <li><a href="/terms">Terms</a></li>
-            </ul>
-            <p style="color: #a0aec0; font-size: 0.9rem;">© 2025 SteadyManager - A Steady Scaling LLC Product</p>
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="footer-logo">SteadyManager</div>
+                <p class="footer-description">
+                    Simple lead management that scales with your business.
+                    Built by Steady Scaling LLC for real sales professionals.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Product</h4>
+                <ul class="footer-links">
+                    <li><a href="/pages/features.html">Features</a></li>
+                    <li><a href="/pages/pricing.html">Pricing</a></li>
+                    <li><a href="/#demo">How It Works</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="footer-title">Company</h4>
+                <ul class="footer-links">
+                    <li><a href="/pages/about.html">About</a></li>
+                    <li><a href="/pages/contact.html">Contact</a></li>
+                    <li><a href="/pages/privacy.html">Privacy</a></li>
+                    <li><a href="/pages/terms.html">Terms</a></li>
+                    <li><a href="/auth/login.html">Sign In</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2025 SteadyManager - A Steady Scaling LLC Product. Built to help you scale steadily.</p>
         </div>
     </footer>
 
@@ -869,45 +1007,30 @@
         let isYearly = false;
 
         const pricing = {
-            professional: { monthly: 6.99, yearly: 69.99 },
-            business: { monthly: 19.99, yearly: 199.99 },
-            enterprise: { monthly: 49.99, yearly: 499.99 }
+            professional: { monthly: 6.99, yearly: 69.99 }
         };
 
-        // Update all pricing display
-        function updateAllPricing() {
+        // Update pricing display
+        function updatePricing() {
             const cycle = isYearly ? 'yearly' : 'monthly';
             const period = isYearly ? '/year' : '/month';
-            
-            // Update Professional
+
             document.getElementById('professionalPrice').textContent = `$${pricing.professional[cycle]}`;
             document.getElementById('professionalPeriod').textContent = period;
-            
-            // Update Business
-            document.getElementById('businessPrice').textContent = `$${pricing.business[cycle]}`;
-            document.getElementById('businessPeriod').textContent = period;
-            
-            // Update Enterprise
-            document.getElementById('enterprisePrice').textContent = `$${pricing.enterprise[cycle]}`;
-            document.getElementById('enterprisePeriod').textContent = period;
         }
 
         // Billing cycle toggle
         document.getElementById('billingSwitch').addEventListener('click', () => {
             isYearly = !isYearly;
             const billingSwitch = document.getElementById('billingSwitch');
-            const labels = document.querySelectorAll('.billing-label');
-            
-            // Update switch visual
+            const monthlyLabel = document.getElementById('monthlyLabel');
+            const yearlyLabel = document.getElementById('yearlyLabel');
+
             billingSwitch.classList.toggle('yearly', isYearly);
-            
-            // Update active label
-            labels.forEach((label, index) => {
-                label.classList.toggle('active', isYearly ? index === 1 : index === 0);
-            });
-            
-            // Update ALL pricing immediately
-            updateAllPricing();
+            monthlyLabel.classList.toggle('active', !isYearly);
+            yearlyLabel.classList.toggle('active', isYearly);
+
+            updatePricing();
         });
 
         // FAQ functionality
@@ -915,7 +1038,7 @@
             question.addEventListener('click', () => {
                 const answer = question.nextElementSibling;
                 const icon = question.querySelector('.faq-icon');
-                
+
                 // Close all other answers
                 document.querySelectorAll('.faq-answer').forEach(otherAnswer => {
                     if (otherAnswer !== answer) {
@@ -923,10 +1046,27 @@
                         otherAnswer.previousElementSibling.querySelector('.faq-icon').classList.remove('active');
                     }
                 });
-                
+
                 // Toggle current answer
                 answer.classList.toggle('active');
                 icon.classList.toggle('active');
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileMenu.classList.toggle('active');
+            this.textContent = mobileMenu.classList.contains('active') ? '✕' : '☰';
+        });
+
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('.mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+                mobileMenuBtn.textContent = '☰';
             });
         });
 
@@ -942,25 +1082,8 @@
             }
         });
 
-        // Mobile menu toggle
-        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
-            alert('Mobile menu coming soon! For now, try our free trial at /auth/trial');
-        });
-
         // Initialize pricing on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            updateAllPricing();
-        });
-
-        // Track CTA clicks
-        document.querySelectorAll('a[href*="trial"], a[href*="register"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                console.log('CTA clicked:', btn.textContent.trim(), 'from pricing page');
-            });
-        });
-
-        console.log('💰 SteadyManager Pricing Page Loaded');
-        console.log('🎯 Conversion machine ready!');
+        updatePricing();
     </script>
 </body>
 </html>
