@@ -20,7 +20,7 @@ window.DashboardModule = {
 
     // INIT - Sharp and direct
     async dashboard_init(targetContainer = 'dashboard-content') {
-        console.log('Dashboard v6.0 initializing...');
+        console.log('Dashboard module loading');
         
         this.state.container = targetContainer;
         this.dashboard_showLoading();
@@ -28,7 +28,7 @@ window.DashboardModule = {
         try {
             await this.dashboard_loadData();
             this.dashboard_render();
-            console.log('Dashboard v6.0 ready');
+            console.log('Dashboard module ready');
         } catch (error) {
             console.error('Dashboard init failed:', error);
             this.dashboard_showError('Failed to load dashboard');
@@ -2603,5 +2603,5 @@ if (typeof window !== 'undefined') {
     DashboardModule.init = function(targetContainer) {
         return this.dashboard_init(targetContainer);
     };
-    console.log('Dashboard Module v6.0 - Sharp Edition with Search loaded');
+    console.log('Dashboard module loaded');
 }

@@ -20,7 +20,7 @@ window.SettingsModule = {
     },
 
     async settings_init(targetContainer = 'settings-content') {
-        console.log('Settings v1.0 initializing...');
+        console.log('Settings module loading');
         
         this.state.container = targetContainer;
         this.showLoading();
@@ -32,7 +32,7 @@ window.SettingsModule = {
             this.render();
             this.attachEvents();
             
-            console.log('✅ Settings loaded');
+            console.log('Settings module ready');
             
         } catch (error) {
             console.error('Settings init failed:', error);
@@ -1253,5 +1253,5 @@ if (typeof window !== 'undefined') {
     SettingsModule.init = function(targetContainer) {
         return this.settings_init(targetContainer);
     };
-    console.log('Settings Module v1.0 loaded - Password, Export, Theme');
+    console.log('Settings module loaded');
 }

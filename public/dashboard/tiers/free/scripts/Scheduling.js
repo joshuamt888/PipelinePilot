@@ -41,7 +41,7 @@ window.SchedulingModule = {
 
     // Init with fade-in
     async init(targetContainer = 'tasks-content') {
-        console.log('Scheduling v3.0 - Sharp Edition initializing...');
+        console.log('Scheduling module loading');
         
         try {
             this.scheduling_state.targetContainer = targetContainer;
@@ -62,7 +62,7 @@ window.SchedulingModule = {
                 if (container) container.style.opacity = '1';
             }, 50);
             
-            console.log('Scheduling v3.0 ready');
+            console.log('Scheduling module ready');
             
         } catch (error) {
             console.error('Scheduling init failed:', error);
@@ -4793,5 +4793,5 @@ modal.addEventListener('mouseup', (e) => {
 // Initialize
 if (typeof window !== 'undefined') {
     window.SchedulingModule = SchedulingModule;
-    console.log('Scheduling v3.0 - Sharp Edition loaded');
+    console.log('Scheduling module loaded');
 }
