@@ -1,18 +1,3 @@
-/**
- * SETTINGS MODULE v1.0 - FREE TIER EDITION
- * 
- * Features:
- * - Account info display
- * - Change password with validation
- * - 2FA enable/disable with QR code
- * - Theme toggle (auto-save)
- * - Export leads/tasks as CSV
- * - Delete account with confirmation
- * - Secure modals with mousedown/mouseup pattern
- * 
- * @version 1.0.0
- */
-
 window.SettingsModule = {
     state: {
         profile: null,

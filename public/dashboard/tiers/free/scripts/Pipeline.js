@@ -1,17 +1,3 @@
-/**
- * PIPELINE MODULE v2.1 FINAL - MODAL BUG FIXED
- * 
- * Features:
- * - Filters persist during session on Pipeline page
- * - Filters reset when navigating away
- * - Smooth drag animation with ghost preview
- * - 40 line note truncation
- * - Fixed modal text selection bug (mousedown/mouseup pattern)
- * - Clean, optimized code
- * 
- * @version 2.1.0-final
- */
-
 window.PipelineModule = {
     // State
     state: {

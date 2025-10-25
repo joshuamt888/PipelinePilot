@@ -1,17 +1,3 @@
-/**
- * ADDLEAD MODULE v3.0 - PIPELINE-STYLE SHARP EDITION
- * 
- * Changes from v2.0:
- * - Fade-in on initial load
- * - Fade transition between dashboard ↔ table
- * - INSTANT modals (dynamic creation, no pre-render)
- * - Optimized event listeners
- * - Pipeline-style animations (50ms/0.3s timing)
- * - All visual styling preserved
- * 
- * @version 3.0.0 - Sharp Edition
- */
-
 window.AddLeadModule = {
     // State
     addlead_state: {

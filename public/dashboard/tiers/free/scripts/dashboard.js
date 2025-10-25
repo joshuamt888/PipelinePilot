@@ -1,12 +1,3 @@
-/**
- * DASHBOARD MODULE v6.0 - SHARP & FAST WITH SEARCH
- * 
- * Pipeline-inspired architecture with Dashboard's beautiful design
- * Instant loading, snappy performance, search-enabled modals
- * 
- * @version 6.0.0 - Sharp Edition with Search
- */
-
 window.DashboardModule = {
     // STATE - Minimal like Pipeline
     state: {

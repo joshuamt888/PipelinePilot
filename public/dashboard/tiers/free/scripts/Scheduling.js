@@ -1,18 +1,3 @@
-/**
- * SCHEDULING MODULE v3.0 - SHARP EDITION
- * 
- * Changes from v2.0:
- * - Fade-in on initial load
- * - Fade transition between dashboard ↔ table
- * - INSTANT modals (dynamic creation, no pre-render)
- * - mousedown/mouseup pattern (NO inline onclick)
- * - Optimized event listeners
- * - Pipeline-style animations (50ms/0.3s timing)
- * - All visual styling preserved
- * 
- * @version 3.0.0 - Sharp Edition
- */
-
 window.SchedulingModule = {
     // State
     scheduling_state: {
