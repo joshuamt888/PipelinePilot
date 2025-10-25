@@ -208,7 +208,6 @@ backdrop.addEventListener('mouseup', (e) => {
 ## 📊 DATABASE SCHEMA REFERENCE (UPDATED)
 
 ### Users Table
-
 ```sql
 CREATE TABLE public.users (
     id UUID PRIMARY KEY REFERENCES auth.users(id),
@@ -227,8 +226,8 @@ CREATE TABLE public.users (
     subscription_status TEXT,
     settings JSONB DEFAULT '{}',
     goals JSONB DEFAULT '{}',
-    tos_accepted_at TIMESTAMPTZ,           -- NEW: Timestamp when user accepted ToS
-    tos_version TEXT DEFAULT '1.0',        -- NEW: Version of ToS they accepted
+    tos_accepted_at TIMESTAMPTZ,
+    tos_version TEXT DEFAULT '1.0',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -248,9 +247,9 @@ CREATE TABLE public.users (
   - `stripe_customer_id` / `stripe_subscription_id` / `subscription_status` (billing)
   - `tos_accepted_at` / `tos_version` (Terms of Service)
   - **Allows changes to**: `settings` and `goals` JSONB fields only
+  - **Exception**: SECURITY DEFINER functions can bypass protection using session flag
 
 ### Leads Table
-
 ```sql
 CREATE TABLE public.leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -271,6 +270,9 @@ CREATE TABLE public.leads (
     follow_up_date DATE,
     last_contact_date DATE,
     linkedin_url TEXT,
+    facebook_url TEXT,
+    twitter_url TEXT,
+    instagram_url TEXT,
     lost_reason TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -280,7 +282,6 @@ CREATE TABLE public.leads (
 **RLS Policies**: All enforce `auth.uid() = user_id`
 
 ### Tasks Table
-
 ```sql
 CREATE TABLE public.tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -303,23 +304,28 @@ CREATE TABLE public.tasks (
 **RLS Policies**: All enforce `auth.uid() = user_id`
 
 ### Database Functions
-
 ```sql
 -- Atomically creates lead and increments counter
+-- Uses session flag to bypass trigger protection
 create_lead_with_increment(lead_data jsonb)
 
 -- Atomically deletes lead and decrements counter
+-- Uses session flag to bypass trigger protection
 delete_lead_with_decrement(lead_id uuid, user_id_val uuid)
 
 -- Downgrades expired trial users (called by cron job)
 downgrade_expired_trials()
 
--- NEW: Securely accepts Terms of Service (one-time only)
+-- Securely accepts Terms of Service (one-time only)
+-- Uses session flag to bypass trigger protection
 accept_terms_of_service(version text DEFAULT '1.0')
+
+-- Upgrades user to 14-day professional trial
+-- Uses session flag to bypass trigger protection
+upgrade_to_trial()
 ```
 
 ### Database Triggers
-
 ```sql
 -- Auto-creates user profile when Supabase Auth account is created
 CREATE TRIGGER on_auth_user_created
@@ -327,17 +333,31 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
 
--- NEW: Protects critical user fields from unauthorized changes
+-- Protects critical user fields from unauthorized changes
 CREATE TRIGGER protect_user_fields_trigger
   BEFORE UPDATE ON public.users
   FOR EACH ROW
   EXECUTE FUNCTION protect_user_critical_fields();
+
+-- Enforces lead limits before insert
+CREATE TRIGGER enforce_lead_limit
+  BEFORE INSERT ON public.leads
+  FOR EACH ROW
+  EXECUTE FUNCTION check_lead_limit();
+
+-- Enforces task limits before insert
+CREATE TRIGGER enforce_task_limit
+  BEFORE INSERT ON public.tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION check_task_limit();
 ```
 
-**Protection Details:**
-- Blocks direct modification of tier, limits, billing, and ToS fields
-- Only allows updates to `settings` and `goals` JSONB
-- Bypassed by `SECURITY DEFINER` functions (like `accept_terms_of_service`)
+**Trigger Protection System:**
+- Blocks direct modification of protected fields
+- Checks `app.bypass_protection` session flag set by SECURITY DEFINER functions
+- Only trusted server functions can set bypass flag
+- Flag is transaction-scoped and disappears after operation completes
+- Users cannot set this flag or execute raw SQL
 
 ### Security Model Summary
 
@@ -345,7 +365,8 @@ CREATE TRIGGER protect_user_fields_trigger
 - ✅ View their own profile
 - ✅ Update `settings` and `goals` JSONB fields
 - ✅ Accept Terms of Service (one-time via `accept_terms_of_service()`)
-- ✅ Create/read/update/delete their own leads and tasks
+- ✅ Upgrade to trial (via `upgrade_to_trial()`)
+- ✅ Create/read/update/delete their own leads and tasks (within limits)
 
 **What Users CANNOT Do:**
 - ❌ Change their tier (`user_type`)
@@ -355,12 +376,24 @@ CREATE TRIGGER protect_user_fields_trigger
 - ❌ Change Stripe billing data
 - ❌ Re-accept or modify ToS timestamp
 - ❌ Access other users' data
+- ❌ Set session flags or execute raw SQL
+- ❌ Bypass trigger protections
 
 **What Server/Admin CAN Do** (via service role or SECURITY DEFINER functions):
 - ✅ Upgrade/downgrade users (Stripe webhooks)
 - ✅ Adjust lead limits
 - ✅ Process trial expirations (cron job)
 - ✅ Accept ToS on behalf of user (secure function)
+- ✅ Bypass trigger protections using session flags
+- ✅ Increment/decrement lead counters atomically
+
+**How the Bypass System Works:**
+1. User calls trusted RPC function (like `create_lead_with_increment`)
+2. Function sets `app.bypass_protection` session flag
+3. Function performs protected operation (increment `current_leads`)
+4. Trigger checks for bypass flag and allows operation
+5. Transaction completes, flag disappears
+6. Any direct user attempts to modify protected fields are blocked
 
 ---
 
