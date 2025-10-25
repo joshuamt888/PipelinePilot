@@ -49,45 +49,40 @@ class TierScalingAPI {
     return { success: true, message: 'Check your email to verify your account!' };
   }
 
+  /**
+   * Upgrade to 14-day Professional Trial
+   * NOTE: This function calls a SECURITY DEFINER database function because
+   * user_type, trial dates, and lead limits are protected by RLS trigger
+   * and cannot be updated directly from the client.
+   */
   static async upgradeToTrial() {
     const { data: { user } } = await supabase.auth.getUser();
-    
+    if (!user) throw new Error('Not authenticated');
+
     // Check if user already used their trial
     const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('trial_end_date, user_type')
       .eq('id', user.id)
       .single();
-    
+
     if (profileError) throw profileError;
-    
+
     // Block if trial was already used (trial_end_date is not null)
     if (profile.trial_end_date !== null) {
       throw new Error('You have already used your free trial. Upgrade to a paid plan to unlock Pro features.');
     }
-    
-    // Block if already on a paid tier
-    if (profile.user_type === 'professional' || 
-        profile.user_type === 'business' || 
-        profile.user_type === 'enterprise') {
-      throw new Error('You are already on a paid plan.');
+
+    // Block if already on professional tier
+    if (profile.user_type === 'professional' || profile.user_type === 'professional_trial') {
+      throw new Error('You are already on a professional plan.');
     }
-    
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 14);
-    
-    const { error } = await supabase
-      .from('users')
-      .update({
-        user_type: 'professional_trial',
-        trial_start_date: new Date().toISOString(),
-        trial_end_date: trialEndDate.toISOString(),
-        current_lead_limit: 5000
-      })
-      .eq('id', user.id);
-    
+
+    // Call secure database function to upgrade (bypasses RLS protection)
+    const { data, error } = await supabase.rpc('upgrade_to_trial');
+
     if (error) throw error;
-    return { success: true };
+    return { success: true, data };
   }
 
   static async checkAuth() {
@@ -108,9 +103,36 @@ class TierScalingAPI {
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
-    
+
     if (error) throw error;
     return { success: true, message: 'Password updated successfully!' };
+  }
+
+  /**
+   * Check if user has accepted Terms of Service
+   * Returns acceptance status and timestamp
+   */
+  static async checkTosAcceptance() {
+    const profile = await this.getProfile();
+    return {
+      accepted: profile.tos_accepted_at !== null,
+      acceptedAt: profile.tos_accepted_at,
+      version: profile.tos_version
+    };
+  }
+
+  /**
+   * Accept Terms of Service
+   * Calls secure database function that updates tos_accepted_at field
+   * This field is protected and can only be set once via SECURITY DEFINER function
+   */
+  static async acceptTos(version = '1.0') {
+    const { data, error } = await supabase.rpc('accept_terms_of_service', {
+      version: version
+    });
+
+    if (error) throw error;
+    return { success: true, data };
   }
 
   // =====================================================
@@ -494,201 +516,12 @@ class TierScalingAPI {
     };
   }
 
-    // =====================================================
-// 2FA / MULTI-FACTOR AUTHENTICATION (PRO TIER OPTIMIZED)
-// =====================================================
-
-/**
- * Enable 2FA with smart caching - only makes API calls when necessary
- * Caches setup data in localStorage for 15 minutes to avoid redundant calls
- */
-static async enable2FA() {
-    try {
-        // Check if we already have a pending 2FA setup in cache
-        const cached = localStorage.getItem('steady_pending_2fa');
-        
-        if (cached) {
-            const { factorId, qrCode, secret, timestamp } = JSON.parse(cached);
-            
-            // Use cached data if less than 15 minutes old
-            const ageMinutes = (Date.now() - timestamp) / (1000 * 60);
-            if (ageMinutes < 15) {
-                console.log('✅ Using cached 2FA setup (age: ' + Math.round(ageMinutes) + ' min)');
-                return {
-                    success: true,
-                    factorId,
-                    qrCode,
-                    secret,
-                    fromCache: true
-                };
-            }
-            
-            // Cache expired - clean up the old factor
-            console.log('🧹 Cache expired, cleaning up old factor...');
-            try {
-                await supabase.auth.mfa.unenroll({ factorId });
-            } catch (e) {
-                console.log('Old factor already removed:', e.message);
-            }
-        }
-        
-        // No valid cache - create NEW factor
-        console.log('🆕 Creating new 2FA factor...');
-        
-        // Step 1: Clean up any unverified factors
-        const { data: existingFactors } = await supabase.auth.mfa.listFactors();
-        const unverified = existingFactors?.totp?.filter(f => f.status !== 'verified') || [];
-        
-        if (unverified.length > 0) {
-            console.log(`Removing ${unverified.length} unverified factors...`);
-            for (const factor of unverified) {
-                try {
-                    await supabase.auth.mfa.unenroll({ factorId: factor.id });
-                } catch (e) {
-                    console.log('Skip cleanup:', e.message);
-                }
-            }
-        }
-        
-        // Step 2: Create new factor with unique name
-        const uniqueName = `SteadyManager 2FA ${Date.now()}`;
-        const { data, error } = await supabase.auth.mfa.enroll({
-            factorType: 'totp',
-            friendlyName: uniqueName
-        });
-        
-        if (error) throw error;
-        
-        const setupData = {
-            factorId: data.id,
-            qrCode: data.totp.qr_code,
-            secret: data.totp.secret,
-            timestamp: Date.now()
-        };
-        
-        // Cache for 15 minutes
-        localStorage.setItem('steady_pending_2fa', JSON.stringify(setupData));
-        console.log('💾 Cached 2FA setup for 15 minutes');
-        
-        return {
-            success: true,
-            ...setupData,
-            fromCache: false
-        };
-        
-    } catch (error) {
-        console.error('Enable 2FA error:', error);
-        throw error;
-    }
-}
-
-/**
- * Verify 2FA code and complete setup
- * Clears cache on successful verification
- */
-static async verify2FA(factorId, code) {
-    try {
-        // Step 1: Create MFA challenge
-        const { data: challenge, error: challengeError } =
-            await supabase.auth.mfa.challenge({ factorId });
-        
-        if (challengeError) throw challengeError;
-        
-        // Step 2: Verify the code
-        const { data, error: verifyError } = await supabase.auth.mfa.verify({
-            factorId,
-            challengeId: challenge.id,
-            code
-        });
-        
-        if (verifyError) throw verifyError;
-        
-        // Success! Clear the cache since setup is complete
-        localStorage.removeItem('steady_pending_2fa');
-        console.log('✅ 2FA verified and cache cleared');
-        
-        return { success: true, data };
-        
-    } catch (error) {
-        console.error('Verify 2FA error:', error);
-        throw error;
-    }
-}
-
-/**
- * Disable 2FA and clean up cache
- */
-static async disable2FA(factorId) {
-    try {
-        const { error } = await supabase.auth.mfa.unenroll({ factorId });
-        if (error) throw error;
-        
-        // Clear any pending setup cache
-        localStorage.removeItem('steady_pending_2fa');
-        console.log('✅ 2FA disabled and cache cleared');
-        
-        return { success: true };
-        
-    } catch (error) {
-        console.error('Disable 2FA error:', error);
-        throw error;
-    }
-}
-
-/**
- * Cancel pending 2FA setup
- * Removes the unverified factor and clears cache
- */
-static async cancel2FASetup() {
-    try {
-        const cached = localStorage.getItem('steady_pending_2fa');
-        
-        if (cached) {
-            const { factorId } = JSON.parse(cached);
-            
-            // Remove the unverified factor from Supabase
-            try {
-                await supabase.auth.mfa.unenroll({ factorId });
-                console.log('🗑️ Cancelled 2FA setup, factor removed');
-            } catch (e) {
-                console.log('Factor already removed:', e.message);
-            }
-            
-            // Clear cache
-            localStorage.removeItem('steady_pending_2fa');
-        }
-        
-        return { success: true };
-        
-    } catch (error) {
-        console.error('Cancel 2FA setup error:', error);
-        throw error;
-    }
-}
-
-/**
- * Get current 2FA status
- */
-static async get2FAStatus() {
-    try {
-        const { data, error } = await supabase.auth.mfa.listFactors();
-        if (error) throw error;
-        
-        const totpFactors = data?.totp || [];
-        const verifiedFactors = totpFactors.filter(f => f.status === 'verified');
-        const enabled = verifiedFactors.length > 0;
-        
-        return {
-            enabled,
-            factors: verifiedFactors,
-            factorId: enabled ? verifiedFactors[0].id : null
-        };
-        
-    } catch (error) {
-        console.error('Get 2FA status error:', error);
-        return { enabled: false, factors: [], factorId: null };
-    }
-}
+  // =====================================================
+  // 2FA / MULTI-FACTOR AUTHENTICATION
+  // =====================================================
+  // NOTE: 2FA functionality removed as per HANDOFF.md
+  // Reserved for Professional tier in future releases
+  // Free tier users do not have access to 2FA features
 
 static async checkTosAcceptance() {
     const profile = await this.getProfile();
