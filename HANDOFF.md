@@ -1263,14 +1263,333 @@ Display Density:
 
 ### **Next Implementation Steps:**
 1. ✅ Run `database_migration_pro_tier.sql` in Supabase
-2. ⏳ Update `api.js` with Jobs/Goals methods
-3. ⏳ Create `Jobs.js` module (calendar + financial view)
-4. ⏳ Create `Goals.js` module (goal tracker)
-5. ⏳ Enhance `AddLead.js` with position/tags fields
-6. ⏳ Enhance `Settings.js` with preferences tab
-7. ⏳ Build `CommandPalette.js` (optional feature)
-8. ⏳ Build `QuickPanels.js` (optional feature)
-9. ⏳ Build `WindowManager.js` (optional feature)
+2. ✅ Update `api.js` with Jobs/Goals methods
+3. ✅ **Overlay System Built** - Revolutionary multi-tasking UI complete!
+4. ⏳ Create `Jobs.js` module (calendar + financial view)
+5. ⏳ Create `Goals.js` module (goal tracker)
+6. ⏳ Enhance `AddLead.js` with position/tags fields
+7. ⏳ Enhance `Settings.js` with preferences tab
+
+---
+
+## 🪟 **OVERLAY SYSTEM (REVOLUTIONARY MULTI-TASKING UI)**
+
+### **Philosophy:**
+Instead of navigating between pages, Pro users can open multiple overlays simultaneously. View a lead detail while the dashboard is still visible in the background. Quick-add a job without leaving the pipeline view. **Module-to-module communication without losing context.**
+
+### **What Makes This Revolutionary:**
+- ✅ **View multiple things at once** (Dashboard + Lead Detail + Quick Add Job)
+- ✅ **Never lose your place** (Background stays visible and blurred)
+- ✅ **Instant access** (Floating action button from anywhere)
+- ✅ **Reusable components** (One LeadDetailOverlay used everywhere)
+- ✅ **Built with SteadyUtils** (Heavily integrated, not siloed code)
+- ✅ **Apple-touch animations** (Smooth fades, backdrop blur, spring physics)
+
+### **Architecture:**
+
+```
+┌─────────────────────────────────────────────┐
+│ SteadyUtils v5.0 (Foundation)              │
+│ - generateId(), fadeIn(), fadeOut()        │
+│ - lockScroll(), blurBackground()           │
+│ - closeOnEscape(), createButton()          │
+└─────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ OverlayManager (Controller)                 │
+│ - open(type, data)                          │
+│ - close(overlayId)                          │
+│ - closeAll(), closeTop()                    │
+│ - register(type, OverlayClass)              │
+└─────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ BaseOverlay (Parent Class)                  │
+│ - render(), destroy()                       │
+│ - showLoading(), hideLoading()              │
+│ - showError(), updateBody()                 │
+│ - onMount(), onDestroy() hooks              │
+└─────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────┐
+│ Specific Overlays (Children)                │
+│ - LeadDetailOverlay                         │
+│ - JobDetailOverlay                          │
+│ - QuickAddLeadOverlay                       │
+│ - QuickAddJobOverlay                        │
+└─────────────────────────────────────────────┘
+```
+
+### **File Structure:**
+
+```
+/public/dashboard/shared/js/
+├── utils.js ✅ v5.0 (Enhanced with overlay utilities)
+├── OverlayManager.js ✅ NEW (Core controller)
+└── overlays/
+    ├── BaseOverlay.js ✅ NEW (Foundation class)
+    ├── LeadDetailOverlay.js ✅ NEW (View lead details)
+    ├── QuickAddLeadOverlay.js ✅ NEW (Fast lead creation)
+    ├── JobDetailOverlay.js ✅ NEW (View job with financials)
+    └── QuickAddJobOverlay.js ✅ NEW (Fast job creation with profit calculator)
+```
+
+### **Usage Examples:**
+
+#### **From Dashboard Module:**
+```javascript
+// Click on lead card
+function viewLead(leadId) {
+    OverlayManager.open('lead-detail', { leadId });
+    // Dashboard stays visible in background (blurred)
+}
+```
+
+#### **From Pipeline Module:**
+```javascript
+// Right-click context menu
+function onLeadRightClick(leadId) {
+    const menu = [
+        { label: 'View Details', action: () => OverlayManager.open('lead-detail', { leadId }) },
+        { label: 'Add Job', action: () => OverlayManager.open('quick-add-job', { lead_id: leadId }) }
+    ];
+    showContextMenu(menu);
+}
+```
+
+#### **From Anywhere (Floating Action Button):**
+```javascript
+// Pro tier has floating + button in bottom-right corner
+// Click → Opens menu:
+//   👤 Add Lead → OverlayManager.open('quick-add-lead')
+//   💼 Add Job → OverlayManager.open('quick-add-job')
+```
+
+#### **Stack Multiple Overlays:**
+```javascript
+// Open lead detail
+OverlayManager.open('lead-detail', { leadId: '123' });
+
+// From lead detail, click "Add Job for this lead" button
+OverlayManager.open('quick-add-job', { lead_id: '123' });
+
+// Now you have:
+// - Dashboard (blurred background)
+// - Lead detail overlay (behind)
+// - Quick add job overlay (on top)
+// ESC closes topmost overlay
+```
+
+### **Overlay Components:**
+
+#### **1. LeadDetailOverlay** (`lead-detail`)
+**Opens:** View full lead information
+**Data:** `{ leadId: 'uuid' }`
+**Features:**
+- All lead fields (contact info, status, financial, next actions)
+- Tags display
+- Associated jobs list (clickable → opens JobDetailOverlay)
+- Weighted value calculation (potential_value × win_probability)
+- Edit button (coming soon)
+- Responsive grid layout
+
+**Example:**
+```javascript
+OverlayManager.open('lead-detail', { leadId: lead.id });
+```
+
+---
+
+#### **2. QuickAddLeadOverlay** (`quick-add-lead`)
+**Opens:** Fast lead creation form
+**Data:** `{ name, email, phone, company, position }` (optional pre-fill)
+**Features:**
+- Essential fields only (name, email, phone, company, position, source, quality, notes)
+- Duplicate detection before save
+- Auto-focus name field
+- Submit on Enter
+- Success toast + auto-reload current page
+
+**Example:**
+```javascript
+// Empty form
+OverlayManager.open('quick-add-lead');
+
+// Pre-filled
+OverlayManager.open('quick-add-lead', {
+    name: 'John Smith',
+    company: 'ACME Corp'
+});
+```
+
+---
+
+#### **3. JobDetailOverlay** (`job-detail`)
+**Opens:** View full job details with profit/loss breakdown
+**Data:** `{ jobId: 'uuid' }`
+**Features:**
+- Job info (title, type, status, priority, dates)
+- **Financial summary card** (profit, margin, color-coded green/red)
+- Cost breakdown (materials, labor, other expenses)
+- Pricing (quoted vs final price, payment status)
+- Materials list (if any)
+- Associated lead card (clickable → opens LeadDetailOverlay)
+- Notes/description
+
+**Example:**
+```javascript
+OverlayManager.open('job-detail', { jobId: job.id });
+```
+
+---
+
+#### **4. QuickAddJobOverlay** (`quick-add-job`)
+**Opens:** Fast job creation with profit calculator
+**Data:** `{ lead_id }` (optional pre-link to lead)
+**Features:**
+- Job details (title, type, priority, date/time)
+- Lead association picker
+- **Pricing section** with live profit calculation:
+  - Quoted price
+  - Material cost
+  - Other expenses
+  - Labor hours + rate
+  - **Real-time profit preview** (updates as you type)
+  - Color-coded profit card (green if positive, red if negative)
+- Location, notes
+- Submit creates job + closes overlay + reloads page
+
+**Example:**
+```javascript
+// Standalone job
+OverlayManager.open('quick-add-job');
+
+// Linked to lead
+OverlayManager.open('quick-add-job', { lead_id: lead.id });
+```
+
+---
+
+### **Floating Action Button (Pro Tier Only):**
+
+**Location:** Bottom-right corner of screen
+**Appearance:** Purple gradient circle with "+" icon
+**Behavior:**
+- Click → Rotates 45° and opens menu above it
+- Menu shows:
+  - 👤 Add Lead
+  - 💼 Add Job
+- Click item → Opens respective overlay
+- Click outside → Closes menu
+- Mobile: Hides labels, shows icons only
+
+**Code:**
+```html
+<div class="quick-actions-fab">
+    <button class="fab-main">+</button>
+    <div class="fab-menu">
+        <button onclick="OverlayManager.open('quick-add-lead')">👤 Add Lead</button>
+        <button onclick="OverlayManager.open('quick-add-job')">💼 Add Job</button>
+    </div>
+</div>
+```
+
+---
+
+### **SteadyUtils v5.0 - New Overlay Utilities:**
+
+```javascript
+// ID Generation
+SteadyUtils.generateId() // → "overlay-1234567890-abc123"
+
+// Animations
+SteadyUtils.fadeIn(element, duration)
+SteadyUtils.fadeOut(element, duration, callback)
+
+// Scroll Control
+SteadyUtils.lockScroll()   // Prevent body scroll when overlay open
+SteadyUtils.unlockScroll() // Restore scroll when all overlays closed
+
+// Backdrop Effects
+SteadyUtils.blurBackground()   // Blur dashboard (4px)
+SteadyUtils.unblurBackground() // Remove blur
+
+// Button Creation
+SteadyUtils.createButton('Save', 'primary', onClick) // → <button class="steady-btn steady-btn-primary">
+
+// Keyboard Shortcuts
+SteadyUtils.closeOnEscape(callback) // ESC key handler
+```
+
+**Button Variants:**
+- `steady-btn-primary` (Purple gradient)
+- `steady-btn-secondary` (Gray)
+- `steady-btn-danger` (Red)
+- `steady-btn-ghost` (Transparent)
+
+---
+
+### **Benefits of This Architecture:**
+
+#### **1. Module-to-Module Communication:**
+Dashboard can open Lead Detail. Lead Detail can open Job Detail. Job Detail can open Lead Detail. **Circular navigation without page redirects.**
+
+#### **2. Context Preservation:**
+You're viewing analytics on the dashboard. You see an interesting lead. You open Lead Detail overlay. **Dashboard stats still visible in the background.** Close overlay → right back where you were.
+
+#### **3. Rapid Multi-Tasking:**
+- Viewing Pipeline
+- See a lead you want to add a job for
+- Click → Quick Add Job overlay opens
+- Fill in job details (pipeline still visible behind)
+- Submit → Overlay closes, pipeline refreshes, job appears
+
+#### **4. Reusable Everywhere:**
+Every module can use `OverlayManager.open('lead-detail', { leadId })`. One component, many entry points. No code duplication.
+
+#### **5. Future-Proof:**
+Want to add `GoalDetailOverlay`? Just extend BaseOverlay, register it, done. System grows easily.
+
+---
+
+### **How to Create a New Overlay:**
+
+```javascript
+// 1. Create overlay class (extends BaseOverlay)
+class MyCustomOverlay extends BaseOverlay {
+    getTitle() { return 'My Custom Overlay'; }
+    getSize() { return 'overlay-md'; } // sm, md, lg, xl, full
+
+    renderBody() {
+        return `<div>My content here</div>`;
+    }
+
+    hasFooter() { return true; }
+
+    renderFooter() {
+        return `
+            <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                Cancel
+            </button>
+            <button class="steady-btn steady-btn-primary" onclick="alert('Action!')">
+                Do Something
+            </button>
+        `;
+    }
+
+    async onMount() {
+        // Load data here
+        this.data = await API.fetchSomething();
+        this.hideLoading();
+    }
+}
+
+// 2. Register overlay type
+OverlayManager.register('my-custom', MyCustomOverlay);
+
+// 3. Use anywhere
+OverlayManager.open('my-custom', { someData: 123 });
+```
 
 ---
 
@@ -1422,8 +1741,8 @@ Display Density:
 
 ---
 
-**Document Version**: 3.0 🚀
-**Last Updated**: Pro Tier Revolution - Jobs, Goals, Enhanced Leads
+**Document Version**: 4.0 🪟
+**Last Updated**: Overlay System Revolution - Multi-Tasking UI Complete
 **Key Changes**:
 - ✅ **NEW**: Jobs table with cost/profit tracking (Better Google Sheets for job financials)
 - ✅ **NEW**: Goals table with auto-progress tracking (Apple Watch-style goal rings)
@@ -1431,7 +1750,13 @@ Display Density:
 - ✅ **NEW**: User preferences (windowing, command palette, quick panels toggles)
 - ✅ **NEW**: Database functions for auto-goal tracking (trigger-based, like spreadsheet formulas)
 - ✅ **NEW**: Complete SQL migration script ready to run
-- ✅ Updated API methods cheatsheet with Jobs, Goals, Preferences
-- ✅ Comprehensive Pro Tier features documentation
-**Status**: Database Schema Ready, API.js Update Next, Then Build Jobs.js & Goals.js Modules
-**Philosophy**: Manual CRM (you control all data) + Smart Visualization (system calculates & displays beautifully)
+- ✅ **NEW**: SteadyUtils v5.0 with overlay utilities (fadeIn, blurBackground, lockScroll, etc)
+- ✅ **NEW**: OverlayManager - Revolutionary multi-tasking UI controller
+- ✅ **NEW**: BaseOverlay foundation class for all overlays
+- ✅ **NEW**: 4 overlay components (LeadDetail, JobDetail, QuickAddLead, QuickAddJob)
+- ✅ **NEW**: Floating action button (Pro tier) for quick access
+- ✅ Updated API.js v3.0 with Jobs, Goals, Preferences methods (21 new methods)
+- ✅ Updated Professional tier index.html with overlay system integration
+- ✅ Comprehensive overlay system documentation
+**Status**: Overlay System Live, Jobs.js & Goals.js Modules Next
+**Philosophy**: Manual CRM (you control all data) + Smart Visualization (system calculates & displays beautifully) + Revolutionary Multi-Tasking (view multiple things simultaneously)

@@ -1,19 +1,20 @@
 /**
- * STEADYUTILS v4.0 - SECURE & MODERN
- * 
+ * STEADYUTILS v5.0 - OVERLAY SYSTEM READY
+ *
  * Lightweight utility toolkit for SteadyManager dashboard
  * Theme-integrated, XSS-safe, spam-protected notifications
- * 
- * @version 4.0.0
+ * NOW WITH: Overlay utilities for revolutionary multi-tasking UI
+ *
+ * @version 5.0.0
  */
 
 class SteadyUtils {
     constructor() {
-        this.version = '4.0.0';
+        this.version = '5.0.0';
         this.device = this.detectDevice();
         this.activeToasts = new Map(); // Track active toasts by message
         this.setupGlobalStyles();
-        console.log('SteadyUtils v4.0 loaded');
+        console.log('SteadyUtils v5.0 loaded - Overlay system ready 🚀');
     }
 
     // DEVICE DETECTION
@@ -339,6 +340,80 @@ class SteadyUtils {
         }, 600);
     }
 
+    fadeIn(element, duration = 300) {
+        if (typeof element === 'string') {
+            element = document.querySelector(element);
+        }
+        if (!element) return;
+
+        element.style.opacity = '0';
+        element.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+
+        requestAnimationFrame(() => {
+            element.style.opacity = '1';
+        });
+    }
+
+    fadeOut(element, duration = 300, callback) {
+        if (typeof element === 'string') {
+            element = document.querySelector(element);
+        }
+        if (!element) return;
+
+        element.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        element.style.opacity = '0';
+
+        setTimeout(() => {
+            if (callback) callback();
+        }, duration);
+    }
+
+    // OVERLAY UTILITIES
+    generateId() {
+        return `overlay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    lockScroll() {
+        document.body.style.overflow = 'hidden';
+    }
+
+    unlockScroll() {
+        document.body.style.overflow = '';
+    }
+
+    blurBackground() {
+        const main = document.querySelector('.main-content');
+        const sidebar = document.querySelector('.sidebar');
+        if (main) main.style.filter = 'blur(4px)';
+        if (sidebar) sidebar.style.filter = 'blur(4px)';
+    }
+
+    unblurBackground() {
+        const main = document.querySelector('.main-content');
+        const sidebar = document.querySelector('.sidebar');
+        if (main) main.style.filter = '';
+        if (sidebar) sidebar.style.filter = '';
+    }
+
+    createButton(text, variant = 'primary', onClick) {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.className = `steady-btn steady-btn-${variant}`;
+        if (onClick) btn.onclick = onClick;
+        return btn;
+    }
+
+    closeOnEscape(callback) {
+        const handler = (e) => {
+            if (e.key === 'Escape') {
+                callback();
+                document.removeEventListener('keydown', handler);
+            }
+        };
+        document.addEventListener('keydown', handler);
+        return handler;
+    }
+
     // GLOBAL STYLES
     setupGlobalStyles() {
         const style = document.createElement('style');
@@ -444,8 +519,61 @@ class SteadyUtils {
                     max-width: none;
                 }
             }
+
+            /* Button Styles */
+            .steady-btn {
+                padding: 0.625rem 1.25rem;
+                border: none;
+                border-radius: var(--radius);
+                font-weight: 600;
+                font-size: 0.875rem;
+                cursor: pointer;
+                transition: var(--transition);
+                font-family: inherit;
+            }
+
+            .steady-btn-primary {
+                background: var(--primary);
+                color: white;
+            }
+
+            .steady-btn-primary:hover {
+                background: var(--primary-dark);
+                transform: translateY(-1px);
+            }
+
+            .steady-btn-secondary {
+                background: var(--surface-hover);
+                color: var(--text-primary);
+                border: 1px solid var(--border);
+            }
+
+            .steady-btn-secondary:hover {
+                background: var(--border);
+            }
+
+            .steady-btn-danger {
+                background: var(--danger);
+                color: white;
+            }
+
+            .steady-btn-danger:hover {
+                background: #dc2626;
+                transform: translateY(-1px);
+            }
+
+            .steady-btn-ghost {
+                background: transparent;
+                color: var(--text-secondary);
+                border: 1px solid transparent;
+            }
+
+            .steady-btn-ghost:hover {
+                background: var(--surface-hover);
+                border-color: var(--border);
+            }
         `;
-        
+
         document.head.appendChild(style);
     }
 }
@@ -455,7 +583,7 @@ const utils = new SteadyUtils();
 window.SteadyUtils = utils;
 window.toast = utils.showToast.bind(utils);
 
-console.log('SteadyUtils v4.0 ready - spam protection active');
+console.log('SteadyUtils v5.0 ready - Overlay utilities loaded 🎯');
 
 /**
  * USAGE EXAMPLES:

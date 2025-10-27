@@ -546,6 +546,150 @@
                 <div id="upgrade-content" class="page-content"></div>
             </div>
         </main>
+
+        <!-- Quick Action Button (Pro Tier) -->
+        <div class="quick-actions-fab" id="quickActionsFab">
+            <button class="fab-main" id="fabMain">+</button>
+            <div class="fab-menu" id="fabMenu">
+                <button class="fab-item" onclick="OverlayManager.open('quick-add-lead')">
+                    <span class="fab-icon">👤</span>
+                    <span class="fab-label">Add Lead</span>
+                </button>
+                <button class="fab-item" onclick="OverlayManager.open('quick-add-job')">
+                    <span class="fab-icon">💼</span>
+                    <span class="fab-label">Add Job</span>
+                </button>
+            </div>
+        </div>
+
+        <style>
+            .quick-actions-fab {
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                z-index: 1500;
+            }
+
+            .fab-main {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: var(--gradient-primary);
+                border: none;
+                color: white;
+                font-size: 2rem;
+                font-weight: 300;
+                cursor: pointer;
+                box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            }
+
+            .fab-main:hover {
+                transform: scale(1.1) rotate(90deg);
+                box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+            }
+
+            .fab-main.active {
+                transform: rotate(45deg);
+            }
+
+            .fab-menu {
+                position: absolute;
+                bottom: 80px;
+                right: 0;
+                display: flex;
+                flex-direction: column-reverse;
+                gap: 0.75rem;
+                opacity: 0;
+                visibility: hidden;
+                transform: scale(0.8);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .fab-menu.active {
+                opacity: 1;
+                visibility: visible;
+                transform: scale(1);
+            }
+
+            .fab-item {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                padding: 0.75rem 1.25rem;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-lg);
+                cursor: pointer;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                white-space: nowrap;
+            }
+
+            .fab-item:hover {
+                background: var(--surface-hover);
+                transform: translateX(-4px);
+                box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            }
+
+            .fab-icon {
+                font-size: 1.25rem;
+            }
+
+            .fab-label {
+                font-weight: 600;
+                color: var(--text-primary);
+                font-size: 0.875rem;
+            }
+
+            @media (max-width: 768px) {
+                .quick-actions-fab {
+                    bottom: 1rem;
+                    right: 1rem;
+                }
+
+                .fab-main {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 1.75rem;
+                }
+
+                .fab-menu {
+                    bottom: 70px;
+                }
+
+                .fab-label {
+                    display: none;
+                }
+            }
+        </style>
+
+        <script>
+            // Quick Actions FAB Toggle
+            document.addEventListener('DOMContentLoaded', () => {
+                const fabMain = document.getElementById('fabMain');
+                const fabMenu = document.getElementById('fabMenu');
+
+                if (fabMain && fabMenu) {
+                    fabMain.onclick = () => {
+                        fabMain.classList.toggle('active');
+                        fabMenu.classList.toggle('active');
+                    };
+
+                    // Close menu when clicking outside
+                    document.addEventListener('click', (e) => {
+                        if (!e.target.closest('.quick-actions-fab')) {
+                            fabMain.classList.remove('active');
+                            fabMenu.classList.remove('active');
+                        }
+                    });
+                }
+            });
+        </script>
     </div>
 
     <script type="module">
@@ -799,12 +943,22 @@
         window.loadPage = loadPage;
     </script>
 
+    <!-- Core Utilities -->
     <script src="/dashboard/shared/js/utils.js"></script>
-    <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
-    <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
-    <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
+
+    <!-- Overlay System (Revolutionary Multi-Tasking UI) -->
+    <script src="/dashboard/shared/js/OverlayManager.js"></script>
+    <script src="/dashboard/shared/js/overlays/BaseOverlay.js"></script>
+    <script src="/dashboard/shared/js/overlays/LeadDetailOverlay.js"></script>
+    <script src="/dashboard/shared/js/overlays/QuickAddLeadOverlay.js"></script>
+    <script src="/dashboard/shared/js/overlays/JobDetailOverlay.js"></script>
+    <script src="/dashboard/shared/js/overlays/QuickAddJobOverlay.js"></script>
+
+    <!-- Pro Tier Modules -->
+    <script src="/dashboard/tiers/professional/scripts/dashboard.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/AddLead.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Settings.js"></script>
+    <!-- Jobs and Goals modules coming soon -->
 </body>
 </html>
