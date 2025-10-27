@@ -797,6 +797,12 @@ modal.addEventListener('mouseup', (e) => {
             
         } catch (error) {
             console.error('Failed to create task:', error);
+            
+            if (error.message.includes('Task limit reached')) {
+                this.scheduling_showUpgradePrompt();
+                return;
+            }
+            
             this.scheduling_showNotification(API.handleAPIError(error, 'CreateTask'), 'error');
         } finally {
             this.scheduling_setLoadingState(false);
@@ -1048,6 +1054,7 @@ modal.addEventListener('mouseup', (e) => {
         document.querySelector('.scheduling-day-popup-overlay')?.remove();
         document.querySelector('.scheduling-task-view-overlay')?.remove();
         document.querySelector('.scheduling-lead-picker-overlay')?.remove();
+        document.querySelector('.scheduling-upgrade-prompt-overlay')?.remove();
     },
 
     // Day Tasks Popup - INSTANT
@@ -1997,6 +2004,35 @@ modal.addEventListener('mouseup', (e) => {
         } else {
             console.log(`${type.toUpperCase()}: ${message}`);
         }
+    },
+
+    scheduling_showUpgradePrompt() {
+        const modal = document.createElement('div');
+        modal.className = 'scheduling-upgrade-prompt-overlay';
+        modal.innerHTML = `
+            <div class="scheduling-upgrade-prompt">
+                <div class="scheduling-upgrade-header">
+                    <div class="scheduling-upgrade-icon">🚀</div>
+                    <h3>Task Limit Reached</h3>
+                </div>
+                <div class="scheduling-upgrade-content">
+                    <p>You've reached the maximum of 10,000 tasks. This is typically more than enough for most users!</p>
+                    <p>If you need to create more tasks, consider archiving or deleting old completed tasks.</p>
+                </div>
+                <div class="scheduling-upgrade-actions">
+                    <button class="scheduling-btn-secondary">
+                        Got it
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.scheduling-btn-secondary').onclick = () => modal.remove();
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
     },
 
     // Utility Functions
@@ -4384,6 +4420,72 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-retry-btn:hover {
                     transform: translateY(-2px);
                     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                }
+
+                /* Upgrade Prompt */
+                .scheduling-upgrade-prompt-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(4px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10004;
+                    padding: 2rem;
+                    animation: scheduling-fadeIn 0.3s ease;
+                }
+
+                .scheduling-upgrade-prompt {
+                    background: var(--surface);
+                    border-radius: 20px;
+                    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
+                    width: 100%;
+                    max-width: 500px;
+                    overflow: hidden;
+                    border: 1px solid var(--border);
+                    animation: scheduling-slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+
+                .scheduling-upgrade-header {
+                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    color: white;
+                    padding: 2rem;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 1rem;
+                }
+
+                .scheduling-upgrade-icon {
+                    font-size: 3rem;
+                }
+
+                .scheduling-upgrade-header h3 {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    margin: 0;
+                }
+
+                .scheduling-upgrade-content {
+                    padding: 2rem;
+                }
+
+                .scheduling-upgrade-content p {
+                    margin: 0 0 1rem 0;
+                    line-height: 1.6;
+                    color: var(--text-primary);
+                }
+
+                .scheduling-upgrade-actions {
+                    padding: 1.5rem 2rem 2rem;
+                    background: var(--surface-hover);
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: center;
                 }
 
                 /* Animations */

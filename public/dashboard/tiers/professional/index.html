@@ -12,67 +12,52 @@
         })();
     </script>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
-    <title>SteadyManager Pro - Dashboard</title>
-
+    <title>SteadyManager - Dashboard</title>
+    
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
+    
     <style>
-        /* ============================================
-           STEADYMANAGER PRO V2.0 - PREMIUM DESIGN
-           Professional tier with modern glassmorphism
-           ============================================ */
-
         :root {
-            /* Premium Color Palette */
-            --premium-gold: #fbbf24;
-            --premium-gold-dark: #f59e0b;
-            --premium-platinum: #e5e7eb;
-            --premium-purple: #8b5cf6;
-            --premium-pink: #ec4899;
-
-            --gradient-premium: linear-gradient(135deg, #fbbf24 0%, #f59e0b 40%, #ef4444 70%, #dc2626 100%);
-            --gradient-premium-subtle: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
-
+            --primary: #667eea;
+            --primary-dark: #4f46e5;
+            --primary-light: #dbeafe;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
             --info: #06b6d4;
-
+            
             --background: #f8fafc;
             --surface: #ffffff;
-            --surface-elevated: #ffffff;
             --surface-hover: #f1f5f9;
             --text-primary: #0f172a;
             --text-secondary: #475569;
             --text-tertiary: #64748b;
             --border: #e2e8f0;
-
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            
             --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
             --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-
-            --radius: 10px;
+            
+            --radius: 8px;
             --radius-lg: 16px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         [data-theme="dark"] {
             --background: #0a0f1c;
             --surface: #1a1f2e;
-            --surface-elevated: #242938;
-            --surface-hover: #2d3348;
+            --surface-hover: #242938;
             --text-primary: #f1f5f9;
             --text-secondary: #cbd5e1;
             --text-tertiary: #94a3b8;
             --border: #374151;
-            --gradient-premium: linear-gradient(135deg, #fbbf24 0%, #f59e0b 40%, #f97316 70%, #ef4444 100%);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-            --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            --primary: #6366f1;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         * {
@@ -80,7 +65,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -110,17 +95,13 @@
             transition: var(--transition);
         }
 
-        /* ============================================
-           PREMIUM SIDEBAR - GLASSMORPHISM DESIGN
-           ============================================ */
-
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
             bottom: 0;
-            width: 300px;
-            background: var(--gradient-premium);
+            width: 280px;
+            background: var(--gradient-primary);
             color: white;
             z-index: 1000;
             overflow-y: auto;
@@ -128,20 +109,6 @@
             transition: var(--transition);
             display: flex;
             flex-direction: column;
-            backdrop-filter: blur(20px);
-        }
-
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 999px;
         }
 
         .sidebar-content {
@@ -152,8 +119,9 @@
         }
 
         .sidebar-header {
-            padding: 0 1.5rem 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 0 1.5rem 2rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 2rem;
         }
 
         .sidebar-logo {
@@ -161,132 +129,9 @@
             font-weight: 900;
             text-align: center;
             color: white;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        /* Premium PRO Badge with Animation */
-        .pro-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.95);
-            color: #f59e0b;
-            padding: 0.35rem 0.85rem;
-            border-radius: 999px;
-            font-size: 0.7rem;
-            font-weight: 900;
-            letter-spacing: 2px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            animation: badgePulse 3s ease-in-out infinite;
-            border: 2px solid rgba(251, 191, 36, 0.3);
-        }
-
-        @keyframes badgePulse {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
-            }
-        }
-
-        /* Stats Widget in Sidebar */
-        .sidebar-stats {
-            margin: 0 1.5rem 1.5rem;
-            padding: 1.25rem;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stat-item {
-            margin-bottom: 1rem;
-        }
-
-        .stat-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            opacity: 0.9;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-progress {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 999px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .stat-progress-bar {
-            height: 100%;
-            background: white;
-            border-radius: 999px;
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-
-        .stat-subtext {
-            font-size: 0.7rem;
-            opacity: 0.8;
-            margin-top: 0.35rem;
-        }
-
-        /* Trial Banner */
-        .trial-banner {
-            margin: 0 1.5rem 1.5rem;
-            padding: 1rem;
-            background: rgba(239, 68, 68, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius-lg);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            text-align: center;
-            animation: bannerPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes bannerPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.85; }
-        }
-
-        .trial-banner-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .trial-banner-days {
-            font-size: 1.75rem;
-            font-weight: 900;
-            margin-bottom: 0.25rem;
-        }
-
-        .trial-banner-text {
-            font-size: 0.7rem;
-            opacity: 0.9;
-        }
-
-        /* Navigation */
         .sidebar-nav {
             list-style: none;
             padding: 0;
@@ -295,7 +140,7 @@
         }
 
         .nav-item {
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.5rem;
         }
 
         .nav-link {
@@ -303,68 +148,44 @@
             align-items: center;
             gap: 1rem;
             padding: 1rem 1.5rem;
-            color: rgba(255, 255, 255, 0.85);
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: var(--transition);
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
             margin: 0 0.75rem;
-            border-radius: var(--radius-lg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: white;
-            transform: scaleY(0);
-            transition: var(--transition);
+            border-radius: var(--radius);
         }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
-            transform: translateX(6px);
-        }
-
-        .nav-link:hover::before {
-            transform: scaleY(1);
+            transform: translateX(8px);
         }
 
         .nav-link.active {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
             color: white;
-            font-weight: 700;
-            transform: translateX(6px);
-        }
-
-        .nav-link.active::before {
-            transform: scaleY(1);
+            font-weight: 600;
+            transform: translateX(8px);
         }
 
         .nav-emoji {
-            font-size: 1.3rem;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+            font-size: 1.2rem;
         }
 
-        /* Subscription Management Link */
-        .subscription-nav-item {
+        .upgrade-nav-item {
             margin: 1.5rem 0.75rem 1rem;
         }
 
-        .subscription-nav-link {
+        .upgrade-nav-link {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.75rem;
             padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: var(--radius-lg);
             color: white;
             text-decoration: none;
@@ -372,21 +193,15 @@
             font-size: 0.95rem;
             transition: var(--transition);
             cursor: pointer;
-            backdrop-filter: blur(10px);
         }
 
-        .subscription-nav-link:hover {
-            background: rgba(255, 255, 255, 0.25);
+        .upgrade-nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
         }
-
-        /* ============================================
-           MAIN CONTENT AREA
-           ============================================ */
 
         .main-content {
-            margin-left: 300px;
+            margin-left: 280px;
             height: 100vh;
             background: var(--background);
             transition: var(--transition);
@@ -406,66 +221,63 @@
             opacity: 1;
         }
 
-        /* Premium Header */
         .header {
-            background: var(--surface-elevated);
+            background: var(--surface);
             padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            height: 85px;
+            height: 80px;
             flex-shrink: 0;
             z-index: 100;
-            box-shadow: var(--shadow-sm);
         }
 
         .header-title {
-            font-size: 1.75rem;
-            font-weight: 900;
-            color: var(--text-primary);
-            background: var(--gradient-premium);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            cursor: pointer;
-            padding: 0.5rem 1.5rem 0.5rem 1rem;
-            border-radius: var(--radius-lg);
-            transition: var(--transition);
-            border: 2px solid transparent;
-            position: relative;
-            display: inline-block;
-        }
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    cursor: pointer;
+    padding: 0.5rem 1.5rem 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    transition: var(--transition);
+    border: 2px solid transparent;
+    position: relative;
+    display: inline-block;
+}
 
-        .header-title::before {
-            content: '⛶';
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.1rem;
-            opacity: 0;
-            transition: all 0.3s ease;
-            background: var(--gradient-premium);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+.header-title::before {
+    content: '⛶';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0;
+    transition: all 0.3s ease;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-        .header-title:hover {
-            border: 2px solid var(--premium-gold);
-            box-shadow: 0 0 25px rgba(251, 191, 36, 0.3);
-            transform: scale(1.02);
-            padding-right: 2.5rem;
-        }
+.header-title:hover {
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+    transform: scale(1.05);
+    padding-right: 2.5rem;
+}
 
-        .header-title:hover::before {
-            opacity: 1;
-        }
+.header-title:hover::before {
+    opacity: 1;
+}
 
-        .header-title:active {
-            transform: scale(0.98);
-        }
+.header-title:active {
+    transform: scale(0.98);
+}
 
-        /* User Menu */
         .user-menu-container {
             position: relative;
             z-index: 999999;
@@ -476,31 +288,29 @@
             align-items: center;
             gap: 0.75rem;
             background: var(--surface-hover);
-            padding: 0.6rem 1.1rem;
+            padding: 0.5rem 1rem;
             border-radius: var(--radius-lg);
             cursor: pointer;
-            transition: var(--transition-fast);
-            border: 2px solid var(--border);
+            transition: var(--transition);
+            border: 1px solid var(--border);
         }
 
         .user-menu:hover {
-            border-color: var(--premium-gold);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+            transform: translateY(-1px);
         }
 
         .user-avatar {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
             border-radius: var(--radius);
-            background: var(--gradient-premium);
+            background: var(--gradient-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: 800;
-            font-size: 0.95rem;
-            box-shadow: var(--shadow);
+            font-weight: 700;
+            font-size: 0.9rem;
         }
 
         .user-info {
@@ -509,53 +319,49 @@
         }
 
         .user-name {
-            font-weight: 700;
-            font-size: 0.9rem;
+            font-weight: 600;
+            font-size: 0.875rem;
             color: var(--text-primary);
         }
 
         .user-tier {
             font-size: 0.75rem;
-            color: var(--premium-gold-dark);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: var(--success);
+            font-weight: 500;
         }
 
-        /* Dropdown */
         .profile-dropdown {
             position: fixed !important;
-            top: 95px !important;
+            top: 80px !important;
             right: 2rem !important;
-            width: 240px !important;
-            background: var(--surface-elevated) !important;
-            border: 2px solid var(--border) !important;
+            width: 220px !important;
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
             border-radius: var(--radius-lg) !important;
             box-shadow: var(--shadow-xl) !important;
             overflow: hidden !important;
             z-index: 2147483647 !important;
             opacity: 0 !important;
             visibility: hidden !important;
-            transform: translateY(-10px) scale(0.95) !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transform: translateY(-10px) !important;
+            transition: all 0.3s ease !important;
         }
 
         .profile-dropdown.show {
             opacity: 1 !important;
             visibility: visible !important;
-            transform: translateY(0) scale(1) !important;
+            transform: translateY(0) !important;
         }
 
         .dropdown-item {
             display: flex !important;
             align-items: center !important;
-            gap: 0.85rem !important;
-            padding: 1rem 1.25rem !important;
+            gap: 0.75rem !important;
+            padding: 1rem !important;
             color: var(--text-primary) !important;
             cursor: pointer !important;
-            transition: var(--transition-fast) !important;
-            font-size: 0.9rem !important;
-            font-weight: 600 !important;
+            transition: var(--transition) !important;
+            font-size: 0.875rem !important;
         }
 
         .dropdown-item:hover {
@@ -564,41 +370,37 @@
 
         .logout-item {
             color: var(--danger) !important;
-            border-top: 2px solid var(--border) !important;
+            border-top: 1px solid var(--border) !important;
         }
 
-        /* Theme Toggle */
         .toggle-switch {
             position: relative !important;
-            width: 44px !important;
-            height: 24px !important;
+            width: 40px !important;
+            height: 20px !important;
             background: var(--border) !important;
-            border-radius: 999px !important;
+            border-radius: 9999px !important;
             margin-left: auto !important;
-            transition: var(--transition-fast) !important;
         }
 
         .toggle-slider {
             position: absolute !important;
-            top: 3px !important;
-            left: 3px !important;
-            width: 18px !important;
-            height: 18px !important;
+            top: 2px !important;
+            left: 2px !important;
+            width: 16px !important;
+            height: 16px !important;
             background: white !important;
             border-radius: 50% !important;
             transition: var(--transition) !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
 
         [data-theme="dark"] .toggle-switch {
-            background: var(--premium-gold) !important;
+            background: var(--primary) !important;
         }
 
         [data-theme="dark"] .toggle-slider {
             transform: translateX(20px) !important;
         }
 
-        /* Dashboard Content */
         .dashboard-content {
             flex: 1;
             overflow-y: auto;
@@ -606,33 +408,15 @@
             background: var(--background);
         }
 
-        .dashboard-content::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        .dashboard-content::-webkit-scrollbar-track {
-            background: var(--background);
-        }
-
-        .dashboard-content::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 999px;
-        }
-
-        .dashboard-content::-webkit-scrollbar-thumb:hover {
-            background: var(--text-tertiary);
-        }
-
         .content-container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
-        /* Responsive Sidebar */
         .sidebar.desktop-hidden {
             transform: translateX(-100%);
         }
-
+        
         .main-content.sidebar-hidden {
             margin-left: 0;
         }
@@ -641,52 +425,23 @@
             .sidebar {
                 transform: translateX(-100%);
             }
-
+            
             .sidebar.mobile-open {
                 transform: translateX(0);
             }
-
+            
             .main-content {
                 margin-left: 0;
             }
-
-            .sidebar {
-                width: 280px;
-            }
         }
 
-        @media (max-width: 640px) {
-            .header {
-                padding: 1rem 1.5rem;
-                height: 75px;
-            }
-
-            .header-title {
-                font-size: 1.4rem;
-            }
-
-            .dashboard-content {
-                padding: 1.5rem;
-            }
-
-            .sidebar-stats {
-                margin: 0 1rem 1rem;
-                padding: 1rem;
-            }
-
-            .stat-value {
-                font-size: 1.25rem;
-            }
-        }
-
-        /* Loading Spinner */
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(102, 126, 234, 0.3);
             border-radius: 50%;
-            border-top-color: white;
+            border-top-color: var(--primary);
             animation: spin 0.8s linear infinite;
         }
 
@@ -694,54 +449,18 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Dark Mode Sidebar Enhancement */
         [data-theme="dark"] .sidebar {
             background: linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
-            background-blend-mode: overlay;
-            position: relative;
-        }
-
-        [data-theme="dark"] .sidebar::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: var(--gradient-premium);
-            opacity: 0.15;
-            pointer-events: none;
         }
     </style>
 </head>
 <body data-theme="light">
-    <!-- Premium Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    SteadyManager
-                    <span class="pro-badge">PRO</span>
-                </div>
+                <div class="sidebar-logo">SteadyManager</div>
             </div>
 
-            <!-- Trial Banner (shown if on trial) -->
-            <div class="trial-banner" id="trialBanner" style="display: none;">
-                <div class="trial-banner-title">Trial Period</div>
-                <div class="trial-banner-days" id="trialDaysLeft">--</div>
-                <div class="trial-banner-text">days remaining</div>
-            </div>
-
-            <!-- Live Stats Widget -->
-            <div class="sidebar-stats" id="sidebarStats">
-                <div class="stat-item">
-                    <div class="stat-label">Lead Usage</div>
-                    <div class="stat-value" id="statLeadCount">--</div>
-                    <div class="stat-progress">
-                        <div class="stat-progress-bar" id="statLeadProgress" style="width: 0%"></div>
-                    </div>
-                    <div class="stat-subtext" id="statLeadText">Loading...</div>
-                </div>
-            </div>
-
-            <!-- Navigation -->
             <nav>
                 <ul class="sidebar-nav">
                     <li class="nav-item">
@@ -777,20 +496,18 @@
                 </ul>
             </nav>
 
-            <!-- Subscription Management -->
-            <div class="subscription-nav-item">
-                <a href="#" class="subscription-nav-link" data-page="settings">
-                    <span>💳 Manage Billing</span>
+            <div class="upgrade-nav-item">
+                <a href="#" class="upgrade-nav-link" data-page="upgrade">
+                    <span>🚀 Upgrade Plan</span>
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
         <header class="header">
             <h1 class="header-title" id="pageTitle">Dashboard</h1>
-
+            
             <div class="user-menu-container">
                 <div class="user-menu" id="userMenu">
                     <div class="user-avatar" id="userAvatar">
@@ -798,10 +515,10 @@
                     </div>
                     <div class="user-info">
                         <div class="user-name" id="userName">Loading...</div>
-                        <div class="user-tier" id="userTier">Professional</div>
+                        <div class="user-tier" id="userTier">Free Plan</div>
                     </div>
                 </div>
-
+                
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="dropdown-item" id="darkModeToggle">
                         <span>🌙 Dark Mode</span>
@@ -826,6 +543,7 @@
                 <div id="pipeline-content" class="page-content"></div>
                 <div id="tasks-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
+                <div id="upgrade-content" class="page-content"></div>
             </div>
         </main>
     </div>
@@ -852,27 +570,27 @@
 
         // Initialize on DOM ready
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔒 SteadyManager Pro V2.0 initializing...');
-
+            console.log('🔒 SteadyManager Shell initializing...');
+            
             if (typeof lucide !== 'undefined') lucide.createIcons();
-
+            
             setupNavigation();
             setupUserMenu();
             setupMobileTitleClick();
-
+            
             await initializeShell();
         });
 
         async function initializeShell() {
             try {
                 if (!API) throw new Error('API failed to load');
-
+                
                 const { authenticated } = await API.checkAuth();
                 if (!authenticated) {
                     window.location.href = '/auth/login.html';
                     return;
                 }
-
+                
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.user?.email_confirmed_at) {
                     window.location.href = '/auth/resend-verification.html';
@@ -881,54 +599,16 @@
 
                 const profile = await API.getProfile();
                 if (!profile?.id) throw new Error('Invalid profile');
-
+                
                 appState.profile = profile;
                 loadUserProfile(profile);
-                updateSidebarStats(profile);
-                checkTrialStatus(profile);
-
-                console.log('✅ Pro Shell initialized');
+                
+                console.log('✅ Shell initialized');
                 await loadPage('dashboard');
-
+                
             } catch (error) {
                 console.error('❌ Shell init failed:', error);
                 showError(API.handleAPIError(error, 'Shell'));
-            }
-        }
-
-        // Update sidebar stats widget
-        async function updateSidebarStats(profile) {
-            try {
-                const stats = await API.getCurrentStats();
-
-                const leadCount = stats.currentLeads || 0;
-                const leadLimit = stats.leadLimit || 5000;
-                const percentage = Math.min((leadCount / leadLimit) * 100, 100);
-
-                document.getElementById('statLeadCount').textContent = leadCount.toLocaleString();
-                document.getElementById('statLeadProgress').style.width = `${percentage}%`;
-                document.getElementById('statLeadText').textContent = `of ${leadLimit.toLocaleString()} leads`;
-            } catch (error) {
-                console.error('Failed to load stats:', error);
-            }
-        }
-
-        // Check and display trial status
-        function checkTrialStatus(profile) {
-            if (profile.user_type !== 'professional_trial') {
-                document.getElementById('trialBanner').style.display = 'none';
-                return;
-            }
-
-            const trialEnd = new Date(profile.trial_end_date);
-            const now = new Date();
-            const daysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
-
-            if (daysLeft > 0) {
-                document.getElementById('trialBanner').style.display = 'block';
-                document.getElementById('trialDaysLeft').textContent = daysLeft;
-            } else {
-                document.getElementById('trialBanner').style.display = 'none';
             }
         }
 
@@ -938,35 +618,35 @@
                 console.log(`Already on ${pageName}`);
                 return;
             }
-
+            
             console.log(`Loading: ${pageName}`);
-
+            
             // Update UI
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${pageName}-content`)?.classList.add('active');
-
-            document.querySelectorAll('.nav-link, .subscription-nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-
+            
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(l => l.classList.remove('active'));
+            if (pageName === 'upgrade') {
+                document.querySelector('.upgrade-nav-link')?.classList.add('active');
+            } else {
+                document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+            }
+            
             const titles = {
                 dashboard: 'Dashboard',
                 leads: 'Add Leads',
                 pipeline: 'Pipeline',
                 tasks: 'Tasks',
-                settings: 'Settings'
+                settings: 'Settings',
+                upgrade: 'Upgrade Plan'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
-
+            
             // Update state
             appState.currentPage = pageName;
-
+            
             // Load module
             await loadModule(pageName);
-
-            // Refresh stats after navigation
-            if (appState.profile) {
-                updateSidebarStats(appState.profile);
-            }
         }
 
         async function loadModule(pageName) {
@@ -978,15 +658,15 @@
                     tasks: window.SchedulingModule,
                     settings: window.SettingsModule
                 };
-
+                
                 const module = modules[pageName];
                 if (!module?.init) return;
-
+                
                 // Always reload to get fresh data
                 await module.init(`${pageName}-content`);
                 appState.loadedModules.add(pageName);
                 console.log(`📦 ${pageName} loaded`);
-
+                
             } catch (error) {
                 console.error(`Module load error:`, error);
             }
@@ -995,15 +675,19 @@
         function loadUserProfile(profile) {
             const email = profile.email || 'User';
             const initials = generateInitials(email);
-
+            
             const tierNames = {
+                'free': 'Free Plan',
                 'professional': 'Professional',
-                'professional_trial': 'Pro Trial'
+                'professional_trial': 'Trial',
+                'business': 'Business',
+                'enterprise': 'Enterprise',
+                'admin': 'Admin'
             };
-
+            
             document.getElementById('userName').textContent = email;
-            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Professional';
-
+            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Free Plan';
+            
             const avatar = document.getElementById('userAvatar');
             avatar.innerHTML = '';
             avatar.textContent = initials;
@@ -1028,17 +712,17 @@
         }
 
         function setupNavigation() {
-            document.querySelectorAll('.nav-link, .subscription-nav-link').forEach(link => {
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
-
+                    
                     if (window.innerWidth <= 1024) {
                         setTimeout(() => {
                             document.getElementById('sidebar')?.classList.remove('mobile-open');
                         }, 150);
                     }
-
+                    
                     if (page) loadPage(page);
                 });
             });
@@ -1047,24 +731,24 @@
         function setupUserMenu() {
             const menu = document.getElementById('userMenu');
             const dropdown = document.getElementById('profileDropdown');
-
+            
             menu.onclick = (e) => {
                 e.stopPropagation();
                 dropdown.classList.toggle('show');
             };
-
+            
             document.addEventListener('click', () => dropdown.classList.remove('show'));
-
+            
             document.getElementById('darkModeToggle').onclick = (e) => {
                 e.stopPropagation();
                 toggleTheme();
             };
-
+            
             dropdown.querySelector('[data-page="settings"]').addEventListener('click', () => {
                 loadPage('settings');
                 dropdown.classList.remove('show');
             });
-
+            
             document.getElementById('logoutBtn').onclick = async () => {
                 if (!confirm('Logout?')) return;
                 try {
@@ -1080,7 +764,7 @@
             const title = document.getElementById('pageTitle');
             const sidebar = document.getElementById('sidebar');
             const main = document.querySelector('.main-content');
-
+            
             title.onclick = () => {
                 if (window.innerWidth <= 1024) {
                     sidebar.classList.toggle('mobile-open');
@@ -1089,10 +773,10 @@
                     main.classList.toggle('sidebar-hidden');
                 }
             };
-
+            
             document.addEventListener('click', (e) => {
-                if (window.innerWidth <= 1024 &&
-                    !sidebar.contains(e.target) &&
+                if (window.innerWidth <= 1024 && 
+                    !sidebar.contains(e.target) && 
                     !title.contains(e.target)) {
                     sidebar.classList.remove('mobile-open');
                 }
@@ -1102,30 +786,25 @@
         function showError(msg) {
             const container = document.getElementById('dashboard-content');
             if (!container) return;
-
+            
             container.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
                     <h2>Connection Error</h2>
                     <p style="margin: 1rem 0;">${API.escapeHtml(msg)}</p>
-                    <button onclick="location.reload()" style="padding: 0.75rem 1.5rem; background: var(--premium-gold); color: white; border: none; border-radius: var(--radius-lg); cursor: pointer; font-weight: 700; box-shadow: var(--shadow);">Retry</button>
+                    <button onclick="location.reload()" style="padding: 0.75rem 1.5rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600;">Retry</button>
                 </div>
             `;
         }
 
         window.loadPage = loadPage;
-        window.refreshSidebarStats = () => {
-            if (appState.profile) updateSidebarStats(appState.profile);
-        };
     </script>
 
-    <!-- Shared utilities and API -->
     <script src="/dashboard/shared/js/utils.js"></script>
-
-    <!-- Pro tier modules (will be copied from free tier and modified) -->
-    <script src="/dashboard/tiers/professional/scripts/dashboard.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/AddLead.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Pipeline.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Scheduling.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Settings.js"></script>
+    <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
+    <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
+    <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
 </body>
 </html>

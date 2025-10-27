@@ -67,6 +67,7 @@ window.DashboardModule = {
                     ${this.dashboard_renderTasksList()}
                 </div>
                 ${this.dashboard_renderActivityFeed()}
+                ${isFreeTier ? this.dashboard_renderUpgradeCTA() : ''}
             </div>
         `;
 
@@ -401,6 +402,26 @@ window.DashboardModule = {
         return activities.sort((a, b) => b.timestamp - a.timestamp);
     },
 
+    // UPGRADE CTA
+    dashboard_renderUpgradeCTA() {
+        return `
+            <div class="dashboard-upgrade">
+                <div class="dashboard-upgrade-glow"></div>
+                <div class="dashboard-upgrade-content">
+                    <div class="dashboard-upgrade-icon">🚀</div>
+                    <div class="dashboard-upgrade-text">
+                        <h3 class="dashboard-upgrade-title">Ready to scale?</h3>
+                        <p class="dashboard-upgrade-subtitle">Upgrade to Pro for 5,000 leads and advanced analytics</p>
+                    </div>
+                </div>
+                <button class="dashboard-upgrade-btn" data-action="upgrade">
+                    <span>View Plans</span>
+                    <div class="dashboard-btn-shine"></div>
+                </button>
+            </div>
+        `;
+    },
+
     // EVENT HANDLING - Simple delegation like Pipeline
     dashboard_attachEvents() {
         const container = document.getElementById(this.state.container);
@@ -445,6 +466,9 @@ window.DashboardModule = {
                     break;
                 case 'drill-winrate':
                     this.dashboard_showWinRateModal();
+                    break;
+                case 'upgrade':
+                    if (window.loadPage) window.loadPage('upgrade');
                     break;
             }
         };
@@ -1754,6 +1778,78 @@ window.DashboardModule = {
 .dashboard-activity-time {
     font-size: 0.8rem;
     color: var(--text-tertiary);
+}
+
+/* UPGRADE CTA */
+.dashboard-upgrade {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    animation: dashSlideUp 0.6s ease 0.5s backwards;
+}
+
+.dashboard-upgrade-glow {
+    position: absolute;
+    inset: -50%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.3), transparent);
+    animation: dashGlow 3s infinite;
+}
+
+.dashboard-upgrade-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.dashboard-upgrade-icon {
+    font-size: 3rem;
+}
+
+.dashboard-upgrade-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-upgrade-subtitle {
+    color: var(--text-secondary);
+}
+
+.dashboard-upgrade-btn {
+    padding: 1rem 2rem;
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-btn-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.dashboard-upgrade-btn:hover .dashboard-btn-shine {
+    transform: translateX(100%);
+}
+
+.dashboard-upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
 /* MODALS */

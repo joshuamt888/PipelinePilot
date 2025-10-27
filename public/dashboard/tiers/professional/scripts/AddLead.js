@@ -1427,10 +1427,55 @@ addlead_showCustomSourceInput(targetInput) {
             
         } catch (error) {
             console.error('Failed to create lead:', error);
+
+            if (error.message.includes('FREE_TIER_LIMIT:')) {
+                const message = error.message.split(':')[1];
+                this.addlead_showUpgradePrompt(message);
+                return;
+            }
+
             this.addlead_showNotification(API.handleAPIError(error, 'CreateLead'), 'error');
         } finally {
             this.addlead_setLoadingState(false);
         }
+    },
+
+    // INSTANT UPGRADE PROMPT
+    addlead_showUpgradePrompt(message) {
+        const modal = document.createElement('div');
+        modal.className = 'addlead-upgrade-prompt-overlay';
+        modal.innerHTML = `
+            <div class="addlead-upgrade-prompt">
+                <div class="addlead-upgrade-header">
+                    <div class="addlead-upgrade-icon">🚀</div>
+                    <h3>Upgrade to Pro</h3>
+                </div>
+                <div class="addlead-upgrade-content">
+                    <p>${API.escapeHtml(message)}</p>
+                    <ul class="addlead-upgrade-features">
+                        <li>✅ 5,000 lead capacity</li>
+                        <li>✅ Advanced analytics</li>
+                        <li>✅ Email tracking</li>
+                        <li>✅ Goal setting & more</li>
+                    </ul>
+                </div>
+                <div class="addlead-upgrade-actions">
+                    <button class="addlead-btn-secondary addlead-close-upgrade">
+                        Maybe Later
+                    </button>
+                    <button class="addlead-btn-primary" onclick="window.location.href='/pages/pricing.html'">
+                        View Pricing
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        modal.querySelector('.addlead-close-upgrade').onclick = () => modal.remove();
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
     },
 
     // Edit lead submit
@@ -2215,6 +2260,7 @@ addlead_showCustomSourceInput(targetInput) {
         document.querySelector('.addlead-similar-popup-overlay')?.remove();
         document.querySelector('.addlead-source-popup-overlay')?.remove();
         document.querySelector('.addlead-custom-source-overlay')?.remove();
+        document.querySelector('.addlead-upgrade-prompt-overlay')?.remove();
     },
 
     // Loading states
@@ -4146,6 +4192,90 @@ addlead_showCustomSourceInput(targetInput) {
     background: var(--primary-dark);
     transform: translateY(-1px);
 }
+
+            /* Upgrade Prompt */
+            .addlead-upgrade-prompt-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(4px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10003;
+                padding: 1rem;
+            }
+
+            .addlead-upgrade-prompt {
+                background: var(--surface);
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 100%;
+                max-width: 450px;
+                border: 1px solid var(--border);
+                overflow: hidden;
+            }
+
+            .addlead-upgrade-header {
+                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                color: white;
+                padding: 2rem;
+                text-align: center;
+            }
+
+            .addlead-upgrade-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+            }
+
+            .addlead-upgrade-header h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 700;
+            }
+
+            .addlead-upgrade-content {
+                padding: 2rem;
+            }
+
+            .addlead-upgrade-content p {
+                margin: 0 0 1.5rem 0;
+                color: var(--text-primary);
+                line-height: 1.6;
+            }
+
+            .addlead-upgrade-features {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .addlead-upgrade-features li {
+                padding: 0.5rem 0;
+                color: var(--text-secondary);
+                font-size: 0.95rem;
+            }
+
+            .addlead-upgrade-actions {
+                display: flex;
+                gap: 1rem;
+                padding: 1rem 2rem 2rem;
+            }
+
+            .addlead-close-upgrade {
+                flex: 1;
+                padding: 0.875rem 1.5rem;
+                border-radius: var(--radius);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                background: var(--surface-hover);
+                color: var(--text-primary);
+                border: 1px solid var(--border);
+            }
 
             /* Error Container */
             .addlead-error-container {
