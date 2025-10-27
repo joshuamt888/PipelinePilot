@@ -323,6 +323,12 @@ accept_terms_of_service(version text DEFAULT '1.0')
 -- Upgrades user to 14-day professional trial
 -- Uses session flag to bypass trigger protection
 upgrade_to_trial()
+
+-- Admin function to manually upgrade/downgrade users (bypasses trigger protection)
+-- Usage: SELECT admin_set_user_tier('user@email.com', 'professional');
+-- Tiers: 'free', 'professional', 'professional_trial', 'business', 'enterprise', 'admin'
+-- Auto-sets correct lead limits, or pass custom limit as 3rd parameter
+admin_set_user_tier(target_email text, new_tier text, new_limit integer DEFAULT NULL)
 ```
 
 ### Database Triggers
@@ -823,17 +829,29 @@ WHERE email = 'test@example.com';
 
 ### Phase 6: Test PRO Tier (1 hour)
 
-**To test Pro tier, manually upgrade a user in database:**
+**To test Pro tier, use the admin function (bypasses trigger protection):**
 ```sql
--- Upgrade to paid professional
-UPDATE users
-SET user_type = 'professional',
-    current_lead_limit = 5000
-WHERE email = 'your-email@example.com';
+-- Upgrade to paid professional (auto-sets 5,000 lead limit)
+SELECT admin_set_user_tier('your-email@example.com', 'professional');
 
--- Or test trial (if not used before)
+-- Or upgrade to professional trial
+SELECT admin_set_user_tier('your-email@example.com', 'professional_trial');
+
+-- Or test trial upgrade via app (if not used before)
 SELECT upgrade_to_trial();
+
+-- Downgrade back to free for testing
+SELECT admin_set_user_tier('your-email@example.com', 'free');
 ```
+
+**Why use admin_set_user_tier() instead of direct UPDATE?**
+- ✅ Properly bypasses trigger protection using session flag
+- ✅ Auto-sets correct lead limits for each tier
+- ✅ Validates tier names (prevents typos)
+- ✅ Returns JSON confirmation
+- ✅ Safe and reusable
+
+**Note:** Direct UPDATE queries will fail with "Cannot modify user_type" error because the trigger protection blocks unauthorized changes to critical fields.
 
 **Verify:**
 - ✅ Router redirects professional users to `/dashboard/tiers/professional/index.html`
@@ -1039,13 +1057,13 @@ SELECT upgrade_to_trial();
 
 ## 📊 CURRENT STATUS SUMMARY
 
-**Total Estimated Time to Launch**: ~10-15 hours remaining
+**Total Estimated Time to Launch**: ~5-10 hours remaining
 
-**Current Blocker**: Mobile responsiveness optimization
+**Current Blocker**: Mobile responsiveness optimization + Stripe integration
 
-**Critical Pre-Launch Tasks**: Trial testing, analytics setup, security audit
+**Critical Pre-Launch Tasks**: Trial testing, Stripe integration, security audit
 
-**Next Milestone**: Free tier production-ready with trial/upgrade fully tested
+**Next Milestone**: Full Stripe integration with checkout flow & webhooks
 
 ### What's Working:
 - ✅ Backend infrastructure (Supabase + Railway)
@@ -1059,6 +1077,9 @@ SELECT upgrade_to_trial();
 - ✅ Trial expiration automation (cron job, database function)
 - ✅ Analytics framework ready (PostHog - just add key)
 - ✅ Legal pages updated (Terms & Privacy with PostHog disclosure)
+- ✅ **Professional tier V2.0 complete** (premium UI, all upgrade prompts removed)
+- ✅ **Admin function for manual tier upgrades** (bypasses trigger protection)
+- ✅ **Database trigger protection working** (prevents unauthorized tier changes)
 
 ### What Needs Testing Before Launch:
 - ❌ **CRITICAL**: Trial upgrade flow (Phase 4 checklist)
@@ -1070,24 +1091,49 @@ SELECT upgrade_to_trial();
 - ❌ PostHog analytics setup (optional but recommended)
 - ❌ Remove test endpoint from server.js before production
 
+### What's NOT Built Yet (Required Before Launch):
+- ❌ **Stripe Checkout Integration** - No payment flow exists yet
+- ❌ **Stripe Webhook Handlers** - Webhooks in server.js don't upgrade/downgrade users
+- ❌ **Subscription Management UI** - Settings.js needs billing tab
+- ❌ **Recurring Payment Verification** - System trusts `user_type` field only
+
+**Current Workaround:** Use `admin_set_user_tier()` function to manually upgrade users after receiving payment externally.
+
+**To Build Stripe Integration (30-45 min):**
+1. Create checkout session endpoint in server.js
+2. Add Stripe checkout button to Settings.js
+3. Implement webhook handlers:
+   - `checkout.session.completed` → upgrade to professional
+   - `customer.subscription.deleted` → downgrade to free
+   - `invoice.payment_failed` → mark as past_due
+4. Add Stripe billing portal link
+
+**Database fields ready but unused:**
+- `stripe_customer_id` - Will store Stripe customer ID
+- `stripe_subscription_id` - Will store Stripe subscription ID
+- `subscription_status` - Will track active/past_due/canceled
+
 ### What's Future Work (Post-Launch):
-- ❌ Pro tier files (copy + enhance from free)
-- ❌ Stripe subscription management UI
-- ❌ Advanced pro-only features
+- ❌ Goals tracking widget in dashboard
+- ❌ Bulk operations in Pipeline
+- ❌ Advanced analytics charts
+- ❌ Custom fields for leads
+- ❌ Business & Enterprise tiers
 
 ### Key Reminders:
 - 🔴 **REMOVE** test endpoint `/test/expire-trials` before production
 - 🟡 **TEST** trial upgrade/downgrade thoroughly (Phase 4 checklist)
 - 🟢 **OPTIONAL** but recommended: Enable PostHog analytics
+- 🟠 **BUILD STRIPE** before accepting real payments
 
 ---
 
-**Document Version**: 2.3
-**Last Updated**: Added Analytics, ToS, Trial Testing, Pre-Launch Checklist
+**Document Version**: 2.4
+**Last Updated**: Professional Tier V2.0 Complete + Admin Function Added
 **Key Changes**:
-- Added ToS acceptance section
-- Added Analytics (PostHog) section
-- Added comprehensive trial/upgrade testing procedures (Phase 4)
-- Added 10-point pre-launch checklist
-- Updated priorities to emphasize trial testing before launch
-**Status**: Free Tier Desktop Complete + Trial Automation Live, Mobile Optimization In Progress
+- ✅ Professional tier V2.0 fully implemented (premium UI, all upgrade prompts removed)
+- ✅ Added `admin_set_user_tier()` database function for manual upgrades
+- ✅ Updated testing procedures to use admin function (bypasses trigger protection)
+- ✅ Documented Stripe integration status (not built yet, required before launch)
+- ✅ Updated current status summary with Pro tier completion
+**Status**: Free + Pro Tier Desktop Complete, Stripe Integration & Mobile Optimization Remaining
