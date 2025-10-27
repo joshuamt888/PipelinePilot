@@ -205,7 +205,7 @@ backdrop.addEventListener('mouseup', (e) => {
 
 ---
 
-## 📊 DATABASE SCHEMA REFERENCE (UPDATED)
+## 📊 DATABASE SCHEMA REFERENCE (UPDATED v2.5)
 
 ### Users Table
 ```sql
@@ -226,6 +226,7 @@ CREATE TABLE public.users (
     subscription_status TEXT,
     settings JSONB DEFAULT '{}',
     goals JSONB DEFAULT '{}',
+    preferences JSONB DEFAULT '{}',  -- NEW: UI preferences (windowing, panels, theme)
     tos_accepted_at TIMESTAMPTZ,
     tos_version TEXT DEFAULT '1.0',
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -249,7 +250,7 @@ CREATE TABLE public.users (
   - **Allows changes to**: `settings` and `goals` JSONB fields only
   - **Exception**: SECURITY DEFINER functions can bypass protection using session flag
 
-### Leads Table
+### Leads Table (Enhanced for Pro Tier)
 ```sql
 CREATE TABLE public.leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -259,6 +260,8 @@ CREATE TABLE public.leads (
     phone TEXT,
     company TEXT,
     job_title TEXT,
+    position TEXT,              -- NEW: "VP of Sales", "CEO" (more detailed than job_title)
+    department TEXT,            -- NEW: "Sales", "Marketing", "Engineering"
     website TEXT,
     status TEXT DEFAULT 'new',
     type TEXT,
@@ -269,6 +272,10 @@ CREATE TABLE public.leads (
     potential_value NUMERIC(12, 2),
     follow_up_date DATE,
     last_contact_date DATE,
+    deal_stage TEXT,            -- NEW: "Discovery", "Proposal", "Negotiation" (more granular)
+    next_action TEXT,           -- NEW: "Send proposal", "Schedule demo" (manual input)
+    win_probability INTEGER CHECK (win_probability BETWEEN 0 AND 100),  -- NEW: For forecasting
+    tags TEXT[] DEFAULT '{}',   -- NEW: ["hot", "enterprise", "q4-priority"]
     linkedin_url TEXT,
     facebook_url TEXT,
     twitter_url TEXT,
@@ -303,6 +310,110 @@ CREATE TABLE public.tasks (
 
 **RLS Policies**: All enforce `auth.uid() = user_id`
 
+### Jobs Table (NEW - Pro Tier Feature)
+```sql
+CREATE TABLE public.jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+
+    -- Basic Info
+    title TEXT NOT NULL,
+    description TEXT,
+    job_type TEXT DEFAULT 'service',  -- 'service', 'product', 'consultation', 'project'
+    status TEXT DEFAULT 'scheduled',  -- 'scheduled', 'in_progress', 'completed', 'cancelled'
+    priority TEXT DEFAULT 'medium',
+
+    -- Scheduling
+    scheduled_date DATE,
+    scheduled_time TIME,
+    duration_hours NUMERIC(5,2),
+    completed_at TIMESTAMPTZ,
+
+    -- Financial Tracking (Manual Input = Better Google Sheets)
+    material_cost NUMERIC(12,2) DEFAULT 0,
+    labor_hours NUMERIC(5,2) DEFAULT 0,
+    labor_rate NUMERIC(8,2) DEFAULT 0,
+    other_expenses NUMERIC(12,2) DEFAULT 0,
+    total_cost NUMERIC(12,2) GENERATED ALWAYS AS (
+        material_cost + (labor_hours * labor_rate) + other_expenses
+    ) STORED,
+
+    quoted_price NUMERIC(12,2) DEFAULT 0,
+    final_price NUMERIC(12,2),
+    profit NUMERIC(12,2) GENERATED ALWAYS AS (
+        COALESCE(final_price, quoted_price) - total_cost
+    ) STORED,
+    profit_margin NUMERIC(5,2) GENERATED ALWAYS AS (
+        CASE
+            WHEN COALESCE(final_price, quoted_price) > 0
+            THEN ((COALESCE(final_price, quoted_price) - total_cost) / COALESCE(final_price, quoted_price)) * 100
+            ELSE 0
+        END
+    ) STORED,
+
+    -- Materials & Notes
+    materials JSONB DEFAULT '[]',  -- [{"name": "Paint", "quantity": 3, "cost": 45}]
+    notes TEXT,
+    location TEXT,
+    invoice_number TEXT,
+    payment_status TEXT DEFAULT 'pending',
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Key Features:**
+- **Manual Input:** You enter all costs, system calculates profit (like spreadsheet formulas)
+- **Generated Columns:** total_cost, profit, profit_margin auto-calculate (like `=SUM()`)
+- **Materials Tracking:** JSONB array for flexible material lists
+- **Lead Association:** Link jobs to leads for full client history
+
+**RLS Policies**: All enforce `auth.uid() = user_id`
+
+### Goals Table (NEW - Pro Tier Feature)
+```sql
+CREATE TABLE public.goals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Goal Definition
+    title TEXT NOT NULL,                       -- "Add 20 leads this month"
+    description TEXT,
+    goal_type TEXT NOT NULL,                   -- 'leads_created', 'jobs_completed', 'revenue', 'profit'
+
+    -- Target & Progress
+    target_value NUMERIC(12,2) NOT NULL,
+    current_value NUMERIC(12,2) DEFAULT 0,     -- Auto-updated by triggers
+    unit TEXT,                                 -- 'leads', 'dollars', 'jobs'
+
+    -- Time Period
+    period TEXT NOT NULL,                      -- 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+
+    -- Status
+    status TEXT DEFAULT 'active',              -- 'active', 'completed', 'failed', 'paused'
+    auto_track BOOLEAN DEFAULT true,           -- Auto-update from database
+
+    -- UI Customization
+    color TEXT DEFAULT '#667eea',
+    icon TEXT DEFAULT '🎯',
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Key Features:**
+- **Auto-tracking:** Goals update automatically when you add leads/jobs (like `=COUNTIF()`)
+- **Manual Control:** You set targets, system counts progress
+- **Visual Progress:** Color-coded progress bars in UI
+- **Time-based:** Track daily, weekly, monthly, or custom periods
+
+**RLS Policies**: All enforce `auth.uid() = user_id`
+
 ### Database Functions
 ```sql
 -- Atomically creates lead and increments counter
@@ -329,6 +440,15 @@ upgrade_to_trial()
 -- Tiers: 'free', 'professional', 'professional_trial', 'business', 'enterprise', 'admin'
 -- Auto-sets correct lead limits, or pass custom limit as 3rd parameter
 admin_set_user_tier(target_email text, new_tier text, new_limit integer DEFAULT NULL)
+
+-- NEW: Auto-update goal progress when leads are created
+update_lead_goals()  -- Trigger function, updates goals.current_value
+
+-- NEW: Auto-update revenue/profit goals when jobs complete
+update_revenue_goals()  -- Trigger function, updates revenue/profit goals
+
+-- NEW: Auto-mark goals as completed when target reached
+check_goal_completion()  -- Trigger function, sets status='completed'
 ```
 
 ### Database Triggers
@@ -498,14 +618,17 @@ steadymanager/
             │       ├── Scheduling.js   # ✅ Complete
             │       └── Settings.js     # ✅ Complete
             │
-            └── professional/      # ❌ NEEDS CREATION (Phase 4)
-                ├── index.html     # Copy from free, modify
-                └── scripts/       # Copy from free, add features
-                    ├── dashboard.js
-                    ├── Pipeline.js
-                    ├── AddLead.js
-                    ├── Scheduling.js
-                    └── Settings.js
+            └── professional/      # ✅ ENHANCED WITH NEW FEATURES
+                ├── index.html     # ✅ Premium UI
+                └── scripts/
+                    ├── dashboard.js     # ✅ Enhanced stats
+                    ├── Pipeline.js      # ✅ Enhanced with tags
+                    ├── AddLead.js       # ✅ Enhanced with position/tags
+                    ├── Jobs.js          # ✨ NEW - Replaces Scheduling with profit tracking
+                    ├── Goals.js         # ✨ NEW - Goal tracking module
+                    ├── Settings.js      # ✅ Enhanced with preferences
+                    ├── CommandPalette.js # ✨ NEW - Cmd+K search (optional)
+                    └── QuickPanels.js   # ✨ NEW - Floating panels (optional)
 ```
 
 ---
@@ -570,6 +693,9 @@ Railway automatically:
 - `API.updateProfile(updates)` - RLS blocks tier/limit changes
 - `API.updateSettings(settings)` - Updates settings JSONB
 - `API.updateUserGoals(goals)` - Updates goals JSONB
+- `API.getPreferences()` - Returns UI preferences (NEW)
+- `API.updatePreferences(preferences)` - Updates UI preferences (NEW)
+- `API.toggleFeature(featureName, enabled)` - Toggle windowing/panels (NEW)
 
 ### Leads
 - `API.getLeads()` - Returns `{ cold: [], warm: [], all: [] }`
@@ -578,6 +704,10 @@ Railway automatically:
 - `API.deleteLead(leadId)` - Deletes lead
 - `API.searchLeads(query)` - Searches name/email/company
 - `API.checkDuplicates(leadData)` - Returns duplicate matches
+- `API.addLeadTags(leadId, tags)` - Add tags to lead (NEW)
+- `API.removeLeadTag(leadId, tag)` - Remove tag from lead (NEW)
+- `API.setWinProbability(leadId, probability)` - Set forecast probability (NEW)
+- `API.setNextAction(leadId, action)` - Set next action (NEW)
 
 ### Tasks
 - `API.getTasks(filters)` - Returns all tasks
@@ -588,6 +718,25 @@ Railway automatically:
 - `API.getTodaysTasks()` - Today's tasks
 - `API.getOverdueTasks()` - Overdue tasks
 - `API.getUpcomingWeek()` - Next 7 days
+
+### Jobs (NEW - Pro Tier)
+- `API.getJobs(filters)` - Returns all jobs
+- `API.createJob(jobData)` - Creates job with cost tracking
+- `API.updateJob(jobId, updates)` - Updates job
+- `API.deleteJob(jobId)` - Deletes job
+- `API.completeJob(jobId, finalPrice, laborHours, materials)` - Mark complete with final costs
+- `API.getJobStats()` - Total revenue, profit, avg margin
+- `API.getJobsByLead(leadId)` - All jobs for specific lead
+- `API.getJobProfitability()` - Profit analysis across all jobs
+
+### Goals (NEW - Pro Tier)
+- `API.getGoals(status)` - Returns goals (default: active)
+- `API.createGoal(goalData)` - Creates new goal
+- `API.updateGoal(goalId, updates)` - Updates goal
+- `API.deleteGoal(goalId)` - Deletes goal
+- `API.updateGoalProgress(goalId, value)` - Manual progress update
+- `API.checkGoalCompletion()` - Check if goals reached target
+- `API.getGoalProgress()` - All goals with progress percentages
 
 ### Stats
 - `API.getBasicStats()` - Lead/task counts
@@ -980,6 +1129,151 @@ SELECT admin_set_user_tier('your-email@example.com', 'free');
 
 ---
 
+## 🚀 PRO TIER FEATURES (NEW - Apple-Touch Manual CRM)
+
+### **Philosophy: Better Google Sheets**
+Pro tier is NOT automation - it's beautiful, manual data entry with smart visualization. Think Apple's design + Google Sheets' flexibility.
+
+### **What's Manual (You Control):**
+- ✅ All data entry (leads, jobs, goals)
+- ✅ All decisions (status changes, tags, priorities)
+- ✅ All organization (drag-and-drop, filters, views)
+
+### **What's Automatic (Like Spreadsheet Formulas):**
+- ✅ Profit calculations (final_price - total_cost)
+- ✅ Goal progress counting (COUNTIF-style)
+- ✅ Stats aggregation (SUM, AVG)
+- ✅ Derived fields (profit_margin %)
+
+### **Core Enhancements:**
+
+#### **1. Jobs Module** (Replaces Scheduling)
+**What it does:**
+- Calendar view for scheduled jobs
+- Financial tracking: material costs, labor hours, quoted price
+- Auto-calculated: total cost, profit, profit margin
+- Link jobs to leads for full client history
+- Payment status tracking
+
+**Key difference from Tasks:**
+- Tasks = reminders ("Call John")
+- Jobs = work performed ("Install cabinets - $1,500 revenue, $900 cost, $600 profit")
+
+**UI:**
+- Calendar tab (schedule jobs)
+- Financial tab (see profit/loss breakdown)
+- Job cards show profit margin in real-time
+
+#### **2. Goals Module** (New Navigation Item)
+**What it does:**
+- Set monthly/weekly/yearly goals
+- Auto-track progress from database
+- Visual progress bars (Apple Watch ring style)
+- Goal types: leads created, jobs completed, revenue, profit
+
+**Examples:**
+- "Add 20 leads this month" → Auto-counts as you add leads
+- "Earn $10,000 revenue" → Auto-sums as you complete jobs
+- "Complete 15 jobs" → Auto-increments per job
+
+**UI:**
+- Goal cards with circular progress
+- Days remaining countdown
+- Color-coded status (on-track, at-risk, completed)
+- Celebration animations when goal hit
+
+#### **3. Enhanced Leads**
+**New fields:**
+- `position` → "VP of Sales", "CEO" (the ONE thing you asked for!)
+- `department` → "Sales", "Marketing"
+- `deal_stage` → "Discovery", "Proposal", "Negotiation"
+- `next_action` → "Send proposal", "Schedule demo"
+- `win_probability` → 0-100% for forecasting
+- `tags` → ["hot", "enterprise", "q4-priority"]
+
+**Why:**
+- Better contact context (position/department)
+- Granular pipeline tracking (deal_stage)
+- Clear next steps (next_action)
+- Revenue forecasting (win_probability × potential_value)
+- Flexible categorization (tags)
+
+#### **4. Command Palette** (Optional - Toggle in Settings)
+**What it does:**
+- Press `Cmd+K` anywhere
+- Fuzzy search leads, jobs, tasks
+- Quick actions ("Create lead", "View analytics")
+- Instant navigation
+
+**UI:**
+- Floating search bar (center screen)
+- Real-time results
+- Keyboard navigation
+- ESC to close
+
+#### **5. Quick Panels** (Optional - Toggle in Settings)
+**What it does:**
+- Floating action buttons (bottom-right)
+- Quick add lead/job without navigating
+- Mini goal tracker (sidebar)
+- Collapsible/draggable
+
+**UI:**
+- "+ Quick Add" button → Mini form pops up
+- Goal widget shows live progress
+- Non-intrusive, can minimize
+
+#### **6. Windowing System** (Optional - Toggle in Settings)
+**What it does:**
+- Open multiple views simultaneously
+- Draggable, resizable windows
+- View lead while checking analytics
+- Desktop OS experience in browser
+
+**UI:**
+- Windows float on dashboard
+- Snap to grid (left/right/quarters)
+- Minimize/maximize/close
+- Window manager (see all open windows)
+
+### **Database Changes:**
+1. ✅ **Jobs table** - Enhanced tasks with cost/profit tracking
+2. ✅ **Goals table** - Goal tracking with auto-progress
+3. ✅ **Leads enhancements** - position, department, deal_stage, next_action, win_probability, tags
+4. ✅ **User preferences** - windowing_enabled, command_palette_enabled, quick_panels_enabled
+
+### **UI Toggles (Settings):**
+```
+⚙️ Settings → Pro Features
+
+Workspace Mode:
+[ ] Enable Windowing System (Beta)
+    Open multiple views simultaneously. Power user feature.
+
+Quick Access:
+[✓] Command Palette (Cmd+K)
+    Instant search and navigation
+
+[✓] Quick Action Panels
+    Fast access to common tasks
+
+Display Density:
+○ Compact  ● Comfortable  ○ Spacious
+```
+
+### **Next Implementation Steps:**
+1. ✅ Run `database_migration_pro_tier.sql` in Supabase
+2. ⏳ Update `api.js` with Jobs/Goals methods
+3. ⏳ Create `Jobs.js` module (calendar + financial view)
+4. ⏳ Create `Goals.js` module (goal tracker)
+5. ⏳ Enhance `AddLead.js` with position/tags fields
+6. ⏳ Enhance `Settings.js` with preferences tab
+7. ⏳ Build `CommandPalette.js` (optional feature)
+8. ⏳ Build `QuickPanels.js` (optional feature)
+9. ⏳ Build `WindowManager.js` (optional feature)
+
+---
+
 ## 📝 IMMEDIATE NEXT STEPS
 
 ### Priority Order:
@@ -1128,12 +1422,16 @@ SELECT admin_set_user_tier('your-email@example.com', 'free');
 
 ---
 
-**Document Version**: 2.4
-**Last Updated**: Professional Tier V2.0 Complete + Admin Function Added
+**Document Version**: 3.0 🚀
+**Last Updated**: Pro Tier Revolution - Jobs, Goals, Enhanced Leads
 **Key Changes**:
-- ✅ Professional tier V2.0 fully implemented (premium UI, all upgrade prompts removed)
-- ✅ Added `admin_set_user_tier()` database function for manual upgrades
-- ✅ Updated testing procedures to use admin function (bypasses trigger protection)
-- ✅ Documented Stripe integration status (not built yet, required before launch)
-- ✅ Updated current status summary with Pro tier completion
-**Status**: Free + Pro Tier Desktop Complete, Stripe Integration & Mobile Optimization Remaining
+- ✅ **NEW**: Jobs table with cost/profit tracking (Better Google Sheets for job financials)
+- ✅ **NEW**: Goals table with auto-progress tracking (Apple Watch-style goal rings)
+- ✅ **NEW**: Enhanced Leads with position, department, deal_stage, next_action, win_probability, tags
+- ✅ **NEW**: User preferences (windowing, command palette, quick panels toggles)
+- ✅ **NEW**: Database functions for auto-goal tracking (trigger-based, like spreadsheet formulas)
+- ✅ **NEW**: Complete SQL migration script ready to run
+- ✅ Updated API methods cheatsheet with Jobs, Goals, Preferences
+- ✅ Comprehensive Pro Tier features documentation
+**Status**: Database Schema Ready, API.js Update Next, Then Build Jobs.js & Goals.js Modules
+**Philosophy**: Manual CRM (you control all data) + Smart Visualization (system calculates & displays beautifully)

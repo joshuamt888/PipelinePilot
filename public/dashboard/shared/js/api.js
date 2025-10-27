@@ -744,6 +744,255 @@ class TierScalingAPI {
     return colors[priority?.toLowerCase()] || '#6B7280';
   }
 
+  // =====================================================
+  // JOBS (Pro Tier - Better Google Sheets for Financials)
+  // =====================================================
+
+  static async getJobs(filters = {}) {
+    let query = supabase
+      .from('jobs')
+      .select('*')
+      .order('scheduled_date', { ascending: false });
+
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.job_type) query = query.eq('job_type', filters.job_type);
+    if (filters.lead_id) query = query.eq('lead_id', filters.lead_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+
+  static async createJob(jobData) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .insert([{ ...jobData, user_id: user.id }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  }
+
+  static async updateJob(jobId, updates) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .update(updates)
+      .eq('id', jobId)
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  }
+
+  static async deleteJob(jobId) {
+    const { error } = await supabase
+      .from('jobs')
+      .delete()
+      .eq('id', jobId);
+
+    if (error) throw error;
+    return { success: true };
+  }
+
+  static async completeJob(jobId, finalPrice, laborHours, materials = []) {
+    const updates = {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      final_price: finalPrice,
+      labor_hours: laborHours,
+      materials: materials
+    };
+
+    return await this.updateJob(jobId, updates);
+  }
+
+  static async getJobStats() {
+    const jobs = await this.getJobs({ status: 'completed' });
+
+    const totalRevenue = jobs.reduce((sum, j) => sum + (parseFloat(j.final_price || j.quoted_price) || 0), 0);
+    const totalCosts = jobs.reduce((sum, j) => sum + (parseFloat(j.total_cost) || 0), 0);
+    const totalProfit = jobs.reduce((sum, j) => sum + (parseFloat(j.profit) || 0), 0);
+    const avgMargin = jobs.length > 0
+      ? jobs.reduce((sum, j) => sum + (parseFloat(j.profit_margin) || 0), 0) / jobs.length
+      : 0;
+
+    return {
+      totalJobs: jobs.length,
+      totalRevenue,
+      totalCosts,
+      totalProfit,
+      avgMargin: Math.round(avgMargin * 10) / 10
+    };
+  }
+
+  static async getJobsByLead(leadId) {
+    return await this.getJobs({ lead_id: leadId });
+  }
+
+  static async getJobProfitability() {
+    const jobs = await this.getJobs({ status: 'completed' });
+
+    return jobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      revenue: parseFloat(job.final_price || job.quoted_price) || 0,
+      cost: parseFloat(job.total_cost) || 0,
+      profit: parseFloat(job.profit) || 0,
+      margin: parseFloat(job.profit_margin) || 0,
+      scheduled_date: job.scheduled_date,
+      completed_at: job.completed_at
+    })).sort((a, b) => b.profit - a.profit);
+  }
+
+  // =====================================================
+  // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
+  // =====================================================
+
+  static async getGoals(status = 'active') {
+    let query = supabase
+      .from('goals')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (status) query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+
+  static async createGoal(goalData) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('goals')
+      .insert([{ ...goalData, user_id: user.id }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  }
+
+  static async updateGoal(goalId, updates) {
+    const { data, error } = await supabase
+      .from('goals')
+      .update(updates)
+      .eq('id', goalId)
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  }
+
+  static async deleteGoal(goalId) {
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', goalId);
+
+    if (error) throw error;
+    return { success: true };
+  }
+
+  static async updateGoalProgress(goalId, value) {
+    return await this.updateGoal(goalId, { current_value: value });
+  }
+
+  static async checkGoalCompletion() {
+    const goals = await this.getGoals('active');
+    const completed = goals.filter(g => g.current_value >= g.target_value);
+
+    for (const goal of completed) {
+      await this.updateGoal(goal.id, { status: 'completed' });
+    }
+
+    return { completedCount: completed.length, completed };
+  }
+
+  static async getGoalProgress() {
+    const goals = await this.getGoals();
+
+    return goals.map(goal => ({
+      ...goal,
+      progress: goal.target_value > 0
+        ? Math.round((goal.current_value / goal.target_value) * 100)
+        : 0,
+      remaining: Math.max(0, goal.target_value - goal.current_value),
+      daysRemaining: this.calculateDaysUntil(goal.end_date)
+    }));
+  }
+
+  // =====================================================
+  // PREFERENCES (Pro Tier - UI Customization)
+  // =====================================================
+
+  static async getPreferences() {
+    const profile = await this.getProfile();
+    return profile.preferences || {
+      windowing_enabled: false,
+      command_palette_enabled: true,
+      quick_panels_enabled: true,
+      default_view: 'dashboard',
+      theme: 'light',
+      density: 'comfortable',
+      animations_enabled: true,
+      keyboard_shortcuts_enabled: true
+    };
+  }
+
+  static async updatePreferences(preferences) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ preferences })
+      .eq('id', user.id)
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  }
+
+  static async toggleFeature(featureName, enabled) {
+    const currentPrefs = await this.getPreferences();
+    currentPrefs[featureName] = enabled;
+    return await this.updatePreferences(currentPrefs);
+  }
+
+  // =====================================================
+  // ENHANCED LEADS (Pro Tier - Tags, Position, etc)
+  // =====================================================
+
+  static async addLeadTags(leadId, tags) {
+    const lead = await this.getLeadById(leadId);
+    const currentTags = lead.tags || [];
+    const newTags = Array.from(new Set([...currentTags, ...tags]));
+
+    return await this.updateLead(leadId, { tags: newTags });
+  }
+
+  static async removeLeadTag(leadId, tag) {
+    const lead = await this.getLeadById(leadId);
+    const currentTags = lead.tags || [];
+    const newTags = currentTags.filter(t => t !== tag);
+
+    return await this.updateLead(leadId, { tags: newTags });
+  }
+
+  static async setWinProbability(leadId, probability) {
+    if (probability < 0 || probability > 100) {
+      throw new Error('Win probability must be between 0 and 100');
+    }
+
+    return await this.updateLead(leadId, { win_probability: probability });
+  }
+
+  static async setNextAction(leadId, action) {
+    return await this.updateLead(leadId, { next_action: action });
+  }
+
   static handleAPIError(error, context = '') {
     console.error(`API Error in ${context}:`, error);
     
@@ -770,5 +1019,6 @@ window.escapeHtml = TierScalingAPI.escapeHtml;
 
 export default API;
 
-console.log('Supabase-powered API v2.0 loaded');
+console.log('Supabase-powered API v3.0 loaded');
 console.log('✅ Direct database calls with RLS security');
+console.log('✨ NEW: Jobs, Goals, Preferences, Enhanced Leads');
