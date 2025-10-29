@@ -946,14 +946,2277 @@
     <!-- Core Utilities -->
     <script src="/dashboard/shared/js/utils.js"></script>
 
-    <!-- Overlay System (Revolutionary Multi-Tasking UI) -->
-    <script src="/dashboard/shared/js/OverlayManager.js"></script>
-    <script src="/dashboard/shared/js/overlays/BaseOverlay.js"></script>
-    <script src="/dashboard/shared/js/overlays/LeadDetailOverlay.js"></script>
-    <script src="/dashboard/shared/js/overlays/QuickAddLeadOverlay.js"></script>
-    <script src="/dashboard/shared/js/overlays/JobDetailOverlay.js"></script>
-    <script src="/dashboard/shared/js/overlays/QuickAddJobOverlay.js"></script>
+    <!-- Overlay System (Revolutionary Multi-Tasking UI) - INLINE -->
+    <!-- Overlay System (Revolutionary Multi-Tasking UI) - INLINE -->
+    <script>
+// ==================================================================
+// OVERLAY SYSTEM - ALL CODE CONSOLIDATED INTO INDEX.HTML  
+// This eliminates file loading issues and ensures everything works
+// ==================================================================
 
+/**
+ * OVERLAY MANAGER v1.0
+ * Revolutionary multi-tasking UI for SteadyManager Pro
+ *
+ * Manages floating overlays (popups, modals, panels)
+ * Heavily integrated with SteadyUtils for animations, theming, and utilities
+ *
+ * Usage:
+ *   OverlayManager.open('lead-detail', { leadId: '123' });
+ *   OverlayManager.open('quick-add-job');
+ *   OverlayManager.close(overlayId);
+ *   OverlayManager.closeAll();
+ */
+
+class OverlayManagerClass {
+    constructor() {
+        this.overlays = new Map();
+        this.zIndexCounter = 2000; // Start above dashboard (1000)
+        this.overlayTypes = {}; // Will be populated by overlay components
+        this.setupGlobalStyles();
+        console.log('OverlayManager v1.0 loaded 🪟');
+    }
+
+    /**
+     * Register an overlay type
+     * Called by overlay components to make themselves available
+     */
+    register(typeName, OverlayClass) {
+        this.overlayTypes[typeName] = OverlayClass;
+    }
+
+    /**
+     * Open an overlay
+     * @param {string} type - Overlay type ('lead-detail', 'job-detail', etc)
+     * @param {object} data - Data to pass to overlay
+     * @returns {string} overlayId
+     */
+    open(type, data = {}) {
+        const OverlayClass = this.overlayTypes[type];
+
+        if (!OverlayClass) {
+            console.error(`Overlay type "${type}" not registered`);
+            SteadyUtils.showToast(`Cannot open ${type} overlay`, 'error');
+            return null;
+        }
+
+        // Generate unique ID using utils
+        const overlayId = SteadyUtils.generateId();
+
+        // Create overlay instance
+        const overlay = new OverlayClass(overlayId, data, this.zIndexCounter++);
+
+        // Store overlay
+        this.overlays.set(overlayId, overlay);
+
+        // Render overlay
+        overlay.render();
+
+        // Lock scroll and blur background (using utils)
+        SteadyUtils.lockScroll();
+        SteadyUtils.blurBackground();
+
+        // ESC to close (using utils)
+        overlay.escHandler = SteadyUtils.closeOnEscape(() => {
+            this.close(overlayId);
+        });
+
+        return overlayId;
+    }
+
+    /**
+     * Close specific overlay
+     */
+    close(overlayId) {
+        const overlay = this.overlays.get(overlayId);
+
+        if (!overlay) return;
+
+        // Call overlay's destroy method
+        overlay.destroy();
+
+        // Remove from map
+        this.overlays.delete(overlayId);
+
+        // If no more overlays, unlock scroll and unblur
+        if (this.overlays.size === 0) {
+            SteadyUtils.unlockScroll();
+            SteadyUtils.unblurBackground();
+        }
+    }
+
+    /**
+     * Close all overlays
+     */
+    closeAll() {
+        const overlayIds = Array.from(this.overlays.keys());
+        overlayIds.forEach(id => this.close(id));
+    }
+
+    /**
+     * Close topmost overlay
+     */
+    closeTop() {
+        if (this.overlays.size === 0) return;
+
+        // Find overlay with highest z-index
+        let topOverlay = null;
+        let maxZIndex = -1;
+
+        this.overlays.forEach((overlay, id) => {
+            if (overlay.zIndex > maxZIndex) {
+                maxZIndex = overlay.zIndex;
+                topOverlay = id;
+            }
+        });
+
+        if (topOverlay) this.close(topOverlay);
+    }
+
+    /**
+     * Check if any overlays are open
+     */
+    hasOpenOverlays() {
+        return this.overlays.size > 0;
+    }
+
+    /**
+     * Get count of open overlays
+     */
+    getCount() {
+        return this.overlays.size;
+    }
+
+    /**
+     * Setup global overlay styles
+     */
+    setupGlobalStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            /* Overlay Backdrop */
+            .overlay-backdrop {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                padding: 2rem;
+            }
+
+            .overlay-backdrop.overlay-visible {
+                opacity: 1;
+            }
+
+            /* Overlay Container */
+            .overlay-container {
+                background: var(--surface);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow-xl);
+                max-width: 90vw;
+                max-height: 90vh;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                transform: scale(0.95) translateY(20px);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                border: 1px solid var(--border);
+            }
+
+            .overlay-visible .overlay-container {
+                transform: scale(1) translateY(0);
+            }
+
+            /* Overlay Header */
+            .overlay-header {
+                padding: 1.5rem 2rem;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-shrink: 0;
+            }
+
+            .overlay-title {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin: 0;
+            }
+
+            .overlay-close {
+                width: 32px;
+                height: 32px;
+                border-radius: var(--radius);
+                border: none;
+                background: transparent;
+                color: var(--text-tertiary);
+                font-size: 1.5rem;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: var(--transition);
+                line-height: 1;
+            }
+
+            .overlay-close:hover {
+                background: var(--surface-hover);
+                color: var(--text-primary);
+            }
+
+            /* Overlay Body */
+            .overlay-body {
+                padding: 2rem;
+                overflow-y: auto;
+                flex: 1;
+            }
+
+            /* Overlay Footer */
+            .overlay-footer {
+                padding: 1.5rem 2rem;
+                border-top: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 0.75rem;
+                flex-shrink: 0;
+            }
+
+            /* Size Variants */
+            .overlay-sm .overlay-container { max-width: 400px; }
+            .overlay-md .overlay-container { max-width: 600px; }
+            .overlay-lg .overlay-container { max-width: 800px; }
+            .overlay-xl .overlay-container { max-width: 1000px; }
+            .overlay-full .overlay-container { max-width: 95vw; }
+
+            /* Mobile Responsive */
+            @media (max-width: 768px) {
+                .overlay-backdrop {
+                    padding: 1rem;
+                }
+
+                .overlay-container {
+                    max-width: 100vw;
+                    max-height: 100vh;
+                    border-radius: 0;
+                }
+
+                .overlay-header {
+                    padding: 1rem 1.5rem;
+                }
+
+                .overlay-body {
+                    padding: 1.5rem;
+                }
+
+                .overlay-footer {
+                    padding: 1rem 1.5rem;
+                    flex-direction: column-reverse;
+                }
+
+                .overlay-footer .steady-btn {
+                    width: 100%;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+}
+
+// Create global instance
+const OverlayManager = new OverlayManagerClass();
+window.OverlayManager = OverlayManager;
+
+console.log('OverlayManager ready - Multi-tasking UI enabled 🚀');
+/**
+ * BASE OVERLAY v1.0
+ * Foundation for all overlay components
+ *
+ * Extend this class to create custom overlays:
+ *   class MyOverlay extends BaseOverlay {
+ *       getTitle() { return 'My Custom Overlay'; }
+ *       renderBody() { return '<div>My content</div>'; }
+ *   }
+ *
+ * All overlays get these for free:
+ * - Fade in/out animations (via SteadyUtils)
+ * - ESC to close
+ * - Click outside to close
+ * - Loading states
+ * - Error handling
+ */
+
+class BaseOverlay {
+    constructor(id, data, zIndex) {
+        this.id = id;
+        this.data = data || {};
+        this.zIndex = zIndex;
+        this.isLoading = false;
+        this.element = null;
+    }
+
+    /**
+     * Render the overlay
+     * Can be async if you need to load data first
+     */
+    async render() {
+        // Create backdrop
+        const backdrop = document.createElement('div');
+        backdrop.id = this.id;
+        backdrop.className = `overlay-backdrop ${this.getSize()}`;
+        backdrop.style.zIndex = this.zIndex;
+
+        backdrop.innerHTML = `
+            <div class="overlay-container" id="${this.id}-container">
+                <div class="overlay-header">
+                    <h2 class="overlay-title">${API.escapeHtml(this.getTitle())}</h2>
+                    <button class="overlay-close" aria-label="Close">×</button>
+                </div>
+                <div class="overlay-body" id="${this.id}-body">
+                    ${this.isLoading ? this.renderLoading() : this.renderBody()}
+                </div>
+                ${this.hasFooter() ? `
+                    <div class="overlay-footer" id="${this.id}-footer">
+                        ${this.renderFooter()}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        document.body.appendChild(backdrop);
+        this.element = backdrop;
+
+        // Fade in using SteadyUtils
+        requestAnimationFrame(() => {
+            backdrop.classList.add('overlay-visible');
+        });
+
+        // Attach event handlers
+        this.attachEvents();
+
+        // Call onMount hook
+        await this.onMount();
+    }
+
+    /**
+     * Attach event listeners
+     */
+    attachEvents() {
+        const backdrop = this.element;
+        const container = backdrop.querySelector('.overlay-container');
+        const closeBtn = backdrop.querySelector('.overlay-close');
+
+        // Close button
+        closeBtn.onclick = () => OverlayManager.close(this.id);
+
+        // Click outside to close (only if clicking directly on backdrop)
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                OverlayManager.close(this.id);
+            }
+        });
+
+        // Prevent clicks on container from closing
+        container.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    /**
+     * Destroy the overlay
+     */
+    destroy() {
+        if (!this.element) return;
+
+        // Call onDestroy hook
+        this.onDestroy();
+
+        // Fade out using SteadyUtils
+        this.element.classList.remove('overlay-visible');
+
+        setTimeout(() => {
+            if (this.element && this.element.parentNode) {
+                this.element.parentNode.removeChild(this.element);
+            }
+            this.element = null;
+        }, 300);
+    }
+
+    /**
+     * Update overlay body content
+     */
+    updateBody(html) {
+        const body = document.getElementById(`${this.id}-body`);
+        if (body) {
+            body.innerHTML = html;
+            // Re-attach events if needed
+            this.onBodyUpdate();
+        }
+    }
+
+    /**
+     * Update overlay footer content
+     */
+    updateFooter(html) {
+        const footer = document.getElementById(`${this.id}-footer`);
+        if (footer) {
+            footer.innerHTML = html;
+        }
+    }
+
+    /**
+     * Show loading state
+     */
+    showLoading() {
+        this.isLoading = true;
+        this.updateBody(this.renderLoading());
+    }
+
+    /**
+     * Hide loading state
+     */
+    hideLoading() {
+        this.isLoading = false;
+        this.updateBody(this.renderBody());
+        this.onBodyUpdate();
+    }
+
+    /**
+     * Show error in overlay
+     */
+    showError(message) {
+        this.updateBody(`
+            <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+                <h3 style="color: var(--danger); margin-bottom: 0.5rem;">Error</h3>
+                <p style="color: var(--text-secondary);">${API.escapeHtml(message)}</p>
+                <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                    Close
+                </button>
+            </div>
+        `);
+    }
+
+    // =====================================================
+    // OVERRIDE THESE METHODS IN YOUR OVERLAY
+    // =====================================================
+
+    /**
+     * Get overlay title
+     * @returns {string}
+     */
+    getTitle() {
+        return 'Overlay';
+    }
+
+    /**
+     * Get overlay size
+     * @returns {string} 'overlay-sm', 'overlay-md', 'overlay-lg', 'overlay-xl', 'overlay-full'
+     */
+    getSize() {
+        return 'overlay-md';
+    }
+
+    /**
+     * Render body content
+     * @returns {string} HTML string
+     */
+    renderBody() {
+        return '<div>Override renderBody() in your overlay class</div>';
+    }
+
+    /**
+     * Does this overlay have a footer?
+     * @returns {boolean}
+     */
+    hasFooter() {
+        return false;
+    }
+
+    /**
+     * Render footer content
+     * @returns {string} HTML string
+     */
+    renderFooter() {
+        return '';
+    }
+
+    /**
+     * Render loading state
+     * @returns {string} HTML string
+     */
+    renderLoading() {
+        return `
+            <div style="text-align: center; padding: 3rem;">
+                <div class="loading-spinner" style="display: inline-block;"></div>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Called after overlay is mounted to DOM
+     * Good place to load data, attach custom events, etc
+     */
+    async onMount() {
+        // Override in subclass
+    }
+
+    /**
+     * Called when overlay body is updated
+     * Re-attach event listeners here if needed
+     */
+    onBodyUpdate() {
+        // Override in subclass
+    }
+
+    /**
+     * Called before overlay is destroyed
+     * Cleanup custom event listeners, timers, etc
+     */
+    onDestroy() {
+        // Override in subclass
+    }
+}
+
+// Export to global scope
+window.BaseOverlay = BaseOverlay;
+
+console.log('BaseOverlay loaded - Overlay foundation ready 📦');
+/**
+ * BASE OVERLAY v1.0
+ * Foundation for all overlay components
+ *
+ * Extend this class to create custom overlays:
+ *   class MyOverlay extends BaseOverlay {
+ *       getTitle() { return 'My Custom Overlay'; }
+ *       renderBody() { return '<div>My content</div>'; }
+ *   }
+ *
+ * All overlays get these for free:
+ * - Fade in/out animations (via SteadyUtils)
+ * - ESC to close
+ * - Click outside to close
+ * - Loading states
+ * - Error handling
+ */
+
+class BaseOverlay {
+    constructor(id, data, zIndex) {
+        this.id = id;
+        this.data = data || {};
+        this.zIndex = zIndex;
+        this.isLoading = false;
+        this.element = null;
+    }
+
+    /**
+     * Render the overlay
+     * Can be async if you need to load data first
+     */
+    async render() {
+        // Create backdrop
+        const backdrop = document.createElement('div');
+        backdrop.id = this.id;
+        backdrop.className = `overlay-backdrop ${this.getSize()}`;
+        backdrop.style.zIndex = this.zIndex;
+
+        backdrop.innerHTML = `
+            <div class="overlay-container" id="${this.id}-container">
+                <div class="overlay-header">
+                    <h2 class="overlay-title">${API.escapeHtml(this.getTitle())}</h2>
+                    <button class="overlay-close" aria-label="Close">×</button>
+                </div>
+                <div class="overlay-body" id="${this.id}-body">
+                    ${this.isLoading ? this.renderLoading() : this.renderBody()}
+                </div>
+                ${this.hasFooter() ? `
+                    <div class="overlay-footer" id="${this.id}-footer">
+                        ${this.renderFooter()}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        document.body.appendChild(backdrop);
+        this.element = backdrop;
+
+        // Fade in using SteadyUtils
+        requestAnimationFrame(() => {
+            backdrop.classList.add('overlay-visible');
+        });
+
+        // Attach event handlers
+        this.attachEvents();
+
+        // Call onMount hook
+        await this.onMount();
+    }
+
+    /**
+     * Attach event listeners
+     */
+    attachEvents() {
+        const backdrop = this.element;
+        const container = backdrop.querySelector('.overlay-container');
+        const closeBtn = backdrop.querySelector('.overlay-close');
+
+        // Close button
+        closeBtn.onclick = () => OverlayManager.close(this.id);
+
+        // Click outside to close (only if clicking directly on backdrop)
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+                OverlayManager.close(this.id);
+            }
+        });
+
+        // Prevent clicks on container from closing
+        container.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    /**
+     * Destroy the overlay
+     */
+    destroy() {
+        if (!this.element) return;
+
+        // Call onDestroy hook
+        this.onDestroy();
+
+        // Fade out using SteadyUtils
+        this.element.classList.remove('overlay-visible');
+
+        setTimeout(() => {
+            if (this.element && this.element.parentNode) {
+                this.element.parentNode.removeChild(this.element);
+            }
+            this.element = null;
+        }, 300);
+    }
+
+    /**
+     * Update overlay body content
+     */
+    updateBody(html) {
+        const body = document.getElementById(`${this.id}-body`);
+        if (body) {
+            body.innerHTML = html;
+            // Re-attach events if needed
+            this.onBodyUpdate();
+        }
+    }
+
+    /**
+     * Update overlay footer content
+     */
+    updateFooter(html) {
+        const footer = document.getElementById(`${this.id}-footer`);
+        if (footer) {
+            footer.innerHTML = html;
+        }
+    }
+
+    /**
+     * Show loading state
+     */
+    showLoading() {
+        this.isLoading = true;
+        this.updateBody(this.renderLoading());
+    }
+
+    /**
+     * Hide loading state
+     */
+    hideLoading() {
+        this.isLoading = false;
+        this.updateBody(this.renderBody());
+        this.onBodyUpdate();
+    }
+
+    /**
+     * Show error in overlay
+     */
+    showError(message) {
+        this.updateBody(`
+            <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+                <h3 style="color: var(--danger); margin-bottom: 0.5rem;">Error</h3>
+                <p style="color: var(--text-secondary);">${API.escapeHtml(message)}</p>
+                <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                    Close
+                </button>
+            </div>
+        `);
+    }
+
+    // =====================================================
+    // OVERRIDE THESE METHODS IN YOUR OVERLAY
+    // =====================================================
+
+    /**
+     * Get overlay title
+     * @returns {string}
+     */
+    getTitle() {
+        return 'Overlay';
+    }
+
+    /**
+     * Get overlay size
+     * @returns {string} 'overlay-sm', 'overlay-md', 'overlay-lg', 'overlay-xl', 'overlay-full'
+     */
+    getSize() {
+        return 'overlay-md';
+    }
+
+    /**
+     * Render body content
+     * @returns {string} HTML string
+     */
+    renderBody() {
+        return '<div>Override renderBody() in your overlay class</div>';
+    }
+
+    /**
+     * Does this overlay have a footer?
+     * @returns {boolean}
+     */
+    hasFooter() {
+        return false;
+    }
+
+    /**
+     * Render footer content
+     * @returns {string} HTML string
+     */
+    renderFooter() {
+        return '';
+    }
+
+    /**
+     * Render loading state
+     * @returns {string} HTML string
+     */
+    renderLoading() {
+        return `
+            <div style="text-align: center; padding: 3rem;">
+                <div class="loading-spinner" style="display: inline-block;"></div>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">Loading...</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Called after overlay is mounted to DOM
+     * Good place to load data, attach custom events, etc
+     */
+    async onMount() {
+        // Override in subclass
+    }
+
+    /**
+     * Called when overlay body is updated
+     * Re-attach event listeners here if needed
+     */
+    onBodyUpdate() {
+        // Override in subclass
+    }
+
+    /**
+     * Called before overlay is destroyed
+     * Cleanup custom event listeners, timers, etc
+     */
+    onDestroy() {
+        // Override in subclass
+    }
+}
+
+// Export to global scope
+window.BaseOverlay = BaseOverlay;
+
+console.log('BaseOverlay loaded - Overlay foundation ready 📦');
+/**
+ * JOB DETAIL OVERLAY
+ * Shows full job information with profit/loss breakdown
+ *
+ * Usage:
+ *   OverlayManager.open('job-detail', { jobId: '123' });
+ */
+
+class JobDetailOverlay extends BaseOverlay {
+    async onMount() {
+        this.showLoading();
+
+        try {
+            const jobId = this.data.jobId;
+            const jobs = await API.getJobs();
+            this.job = jobs.find(j => j.id === jobId);
+
+            if (!this.job) {
+                throw new Error('Job not found');
+            }
+
+            // Load associated lead if exists
+            if (this.job.lead_id) {
+                this.lead = await API.getLeadById(this.job.lead_id);
+            }
+
+            this.hideLoading();
+        } catch (error) {
+            this.showError(API.handleAPIError(error, 'Load Job'));
+        }
+    }
+
+    getTitle() {
+        return this.job ? `💼 ${this.job.title}` : 'Job Details';
+    }
+
+    getSize() {
+        return 'overlay-lg';
+    }
+
+    renderBody() {
+        if (!this.job) return '';
+
+        const job = this.job;
+        const profit = parseFloat(job.profit) || 0;
+        const margin = parseFloat(job.profit_margin) || 0;
+
+        return `
+            <div class="job-detail-grid">
+                <!-- Job Info -->
+                <div class="detail-section">
+                    <h3 class="section-title">Job Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Title:</span>
+                        <span class="detail-value">${API.escapeHtml(job.title)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">${API.escapeHtml(job.job_type || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">
+                            <span class="status-badge status-${job.status}">
+                                ${API.escapeHtml(job.status || 'scheduled')}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Priority:</span>
+                        <span class="detail-value">${API.escapeHtml(job.priority || 'medium')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Scheduled Date:</span>
+                        <span class="detail-value">${job.scheduled_date ? SteadyUtils.formatDate(job.scheduled_date, 'long') : 'Not scheduled'}</span>
+                    </div>
+                    ${job.scheduled_time ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Time:</span>
+                            <span class="detail-value">${job.scheduled_time}</span>
+                        </div>
+                    ` : ''}
+                    ${job.duration_hours ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Duration:</span>
+                            <span class="detail-value">${job.duration_hours} hours</span>
+                        </div>
+                    ` : ''}
+                    ${job.location ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Location:</span>
+                            <span class="detail-value">${API.escapeHtml(job.location)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Financial Summary -->
+                <div class="detail-section financial-summary">
+                    <h3 class="section-title">Financial Summary</h3>
+                    <div class="financial-card ${profit >= 0 ? 'profit-positive' : 'profit-negative'}">
+                        <div class="financial-big">
+                            <div class="financial-label">Profit</div>
+                            <div class="financial-value">${SteadyUtils.formatCurrency(profit)}</div>
+                            <div class="financial-meta">${margin.toFixed(1)}% margin</div>
+                        </div>
+                    </div>
+
+                    <div class="financial-breakdown">
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Revenue:</span>
+                            <span class="breakdown-value revenue">${SteadyUtils.formatCurrency(parseFloat(job.final_price || job.quoted_price) || 0)}</span>
+                        </div>
+                        <div class="breakdown-row">
+                            <span class="breakdown-label">Total Cost:</span>
+                            <span class="breakdown-value cost">-${SteadyUtils.formatCurrency(parseFloat(job.total_cost) || 0)}</span>
+                        </div>
+                        <div class="breakdown-divider"></div>
+                        <div class="breakdown-row breakdown-total">
+                            <span class="breakdown-label">Net Profit:</span>
+                            <span class="breakdown-value ${profit >= 0 ? 'profit' : 'loss'}">${SteadyUtils.formatCurrency(profit)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cost Breakdown -->
+                <div class="detail-section">
+                    <h3 class="section-title">Cost Breakdown</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Material Cost:</span>
+                        <span class="detail-value">${SteadyUtils.formatCurrency(parseFloat(job.material_cost) || 0)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Labor Hours:</span>
+                        <span class="detail-value">${job.labor_hours || 0} hours</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Labor Rate:</span>
+                        <span class="detail-value">${SteadyUtils.formatCurrency(parseFloat(job.labor_rate) || 0)}/hr</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Labor Cost:</span>
+                        <span class="detail-value">${SteadyUtils.formatCurrency((job.labor_hours || 0) * (parseFloat(job.labor_rate) || 0))}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Other Expenses:</span>
+                        <span class="detail-value">${SteadyUtils.formatCurrency(parseFloat(job.other_expenses) || 0)}</span>
+                    </div>
+                </div>
+
+                <!-- Pricing -->
+                <div class="detail-section">
+                    <h3 class="section-title">Pricing</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Quoted Price:</span>
+                        <span class="detail-value">${SteadyUtils.formatCurrency(parseFloat(job.quoted_price) || 0)}</span>
+                    </div>
+                    ${job.final_price ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Final Price:</span>
+                            <span class="detail-value">${SteadyUtils.formatCurrency(parseFloat(job.final_price))}</span>
+                        </div>
+                    ` : ''}
+                    ${job.invoice_number ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Invoice #:</span>
+                            <span class="detail-value">${API.escapeHtml(job.invoice_number)}</span>
+                        </div>
+                    ` : ''}
+                    <div class="detail-row">
+                        <span class="detail-label">Payment Status:</span>
+                        <span class="detail-value">
+                            <span class="status-badge status-${job.payment_status}">
+                                ${API.escapeHtml(job.payment_status || 'pending')}
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Associated Lead -->
+                ${this.lead ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Associated Lead</h3>
+                        <div class="lead-card" onclick="OverlayManager.open('lead-detail', { leadId: '${this.lead.id}' })">
+                            <div class="lead-name">${API.escapeHtml(this.lead.name)}</div>
+                            <div class="lead-meta">
+                                ${this.lead.company ? API.escapeHtml(this.lead.company) : 'No company'} •
+                                ${this.lead.email || 'No email'}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Materials -->
+                ${job.materials && Array.isArray(job.materials) && job.materials.length > 0 ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Materials Used</h3>
+                        <div class="materials-table">
+                            ${job.materials.map(mat => `
+                                <div class="material-row">
+                                    <span class="material-name">${API.escapeHtml(mat.name)}</span>
+                                    <span class="material-qty">${mat.quantity} ${mat.unit || 'units'}</span>
+                                    <span class="material-cost">${SteadyUtils.formatCurrency(mat.cost || 0)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Notes/Description -->
+                ${job.notes ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Notes</h3>
+                        <div class="notes-content">${API.escapeHtml(job.notes)}</div>
+                    </div>
+                ` : ''}
+
+                ${job.description ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Description</h3>
+                        <div class="notes-content">${API.escapeHtml(job.description)}</div>
+                    </div>
+                ` : ''}
+            </div>
+
+            <style>
+                .job-detail-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 1.5rem;
+                }
+
+                .detail-section-full {
+                    grid-column: 1 / -1;
+                }
+
+                .financial-summary {
+                    grid-column: 1 / -1;
+                }
+
+                .financial-card {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
+                    color: white;
+                    margin-bottom: 1.5rem;
+                }
+
+                .financial-card.profit-negative {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                }
+
+                .financial-big {
+                    text-align: center;
+                }
+
+                .financial-label {
+                    font-size: 0.875rem;
+                    opacity: 0.9;
+                    margin-bottom: 0.5rem;
+                }
+
+                .financial-value {
+                    font-size: 2.5rem;
+                    font-weight: 900;
+                }
+
+                .financial-meta {
+                    font-size: 1rem;
+                    opacity: 0.9;
+                    margin-top: 0.5rem;
+                }
+
+                .financial-breakdown {
+                    background: var(--background);
+                    border-radius: var(--radius);
+                    padding: 1.5rem;
+                }
+
+                .breakdown-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.75rem 0;
+                }
+
+                .breakdown-label {
+                    color: var(--text-secondary);
+                }
+
+                .breakdown-value {
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .breakdown-value.revenue {
+                    color: var(--success);
+                }
+
+                .breakdown-value.cost {
+                    color: var(--text-secondary);
+                }
+
+                .breakdown-value.profit {
+                    color: var(--success);
+                }
+
+                .breakdown-value.loss {
+                    color: var(--danger);
+                }
+
+                .breakdown-divider {
+                    border-top: 2px solid var(--border);
+                    margin: 0.5rem 0;
+                }
+
+                .breakdown-total {
+                    font-size: 1.125rem;
+                }
+
+                .status-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: var(--radius);
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+
+                .status-scheduled {
+                    background: #3b82f6;
+                    color: white;
+                }
+
+                .status-in_progress {
+                    background: #f59e0b;
+                    color: white;
+                }
+
+                .status-completed {
+                    background: #10b981;
+                    color: white;
+                }
+
+                .status-cancelled {
+                    background: #6b7280;
+                    color: white;
+                }
+
+                .status-pending {
+                    background: #f59e0b;
+                    color: white;
+                }
+
+                .status-paid {
+                    background: #10b981;
+                    color: white;
+                }
+
+                .status-overdue {
+                    background: #ef4444;
+                    color: white;
+                }
+
+                .lead-card,
+                .materials-table .material-row {
+                    background: var(--background);
+                    padding: 1rem;
+                    border-radius: var(--radius);
+                    cursor: pointer;
+                    transition: var(--transition);
+                }
+
+                .lead-card:hover {
+                    background: var(--surface-hover);
+                    transform: translateY(-2px);
+                }
+
+                .lead-name {
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 0.25rem;
+                }
+
+                .lead-meta {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                }
+
+                .materials-table {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .material-row {
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    gap: 1rem;
+                    align-items: center;
+                    cursor: default;
+                }
+
+                .material-name {
+                    font-weight: 500;
+                }
+
+                .material-qty {
+                    color: var(--text-secondary);
+                    font-size: 0.875rem;
+                }
+
+                .material-cost {
+                    font-weight: 600;
+                }
+
+                @media (max-width: 768px) {
+                    .job-detail-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .financial-value {
+                        font-size: 2rem;
+                    }
+                }
+            </style>
+        `;
+    }
+
+    hasFooter() {
+        return true;
+    }
+
+    renderFooter() {
+        return `
+            <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                Close
+            </button>
+            ${this.job.status !== 'completed' ? `
+                <button class="steady-btn steady-btn-primary" onclick="alert('Edit feature coming soon!')">
+                    Edit Job
+                </button>
+            ` : ''}
+        `;
+    }
+}
+
+// Register this overlay type
+OverlayManager.register('job-detail', JobDetailOverlay);
+
+console.log('JobDetailOverlay registered ✅');
+/**
+ * LEAD DETAIL OVERLAY
+ * Shows full lead information in a popup
+ *
+ * Usage:
+ *   OverlayManager.open('lead-detail', { leadId: '123' });
+ */
+
+class LeadDetailOverlay extends BaseOverlay {
+    async onMount() {
+        this.showLoading();
+
+        try {
+            // Load lead data
+            this.lead = await API.getLeadById(this.data.leadId);
+
+            // Load associated jobs
+            this.jobs = await API.getJobsByLead(this.data.leadId);
+
+            this.hideLoading();
+        } catch (error) {
+            this.showError(API.handleAPIError(error, 'Load Lead'));
+        }
+    }
+
+    getTitle() {
+        return this.lead ? `${this.lead.name}` : 'Lead Details';
+    }
+
+    getSize() {
+        return 'overlay-lg';
+    }
+
+    renderBody() {
+        if (!this.lead) return '';
+
+        const lead = this.lead;
+
+        return `
+            <div class="lead-detail-grid">
+                <!-- Contact Information -->
+                <div class="detail-section">
+                    <h3 class="section-title">Contact Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Name:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.name)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">${lead.email ? `<a href="mailto:${API.escapeHtml(lead.email)}">${API.escapeHtml(lead.email)}</a>` : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Phone:</span>
+                        <span class="detail-value">${lead.phone ? `<a href="tel:${API.escapeHtml(lead.phone)}">${API.escapeHtml(lead.phone)}</a>` : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Company:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.company || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Position:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.position || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Department:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.department || 'N/A')}</span>
+                    </div>
+                </div>
+
+                <!-- Lead Status -->
+                <div class="detail-section">
+                    <h3 class="section-title">Lead Status</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value">
+                            <span class="status-badge" style="background: ${API.getStatusColor(lead.status)}">
+                                ${API.escapeHtml(lead.status || 'new')}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Type:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.type || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Source:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.source || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Quality Score:</span>
+                        <span class="detail-value">${lead.quality_score ? `${lead.quality_score}/10` : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Deal Stage:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.deal_stage || 'N/A')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Win Probability:</span>
+                        <span class="detail-value">${lead.win_probability ? `${lead.win_probability}%` : 'N/A'}</span>
+                    </div>
+                </div>
+
+                <!-- Financial -->
+                <div class="detail-section">
+                    <h3 class="section-title">Financial</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Potential Value:</span>
+                        <span class="detail-value" style="font-weight: 600; color: var(--success);">
+                            ${lead.potential_value ? SteadyUtils.formatCurrency(parseFloat(lead.potential_value)) : 'N/A'}
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Weighted Value:</span>
+                        <span class="detail-value">
+                            ${lead.potential_value && lead.win_probability ?
+                                SteadyUtils.formatCurrency(parseFloat(lead.potential_value) * (lead.win_probability / 100)) : 'N/A'}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Next Actions -->
+                <div class="detail-section">
+                    <h3 class="section-title">Next Actions</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Next Action:</span>
+                        <span class="detail-value">${API.escapeHtml(lead.next_action || 'No action set')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Follow-up Date:</span>
+                        <span class="detail-value">${lead.follow_up_date ? SteadyUtils.formatDate(lead.follow_up_date, 'long') : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Last Contact:</span>
+                        <span class="detail-value">${lead.last_contact_date ? SteadyUtils.formatDate(lead.last_contact_date, 'relative') : 'Never'}</span>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                ${lead.tags && lead.tags.length > 0 ? `
+                    <div class="detail-section">
+                        <h3 class="section-title">Tags</h3>
+                        <div class="tags-container">
+                            ${lead.tags.map(tag => `
+                                <span class="tag">${API.escapeHtml(tag)}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Notes -->
+                ${lead.notes ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Notes</h3>
+                        <div class="notes-content">${API.escapeHtml(lead.notes)}</div>
+                    </div>
+                ` : ''}
+
+                <!-- Associated Jobs -->
+                ${this.jobs && this.jobs.length > 0 ? `
+                    <div class="detail-section detail-section-full">
+                        <h3 class="section-title">Associated Jobs (${this.jobs.length})</h3>
+                        <div class="jobs-list">
+                            ${this.jobs.map(job => `
+                                <div class="job-card" onclick="OverlayManager.open('job-detail', { jobId: '${job.id}' })">
+                                    <div class="job-title">${API.escapeHtml(job.title)}</div>
+                                    <div class="job-meta">
+                                        ${job.scheduled_date ? SteadyUtils.formatDate(job.scheduled_date, 'short') : 'No date'} •
+                                        ${job.quoted_price ? SteadyUtils.formatCurrency(job.quoted_price) : 'No price'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Created Date -->
+                <div class="detail-section detail-section-full">
+                    <div class="detail-row">
+                        <span class="detail-label">Created:</span>
+                        <span class="detail-value">${SteadyUtils.formatDate(lead.created_at, 'datetime')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .lead-detail-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 2rem;
+                }
+
+                .detail-section {
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    padding: 1.5rem;
+                }
+
+                .detail-section-full {
+                    grid-column: 1 / -1;
+                }
+
+                .section-title {
+                    font-size: 0.875rem;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 1rem;
+                }
+
+                .detail-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 0.75rem 0;
+                    border-bottom: 1px solid var(--border);
+                }
+
+                .detail-row:last-child {
+                    border-bottom: none;
+                }
+
+                .detail-label {
+                    font-weight: 500;
+                    color: var(--text-secondary);
+                }
+
+                .detail-value {
+                    color: var(--text-primary);
+                    text-align: right;
+                }
+
+                .status-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: var(--radius);
+                    color: white;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+
+                .tags-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                }
+
+                .tag {
+                    background: var(--primary-light);
+                    color: var(--primary);
+                    padding: 0.25rem 0.75rem;
+                    border-radius: var(--radius);
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+
+                .notes-content {
+                    background: var(--background);
+                    padding: 1rem;
+                    border-radius: var(--radius);
+                    white-space: pre-wrap;
+                    color: var(--text-primary);
+                }
+
+                .jobs-list {
+                    display: grid;
+                    gap: 0.75rem;
+                }
+
+                .job-card {
+                    background: var(--background);
+                    padding: 1rem;
+                    border-radius: var(--radius);
+                    cursor: pointer;
+                    transition: var(--transition);
+                }
+
+                .job-card:hover {
+                    background: var(--surface-hover);
+                    transform: translateY(-2px);
+                }
+
+                .job-title {
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 0.25rem;
+                }
+
+                .job-meta {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                }
+
+                @media (max-width: 768px) {
+                    .lead-detail-grid {
+                        grid-template-columns: 1fr;
+                        gap: 1rem;
+                    }
+
+                    .detail-row {
+                        flex-direction: column;
+                        gap: 0.25rem;
+                    }
+
+                    .detail-value {
+                        text-align: left;
+                    }
+                }
+            </style>
+        `;
+    }
+
+    hasFooter() {
+        return true;
+    }
+
+    renderFooter() {
+        return `
+            <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                Close
+            </button>
+            <button class="steady-btn steady-btn-primary" onclick="alert('Edit feature coming soon!')">
+                Edit Lead
+            </button>
+        `;
+    }
+}
+
+// Register this overlay type
+OverlayManager.register('lead-detail', LeadDetailOverlay);
+
+console.log('LeadDetailOverlay registered ✅');
+/**
+ * QUICK ADD JOB OVERLAY
+ * Fast job creation from anywhere
+ *
+ * Usage:
+ *   OverlayManager.open('quick-add-job');
+ *   OverlayManager.open('quick-add-job', { lead_id: '123' }); // Pre-link to lead
+ */
+
+class QuickAddJobOverlay extends BaseOverlay {
+    async onMount() {
+        // Load leads for association picker
+        try {
+            const leadsData = await API.getLeads();
+            this.leads = leadsData.all || [];
+        } catch (error) {
+            this.leads = [];
+        }
+    }
+
+    getTitle() {
+        return '💼 Quick Add Job';
+    }
+
+    getSize() {
+        return 'overlay-lg';
+    }
+
+    renderBody() {
+        const prefill = this.data || {};
+
+        return `
+            <form id="${this.id}-form" class="quick-add-job-form">
+                <div class="form-section">
+                    <h3 class="form-section-title">Job Details</h3>
+
+                    <div class="form-row">
+                        <label for="${this.id}-title">Job Title *</label>
+                        <input
+                            type="text"
+                            id="${this.id}-title"
+                            class="form-input"
+                            required
+                            placeholder="Install kitchen cabinets"
+                            value="${API.escapeHtml(prefill.title || '')}"
+                            autocomplete="off">
+                    </div>
+
+                    <div class="form-row-split">
+                        <div class="form-row">
+                            <label for="${this.id}-type">Type</label>
+                            <select id="${this.id}-type" class="form-input">
+                                <option value="service">Service</option>
+                                <option value="product">Product</option>
+                                <option value="consultation">Consultation</option>
+                                <option value="project">Project</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="${this.id}-priority">Priority</label>
+                            <select id="${this.id}-priority" class="form-input">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-split">
+                        <div class="form-row">
+                            <label for="${this.id}-date">Scheduled Date</label>
+                            <input
+                                type="date"
+                                id="${this.id}-date"
+                                class="form-input"
+                                value="${prefill.scheduled_date || ''}">
+                        </div>
+
+                        <div class="form-row">
+                            <label for="${this.id}-time">Time</label>
+                            <input
+                                type="time"
+                                id="${this.id}-time"
+                                class="form-input"
+                                value="${prefill.scheduled_time || ''}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="${this.id}-lead">Associate with Lead (optional)</label>
+                        <select id="${this.id}-lead" class="form-input">
+                            <option value="">None</option>
+                            ${this.leads ? this.leads.map(lead => `
+                                <option value="${lead.id}" ${prefill.lead_id === lead.id ? 'selected' : ''}>
+                                    ${API.escapeHtml(lead.name)} ${lead.company ? `- ${API.escapeHtml(lead.company)}` : ''}
+                                </option>
+                            `).join('') : ''}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Pricing & Costs</h3>
+
+                    <div class="form-row">
+                        <label for="${this.id}-quoted">Quoted Price ($)</label>
+                        <input
+                            type="number"
+                            id="${this.id}-quoted"
+                            class="form-input"
+                            min="0"
+                            step="0.01"
+                            placeholder="1500.00"
+                            value="${prefill.quoted_price || ''}">
+                    </div>
+
+                    <div class="form-row-split">
+                        <div class="form-row">
+                            <label for="${this.id}-material">Material Cost ($)</label>
+                            <input
+                                type="number"
+                                id="${this.id}-material"
+                                class="form-input"
+                                min="0"
+                                step="0.01"
+                                placeholder="500.00"
+                                value="${prefill.material_cost || '0'}">
+                        </div>
+
+                        <div class="form-row">
+                            <label for="${this.id}-other">Other Expenses ($)</label>
+                            <input
+                                type="number"
+                                id="${this.id}-other"
+                                class="form-input"
+                                min="0"
+                                step="0.01"
+                                placeholder="50.00"
+                                value="${prefill.other_expenses || '0'}">
+                        </div>
+                    </div>
+
+                    <div class="form-row-split">
+                        <div class="form-row">
+                            <label for="${this.id}-labor-hours">Labor Hours</label>
+                            <input
+                                type="number"
+                                id="${this.id}-labor-hours"
+                                class="form-input"
+                                min="0"
+                                step="0.5"
+                                placeholder="8"
+                                value="${prefill.labor_hours || '0'}">
+                        </div>
+
+                        <div class="form-row">
+                            <label for="${this.id}-labor-rate">Labor Rate ($/hr)</label>
+                            <input
+                                type="number"
+                                id="${this.id}-labor-rate"
+                                class="form-input"
+                                min="0"
+                                step="0.01"
+                                placeholder="50.00"
+                                value="${prefill.labor_rate || '0'}">
+                        </div>
+                    </div>
+
+                    <!-- Profit Preview -->
+                    <div id="${this.id}-profit-preview" class="profit-preview">
+                        <div class="profit-label">Estimated Profit:</div>
+                        <div class="profit-value">$0.00</div>
+                        <div class="profit-margin">0% margin</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">Additional Info</h3>
+
+                    <div class="form-row">
+                        <label for="${this.id}-location">Location</label>
+                        <input
+                            type="text"
+                            id="${this.id}-location"
+                            class="form-input"
+                            placeholder="123 Main St, City, State"
+                            value="${API.escapeHtml(prefill.location || '')}"
+                            autocomplete="off">
+                    </div>
+
+                    <div class="form-row">
+                        <label for="${this.id}-notes">Notes</label>
+                        <textarea
+                            id="${this.id}-notes"
+                            class="form-input"
+                            rows="3"
+                            placeholder="Additional job details...">${API.escapeHtml(prefill.notes || '')}</textarea>
+                    </div>
+                </div>
+            </form>
+
+            <style>
+                .quick-add-job-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2rem;
+                }
+
+                .form-section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .form-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin: 0;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid var(--border);
+                }
+
+                .profit-preview {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    border-radius: var(--radius-lg);
+                    padding: 1.5rem;
+                    text-align: center;
+                    color: white;
+                    margin-top: 1rem;
+                }
+
+                .profit-preview.negative {
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                }
+
+                .profit-label {
+                    font-size: 0.875rem;
+                    opacity: 0.9;
+                    margin-bottom: 0.5rem;
+                }
+
+                .profit-value {
+                    font-size: 2rem;
+                    font-weight: 900;
+                }
+
+                .profit-margin {
+                    font-size: 0.875rem;
+                    opacity: 0.9;
+                    margin-top: 0.25rem;
+                }
+            </style>
+        `;
+    }
+
+    hasFooter() {
+        return true;
+    }
+
+    renderFooter() {
+        return `
+            <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                Cancel
+            </button>
+            <button class="steady-btn steady-btn-primary" id="${this.id}-submit">
+                Create Job
+            </button>
+        `;
+    }
+
+    onBodyUpdate() {
+        // Attach submit handler
+        const submitBtn = document.getElementById(`${this.id}-submit`);
+        if (submitBtn) {
+            submitBtn.onclick = () => this.handleSubmit();
+        }
+
+        // Submit on Enter in form
+        const form = document.getElementById(`${this.id}-form`);
+        if (form) {
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                this.handleSubmit();
+            };
+        }
+
+        // Calculate profit as user types
+        const inputs = ['quoted', 'material', 'other', 'labor-hours', 'labor-rate'];
+        inputs.forEach(field => {
+            const input = document.getElementById(`${this.id}-${field}`);
+            if (input) {
+                input.addEventListener('input', () => this.updateProfitPreview());
+            }
+        });
+
+        // Initial calculation
+        this.updateProfitPreview();
+
+        // Focus first input
+        setTimeout(() => {
+            document.getElementById(`${this.id}-title`)?.focus();
+        }, 100);
+    }
+
+    updateProfitPreview() {
+        const quoted = parseFloat(document.getElementById(`${this.id}-quoted`)?.value || 0);
+        const material = parseFloat(document.getElementById(`${this.id}-material`)?.value || 0);
+        const other = parseFloat(document.getElementById(`${this.id}-other`)?.value || 0);
+        const laborHours = parseFloat(document.getElementById(`${this.id}-labor-hours`)?.value || 0);
+        const laborRate = parseFloat(document.getElementById(`${this.id}-labor-rate`)?.value || 0);
+
+        const laborCost = laborHours * laborRate;
+        const totalCost = material + other + laborCost;
+        const profit = quoted - totalCost;
+        const margin = quoted > 0 ? (profit / quoted) * 100 : 0;
+
+        const preview = document.getElementById(`${this.id}-profit-preview`);
+        if (preview) {
+            preview.querySelector('.profit-value').textContent = SteadyUtils.formatCurrency(profit);
+            preview.querySelector('.profit-margin').textContent = `${margin.toFixed(1)}% margin`;
+
+            if (profit < 0) {
+                preview.classList.add('negative');
+            } else {
+                preview.classList.remove('negative');
+            }
+        }
+    }
+
+    async handleSubmit() {
+        const getTitle = () => document.getElementById(`${this.id}-title`)?.value.trim();
+        const getType = () => document.getElementById(`${this.id}-type`)?.value;
+        const getPriority = () => document.getElementById(`${this.id}-priority`)?.value;
+        const getDate = () => document.getElementById(`${this.id}-date`)?.value;
+        const getTime = () => document.getElementById(`${this.id}-time`)?.value;
+        const getLead = () => document.getElementById(`${this.id}-lead`)?.value;
+        const getQuoted = () => document.getElementById(`${this.id}-quoted`)?.value;
+        const getMaterial = () => document.getElementById(`${this.id}-material`)?.value;
+        const getOther = () => document.getElementById(`${this.id}-other`)?.value;
+        const getLaborHours = () => document.getElementById(`${this.id}-labor-hours`)?.value;
+        const getLaborRate = () => document.getElementById(`${this.id}-labor-rate`)?.value;
+        const getLocation = () => document.getElementById(`${this.id}-location`)?.value.trim();
+        const getNotes = () => document.getElementById(`${this.id}-notes`)?.value.trim();
+
+        const title = getTitle();
+
+        if (!title) {
+            SteadyUtils.shake(`#${this.id}-title`);
+            toast('Job title is required', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById(`${this.id}-submit`);
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+
+        try {
+            const jobData = {
+                title,
+                job_type: getType(),
+                priority: getPriority(),
+                scheduled_date: getDate() || null,
+                scheduled_time: getTime() || null,
+                lead_id: getLead() || null,
+                quoted_price: getQuoted() ? parseFloat(getQuoted()) : 0,
+                material_cost: getMaterial() ? parseFloat(getMaterial()) : 0,
+                other_expenses: getOther() ? parseFloat(getOther()) : 0,
+                labor_hours: getLaborHours() ? parseFloat(getLaborHours()) : 0,
+                labor_rate: getLaborRate() ? parseFloat(getLaborRate()) : 0,
+                location: getLocation() || null,
+                notes: getNotes() || null,
+                status: 'scheduled'
+            };
+
+            await API.createJob(jobData);
+
+            toast('Job created successfully! 💼', 'success');
+
+            // Close overlay
+            OverlayManager.close(this.id);
+
+            // Reload current page to show new job
+            if (window.loadPage) {
+                const currentPage = document.querySelector('.nav-link.active')?.getAttribute('data-page') || 'dashboard';
+                window.loadPage(currentPage);
+            }
+
+        } catch (error) {
+            console.error('Quick add job error:', error);
+            toast(API.handleAPIError(error, 'Quick Add Job'), 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Job';
+        }
+    }
+}
+
+// Register this overlay type
+OverlayManager.register('quick-add-job', QuickAddJobOverlay);
+
+console.log('QuickAddJobOverlay registered ✅');
+/**
+ * QUICK ADD LEAD OVERLAY
+ * Fast lead creation from anywhere
+ *
+ * Usage:
+ *   OverlayManager.open('quick-add-lead');
+ *   OverlayManager.open('quick-add-lead', { name: 'John Smith', company: 'TechCorp' }); // Pre-fill
+ */
+
+class QuickAddLeadOverlay extends BaseOverlay {
+    getTitle() {
+        return '⚡ Quick Add Lead';
+    }
+
+    getSize() {
+        return 'overlay-md';
+    }
+
+    renderBody() {
+        const prefill = this.data || {};
+
+        return `
+            <form id="${this.id}-form" class="quick-add-form">
+                <div class="form-row">
+                    <label for="${this.id}-name">Name *</label>
+                    <input
+                        type="text"
+                        id="${this.id}-name"
+                        class="form-input"
+                        required
+                        placeholder="John Smith"
+                        value="${API.escapeHtml(prefill.name || '')}"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <label for="${this.id}-email">Email</label>
+                    <input
+                        type="email"
+                        id="${this.id}-email"
+                        class="form-input"
+                        placeholder="john@example.com"
+                        value="${API.escapeHtml(prefill.email || '')}"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <label for="${this.id}-phone">Phone</label>
+                    <input
+                        type="tel"
+                        id="${this.id}-phone"
+                        class="form-input"
+                        placeholder="+1 (555) 123-4567"
+                        value="${API.escapeHtml(prefill.phone || '')}"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <label for="${this.id}-company">Company</label>
+                    <input
+                        type="text"
+                        id="${this.id}-company"
+                        class="form-input"
+                        placeholder="ACME Corp"
+                        value="${API.escapeHtml(prefill.company || '')}"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-row">
+                    <label for="${this.id}-position">Position</label>
+                    <input
+                        type="text"
+                        id="${this.id}-position"
+                        class="form-input"
+                        placeholder="VP of Sales"
+                        value="${API.escapeHtml(prefill.position || '')}"
+                        autocomplete="off">
+                </div>
+
+                <div class="form-row-split">
+                    <div class="form-row">
+                        <label for="${this.id}-source">Source</label>
+                        <select id="${this.id}-source" class="form-input">
+                            <option value="">Select source...</option>
+                            <option value="website">Website</option>
+                            <option value="referral">Referral</option>
+                            <option value="cold_call">Cold Call</option>
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="email">Email Campaign</option>
+                            <option value="event">Event</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="${this.id}-quality">Quality Score</label>
+                        <input
+                            type="number"
+                            id="${this.id}-quality"
+                            class="form-input"
+                            min="1"
+                            max="10"
+                            placeholder="7"
+                            value="${prefill.quality_score || ''}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label for="${this.id}-notes">Notes</label>
+                    <textarea
+                        id="${this.id}-notes"
+                        class="form-input"
+                        rows="3"
+                        placeholder="Quick notes about this lead...">${API.escapeHtml(prefill.notes || '')}</textarea>
+                </div>
+            </form>
+
+            <style>
+                .quick-add-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .form-row {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .form-row-split {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                }
+
+                .form-row label {
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    color: var(--text-primary);
+                }
+
+                .form-input {
+                    padding: 0.75rem;
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    background: var(--surface);
+                    color: var(--text-primary);
+                    font-size: 0.9375rem;
+                    font-family: inherit;
+                    transition: var(--transition);
+                }
+
+                .form-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                @media (max-width: 768px) {
+                    .form-row-split {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+        `;
+    }
+
+    hasFooter() {
+        return true;
+    }
+
+    renderFooter() {
+        return `
+            <button class="steady-btn steady-btn-secondary" onclick="OverlayManager.close('${this.id}')">
+                Cancel
+            </button>
+            <button class="steady-btn steady-btn-primary" id="${this.id}-submit">
+                Add Lead
+            </button>
+        `;
+    }
+
+    onBodyUpdate() {
+        // Attach submit handler
+        const submitBtn = document.getElementById(`${this.id}-submit`);
+        if (submitBtn) {
+            submitBtn.onclick = () => this.handleSubmit();
+        }
+
+        // Submit on Enter in form
+        const form = document.getElementById(`${this.id}-form`);
+        if (form) {
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                this.handleSubmit();
+            };
+        }
+
+        // Focus first input
+        const nameInput = document.getElementById(`${this.id}-name`);
+        if (nameInput) {
+            setTimeout(() => nameInput.focus(), 100);
+        }
+    }
+
+    async handleSubmit() {
+        const getName = () => document.getElementById(`${this.id}-name`).value.trim();
+        const getEmail = () => document.getElementById(`${this.id}-email`).value.trim();
+        const getPhone = () => document.getElementById(`${this.id}-phone`).value.trim();
+        const getCompany = () => document.getElementById(`${this.id}-company`).value.trim();
+        const getPosition = () => document.getElementById(`${this.id}-position`).value.trim();
+        const getSource = () => document.getElementById(`${this.id}-source`).value;
+        const getQuality = () => document.getElementById(`${this.id}-quality`).value;
+        const getNotes = () => document.getElementById(`${this.id}-notes`).value.trim();
+
+        const name = getName();
+
+        if (!name) {
+            SteadyUtils.shake(`#${this.id}-name`);
+            toast('Name is required', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById(`${this.id}-submit`);
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
+
+        try {
+            const leadData = {
+                name,
+                email: getEmail() || null,
+                phone: getPhone() || null,
+                company: getCompany() || null,
+                position: getPosition() || null,
+                source: getSource() || null,
+                quality_score: getQuality() ? parseInt(getQuality()) : null,
+                notes: getNotes() || null,
+                status: 'new',
+                type: 'cold'
+            };
+
+            // Check duplicates
+            const dupes = await API.checkDuplicates(leadData);
+
+            if (dupes.hasExactDuplicates) {
+                const confirmed = confirm(`This lead looks like a duplicate:\n\n${dupes.exact[0].lead.name} - ${dupes.exact[0].lead.company}\n\nAdd anyway?`);
+                if (!confirmed) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Add Lead';
+                    return;
+                }
+            }
+
+            // Create lead
+            await API.createLead(leadData);
+
+            toast('Lead added successfully! 🎉', 'success');
+
+            // Close overlay
+            OverlayManager.close(this.id);
+
+            // Reload current page to show new lead
+            if (window.loadPage) {
+                const currentPage = document.querySelector('.nav-link.active')?.getAttribute('data-page') || 'dashboard';
+                window.loadPage(currentPage);
+            }
+
+        } catch (error) {
+            console.error('Quick add error:', error);
+            toast(API.handleAPIError(error, 'Quick Add Lead'), 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Lead';
+        }
+    }
+}
+
+// Register this overlay type
+OverlayManager.register('quick-add-lead', QuickAddLeadOverlay);
+
+console.log('QuickAddLeadOverlay registered ✅');
+    </script>
     <!-- Pro Tier Modules -->
     <script src="/dashboard/tiers/professional/scripts/dashboard.js"></script>
     <script src="/dashboard/tiers/professional/scripts/AddLead.js"></script>
