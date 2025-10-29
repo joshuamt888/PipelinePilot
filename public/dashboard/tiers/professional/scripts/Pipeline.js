@@ -340,12 +340,12 @@ window.PipelineModule = {
         const timeAgo = this.formatTimeAgo(lead.created_at);
         
         return `
-            <div class="lead-card" 
+            <div class="lead-card"
                  data-lead-id="${lead.id}"
                  data-lead-status="${lead.status}"
                  draggable="true">
-                
-                <div class="card-header">
+
+                <div class="card-header" onclick="event.stopPropagation(); OverlayManager.open('lead-detail', { leadId: '${lead.id}' });" style="cursor: pointer;">
                     <div class="lead-avatar">
                         <span class="avatar-text">${initials}</span>
                     </div>
@@ -358,8 +358,8 @@ window.PipelineModule = {
                         <span class="lead-type">${typeIcon}</span>
                     </div>
                 </div>
-                
-                <div class="card-body">
+
+                <div class="card-body" onclick="event.stopPropagation(); OverlayManager.open('lead-detail', { leadId: '${lead.id}' });" style="cursor: pointer;">
                     ${safeEmail || safePhone ? `
                         <div class="contact-info">
                             ${safeEmail ? `<div class="contact-item">📧 ${safeEmail}</div>` : ''}
@@ -373,23 +373,23 @@ window.PipelineModule = {
                         <div class="deal-value-display">
                             <span class="value-icon">💰</span>
                             <span class="value-amount">$${lead.potential_value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit">✏️</button>
+                            <button class="value-edit-btn" onclick="event.stopPropagation(); PipelineModule.editDealValue('${lead.id}')" title="Edit">✏️</button>
                         </div>
                     ` : `
-                        <button class="deal-value-btn" onclick="PipelineModule.addDealValue('${lead.id}')">
+                        <button class="deal-value-btn" onclick="event.stopPropagation(); PipelineModule.addDealValue('${lead.id}')">
                             💰 Add value
                         </button>
                     `}
-                    
+
                     ${lead.status === 'lost' ? (
                         lead.lost_reason ? `
                             <div class="loss-reason-display">
                                 <span class="loss-icon">❌</span>
                                 <span class="loss-text">${API.escapeHtml(lead.lost_reason)}</span>
-                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit">✏️</button>
+                                <button class="loss-edit-btn" onclick="event.stopPropagation(); PipelineModule.editLossReason('${lead.id}')" title="Edit">✏️</button>
                             </div>
                         ` : `
-                            <button class="loss-reason-btn" onclick="PipelineModule.addLossReason('${lead.id}')">
+                            <button class="loss-reason-btn" onclick="event.stopPropagation(); PipelineModule.addLossReason('${lead.id}')">
                                 ❌ Add loss reason
                             </button>
                         `
@@ -399,8 +399,8 @@ window.PipelineModule = {
                 <div class="card-footer">
                     <div class="card-date">${timeAgo}</div>
                     <div class="card-actions">
-                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')">✏️</button>
-                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')">➡️</button>
+                        <button class="action-btn" onclick="event.stopPropagation(); OverlayManager.open('lead-detail', { leadId: '${lead.id}' })" title="View Details">👁️</button>
+                        <button class="action-btn" onclick="event.stopPropagation(); PipelineModule.moveLead('${lead.id}')" title="Move Stage">➡️</button>
                     </div>
                 </div>
             </div>
@@ -1463,7 +1463,8 @@ window.PipelineModule = {
                 .lead-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; cursor: grab; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; }
                 .lead-card:hover { border-color: var(--primary); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15); transform: translateY(-3px); }
                 .lead-card:active { cursor: grabbing; }
-                .card-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+                .card-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; transition: background 0.2s ease; border-radius: var(--radius); padding: 0.5rem; margin: -0.5rem -0.5rem 0.5rem -0.5rem; }
+                .card-header:hover { background: var(--surface-hover); }
                 .lead-avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--radius); background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
                 .avatar-text { color: white; font-weight: 700; font-size: 0.9rem; }
                 .lead-main-info { flex: 1; min-width: 0; }
@@ -1472,7 +1473,8 @@ window.PipelineModule = {
                 .lead-meta { display: flex; align-items: center; gap: 0.5rem; }
                 .lead-score { color: white; padding: 0.25rem 0.5rem; border-radius: 9999px; font-weight: 700; font-size: 0.75rem; }
                 .lead-type { font-size: 1.125rem; }
-                .card-body { margin-bottom: 1rem; }
+                .card-body { margin-bottom: 1rem; transition: background 0.2s ease; border-radius: var(--radius); padding: 0.5rem; margin: 0.5rem -0.5rem; }
+                .card-body:hover { background: var(--surface-hover); }
                 .contact-info { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
                 .contact-item { font-size: 0.8rem; color: var(--text-secondary); }
                 .lead-notes { font-size: 0.8rem; color: var(--text-tertiary); font-style: italic; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--surface-hover); border-radius: var(--radius); border-left: 3px solid var(--border); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-height: 5.5rem; overflow: hidden; }
