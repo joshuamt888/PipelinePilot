@@ -1741,22 +1741,271 @@ OverlayManager.open('my-custom', { someData: 123 });
 
 ---
 
-**Document Version**: 4.0 🪟
-**Last Updated**: Overlay System Revolution - Multi-Tasking UI Complete
-**Key Changes**:
-- ✅ **NEW**: Jobs table with cost/profit tracking (Better Google Sheets for job financials)
-- ✅ **NEW**: Goals table with auto-progress tracking (Apple Watch-style goal rings)
-- ✅ **NEW**: Enhanced Leads with position, department, deal_stage, next_action, win_probability, tags
-- ✅ **NEW**: User preferences (windowing, command palette, quick panels toggles)
-- ✅ **NEW**: Database functions for auto-goal tracking (trigger-based, like spreadsheet formulas)
-- ✅ **NEW**: Complete SQL migration script ready to run
-- ✅ **NEW**: SteadyUtils v5.0 with overlay utilities (fadeIn, blurBackground, lockScroll, etc)
-- ✅ **NEW**: OverlayManager - Revolutionary multi-tasking UI controller
-- ✅ **NEW**: BaseOverlay foundation class for all overlays
-- ✅ **NEW**: 4 overlay components (LeadDetail, JobDetail, QuickAddLead, QuickAddJob)
-- ✅ **NEW**: Floating action button (Pro tier) for quick access
+## 🆚 **PRO TIER VS FREE TIER - DIFFERENCES**
+
+### **What Makes Pro Tier Different:**
+
+#### **1. Overlay System (Multi-Tasking UI)**
+- **Free Tier:** Traditional page navigation, one view at a time
+- **Pro Tier:** Revolutionary overlay system - view multiple things simultaneously
+  - Click lead card → Overlay opens on blurred background
+  - View lead details while pipeline stays visible
+  - Stack overlays (Dashboard → Lead → Job)
+  - ESC to close, click outside to dismiss
+  - Floating Action Button (FAB) for quick access
+
+#### **2. Advanced Modules**
+- **Free Tier:** Basic modules (Dashboard, Add Leads, Pipeline, Tasks, Settings)
+- **Pro Tier:** Everything in Free + Advanced modules:
+  - **Jobs Module:** Calendar + financial tracking with profit/loss
+  - **Goals Module:** Apple Watch-style progress rings with auto-tracking
+  - **Enhanced Pipeline:** Richer data fields (position, department, deal stage, win probability)
+  - **Analytics Dashboard:** More detailed stats and insights
+
+#### **3. Enhanced Data Fields**
+- **Free Tier:** Basic lead fields (name, email, phone, company, status, notes)
+- **Pro Tier:** Enhanced lead fields:
+  - Position/Title (e.g., "VP of Sales")
+  - Department (e.g., "Marketing")
+  - Deal Stage (discovery, proposal, negotiation, etc.)
+  - Next Action (e.g., "Send proposal on Friday")
+  - Win Probability (0-100% forecasting)
+  - Tags (flexible categorization with JSONB)
+
+#### **4. Financial Tracking**
+- **Free Tier:** Basic potential_value field on leads
+- **Pro Tier:** Full job costing system:
+  - Material costs
+  - Labor hours × rate
+  - Other expenses
+  - Auto-calculated total cost, profit, profit margin (like spreadsheet formulas)
+  - Quoted vs final price
+  - Payment status tracking
+
+#### **5. Goal Tracking**
+- **Free Tier:** Manual goal tracking in notes
+- **Pro Tier:** Automated goal system:
+  - Create goals (leads created, revenue, jobs completed)
+  - Auto-updates via database triggers
+  - Apple Watch-style progress rings
+  - Visual progress bars
+  - Completion notifications
+
+#### **6. User Experience**
+- **Free Tier:** Clean, simple, straightforward
+- **Pro Tier:** Advanced UX features:
+  - Overlay system for multi-tasking
+  - Floating Action Button (FAB)
+  - Keyboard shortcuts (Cmd+K for search - planned)
+  - Backdrop blur effects
+  - Smooth animations and transitions
+
+---
+
+## 📋 **PRO TIER MODULES - STATUS CHECKLIST**
+
+### **Core Modules (Existing from Free Tier):**
+
+| Module | Status | Overlay Integration | Notes |
+|--------|--------|---------------------|-------|
+| **Dashboard.js** | ✅ Working | ❌ Not Migrated | Shows stats, recent activity - needs overlay clickable cards |
+| **AddLead.js** | ✅ Working | ❌ Not Migrated | Lead creation form - needs enhanced fields (position, tags) |
+| **Pipeline.js** | ✅ Working | ❌ Not Migrated | Kanban board - needs overlay on card click instead of inline edit |
+| **Scheduling.js** | ⚠️ MISSING | ❌ Not Loaded | **CRITICAL BUG**: Not in index.html, Tasks page broken! |
+| **Settings.js** | ✅ Working | ❌ Not Migrated | Settings panel - needs preferences tab for overlay toggles |
+
+**Migration Priority:** Pipeline first (most visible), then Dashboard, then others
+
+---
+
+### **New Pro Tier Modules (To Be Built):**
+
+| Module | Status | Description | Features |
+|--------|--------|-------------|----------|
+| **Jobs.js** | ⏳ Not Started | Financial job tracking | Calendar view, profit/loss cards, cost breakdown, material lists, payment tracking |
+| **Goals.js** | ⏳ Not Started | Goal tracking system | Apple Watch rings, progress bars, auto-tracking, completion alerts |
+| **SearchOverlay.js** | ⏳ Not Started | Global Cmd+K search | Search across all leads/jobs/tasks, click result opens overlay |
+| **EditLeadOverlay.js** | ⏳ Not Started | Full lead edit form | Complete lead editing in overlay (alternative to inline edit) |
+| **TaskDetailOverlay.js** | ⏳ Not Started | Task details overlay | View/edit tasks in overlay format |
+| **GoalDetailOverlay.js** | ⏳ Not Started | Goal progress detail | Detailed goal view with history and insights |
+
+**Build Order:** Jobs.js → Goals.js → SearchOverlay → Rest
+
+---
+
+### **Overlay System Files:**
+
+| File | Status | Location | Notes |
+|------|--------|----------|-------|
+| **OverlayManager.js** | ✅ Inline in index.html | Line ~950-1236 | Core controller (284 lines) |
+| **BaseOverlay.js** | ✅ Inline in index.html | Line ~1240-1490 | Parent class (250 lines) |
+| **LeadDetailOverlay.js** | ✅ Inline in index.html | Line ~1492-1850 | View lead overlay (358 lines) |
+| **QuickAddLeadOverlay.js** | ✅ Inline in index.html | Line ~1852-2100 | Quick add lead (248 lines) |
+| **JobDetailOverlay.js** | ✅ Inline in index.html | Line ~2102-2450 | View job overlay (348 lines) |
+| **QuickAddJobOverlay.js** | ✅ Inline in index.html | Line ~2452-2850 | Quick add job (398 lines) |
+
+**Total:** 2,262 lines of overlay code consolidated into index.html (no separate file loads)
+
+---
+
+## 🔧 **OVERLAY SYSTEM ARCHITECTURE (v2.0 - INLINE)**
+
+### **Major Change: Consolidated into index.html**
+
+**Problem with v1.0:** Separate file loading caused race conditions - `OverlayManager is not defined` errors
+
+**Solution v2.0:** ALL overlay code now inline in `/dashboard/tiers/professional/index.html`
+
+### **Loading Order (GUARANTEED):**
+```
+1. index.html starts loading
+   ↓
+2. <script src="utils.js"></script>
+   → window.SteadyUtils created ✅
+   ↓
+3. <script>
+   /* 2,262 lines of inline overlay code */
+   - class OverlayManagerClass { ... }
+   - class BaseOverlay { ... }
+   - class LeadDetailOverlay extends BaseOverlay { ... }
+   - class QuickAddLeadOverlay extends BaseOverlay { ... }
+   - class JobDetailOverlay extends BaseOverlay { ... }
+   - class QuickAddJobOverlay extends BaseOverlay { ... }
+
+   // Create global instance
+   window.OverlayManager = new OverlayManagerClass();
+
+   // Register all overlays
+   OverlayManager.register('lead-detail', LeadDetailOverlay);
+   OverlayManager.register('quick-add-lead', QuickAddLeadOverlay);
+   OverlayManager.register('job-detail', JobDetailOverlay);
+   OverlayManager.register('quick-add-job', QuickAddJobOverlay);
+   </script>
+   → window.OverlayManager created ✅
+   → All overlays registered ✅
+   ↓
+4. <script src="dashboard.js"></script>
+   → window.DashboardModule created
+   → Can safely use OverlayManager.open() ✅
+   ↓
+5. <script src="Pipeline.js"></script>
+   → window.PipelineModule created
+   → Can safely use OverlayManager.open() ✅
+```
+
+**Benefits:**
+- ✅ No file loading race conditions
+- ✅ Guaranteed order of execution
+- ✅ No "OverlayManager is not defined" errors
+- ✅ Faster initial load (no separate file requests)
+- ✅ Easier to debug (all code in one place)
+
+---
+
+## 🎯 **MIGRATION ROADMAP**
+
+### **Phase 1: Fix Critical Bugs** (URGENT)
+- [ ] Add `Scheduling.js` to index.html (Tasks page currently broken!)
+- [ ] Test that all existing modules still work
+
+### **Phase 2: Connect Existing Modules to Overlays**
+- [ ] **Pipeline.js**: Make lead cards open LeadDetailOverlay on click
+  - Keep drag-and-drop working
+  - Use event delegation (not inline onclick)
+  - Preserve existing functionality
+- [ ] **Dashboard.js**: Make stat cards and recent activity clickable
+  - Lead cards → LeadDetailOverlay
+  - Job cards → JobDetailOverlay (once Jobs module built)
+- [ ] **AddLead.js**: Add enhanced fields (position, department, tags)
+  - Update form with new fields
+  - Update API calls
+- [ ] **Scheduling.js**: Make task cards open TaskDetailOverlay (once built)
+- [ ] **Settings.js**: Add Preferences tab for overlay toggles
+
+### **Phase 3: Build New Pro Modules**
+- [ ] **Jobs.js** (4-6 hours)
+  - Calendar view with financial data
+  - Job cards with profit/loss color coding
+  - Detail view with cost breakdown
+  - Integrate with LeadDetailOverlay (show jobs for lead)
+- [ ] **Goals.js** (3-4 hours)
+  - Apple Watch-style progress rings
+  - Goal cards with progress bars
+  - Auto-tracking integration
+  - Completion animations
+- [ ] **SearchOverlay.js** (2-3 hours)
+  - Global Cmd+K keyboard shortcut
+  - Fuzzy search across leads/jobs/tasks
+  - Click result opens appropriate overlay
+  - Works from any page
+
+### **Phase 4: Advanced Features**
+- [ ] **EditLeadOverlay**: Full lead editing in overlay
+- [ ] **TaskDetailOverlay**: Task view/edit overlay
+- [ ] **GoalDetailOverlay**: Goal progress details
+- [ ] **BulkActionsOverlay**: Multi-select operations
+- [ ] **Command Palette**: Fuzzy search with quick actions
+
+---
+
+## 📊 **WHAT NEEDS TO HAPPEN NOW**
+
+### **Immediate Next Steps:**
+1. **Fix Scheduling.js bug** - Add to index.html
+2. **Test overlay system** - Verify FAB button works, overlays open
+3. **Connect Pipeline to overlays** - Make cards clickable
+4. **Build Jobs.js module** - Calendar + financial tracking
+5. **Build Goals.js module** - Progress rings + auto-tracking
+
+### **Database Migration:**
+Run `database_migration_pro_tier.sql` in Supabase SQL Editor to add:
+- Jobs table with generated columns (profit, profit_margin)
+- Goals table with auto-tracking
+- Enhanced lead fields (position, department, deal_stage, etc.)
+- Database functions and triggers
+
+### **Testing Checklist:**
+- [ ] Open Pro tier dashboard
+- [ ] Open browser console, run: `typeof OverlayManager` (should return "object")
+- [ ] Open browser console, run: `Object.keys(OverlayManager.overlayTypes)` (should show 4 overlays)
+- [ ] Click FAB button (bottom-right +) → menu should expand
+- [ ] Click "Add Lead" → QuickAddLeadOverlay should open
+- [ ] Click "Add Job" → QuickAddJobOverlay should open
+- [ ] Test ESC key closes overlay
+- [ ] Test click outside closes overlay
+- [ ] Test background is blurred when overlay open
+
+---
+
+**Document Version**: 5.0 🪟 (Inline Overlay Edition)
+**Last Updated**: Overlay System Consolidated - All Code Inline in index.html
+
+**Key Changes in v5.0**:
+- ✅ **MAJOR**: Consolidated all overlay code into index.html (2,262 lines inline)
+  - Eliminates file loading race conditions
+  - Guarantees OverlayManager is always available
+  - No more "is not defined" errors
+- ✅ **ADDED**: Pro Tier vs Free Tier comparison section
+- ✅ **ADDED**: Complete module status checklist (existing + planned)
+- ✅ **ADDED**: Migration roadmap with phases
+- ✅ **ADDED**: Overlay system architecture v2.0 documentation
+- ✅ **CRITICAL BUG FOUND**: Scheduling.js not loaded in index.html (Tasks page broken)
+- ❌ **NOT DONE YET**: No Pro tier modules migrated to overlay system
+- ⏳ **NEXT**: Fix Scheduling.js bug → Connect Pipeline to overlays → Build Jobs.js
+
+**Previous Changes (v4.0)**:
+- ✅ Jobs table with cost/profit tracking (Better Google Sheets for job financials)
+- ✅ Goals table with auto-progress tracking (Apple Watch-style goal rings)
+- ✅ Enhanced Leads with position, department, deal_stage, next_action, win_probability, tags
+- ✅ User preferences (windowing, command palette, quick panels toggles)
+- ✅ Database functions for auto-goal tracking (trigger-based, like spreadsheet formulas)
+- ✅ Complete SQL migration script ready to run
+- ✅ SteadyUtils v5.0 with overlay utilities (fadeIn, blurBackground, lockScroll, etc)
+- ✅ OverlayManager - Revolutionary multi-tasking UI controller (originally separate files)
+- ✅ BaseOverlay foundation class for all overlays
+- ✅ 4 overlay components (LeadDetail, JobDetail, QuickAddLead, QuickAddJob)
+- ✅ Floating action button (Pro tier) for quick access
 - ✅ Updated API.js v3.0 with Jobs, Goals, Preferences methods (21 new methods)
-- ✅ Updated Professional tier index.html with overlay system integration
-- ✅ Comprehensive overlay system documentation
-**Status**: Overlay System Live, Jobs.js & Goals.js Modules Next
-**Philosophy**: Manual CRM (you control all data) + Smart Visualization (system calculates & displays beautifully) + Revolutionary Multi-Tasking (view multiple things simultaneously)
+
+**Status**: Overlay System Consolidated and Ready - Zero Modules Migrated Yet
+**Philosophy**: Manual CRM (you control all data) + Smart Visualization (system calculates & displays beautifully) + Revolutionary Multi-Tasking (view multiple things simultaneously without losing context)
