@@ -1,28 +1,50 @@
+/**
+ * SETTINGS MODULE v2.0
+ * Rebuilt for Pro Tier with Overlay System Control
+ * 
+ * NEW FEATURES:
+ * - Pro Features section with Windowing toggle
+ * - Cleaner card-based layout
+ * - Better mobile responsiveness
+ * - Live preference updates (no reload needed)
+ */
+
 window.SettingsModule = {
     state: {
         profile: null,
+        preferences: null,
         container: 'settings-content',
     },
 
-    async settings_init(targetContainer = 'settings-content') {
-        console.log('Settings module loading');
+    async init(targetContainer = 'settings-content') {
+        console.log('⚙️ Settings v2.0 loading...');
         
         this.state.container = targetContainer;
         this.showLoading();
         
         try {
-            const profile = await API.getProfile();
-            this.state.profile = profile;
+            // Load profile
+            this.state.profile = await API.getProfile();
+            
+            // Load preferences (Pro tier only)
+            if (this.isPro()) {
+                this.state.preferences = await API.getPreferences();
+            }
             
             this.render();
             this.attachEvents();
             
-            console.log('Settings module ready');
+            console.log('✅ Settings ready');
             
         } catch (error) {
-            console.error('Settings init failed:', error);
+            console.error('❌ Settings init failed:', error);
             this.showError('Failed to load settings');
         }
+    },
+
+    isPro() {
+        const proTiers = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'];
+        return proTiers.includes(this.state.profile?.user_type);
     },
 
     render() {
@@ -33,23 +55,93 @@ window.SettingsModule = {
             ${this.renderStyles()}
             <div class="settings-container">
                 ${this.renderAccountCard()}
+                ${this.isPro() ? this.renderProFeaturesCard() : ''}
                 ${this.renderSecurityCard()}
                 ${this.renderAppearanceCard()}
                 ${this.renderExportCard()}
                 ${this.renderDangerZone()}
             </div>
         `;
-
-        // Fade in
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
-        }, 50);
     },
 
+    // =====================================================
+    // NEW: PRO FEATURES CARD
+    // =====================================================
+    renderProFeaturesCard() {
+        const prefs = this.state.preferences || {};
+        const windowingEnabled = prefs.windowing_enabled !== false; // Default true for Pro
+
+        return `
+            <div class="settings-card pro-card">
+                <div class="card-header">
+                    <div class="card-icon">✨</div>
+                    <h3 class="card-title">Pro Features</h3>
+                    <span class="pro-badge">PRO</span>
+                </div>
+                <div class="card-body">
+                    <!-- Windowing Toggle -->
+                    <div class="feature-item">
+                        <div class="feature-info">
+                            <div class="feature-label">
+                                <span class="feature-icon">🪟</span>
+                                <span>Multi-Tasking Overlays</span>
+                            </div>
+                            <div class="feature-description">
+                                Revolutionary windowing system - open multiple views at once (leads, jobs, tasks) without losing context. Stack and navigate freely like macOS windows.
+                            </div>
+                            <div class="feature-status ${windowingEnabled ? 'status-enabled' : 'status-disabled'}">
+                                ${windowingEnabled ? '✓ Enabled' : '○ Disabled'}
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input 
+                                type="checkbox" 
+                                id="windowingToggle" 
+                                ${windowingEnabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="feature-divider"></div>
+
+                    <!-- Coming Soon Features -->
+                    <div class="feature-item disabled">
+                        <div class="feature-info">
+                            <div class="feature-label">
+                                <span class="feature-icon">⌘</span>
+                                <span>Command Palette</span>
+                            </div>
+                            <div class="feature-description">
+                                Quick access to any action via keyboard shortcuts (Cmd+K)
+                            </div>
+                            <div class="feature-status coming-soon">Coming Soon</div>
+                        </div>
+                    </div>
+
+                    <div class="feature-divider"></div>
+
+                    <div class="feature-item disabled">
+                        <div class="feature-info">
+                            <div class="feature-label">
+                                <span class="feature-icon">⚡</span>
+                                <span>Quick Panels</span>
+                            </div>
+                            <div class="feature-description">
+                                Slide-out panels for quick lead/job creation from anywhere
+                            </div>
+                            <div class="feature-status coming-soon">Coming Soon</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    // =====================================================
+    // EXISTING CARDS (CLEANED UP)
+    // =====================================================
     renderAccountCard() {
-        const { email, user_type, created_at } = this.state.profile;
+        const { email, user_type, created_at, current_leads, current_lead_limit } = this.state.profile;
         
         const tierNames = {
             'free': 'Free Plan',
@@ -69,10 +161,6 @@ window.SettingsModule = {
             'admin': '#ef4444'
         };
         
-        const tierName = tierNames[user_type] || 'Free Plan';
-        const tierColor = tierColors[user_type] || '#6b7280';
-        const memberSince = this.formatDate(created_at);
-        
         return `
             <div class="settings-card">
                 <div class="card-header">
@@ -86,11 +174,17 @@ window.SettingsModule = {
                     </div>
                     <div class="info-row">
                         <span class="info-label">Plan</span>
-                        <span class="plan-badge" style="background: ${tierColor}">${tierName}</span>
+                        <span class="plan-badge" style="background: ${tierColors[user_type] || '#6b7280'}">
+                            ${tierNames[user_type] || 'Free Plan'}
+                        </span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Member since</span>
-                        <span class="info-value">${memberSince}</span>
+                        <span class="info-label">Leads Usage</span>
+                        <span class="info-value">${current_leads || 0} / ${current_lead_limit || 50}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Member Since</span>
+                        <span class="info-value">${window.SteadyUtils.formatDate(created_at, 'long')}</span>
                     </div>
                 </div>
             </div>
@@ -98,26 +192,26 @@ window.SettingsModule = {
     },
 
     renderSecurityCard() {
-    return `
-        <div class="settings-card">
-            <div class="card-header">
-                <div class="card-icon">🔐</div>
-                <h3 class="card-title">Security</h3>
-            </div>
-            <div class="card-body">
-                <div class="security-item">
-                    <div class="security-info">
-                        <div class="security-label">Password</div>
-                        <div class="security-description">Change your password</div>
+        return `
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">🔐</div>
+                    <h3 class="card-title">Security</h3>
+                </div>
+                <div class="card-body">
+                    <div class="security-item">
+                        <div class="security-info">
+                            <div class="security-label">Password</div>
+                            <div class="security-description">Change your account password</div>
+                        </div>
+                        <button class="btn-secondary" onclick="SettingsModule.changePassword()">
+                            Change Password
+                        </button>
                     </div>
-                    <button class="btn-secondary" onclick="SettingsModule.changePassword()">
-                        Change Password
-                    </button>
                 </div>
             </div>
-        </div>
-    `;
-},
+        `;
+    },
 
     renderAppearanceCard() {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -157,16 +251,16 @@ window.SettingsModule = {
                 </div>
                 <div class="card-body">
                     <div class="export-description">
-                        Download your data as CSV files for backup or analysis
+                        Download your data as CSV files for backup or external analysis
                     </div>
                     <div class="export-buttons">
                         <button class="btn-export" onclick="SettingsModule.exportLeads()">
                             <span class="export-icon">📥</span>
-                            <span>Export All Leads</span>
+                            <span>Export Leads</span>
                         </button>
                         <button class="btn-export" onclick="SettingsModule.exportTasks()">
                             <span class="export-icon">📥</span>
-                            <span>Export All Tasks</span>
+                            <span>Export Tasks</span>
                         </button>
                     </div>
                 </div>
@@ -183,7 +277,7 @@ window.SettingsModule = {
                 </div>
                 <div class="card-body">
                     <div class="danger-description">
-                        ⚠️ Delete your account and all associated data permanently
+                        ⚠️ Permanently delete your account and all associated data
                     </div>
                     <button class="btn-danger" onclick="SettingsModule.deleteAccount()">
                         Delete Account
@@ -193,22 +287,31 @@ window.SettingsModule = {
         `;
     },
 
+    // =====================================================
+    // EVENT HANDLERS
+    // =====================================================
     attachEvents() {
         // Theme toggle
         document.querySelectorAll('.theme-option').forEach(option => {
-            option.addEventListener('click', (e) => {
+            option.addEventListener('click', () => {
                 const theme = option.dataset.theme;
                 this.updateTheme(theme);
             });
         });
+
+        // Windowing toggle (Pro only)
+        const windowingToggle = document.getElementById('windowingToggle');
+        if (windowingToggle) {
+            windowingToggle.addEventListener('change', (e) => {
+                this.toggleWindowing(e.target.checked);
+            });
+        }
     },
 
     updateTheme(theme) {
-        // Update UI
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('dashboard-theme', theme);
         
-        // Update active state
         document.querySelectorAll('.theme-option').forEach(opt => {
             opt.classList.remove('active');
             if (opt.dataset.theme === theme) {
@@ -217,168 +320,177 @@ window.SettingsModule = {
             }
         });
         
-        this.notify(`Switched to ${theme} mode`, 'success');
+        toast(`Switched to ${theme} mode`, 'success');
     },
 
-    // Change Password Modal
-changePassword() {
-    const modal = document.createElement('div');
-    modal.className = 'settings-modal show';
-    modal.id = 'changePasswordModal';
-    modal.innerHTML = `
-        <div class="modal-backdrop" id="changePasswordBackdrop"></div>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Change Password</h3>
-                <button class="modal-close" onclick="document.getElementById('changePasswordModal').remove()">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="changePasswordForm">
-                    <div class="form-section">
-                        <label class="form-label">Current Password</label>
-                        <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password" required>
-                        <div class="input-feedback" id="currentPasswordFeedback"></div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <label class="form-label">New Password</label>
-                        <input type="password" id="newPassword" class="form-input" placeholder="Enter new password" minlength="6" required>
-                        <div class="password-strength" id="passwordStrength"></div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <label class="form-label">Confirm New Password</label>
-                        <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password" minlength="6" required>
-                        <div class="input-feedback" id="passwordFeedback"></div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('changePasswordModal').remove()">Cancel</button>
-                        <button type="submit" class="btn-primary">
-                            <span class="btn-text">Change Password</span>
-                            <span class="btn-loading" style="display: none;">⏳</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-
-    // Backdrop pattern
-    const backdrop = document.getElementById('changePasswordBackdrop');
-    let mouseDownTarget = null;
-
-    backdrop.addEventListener('mousedown', (e) => {
-        mouseDownTarget = e.target;
-    });
-
-    backdrop.addEventListener('mouseup', (e) => {
-        if (mouseDownTarget === backdrop && e.target === backdrop) {
-            document.getElementById('changePasswordModal').remove();
-        }
-        mouseDownTarget = null;
-    });
-
-    const currentPasswordInput = document.getElementById('currentPassword');
-    const newPasswordInput = document.getElementById('newPassword');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-    const strengthDisplay = document.getElementById('passwordStrength');
-    const feedback = document.getElementById('passwordFeedback');
-    const currentFeedback = document.getElementById('currentPasswordFeedback');
-
-    // Password strength checker
-    newPasswordInput.oninput = (e) => {
-        const password = e.target.value;
-        const strength = this.checkPasswordStrength(password);
-        
-        strengthDisplay.textContent = `Strength: ${strength.text}`;
-        strengthDisplay.className = `password-strength strength-${strength.level}`;
-    };
-
-    // Confirm password validation
-    confirmPasswordInput.oninput = (e) => {
-        const newPass = newPasswordInput.value;
-        const confirmPass = e.target.value;
-        
-        if (confirmPass && newPass !== confirmPass) {
-            feedback.textContent = 'Passwords do not match';
-            feedback.className = 'input-feedback feedback-error';
-        } else {
-            feedback.textContent = '';
-        }
-    };
-
-    document.getElementById('changePasswordForm').onsubmit = async (e) => {
-        e.preventDefault();
-        
-        const currentPassword = currentPasswordInput.value;
-        const newPassword = newPasswordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
-        
-        // Clear previous errors
-        currentFeedback.textContent = '';
-        feedback.textContent = '';
-        
-        if (newPassword !== confirmPassword) {
-            feedback.textContent = 'Passwords do not match';
-            feedback.className = 'input-feedback feedback-error';
-            return;
-        }
-        
-        if (newPassword.length < 6) {
-            feedback.textContent = 'Password must be at least 6 characters';
-            feedback.className = 'input-feedback feedback-error';
-            return;
-        }
-        
-        if (currentPassword === newPassword) {
-            feedback.textContent = 'New password must be different from current password';
-            feedback.className = 'input-feedback feedback-error';
-            return;
-        }
-        
-        const btn = e.target.querySelector('.btn-primary');
-        const btnText = btn.querySelector('.btn-text');
-        const btnLoading = btn.querySelector('.btn-loading');
-        
+    // =====================================================
+    // NEW: WINDOWING TOGGLE
+    // =====================================================
+    async toggleWindowing(enabled) {
         try {
-            btnText.style.display = 'none';
-            btnLoading.style.display = 'inline-block';
-            btn.disabled = true;
+            // Update preferences in database
+            const updatedPrefs = {
+                ...this.state.preferences,
+                windowing_enabled: enabled
+            };
             
-            // Verify current password by attempting to sign in
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-                email: this.state.profile.email,
-                password: currentPassword
-            });
+            await API.updatePreferences(updatedPrefs);
+            this.state.preferences = updatedPrefs;
             
-            if (signInError) {
-                currentFeedback.textContent = 'Current password is incorrect';
-                currentFeedback.className = 'input-feedback feedback-error';
-                btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
-                btn.disabled = false;
+            // Update UI immediately
+            const fab = document.getElementById('quickActionsFab');
+            if (fab) {
+                fab.style.display = enabled ? 'block' : 'none';
+            }
+            
+            // Update feature status text
+            const statusEl = document.querySelector('.feature-status');
+            if (statusEl) {
+                statusEl.textContent = enabled ? '✓ Enabled' : '○ Disabled';
+                statusEl.className = `feature-status ${enabled ? 'status-enabled' : 'status-disabled'}`;
+            }
+            
+            toast(
+                enabled 
+                    ? 'Multi-tasking overlays enabled! Click cards to open overlays 🪟' 
+                    : 'Multi-tasking disabled. Using traditional navigation 📄',
+                'success'
+            );
+            
+        } catch (error) {
+            console.error('Toggle windowing error:', error);
+            toast('Failed to update preferences', 'error');
+            
+            // Revert toggle
+            const toggle = document.getElementById('windowingToggle');
+            if (toggle) toggle.checked = !enabled;
+        }
+    },
+
+    // =====================================================
+    // PASSWORD CHANGE
+    // =====================================================
+    changePassword() {
+        const modal = document.createElement('div');
+        modal.className = 'settings-modal show';
+        modal.id = 'changePasswordModal';
+        modal.innerHTML = `
+            <div class="modal-backdrop" id="changePasswordBackdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Change Password</h3>
+                    <button class="modal-close" onclick="document.getElementById('changePasswordModal').remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="form-section">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" id="currentPassword" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-section">
+                            <label class="form-label">New Password</label>
+                            <input type="password" id="newPassword" class="form-input" minlength="6" required>
+                            <div class="password-strength" id="passwordStrength"></div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" class="form-input" minlength="6" required>
+                            <div class="input-feedback" id="passwordFeedback"></div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('changePasswordModal').remove()">Cancel</button>
+                            <button type="submit" class="btn-primary">
+                                <span class="btn-text">Change Password</span>
+                                <span class="btn-loading" style="display: none;">⏳</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+
+        const backdrop = document.getElementById('changePasswordBackdrop');
+        backdrop.onclick = () => modal.remove();
+
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const strengthDisplay = document.getElementById('passwordStrength');
+        const feedback = document.getElementById('passwordFeedback');
+
+        newPasswordInput.oninput = (e) => {
+            const password = e.target.value;
+            const strength = this.checkPasswordStrength(password);
+            strengthDisplay.textContent = `Strength: ${strength.text}`;
+            strengthDisplay.className = `password-strength strength-${strength.level}`;
+        };
+
+        confirmPasswordInput.oninput = (e) => {
+            const newPass = newPasswordInput.value;
+            const confirmPass = e.target.value;
+            
+            if (confirmPass && newPass !== confirmPass) {
+                feedback.textContent = 'Passwords do not match';
+                feedback.className = 'input-feedback feedback-error';
+            } else {
+                feedback.textContent = '';
+            }
+        };
+
+        document.getElementById('changePasswordForm').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = newPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            if (newPassword !== confirmPassword) {
+                feedback.textContent = 'Passwords do not match';
+                feedback.className = 'input-feedback feedback-error';
                 return;
             }
             
-            // Current password verified, now update to new password
-            await API.updatePassword(newPassword);
+            if (newPassword.length < 6) {
+                feedback.textContent = 'Password must be at least 6 characters';
+                feedback.className = 'input-feedback feedback-error';
+                return;
+            }
             
-            modal.remove();
-            this.notify('Password changed successfully!', 'success');
+            const btn = e.target.querySelector('.btn-primary');
+            const btnText = btn.querySelector('.btn-text');
+            const btnLoading = btn.querySelector('.btn-loading');
             
-        } catch (error) {
-            console.error('Change password error:', error);
-            feedback.textContent = 'Failed to change password. Please try again.';
-            feedback.className = 'input-feedback feedback-error';
-            btnText.style.display = 'inline-block';
-            btnLoading.style.display = 'none';
-            btn.disabled = false;
-        }
-    };
-},
+            try {
+                btnText.style.display = 'none';
+                btnLoading.style.display = 'inline-block';
+                btn.disabled = true;
+                
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: this.state.profile.email,
+                    password: currentPassword
+                });
+                
+                if (signInError) throw new Error('Current password is incorrect');
+                
+                await API.updatePassword(newPassword);
+                
+                modal.remove();
+                toast('Password changed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Change password error:', error);
+                feedback.textContent = error.message || 'Failed to change password';
+                feedback.className = 'input-feedback feedback-error';
+                btnText.style.display = 'inline-block';
+                btnLoading.style.display = 'none';
+                btn.disabled = false;
+            }
+        };
+    },
 
     checkPasswordStrength(password) {
         if (password.length === 0) return { level: '', text: '' };
@@ -396,43 +508,33 @@ changePassword() {
         return { level: 'strong', text: 'Strong' };
     },
 
-    // Export Leads
+    // =====================================================
+    // EXPORT FUNCTIONS
+    // =====================================================
     async exportLeads() {
         try {
-            this.notify('Preparing export...', 'info');
+            toast('Preparing export...', 'info');
             
             const leads = await API.getLeads();
             const csv = this.convertLeadsToCSV(leads.all);
             const filename = `steadymanager-leads-${this.getDateStamp()}.csv`;
             
             this.downloadFile(csv, filename);
-            this.notify('Leads exported successfully!', 'success');
+            toast('Leads exported successfully!', 'success');
             
         } catch (error) {
             console.error('Export leads error:', error);
-            this.notify('Failed to export leads', 'error');
+            toast('Failed to export leads', 'error');
         }
     },
 
     convertLeadsToCSV(leads) {
-        if (!leads || leads.length === 0) {
-            return 'No leads to export';
-        }
+        if (!leads || leads.length === 0) return 'No leads to export';
         
         const headers = [
-            'Name',
-            'Email',
-            'Phone',
-            'Company',
-            'Type',
-            'Status',
-            'Quality Score',
-            'Potential Value',
-            'Source',
-            'Notes',
-            'Lost Reason',
-            'Created At',
-            'Last Contact'
+            'Name', 'Email', 'Phone', 'Company', 'Type', 'Status',
+            'Quality Score', 'Potential Value', 'Source', 'Notes',
+            'Created At', 'Last Contact'
         ];
         
         const rows = leads.map(lead => [
@@ -445,54 +547,40 @@ changePassword() {
             lead.quality_score || '',
             lead.potential_value || '',
             lead.source || '',
-            (lead.notes || '').replace(/"/g, '""'), // Escape quotes
-            lead.lost_reason || '',
+            (lead.notes || '').replace(/"/g, '""'),
             lead.created_at || '',
             lead.last_contact_date || ''
         ]);
         
-        const csvContent = [
+        return [
             headers.map(h => `"${h}"`).join(','),
             ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
         ].join('\n');
-        
-        return csvContent;
     },
 
-    // Export Tasks
     async exportTasks() {
         try {
-            this.notify('Preparing export...', 'info');
+            toast('Preparing export...', 'info');
             
             const tasks = await API.getTasks();
             const csv = this.convertTasksToCSV(tasks);
             const filename = `steadymanager-tasks-${this.getDateStamp()}.csv`;
             
             this.downloadFile(csv, filename);
-            this.notify('Tasks exported successfully!', 'success');
+            toast('Tasks exported successfully!', 'success');
             
         } catch (error) {
             console.error('Export tasks error:', error);
-            this.notify('Failed to export tasks', 'error');
+            toast('Failed to export tasks', 'error');
         }
     },
 
     convertTasksToCSV(tasks) {
-        if (!tasks || tasks.length === 0) {
-            return 'No tasks to export';
-        }
+        if (!tasks || tasks.length === 0) return 'No tasks to export';
         
         const headers = [
-            'Title',
-            'Description',
-            'Status',
-            'Type',
-            'Priority',
-            'Due Date',
-            'Due Time',
-            'Completed At',
-            'Completion Notes',
-            'Created At'
+            'Title', 'Description', 'Status', 'Type', 'Priority',
+            'Due Date', 'Due Time', 'Completed At', 'Created At'
         ];
         
         const rows = tasks.map(task => [
@@ -504,40 +592,35 @@ changePassword() {
             task.due_date || '',
             task.due_time || '',
             task.completed_at || '',
-            (task.completion_notes || '').replace(/"/g, '""'),
             task.created_at || ''
         ]);
         
-        const csvContent = [
+        return [
             headers.map(h => `"${h}"`).join(','),
             ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
         ].join('\n');
-        
-        return csvContent;
     },
 
     downloadFile(content, filename) {
         const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = filename;
-        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url);
     },
 
     getDateStamp() {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     },
 
-    // Delete Account
+    // =====================================================
+    // DELETE ACCOUNT
+    // =====================================================
     deleteAccount() {
         const modal = document.createElement('div');
         modal.className = 'settings-modal show';
@@ -554,7 +637,7 @@ changePassword() {
                         <div class="warning-icon">⚠️</div>
                         <h4 class="warning-title">Are you absolutely sure?</h4>
                         <p class="warning-text">
-                            This action <strong>cannot be undone</strong>. This will permanently delete your account and remove all data including:
+                            This action <strong>cannot be undone</strong>. This will permanently delete:
                         </p>
                         <ul class="warning-list">
                             <li>All your leads (${this.state.profile.current_leads || 0} leads)</li>
@@ -567,11 +650,7 @@ changePassword() {
                     </div>
                     
                     <div class="form-section">
-                        <input type="text" 
-                               id="deleteConfirmation" 
-                               class="form-input" 
-                               placeholder="Type DELETE to confirm"
-                               autocomplete="off">
+                        <input type="text" id="deleteConfirmation" class="form-input" placeholder="Type DELETE to confirm">
                         <div class="input-feedback" id="deleteFeedback"></div>
                     </div>
                     
@@ -588,34 +667,14 @@ changePassword() {
         
         document.body.appendChild(modal);
 
-        // Backdrop pattern
         const backdrop = document.getElementById('deleteAccountBackdrop');
-        let mouseDownTarget = null;
-
-        backdrop.addEventListener('mousedown', (e) => {
-            mouseDownTarget = e.target;
-        });
-
-        backdrop.addEventListener('mouseup', (e) => {
-            if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('deleteAccountModal').remove();
-            }
-            mouseDownTarget = null;
-        });
+        backdrop.onclick = () => modal.remove();
 
         const confirmInput = document.getElementById('deleteConfirmation');
         const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const feedback = document.getElementById('deleteFeedback');
 
         confirmInput.oninput = (e) => {
-            const value = e.target.value.trim();
-            
-            if (value === 'DELETE') {
-                confirmBtn.disabled = false;
-                feedback.textContent = '';
-            } else {
-                confirmBtn.disabled = true;
-            }
+            confirmBtn.disabled = e.target.value.trim() !== 'DELETE';
         };
 
         confirmBtn.onclick = async () => {
@@ -628,14 +687,12 @@ changePassword() {
                 confirmBtn.disabled = true;
                 
                 await API.deleteAccount();
-                
-                // Account deleted - redirect to homepage
                 window.location.href = '/?message=Account deleted successfully';
                 
             } catch (error) {
                 console.error('Delete account error:', error);
-                feedback.textContent = 'Failed to delete account. Please try again or contact support.';
-                feedback.className = 'input-feedback feedback-error';
+                document.getElementById('deleteFeedback').textContent = 'Failed to delete account';
+                document.getElementById('deleteFeedback').className = 'input-feedback feedback-error';
                 btnText.style.display = 'inline-block';
                 btnLoading.style.display = 'none';
                 confirmBtn.disabled = false;
@@ -643,38 +700,15 @@ changePassword() {
         };
     },
 
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            this.notify('Copied to clipboard!', 'success');
-        }).catch(() => {
-            this.notify('Failed to copy', 'error');
-        });
-    },
-
-    formatDate(dateString) {
-        if (!dateString) return 'Unknown';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
-    },
-
-    notify(message, type = 'info') {
-        if (window.SteadyUtils?.showToast) {
-            window.SteadyUtils.showToast(message, type);
-        } else {
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
-    },
-
+    // =====================================================
+    // UI HELPERS
+    // =====================================================
     showLoading() {
         const container = document.getElementById(this.state.container);
         if (container) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
-                    <div class="loading-spinner" style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    <div class="loading-spinner"></div>
                 </div>
             `;
         }
@@ -686,9 +720,9 @@ changePassword() {
             container.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
                     <div style="font-size: 4rem; margin-bottom: 2rem;">⚠️</div>
-                    <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">Settings Error</h2>
-                    <p style="margin-bottom: 2rem; font-size: 1.125rem; color: var(--text-secondary);">${API.escapeHtml(message)}</p>
-                    <button onclick="SettingsModule.settings_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;">🔄 Try Again</button>
+                    <h2 style="font-size: 1.75rem; margin-bottom: 1rem;">Settings Error</h2>
+                    <p style="margin-bottom: 2rem; color: var(--text-secondary);">${API.escapeHtml(message)}</p>
+                    <button onclick="SettingsModule.init()" class="btn-primary">🔄 Try Again</button>
                 </div>
             `;
         }
@@ -697,14 +731,9 @@ changePassword() {
     renderStyles() {
         return `
             <style>
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-
                 .settings-container {
                     max-width: 900px;
                     margin: 0 auto;
-                    padding: 0;
                 }
 
                 .settings-card {
@@ -721,6 +750,11 @@ changePassword() {
                     box-shadow: var(--shadow-lg);
                 }
 
+                .pro-card {
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+                    border: 2px solid var(--primary);
+                }
+
                 .danger-card {
                     border-color: var(--danger);
                     border-width: 2px;
@@ -733,6 +767,7 @@ changePassword() {
                     margin-bottom: 2rem;
                     padding-bottom: 1rem;
                     border-bottom: 2px solid var(--border);
+                    position: relative;
                 }
 
                 .card-icon {
@@ -744,6 +779,18 @@ changePassword() {
                     font-weight: 800;
                     color: var(--text-primary);
                     margin: 0;
+                    flex: 1;
+                }
+
+                .pro-badge {
+                    background: var(--gradient-primary);
+                    color: white;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 9999px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .card-body {
@@ -752,6 +799,117 @@ changePassword() {
                     gap: 1.5rem;
                 }
 
+                /* Pro Features */
+                .feature-item {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 2rem;
+                    padding: 1.5rem;
+                    background: var(--background);
+                    border-radius: var(--radius);
+                    transition: var(--transition);
+                }
+
+                .feature-item:not(.disabled):hover {
+                    background: var(--surface-hover);
+                }
+
+                .feature-item.disabled {
+                    opacity: 0.6;
+                }
+
+                .feature-info {
+                    flex: 1;
+                }
+
+                .feature-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    color: var(--text-primary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .feature-icon {
+                    font-size: 1.5rem;
+                }
+
+                .feature-description {
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    line-height: 1.5;
+                    margin-bottom: 0.75rem;
+                }
+
+                .feature-status {
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    padding: 0.25rem 0;
+                }
+
+                .status-enabled {
+                    color: var(--success);
+                }
+
+                .status-disabled {
+                    color: var(--text-tertiary);
+                }
+
+                .coming-soon {
+                    color: var(--warning);
+                    text-transform: uppercase;
+                    font-size: 0.75rem;
+                    letter-spacing: 0.5px;
+                }
+
+                .feature-divider {
+                    height: 1px;
+                    background: var(--border);
+                }
+
+                .toggle-switch {
+                    position: relative;
+                    width: 52px;
+                    height: 28px;
+                    background: var(--border);
+                    border-radius: 9999px;
+                    cursor: pointer;
+                    transition: var(--transition);
+                    flex-shrink: 0;
+                }
+
+                .toggle-switch input {
+                    display: none;
+                }
+
+                .toggle-slider {
+                    position: absolute;
+                    top: 3px;
+                    left: 3px;
+                    width: 22px;
+                    height: 22px;
+                    background: white;
+                    border-radius: 50%;
+                    transition: var(--transition);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .toggle-switch input:checked ~ .toggle-slider {
+                    transform: translateX(24px);
+                }
+
+                .toggle-switch input:checked {
+                    background: var(--success);
+                }
+
+                .toggle-switch:has(input:checked) {
+                    background: var(--success);
+                }
+
+                /* Account Card */
                 .info-row {
                     display: flex;
                     justify-content: space-between;
@@ -782,6 +940,7 @@ changePassword() {
                     font-weight: 700;
                 }
 
+                /* Security Card */
                 .security-item {
                     display: flex;
                     justify-content: space-between;
@@ -804,22 +963,7 @@ changePassword() {
                     color: var(--text-secondary);
                 }
 
-                .status-enabled {
-                    color: var(--success);
-                    font-weight: 600;
-                }
-
-                .status-disabled {
-                    color: var(--text-tertiary);
-                    font-weight: 600;
-                }
-
-                .security-divider {
-                    height: 1px;
-                    background: var(--border);
-                    margin: 0.5rem 0;
-                }
-
+                /* Theme Selector */
                 .theme-selector {
                     display: flex;
                     gap: 1rem;
@@ -873,10 +1017,10 @@ changePassword() {
                     font-style: italic;
                 }
 
+                /* Export Card */
                 .export-description {
                     font-size: 0.95rem;
                     color: var(--text-secondary);
-                    line-height: 1.6;
                 }
 
                 .export-buttons {
@@ -909,13 +1053,13 @@ changePassword() {
                     font-size: 1.25rem;
                 }
 
+                /* Danger Zone */
                 .danger-description {
                     font-size: 0.95rem;
                     color: var(--text-secondary);
-                    line-height: 1.6;
-                    margin-bottom: 1rem;
                 }
 
+                /* Buttons */
                 .btn-primary, .btn-secondary, .btn-danger {
                     padding: 0.875rem 1.5rem;
                     border-radius: var(--radius);
@@ -926,7 +1070,6 @@ changePassword() {
                     display: inline-flex;
                     align-items: center;
                     gap: 0.5rem;
-                    white-space: nowrap;
                 }
 
                 .btn-primary {
@@ -952,7 +1095,6 @@ changePassword() {
 
                 .btn-secondary:hover {
                     border-color: var(--primary);
-                    color: var(--primary);
                 }
 
                 .btn-danger {
@@ -970,16 +1112,7 @@ changePassword() {
                     cursor: not-allowed;
                 }
 
-                .btn-loading {
-                    display: inline-block;
-                    width: 16px;
-                    height: 16px;
-                    border: 2px solid transparent;
-                    border-top-color: currentColor;
-                    border-radius: 50%;
-                    animation: spin 0.8s linear infinite;
-                }
-
+                /* Modals */
                 .settings-modal {
                     position: fixed;
                     top: 0;
@@ -1013,19 +1146,13 @@ changePassword() {
 
                 .modal-content {
                     background: var(--surface);
-                    border-radius: 24px;
-                    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+                    border-radius: var(--radius-lg);
+                    box-shadow: var(--shadow-xl);
                     width: 100%;
                     max-width: 500px;
-                    max-height: 90vh;
-                    overflow: hidden;
                     position: relative;
                     z-index: 1;
                     border: 1px solid var(--border);
-                }
-
-                .modal-wide {
-                    max-width: 600px;
                 }
 
                 .modal-header {
@@ -1034,7 +1161,6 @@ changePassword() {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    background: var(--surface-hover);
                 }
 
                 .modal-title {
@@ -1063,8 +1189,6 @@ changePassword() {
 
                 .modal-body {
                     padding: 2rem;
-                    overflow-y: auto;
-                    max-height: calc(90vh - 120px);
                 }
 
                 .form-section {
@@ -1105,27 +1229,15 @@ changePassword() {
                     color: var(--danger);
                 }
 
-                .feedback-normal {
-                    color: var(--text-secondary);
-                }
-
                 .password-strength {
                     font-size: 0.85rem;
                     margin-top: 0.5rem;
                     font-weight: 600;
                 }
 
-                .strength-weak {
-                    color: var(--danger);
-                }
-
-                .strength-medium {
-                    color: var(--warning);
-                }
-
-                .strength-strong {
-                    color: var(--success);
-                }
+                .strength-weak { color: var(--danger); }
+                .strength-medium { color: var(--warning); }
+                .strength-strong { color: var(--success); }
 
                 .form-actions {
                     display: flex;
@@ -1186,25 +1298,18 @@ changePassword() {
                 }
 
                 @media (max-width: 768px) {
-                    .settings-container {
-                        padding: 0;
-                    }
-
                     .settings-card {
-                        border-radius: var(--radius);
                         padding: 1.5rem;
                     }
 
+                    .feature-item,
                     .security-item {
                         flex-direction: column;
                         align-items: stretch;
                         gap: 1rem;
                     }
 
-                    .export-buttons {
-                        flex-direction: column;
-                    }
-
+                    .export-buttons,
                     .theme-selector {
                         flex-direction: column;
                     }
@@ -1213,18 +1318,9 @@ changePassword() {
                         flex-direction: column-reverse;
                     }
 
-                    .btn-primary, .btn-secondary, .btn-danger {
+                    .btn-primary, .btn-secondary, .btn-danger, .btn-export {
                         width: 100%;
                         justify-content: center;
-                    }
-
-                    .modal-content {
-                        max-width: 100%;
-                        border-radius: var(--radius);
-                    }
-
-                    .settings-modal {
-                        padding: 1rem;
                     }
                 }
             </style>
@@ -1235,8 +1331,5 @@ changePassword() {
 // Shell compatibility
 if (typeof window !== 'undefined') {
     window.SettingsModule = SettingsModule;
-    SettingsModule.init = function(targetContainer) {
-        return this.settings_init(targetContainer);
-    };
-    console.log('Settings module loaded');
+    console.log('✅ Settings v2.0 loaded');
 }

@@ -1,23 +1,30 @@
 /**
- * STEADYUTILS v5.0 - OVERLAY SYSTEM READY
- *
- * Lightweight utility toolkit for SteadyManager dashboard
- * Theme-integrated, XSS-safe, spam-protected notifications
- * NOW WITH: Overlay utilities for revolutionary multi-tasking UI
- *
- * @version 5.0.0
+ * SteadyUtils v6.0 - Enterprise Utility Library
+ * 
+ * Comprehensive utility toolkit for SteadyManager Pro
+ * Features: Date/number formatting, notifications, animations, overlay management
+ * 
+ * @version 6.0.0
+ * @license Proprietary - Steady Scaling LLC
  */
 
 class SteadyUtils {
     constructor() {
-        this.version = '5.0.0';
+        this.version = '6.0.0';
         this.device = this.detectDevice();
-        this.activeToasts = new Map(); // Track active toasts by message
+        this.activeToasts = new Map();
         this.setupGlobalStyles();
-        console.log('SteadyUtils v5.0 loaded - Overlay system ready 🚀');
+        console.log(`[SteadyUtils] v${this.version} initialized successfully`);
     }
 
-    // DEVICE DETECTION
+    // =================================================================
+    // DEVICE DETECTION & VIEWPORT MANAGEMENT
+    // =================================================================
+    
+    /**
+     * Detect device capabilities and viewport dimensions
+     * @returns {Object} Device information object
+     */
     detectDevice() {
         const ua = navigator.userAgent;
         const device = {
@@ -29,7 +36,6 @@ class SteadyUtils {
             viewportHeight: window.innerHeight
         };
 
-        // Update on resize
         window.addEventListener('resize', this.debounce(() => {
             device.viewportWidth = window.innerWidth;
             device.viewportHeight = window.innerHeight;
@@ -38,13 +44,42 @@ class SteadyUtils {
         return device;
     }
 
-    isMobileView() { return this.device.viewportWidth <= 768; }
-    isTabletView() { return this.device.viewportWidth > 768 && this.device.viewportWidth <= 1024; }
-    isDesktopView() { return this.device.viewportWidth > 1024; }
+    /**
+     * Check if current viewport is mobile size
+     * @returns {boolean}
+     */
+    isMobileView() { 
+        return this.device.viewportWidth <= 768; 
+    }
 
-    // DATE FORMATTING
-    formatDate(date, format = 'relative') {
-        if (!date) return 'Unknown';
+    /**
+     * Check if current viewport is tablet size
+     * @returns {boolean}
+     */
+    isTabletView() { 
+        return this.device.viewportWidth > 768 && this.device.viewportWidth <= 1024; 
+    }
+
+    /**
+     * Check if current viewport is desktop size
+     * @returns {boolean}
+     */
+    isDesktopView() { 
+        return this.device.viewportWidth > 1024; 
+    }
+
+    // =================================================================
+    // DATE & TIME FORMATTING
+    // =================================================================
+    
+    /**
+     * Format date with various display styles
+     * @param {Date|string} date - Date object or ISO string
+     * @param {string} format - Format type: 'relative', 'short', 'long', 'time', 'datetime'
+     * @returns {string} Formatted date string
+     */
+    formatDate(date, format = 'short') {
+        if (!date) return 'N/A';
         
         const dateObj = date instanceof Date ? date : new Date(date);
         if (isNaN(dateObj.getTime())) return 'Invalid date';
@@ -88,6 +123,7 @@ class SteadyUtils {
                 return dateObj.toLocaleString('en-US', {
                     month: 'short',
                     day: 'numeric',
+                    year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: true
@@ -98,7 +134,16 @@ class SteadyUtils {
         }
     }
 
+    // =================================================================
     // NUMBER FORMATTING
+    // =================================================================
+    
+    /**
+     * Format number with locale-specific separators
+     * @param {number} number - Number to format
+     * @param {number} decimals - Number of decimal places
+     * @returns {string} Formatted number string
+     */
     formatNumber(number, decimals = 0) {
         if (typeof number !== 'number' || isNaN(number)) return '0';
         return number.toLocaleString('en-US', {
@@ -107,6 +152,11 @@ class SteadyUtils {
         });
     }
 
+    /**
+     * Format number as USD currency
+     * @param {number} amount - Amount to format
+     * @returns {string} Formatted currency string
+     */
     formatCurrency(amount) {
         if (typeof amount !== 'number' || isNaN(amount)) return '$0';
         return new Intl.NumberFormat('en-US', {
@@ -117,12 +167,27 @@ class SteadyUtils {
         }).format(amount);
     }
 
+    /**
+     * Format number as percentage
+     * @param {number} value - Decimal value (0.85 = 85%)
+     * @param {number} decimals - Number of decimal places
+     * @returns {string} Formatted percentage string
+     */
     formatPercentage(value, decimals = 0) {
         if (typeof value !== 'number' || isNaN(value)) return '0%';
         return `${(value * 100).toFixed(decimals)}%`;
     }
 
+    // =================================================================
     // STRING UTILITIES
+    // =================================================================
+    
+    /**
+     * Generate initials from name
+     * @param {string} name - Full name
+     * @param {number} maxChars - Maximum number of characters
+     * @returns {string} Initials string
+     */
     getInitials(name, maxChars = 2) {
         if (!name) return '??';
         
@@ -138,18 +203,39 @@ class SteadyUtils {
             .toUpperCase();
     }
 
+    /**
+     * Truncate text to specified length
+     * @param {string} text - Text to truncate
+     * @param {number} length - Maximum length
+     * @returns {string} Truncated text with ellipsis
+     */
     truncate(text, length = 50) {
         if (!text || text.length <= length) return text || '';
         return text.substring(0, length).trim() + '...';
     }
 
+    /**
+     * Capitalize first letter of string
+     * @param {string} text - Text to capitalize
+     * @returns {string} Capitalized text
+     */
     capitalize(text) {
         if (!text) return '';
         return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
     }
 
-    // STORAGE (with expiry support)
+    // =================================================================
+    // LOCAL STORAGE MANAGEMENT
+    // =================================================================
+    
     storage = {
+        /**
+         * Set item in localStorage with optional expiry
+         * @param {string} key - Storage key
+         * @param {*} value - Value to store
+         * @param {number|null} expiryMs - Expiry time in milliseconds
+         * @returns {boolean} Success status
+         */
         set: (key, value, expiryMs = null) => {
             try {
                 const data = {
@@ -159,11 +245,17 @@ class SteadyUtils {
                 localStorage.setItem(key, JSON.stringify(data));
                 return true;
             } catch (e) {
-                console.error('Storage set failed:', e);
+                console.error('[SteadyUtils] Storage set failed:', e);
                 return false;
             }
         },
 
+        /**
+         * Get item from localStorage with expiry check
+         * @param {string} key - Storage key
+         * @param {*} defaultValue - Default value if not found or expired
+         * @returns {*} Stored value or default value
+         */
         get: (key, defaultValue = null) => {
             try {
                 const item = localStorage.getItem(key);
@@ -178,11 +270,16 @@ class SteadyUtils {
 
                 return data.value;
             } catch (e) {
-                console.error('Storage get failed:', e);
+                console.error('[SteadyUtils] Storage get failed:', e);
                 return defaultValue;
             }
         },
 
+        /**
+         * Remove item from localStorage
+         * @param {string} key - Storage key
+         * @returns {boolean} Success status
+         */
         remove: (key) => {
             try {
                 localStorage.removeItem(key);
@@ -193,15 +290,30 @@ class SteadyUtils {
         }
     };
 
+    // =================================================================
     // THEME MANAGEMENT
+    // =================================================================
+    
     theme = {
+        /**
+         * Get current theme
+         * @returns {string} Current theme ('light' or 'dark')
+         */
         get: () => document.documentElement.getAttribute('data-theme') || 'light',
         
+        /**
+         * Set theme
+         * @param {string} theme - Theme name ('light' or 'dark')
+         */
         set: (theme) => {
             document.documentElement.setAttribute('data-theme', theme);
             this.storage.set('dashboard-theme', theme);
         },
 
+        /**
+         * Toggle between light and dark themes
+         * @returns {string} New theme name
+         */
         toggle: () => {
             const current = this.theme.get();
             const newTheme = current === 'light' ? 'dark' : 'light';
@@ -209,24 +321,36 @@ class SteadyUtils {
             return newTheme;
         },
 
+        /**
+         * Check if dark theme is active
+         * @returns {boolean}
+         */
         isDark: () => this.theme.get() === 'dark'
     };
 
-    // TOAST NOTIFICATIONS (spam-protected, theme-aware, XSS-safe)
+    // =================================================================
+    // NOTIFICATION SYSTEM
+    // =================================================================
+    
+    /**
+     * Display toast notification with spam protection
+     * @param {string} message - Message to display (will be XSS-escaped)
+     * @param {string} type - Notification type: 'success', 'error', 'warning', 'info'
+     * @param {number} duration - Display duration in milliseconds
+     * @returns {HTMLElement} Toast element
+     */
     showToast(message, type = 'info', duration = 4000) {
-        // SECURITY: All user content must be escaped via API.escapeHtml
+        // XSS Protection: Escape all user content
         const safeMessage = window.API ? window.API.escapeHtml(message) : message;
         
-        // SPAM PREVENTION: Check if identical toast already exists
+        // Spam Prevention: Check for duplicate toasts
         const toastKey = `${type}-${safeMessage}`;
         if (this.activeToasts.has(toastKey)) {
-            // Toast with same message already showing, ignore duplicate
             return this.activeToasts.get(toastKey);
         }
         
-        // RATE LIMITING: Max 3 toasts visible at once
+        // Rate Limiting: Maximum 3 toasts visible simultaneously
         if (this.activeToasts.size >= 3) {
-            // Remove oldest toast to make room
             const firstKey = this.activeToasts.keys().next().value;
             const oldestToast = this.activeToasts.get(firstKey);
             this.removeToast(oldestToast);
@@ -237,10 +361,10 @@ class SteadyUtils {
         toast.dataset.key = toastKey;
         
         const icons = {
-            success: '✅',
-            error: '❌',
-            warning: '⚠️',
-            info: 'ℹ️'
+            success: '✓',
+            error: '✕',
+            warning: '!',
+            info: 'i'
         };
 
         toast.innerHTML = `
@@ -249,22 +373,17 @@ class SteadyUtils {
             <button class="steady-toast-close" aria-label="Close">×</button>
         `;
 
-        // Track this toast
         this.activeToasts.set(toastKey, toast);
-        
         document.body.appendChild(toast);
 
-        // Animate in
         requestAnimationFrame(() => {
             toast.classList.add('steady-toast-show');
         });
 
-        // Auto remove
         const timeoutId = setTimeout(() => {
             this.removeToast(toast);
         }, duration);
 
-        // Close button
         toast.querySelector('.steady-toast-close').addEventListener('click', () => {
             clearTimeout(timeoutId);
             this.removeToast(toast);
@@ -273,10 +392,13 @@ class SteadyUtils {
         return toast;
     }
 
+    /**
+     * Remove toast notification from DOM
+     * @param {HTMLElement} toast - Toast element to remove
+     */
     removeToast(toast) {
         if (!toast || !toast.parentNode) return;
         
-        // Remove from tracking
         const key = toast.dataset.key;
         if (key) {
             this.activeToasts.delete(key);
@@ -291,7 +413,16 @@ class SteadyUtils {
         }, 300);
     }
 
+    // =================================================================
     // PERFORMANCE UTILITIES
+    // =================================================================
+    
+    /**
+     * Debounce function execution
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Wait time in milliseconds
+     * @returns {Function} Debounced function
+     */
     debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -300,6 +431,12 @@ class SteadyUtils {
         };
     }
 
+    /**
+     * Throttle function execution
+     * @param {Function} func - Function to throttle
+     * @param {number} limit - Minimum time between executions in milliseconds
+     * @returns {Function} Throttled function
+     */
     throttle(func, limit) {
         let inThrottle;
         return function(...args) {
@@ -311,7 +448,15 @@ class SteadyUtils {
         };
     }
 
-    // ANIMATION HELPERS
+    // =================================================================
+    // ANIMATION UTILITIES
+    // =================================================================
+    
+    /**
+     * Animate element into view with slide-up effect
+     * @param {HTMLElement|string} element - Element or selector
+     * @param {number} delay - Animation delay in milliseconds
+     */
     animateIn(element, delay = 0) {
         if (typeof element === 'string') {
             element = document.querySelector(element);
@@ -328,6 +473,10 @@ class SteadyUtils {
         }, delay);
     }
 
+    /**
+     * Apply shake animation to element (for validation errors)
+     * @param {HTMLElement|string} element - Element or selector
+     */
     shake(element) {
         if (typeof element === 'string') {
             element = document.querySelector(element);
@@ -340,6 +489,11 @@ class SteadyUtils {
         }, 600);
     }
 
+    /**
+     * Fade in element
+     * @param {HTMLElement|string} element - Element or selector
+     * @param {number} duration - Animation duration in milliseconds
+     */
     fadeIn(element, duration = 300) {
         if (typeof element === 'string') {
             element = document.querySelector(element);
@@ -354,6 +508,12 @@ class SteadyUtils {
         });
     }
 
+    /**
+     * Fade out element
+     * @param {HTMLElement|string} element - Element or selector
+     * @param {number} duration - Animation duration in milliseconds
+     * @param {Function} callback - Callback function to execute after fade out
+     */
     fadeOut(element, duration = 300, callback) {
         if (typeof element === 'string') {
             element = document.querySelector(element);
@@ -368,19 +528,35 @@ class SteadyUtils {
         }, duration);
     }
 
-    // OVERLAY UTILITIES
+    // =================================================================
+    // OVERLAY SYSTEM UTILITIES
+    // =================================================================
+    
+    /**
+     * Generate unique ID for overlay elements
+     * @returns {string} Unique identifier
+     */
     generateId() {
         return `overlay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
+    /**
+     * Lock body scroll (for modal/overlay display)
+     */
     lockScroll() {
         document.body.style.overflow = 'hidden';
     }
 
+    /**
+     * Unlock body scroll
+     */
     unlockScroll() {
         document.body.style.overflow = '';
     }
 
+    /**
+     * Apply blur effect to background elements
+     */
     blurBackground() {
         const main = document.querySelector('.main-content');
         const sidebar = document.querySelector('.sidebar');
@@ -388,6 +564,9 @@ class SteadyUtils {
         if (sidebar) sidebar.style.filter = 'blur(4px)';
     }
 
+    /**
+     * Remove blur effect from background elements
+     */
     unblurBackground() {
         const main = document.querySelector('.main-content');
         const sidebar = document.querySelector('.sidebar');
@@ -395,6 +574,13 @@ class SteadyUtils {
         if (sidebar) sidebar.style.filter = '';
     }
 
+    /**
+     * Create button element with consistent styling
+     * @param {string} text - Button text
+     * @param {string} variant - Button variant: 'primary', 'secondary', 'danger', 'ghost'
+     * @param {Function} onClick - Click handler function
+     * @returns {HTMLButtonElement} Button element
+     */
     createButton(text, variant = 'primary', onClick) {
         const btn = document.createElement('button');
         btn.textContent = text;
@@ -403,6 +589,11 @@ class SteadyUtils {
         return btn;
     }
 
+    /**
+     * Set up escape key handler for closing overlays
+     * @param {Function} callback - Function to call when escape is pressed
+     * @returns {Function} Event handler function
+     */
     closeOnEscape(callback) {
         const handler = (e) => {
             if (e.key === 'Escape') {
@@ -414,11 +605,19 @@ class SteadyUtils {
         return handler;
     }
 
-    // GLOBAL STYLES
+    // =================================================================
+    // GLOBAL STYLES INJECTION
+    // =================================================================
+    
+    /**
+     * Inject global utility styles into document head
+     * @private
+     */
     setupGlobalStyles() {
         const style = document.createElement('style');
+        style.id = 'steady-utils-styles';
         style.textContent = `
-            /* Toast Notifications - Theme Integrated & Spam Protected */
+            /* Toast Notification System */
             .steady-toast {
                 position: fixed;
                 bottom: 20px;
@@ -447,25 +646,20 @@ class SteadyUtils {
                 transform: translateX(0) translateY(0) scale(1);
             }
 
-            .steady-toast-success {
-                border-left-color: var(--success);
-            }
-
-            .steady-toast-error {
-                border-left-color: var(--danger);
-            }
-
-            .steady-toast-warning {
-                border-left-color: var(--warning);
-            }
-
-            .steady-toast-info {
-                border-left-color: var(--info);
-            }
+            .steady-toast-success { border-left-color: var(--success); }
+            .steady-toast-error { border-left-color: var(--danger); }
+            .steady-toast-warning { border-left-color: var(--warning); }
+            .steady-toast-info { border-left-color: var(--info); }
 
             .steady-toast-icon {
                 font-size: 1.25rem;
                 flex-shrink: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
             }
 
             .steady-toast-message {
@@ -510,17 +704,7 @@ class SteadyUtils {
                 20%, 40%, 60%, 80% { transform: translateX(10px); }
             }
 
-            /* Mobile Responsive */
-            @media (max-width: 768px) {
-                .steady-toast {
-                    left: 20px;
-                    right: 20px;
-                    min-width: auto;
-                    max-width: none;
-                }
-            }
-
-            /* Button Styles */
+            /* Button System */
             .steady-btn {
                 padding: 0.625rem 1.25rem;
                 border: none;
@@ -530,6 +714,9 @@ class SteadyUtils {
                 cursor: pointer;
                 transition: var(--transition);
                 font-family: inherit;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
             }
 
             .steady-btn-primary {
@@ -572,63 +759,28 @@ class SteadyUtils {
                 background: var(--surface-hover);
                 border-color: var(--border);
             }
+
+            /* Mobile Responsive */
+            @media (max-width: 768px) {
+                .steady-toast {
+                    left: 20px;
+                    right: 20px;
+                    min-width: auto;
+                    max-width: none;
+                }
+            }
         `;
 
         document.head.appendChild(style);
     }
 }
 
-// Create global instance
-const utils = new SteadyUtils();
-window.SteadyUtils = utils;
-window.toast = utils.showToast.bind(utils);
+// =================================================================
+// GLOBAL INITIALIZATION
+// =================================================================
 
-console.log('SteadyUtils v5.0 ready - Overlay utilities loaded 🎯');
+const SteadyUtilsInstance = new SteadyUtils();
+window.SteadyUtils = SteadyUtilsInstance;
+window.toast = SteadyUtilsInstance.showToast.bind(SteadyUtilsInstance);
 
-/**
- * USAGE EXAMPLES:
- * 
- * // Date formatting
- * SteadyUtils.formatDate(new Date(), 'relative'); // "2h ago"
- * SteadyUtils.formatDate(lead.created_at, 'short'); // "Jan 15"
- * 
- * // Numbers
- * SteadyUtils.formatNumber(1234.56, 2); // "1,234.56"
- * SteadyUtils.formatCurrency(2500); // "$2,500"
- * SteadyUtils.formatPercentage(0.856, 1); // "85.6%"
- * 
- * // Strings
- * SteadyUtils.getInitials('John Smith'); // "JS"
- * SteadyUtils.truncate('Long text here...', 20); // "Long text here..."
- * 
- * // Storage
- * SteadyUtils.storage.set('key', value, 86400000); // 24h expiry
- * const data = SteadyUtils.storage.get('key', defaultValue);
- * 
- * // Theme
- * SteadyUtils.theme.toggle(); // Switch theme
- * SteadyUtils.theme.set('dark'); // Force dark
- * const isDark = SteadyUtils.theme.isDark(); // Check
- * 
- * // Toasts (spam protected - duplicates ignored, max 3 on screen)
- * toast(API.escapeHtml(userMessage), 'success');
- * SteadyUtils.showToast('Saved!', 'success', 3000);
- * 
- * // Rapid fire - only shows once
- * toast('Lead created!', 'success');
- * toast('Lead created!', 'success'); // Ignored - duplicate
- * toast('Lead created!', 'success'); // Ignored - duplicate
- * 
- * // Animations
- * SteadyUtils.animateIn('.stat-card', 100);
- * SteadyUtils.shake('#error-field');
- * 
- * // Performance
- * const debouncedSearch = SteadyUtils.debounce(search, 300);
- * const throttledScroll = SteadyUtils.throttle(handler, 100);
- * 
- * // Device
- * if (SteadyUtils.isMobileView()) { 
- *     // Mobile-specific layout 
- * }
- */
+console.log('[SteadyUtils] Enterprise utility library ready for production use');

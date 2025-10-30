@@ -10,18 +10,19 @@ window.PipelineModule = {
 
     // Stage definitions
     stages: [
-    { id: 'new', name: 'New Leads', icon: '🆕', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
-    { id: 'contacted', name: 'Contacted', icon: '📞', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
-    { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
-    { id: 'qualified', name: 'Qualified', icon: '✅', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
-    { id: 'closed', name: 'Closed Won', icon: '🎉', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
-    { id: 'lost', name: 'Lost', icon: '❌', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
-],
+        { id: 'new', name: 'New Leads', icon: '🆕', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
+        { id: 'contacted', name: 'Contacted', icon: '📞', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
+        { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
+        { id: 'qualified', name: 'Qualified', icon: '✅', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
+        { id: 'closed', name: 'Closed Won', icon: '🎉', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
+        { id: 'lost', name: 'Lost', icon: '❌', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
+    ],
 
     // Initialize
     async pipeline_init(targetContainer = 'pipeline-content') {
-        console.log('Pipeline module loading');
+        console.log('Pipeline module loading (Overlay Edition v2.0)');
         
+        this.state.container = targetContainer;
         this.showLoading();
         
         try {
@@ -75,21 +76,19 @@ window.PipelineModule = {
                 
                 if (types.length && !types.includes(lead.type)) return false;
                 if (sources.length) {
-                const leadSource = lead.source || null;
-                const hasCustomFilter = sources.includes('custom');
-    
-                // Predefined sources (from your dropdown)
-                const predefined = ['🌐 Website', '💼 LinkedIn', '📘 Facebook', '📸 Instagram',
-                    '🐦 Twitter', '👥 Referral', '📧 Email', '📞 Phone', '🎪 Event',
-                    '📢 Advertisement', '🎯 Direct', '🔍 Google', '🌱 Organic', '💰 Paid Ads',
-                    '❄️ Cold Call', '🏢 Trade Show', '💻 Webinar', '📝 Content', '🤝 Partnership'];
-    
-                // Check if it matches a predefined source OR is a custom source when custom filter is active
-                const matchesPredefined = sources.includes(leadSource);
-                const isCustom = leadSource && !predefined.includes(leadSource);
-                const matchesCustom = hasCustomFilter && isCustom;
-    
-                if (!matchesPredefined && !matchesCustom) return false;
+                    const leadSource = lead.source || null;
+                    const hasCustomFilter = sources.includes('custom');
+        
+                    const predefined = ['🌐 Website', '💼 LinkedIn', '📘 Facebook', '📸 Instagram',
+                        '🐦 Twitter', '👥 Referral', '📧 Email', '📞 Phone', '🎪 Event',
+                        '📢 Advertisement', '🎯 Direct', '🔍 Google', '🌱 Organic', '💰 Paid Ads',
+                        '❄️ Cold Call', '🏢 Trade Show', '💻 Webinar', '📝 Content', '🤝 Partnership'];
+        
+                    const matchesPredefined = sources.includes(leadSource);
+                    const isCustom = leadSource && !predefined.includes(leadSource);
+                    const matchesCustom = hasCustomFilter && isCustom;
+        
+                    if (!matchesPredefined && !matchesCustom) return false;
                 }
                 
                 if (scores.length) {
@@ -319,7 +318,7 @@ window.PipelineModule = {
         `;
     },
 
-    // Render lead card with 40-line note truncation
+    // Render lead card - UPDATED for overlays
     renderLeadCard(lead, stage) {
         const typeIcon = lead.type === 'warm' ? '🔥' : '❄️';
         const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' : 
@@ -370,10 +369,10 @@ window.PipelineModule = {
                     ${safeNotes ? `<div class="lead-notes">${safeNotes}</div>` : ''}
                     
                     ${lead.potential_value ? `
-                        <div class="deal-value-display">
+                        <div class="deal-value-display" onclick="PipelineModule.editDealValue('${lead.id}')">
                             <span class="value-icon">💰</span>
                             <span class="value-amount">$${lead.potential_value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit">✏️</button>
+                            <button class="value-edit-btn" title="Edit">✏️</button>
                         </div>
                     ` : `
                         <button class="deal-value-btn" onclick="PipelineModule.addDealValue('${lead.id}')">
@@ -383,10 +382,10 @@ window.PipelineModule = {
                     
                     ${lead.status === 'lost' ? (
                         lead.lost_reason ? `
-                            <div class="loss-reason-display">
+                            <div class="loss-reason-display" onclick="PipelineModule.editLossReason('${lead.id}')">
                                 <span class="loss-icon">❌</span>
                                 <span class="loss-text">${API.escapeHtml(lead.lost_reason)}</span>
-                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit">✏️</button>
+                                <button class="loss-edit-btn" title="Edit">✏️</button>
                             </div>
                         ` : `
                             <button class="loss-reason-btn" onclick="PipelineModule.addLossReason('${lead.id}')">
@@ -399,8 +398,9 @@ window.PipelineModule = {
                 <div class="card-footer">
                     <div class="card-date">${timeAgo}</div>
                     <div class="card-actions">
-                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')">✏️</button>
-                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')">➡️</button>
+                        <button class="action-btn" onclick="PipelineModule.openLeadDetail('${lead.id}')" title="View Details">👁️</button>
+                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')" title="Edit">✏️</button>
+                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')" title="Move">➡️</button>
                     </div>
                 </div>
             </div>
@@ -548,7 +548,7 @@ window.PipelineModule = {
         });
     },
 
-    // Show filter dropdown
+    // Show filter dropdown (unchanged - works fine)
     showFilterDropdown(event, filterType) {
         this.hideAllDropdowns();
         
@@ -703,15 +703,197 @@ window.PipelineModule = {
 
     pipeline_cleanup() {
         document.querySelectorAll('.filter-dropdown').forEach(d => d.remove());
-        document.getElementById('pipelineEditModal')?.remove();
-        document.getElementById('pipelineMoveModal')?.remove();
-        document.getElementById('dealValueModal')?.remove();
-        document.getElementById('lossReasonModal')?.remove();
-        document.getElementById('pipelineDeleteModal')?.remove();
     },
 
-    // Edit lead modal
+    // ============================================
+    // OVERLAY INTEGRATION - NEW METHODS
+    // ============================================
+
+    /**
+     * Open lead detail overlay (read-only)
+     */
+    openLeadDetail(leadId) {
+        const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
+        if (!lead) return;
+
+        if (typeof OverlayComponents === 'undefined') {
+            this.notify('Overlay system not loaded', 'error');
+            return;
+        }
+
+        OverlayComponents.Leads.openDetail(leadId, () => {
+            this.loadData();
+            this.render();
+        });
+    },
+
+    /**
+     * Edit lead - UPDATED to use OverlayManager
+     */
     editLead(leadId) {
+        const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
+        if (!lead) return;
+
+        // Check if OverlayManager exists
+        if (typeof OverlayManager === 'undefined') {
+            console.warn('[Pipeline] OverlayManager not found, using fallback modal');
+            this.editLeadFallback(leadId);
+            return;
+        }
+
+        // Build edit form HTML
+        const formHTML = `
+            <form id="editLeadForm">
+                <div class="form-section">
+                    <label class="form-label">Lead Temperature</label>
+                    <div class="temperature-toggle">
+                        <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold">❄️ Cold</button>
+                        <button type="button" class="temp-btn ${lead.type === 'warm' ? 'active' : ''}" data-temp="warm">🔥 Warm</button>
+                    </div>
+                    <input type="hidden" id="editType" value="${lead.type || 'cold'}">
+                </div>
+
+                <div class="form-section">
+                    <label class="form-label">Quality Score</label>
+                    <div class="quality-slider-container">
+                        <div class="score-track">
+                            <input type="range" id="editScore" class="quality-slider" min="1" max="10" value="${lead.quality_score || 5}">
+                        </div>
+                        <div class="score-display">
+                            <div class="score-number" id="scoreDisplay">${lead.quality_score || 5}</div>
+                            <div class="score-label">out of 10</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <label class="form-label">Notes</label>
+                    <textarea id="editNotes" class="notes-textarea" rows="6" maxlength="500" placeholder="Add context, insights, or important details...">${API.escapeHtml(lead.notes || '')}</textarea>
+                    <div class="input-feedback" id="notesFeedback"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-danger" id="deleteLeadBtn">🗑️ Delete</button>
+                    <div class="form-actions-right">
+                        <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">
+                            <span class="btn-text">Save Changes</span>
+                            <span class="btn-loading" style="display: none;">⏳</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        `;
+
+        // Open overlay
+        OverlayManager.open({
+            id: `edit-lead-${leadId}`,
+            title: `Edit Lead: ${lead.name}`,
+            content: formHTML,
+            width: 600,
+            height: 700,
+            module: 'pipeline',
+            onClose: () => {
+                console.log('[Pipeline] Edit overlay closed');
+            }
+        });
+
+        // Attach events after DOM is ready
+        setTimeout(() => {
+            this.attachEditLeadEvents(leadId, lead);
+        }, 100);
+    },
+
+    /**
+     * Attach events for edit lead form
+     */
+    attachEditLeadEvents(leadId, lead) {
+        // Temperature toggle
+        document.querySelectorAll('.temp-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('editType').value = btn.dataset.temp;
+            };
+        });
+        
+        // Quality slider
+        const slider = document.getElementById('editScore');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        if (slider && scoreDisplay) {
+            slider.oninput = (e) => {
+                scoreDisplay.textContent = e.target.value;
+            };
+        }
+        
+        // Notes character counter
+        const notes = document.getElementById('editNotes');
+        const feedback = document.getElementById('notesFeedback');
+        if (notes && feedback) {
+            notes.oninput = (e) => {
+                const len = e.target.value.length;
+                feedback.textContent = `${len}/500`;
+                feedback.className = `input-feedback ${len > 450 ? 'warning' : 'normal'}`;
+            };
+        }
+
+        // Delete button
+        const deleteBtn = document.getElementById('deleteLeadBtn');
+        if (deleteBtn) {
+            deleteBtn.onclick = () => {
+                this.deleteLead(leadId);
+            };
+        }
+
+        // Cancel button
+        const cancelBtn = document.getElementById('cancelEditBtn');
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                OverlayManager.close(`edit-lead-${leadId}`);
+            };
+        }
+        
+        // Form submission
+        const form = document.getElementById('editLeadForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = form.querySelector('.btn-primary');
+                const btnText = btn.querySelector('.btn-text');
+                const btnLoading = btn.querySelector('.btn-loading');
+                
+                try {
+                    btnText.style.display = 'none';
+                    btnLoading.style.display = 'inline-block';
+                    btn.disabled = true;
+                    
+                    await API.updateLead(leadId, {
+                        type: document.getElementById('editType').value,
+                        quality_score: parseInt(document.getElementById('editScore').value),
+                        notes: document.getElementById('editNotes').value.trim() || null
+                    });
+                    
+                    await this.loadData();
+                    this.render();
+                    OverlayManager.close(`edit-lead-${leadId}`);
+                    this.notify('Lead updated successfully', 'success');
+                    
+                } catch (error) {
+                    console.error('Failed to update lead:', error);
+                    this.notify('Failed to update lead', 'error');
+                    btnText.style.display = 'inline-block';
+                    btnLoading.style.display = 'none';
+                    btn.disabled = false;
+                }
+            };
+        }
+    },
+
+    /**
+     * Fallback edit modal (if OverlayManager not loaded)
+     */
+    editLeadFallback(leadId) {
+        // This is your original modal code as fallback
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
         
@@ -772,22 +954,20 @@ window.PipelineModule = {
         
         document.body.appendChild(modal);
 
-        // Proper mousedown/mouseup pattern for backdrop
+        // Backdrop close with mousedown/mouseup pattern
         const backdrop = document.getElementById('pipelineEditBackdrop');
         let mouseDownTarget = null;
-
         backdrop.addEventListener('mousedown', (e) => {
             mouseDownTarget = e.target;
         });
-
         backdrop.addEventListener('mouseup', (e) => {
             if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('pipelineEditModal').remove();
+                modal.remove();
             }
             mouseDownTarget = null;
         });
         
-        const form = document.getElementById('editLeadForm');
+        // Temperature toggle
         document.querySelectorAll('.temp-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.temp-btn').forEach(b => b.classList.remove('active'));
@@ -796,12 +976,14 @@ window.PipelineModule = {
             };
         });
         
+        // Slider
         const slider = document.getElementById('editScore');
         const scoreDisplay = document.getElementById('scoreDisplay');
         slider.oninput = (e) => {
             scoreDisplay.textContent = e.target.value;
         };
         
+        // Notes feedback
         const notes = document.getElementById('editNotes');
         const feedback = document.getElementById('notesFeedback');
         notes.oninput = (e) => {
@@ -810,6 +992,8 @@ window.PipelineModule = {
             feedback.className = `input-feedback ${len > 450 ? 'warning' : 'normal'}`;
         };
         
+        // Form submit
+        const form = document.getElementById('editLeadForm');
         form.onsubmit = async (e) => {
             e.preventDefault();
             const btn = form.querySelector('.btn-primary');
@@ -821,7 +1005,7 @@ window.PipelineModule = {
                 btnLoading.style.display = 'inline-block';
                 btn.disabled = true;
                 
-                await API.updateLead(lead.id, {
+                await API.updateLead(leadId, {
                     type: document.getElementById('editType').value,
                     quality_score: parseInt(document.getElementById('editScore').value),
                     notes: document.getElementById('editNotes').value.trim() || null
@@ -842,10 +1026,15 @@ window.PipelineModule = {
         };
     },
 
-    // Move lead modal (no text inputs, no fix needed)
+    /**
+     * Move lead - TODO: Will use OverlayComponents.Leads.openMoveStage()
+     */
     moveLead(leadId) {
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
+
+        // TODO: Implement with OverlayComponents.Leads.openMoveStage()
+        // For now, use fallback modal
         
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
@@ -884,8 +1073,11 @@ window.PipelineModule = {
         await this.updateLeadStatus(leadId, newStage);
     },
 
-    // Add deal value modal
+    /**
+     * Add deal value - TODO: Will use OverlayComponents.Leads.openDealValueEditor()
+     */
     addDealValue(leadId) {
+        // Keeping original modal for now - will migrate to OverlayComponents later
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
         
@@ -930,17 +1122,14 @@ window.PipelineModule = {
         
         document.body.appendChild(modal);
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('dealValueBackdrop');
         let mouseDownTarget = null;
-
         backdrop.addEventListener('mousedown', (e) => {
             mouseDownTarget = e.target;
         });
-
         backdrop.addEventListener('mouseup', (e) => {
             if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('dealValueModal').remove();
+                modal.remove();
             }
             mouseDownTarget = null;
         });
@@ -1053,8 +1242,11 @@ window.PipelineModule = {
         }, 100);
     },
 
-    // Add loss reason modal
+    /**
+     * Add loss reason - TODO: Will use OverlayComponents.Leads.openLossReasonEditor()
+     */
     addLossReason(leadId) {
+        // Keeping original modal for now - will migrate to OverlayComponents later
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
         
@@ -1110,17 +1302,14 @@ window.PipelineModule = {
         
         document.body.appendChild(modal);
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('lossReasonBackdrop');
         let mouseDownTarget = null;
-
         backdrop.addEventListener('mousedown', (e) => {
             mouseDownTarget = e.target;
         });
-
         backdrop.addEventListener('mouseup', (e) => {
             if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('lossReasonModal').remove();
+                modal.remove();
             }
             mouseDownTarget = null;
         });
@@ -1223,7 +1412,9 @@ window.PipelineModule = {
         }, 100);
     },
 
-    // Delete lead modal
+    /**
+     * Delete lead - TODO: Will use OverlayComponents.Leads.openDeleteConfirmation()
+     */
     async deleteLead(leadId) {
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
@@ -1268,14 +1459,11 @@ window.PipelineModule = {
         
         document.body.appendChild(modal);
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('pipelineDeleteBackdrop');
         let mouseDownTarget = null;
-
         backdrop.addEventListener('mousedown', (e) => {
             mouseDownTarget = e.target;
         });
-
         backdrop.addEventListener('mouseup', (e) => {
             if (mouseDownTarget === backdrop && e.target === backdrop) {
                 modal.remove();
@@ -1307,7 +1495,12 @@ window.PipelineModule = {
             await API.deleteLead(leadId);
             this.state.leads = this.state.leads.filter(l => l.id.toString() !== leadId.toString());
             
+            // Close edit modal if open
+            if (typeof OverlayManager !== 'undefined') {
+                OverlayManager.close(`edit-lead-${leadId}`);
+            }
             document.getElementById('pipelineEditModal')?.remove();
+            
             modal.remove();
             this.render();
             this.notify('Lead deleted successfully', 'success');
@@ -1319,6 +1512,10 @@ window.PipelineModule = {
             btn.disabled = false;
         }
     },
+
+    // ============================================
+    // UTILITY METHODS (unchanged)
+    // ============================================
 
     getInitials(name) {
         if (!name) return '??';
@@ -1356,9 +1553,7 @@ window.PipelineModule = {
         const container = document.getElementById(this.state.container);
         if (container) {
             container.style.opacity = '0';
-            container.innerHTML = `
-                <div style="min-height: 400px;"></div>
-            `;
+            container.innerHTML = `<div style="min-height: 400px;"></div>`;
         }
     },
 
@@ -1377,6 +1572,7 @@ window.PipelineModule = {
     },
 
     renderStyles() {
+        // All your existing CSS (unchanged - keeping it exactly as is)
         return `
             <style>
                 .pipeline-container { max-width: 1800px; margin: 0 auto; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -1396,7 +1592,8 @@ window.PipelineModule = {
                 
                 .monthly-progress { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; min-width: 320px; }
                 .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-                .progress-title { font-weight: 600; color: var(--text-primary); }.progress-stats { display: flex; align-items: center; gap: 0.25rem; font-weight: 700; }
+                .progress-title { font-weight: 600; color: var(--text-primary); }
+                .progress-stats { display: flex; align-items: center; gap: 0.25rem; font-weight: 700; }
                 .current-count { color: var(--primary); font-size: 1.125rem; }
                 .separator { color: var(--text-tertiary); }
                 .limit-count { color: var(--text-secondary); }
@@ -1477,20 +1674,20 @@ window.PipelineModule = {
                 .contact-item { font-size: 0.8rem; color: var(--text-secondary); }
                 .lead-notes { font-size: 0.8rem; color: var(--text-tertiary); font-style: italic; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--surface-hover); border-radius: var(--radius); border-left: 3px solid var(--border); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-height: 5.5rem; overflow: hidden; }
                 
-                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; }
+                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s ease; }
+                .deal-value-display:hover { background: rgba(16, 185, 129, 0.15); }
                 .value-icon { font-size: 1rem; }
                 .value-amount { font-weight: 700; color: var(--success); flex: 1; }
-                .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
-                .value-edit-btn:hover { background: rgba(16, 185, 129, 0.2); }
+                .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; pointer-events: none; }
                 
                 .deal-value-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .deal-value-btn:hover { background: rgba(102, 126, 234, 0.2); }
                 
-                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; }
+                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s ease; }
+                .loss-reason-display:hover { background: rgba(239, 68, 68, 0.15); }
                 .loss-icon { font-size: 0.9rem; }
                 .loss-text { font-size: 0.8rem; color: var(--danger); font-weight: 600; flex: 1; }
-                .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
-                .loss-edit-btn:hover { background: rgba(239, 68, 68, 0.2); }
+                .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; pointer-events: none; }
                 
                 .loss-reason-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius); color: var(--danger); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .loss-reason-btn:hover { background: rgba(239, 68, 68, 0.2); }
@@ -1589,65 +1786,14 @@ window.PipelineModule = {
                 .quick-value-btn { padding: 0.75rem 1rem; background: var(--background); border: 2px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s ease; font-weight: 600; }
                 .quick-value-btn:hover { border-color: var(--success); color: var(--success); background: rgba(16, 185, 129, 0.05); }
                 
-                .reason-select {
-                    width: 100%;
-                    padding: 0.875rem 3rem 0.875rem 1.25rem;
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    font-size: 0.95rem;
-                    background: var(--background);
-                    color: var(--text-primary);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    font-family: inherit;
-                    font-weight: 500;
-                    cursor: pointer;
-                    appearance: none;
-                    -webkit-appearance: none;
-                    -moz-appearance: none;
-                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-                    background-position: right 1rem center;
-                    background-repeat: no-repeat;
-                    background-size: 1.25rem;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                }
+                .reason-select { width: 100%; padding: 0.875rem 3rem 0.875rem 1.25rem; border: 2px solid var(--border); border-radius: 12px; font-size: 0.95rem; background: var(--background); color: var(--text-primary); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit; font-weight: 500; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 1rem center; background-repeat: no-repeat; background-size: 1.25rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+                .reason-select:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15); }
+                .reason-select:focus { outline: none; border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(239, 68, 68, 0.15); }
                 
-                .reason-select:hover {
-                    border-color: var(--primary);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-                }
-                
-                .reason-select:focus {
-                    outline: none;
-                    border-color: var(--danger);
-                    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(239, 68, 68, 0.15);
-                }
-                
-                .custom-reason-input {
-                    width: 100%;
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    font-size: 0.95rem;
-                    background: var(--background);
-                    color: var(--text-primary);
-                    transition: all 0.3s ease;
-                    font-family: inherit;
-                }
-                
-                .custom-reason-input:focus {
-                    outline: none;
-                    border-color: var(--danger);
-                    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-                }
-                
-                .input-warning {
-                    border-color: var(--warning) !important;
-                }
-                
-                .input-error {
-                    border-color: var(--danger) !important;
-                }
+                .custom-reason-input { width: 100%; padding: 0.875rem 1rem; border: 2px solid var(--border); border-radius: var(--radius); font-size: 0.95rem; background: var(--background); color: var(--text-primary); transition: all 0.3s ease; font-family: inherit; }
+                .custom-reason-input:focus { outline: none; border-color: var(--danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1); }
+                .input-warning { border-color: var(--warning) !important; }
+                .input-error { border-color: var(--danger) !important; }
                 
                 @media (max-width: 1024px) {
                     .stages-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
@@ -1687,5 +1833,5 @@ if (typeof window !== 'undefined') {
     PipelineModule.init = function(targetContainer) {
         return this.pipeline_init(targetContainer);
     };
-    console.log('Pipeline module loaded');
+    console.log('Pipeline module loaded (Overlay Edition v2.0)');
 }
