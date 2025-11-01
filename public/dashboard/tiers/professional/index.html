@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Theme preload (prevent flash) -->
     <script>
         (function() {
             const savedTheme = localStorage.getItem('dashboard-theme');
@@ -13,10 +11,10 @@
             }
         })();
     </script>
-    
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
-    <title>SteadyManager Pro - Dashboard</title>
+    <title>SteadyManager - Dashboard</title>
     
+    <link rel="stylesheet" href="/dashboard/shared/styles/SteadyManager.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
@@ -98,9 +96,6 @@
             transition: var(--transition);
         }
 
-        /* ============================================
-           SIDEBAR - ENHANCED FOR PRO
-           ============================================ */
         .sidebar {
             position: fixed;
             left: 0;
@@ -136,21 +131,6 @@
             text-align: center;
             color: white;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        /* PRO BADGE in sidebar */
-        .pro-badge-sidebar {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-block;
-            margin-left: 0.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .sidebar-nav {
@@ -195,9 +175,32 @@
             font-size: 1.2rem;
         }
 
-        /* ============================================
-           MAIN CONTENT - OPTIMIZED FOR OVERLAYS
-           ============================================ */
+        .upgrade-nav-item {
+            margin: 1.5rem 0.75rem 1rem;
+        }
+
+        .upgrade-nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-lg);
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .upgrade-nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
         .main-content {
             margin-left: 280px;
             height: 100vh;
@@ -219,9 +222,6 @@
             opacity: 1;
         }
 
-        /* ============================================
-           HEADER - PRO VERSION WITH STATUS
-           ============================================ */
         .header {
             background: var(--surface);
             padding: 1.25rem 2rem;
@@ -234,93 +234,51 @@
             z-index: 100;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
         .header-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            cursor: pointer;
-            padding: 0.5rem 1.5rem 0.5rem 1rem;
-            border-radius: var(--radius-lg);
-            transition: var(--transition);
-            border: 2px solid transparent;
-            position: relative;
-            display: inline-block;
-        }
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    cursor: pointer;
+    padding: 0.5rem 1.5rem 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    transition: var(--transition);
+    border: 2px solid transparent;
+    position: relative;
+    display: inline-block;
+}
 
-        .header-title::before {
-            content: '⛶';
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1rem;
-            opacity: 0;
-            transition: all 0.3s ease;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+.header-title::before {
+    content: '⛶';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    opacity: 0;
+    transition: all 0.3s ease;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-        .header-title:hover {
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
-            transform: scale(1.05);
-            padding-right: 2.5rem;
-        }
+.header-title:hover {
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+    transform: scale(1.05);
+    padding-right: 2.5rem;
+}
 
-        .header-title:hover::before {
-            opacity: 1;
-        }
+.header-title:hover::before {
+    opacity: 1;
+}
 
-        /* WINDOWING STATUS INDICATOR */
-        .windowing-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(102, 126, 234, 0.1);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: var(--radius-lg);
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--primary);
-        }
+.header-title:active {
+    transform: scale(0.98);
+}
 
-        .windowing-status.active {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.3);
-            color: var(--success);
-        }
-
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--primary);
-            animation: pulse 2s infinite;
-        }
-
-        .windowing-status.active .status-indicator {
-            background: var(--success);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* ============================================
-           USER MENU
-           ============================================ */
         .user-menu-container {
             position: relative;
             z-index: 999999;
@@ -444,99 +402,18 @@
             transform: translateX(20px) !important;
         }
 
-        /* ============================================
-           DASHBOARD CONTENT
-           ============================================ */
         .dashboard-content {
             flex: 1;
             overflow-y: auto;
             padding: 2rem;
             background: var(--background);
-            position: relative;
         }
 
         .content-container {
-            max-width: 1800px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
-        /* ============================================
-           QUICK ACTIONS FAB (PRO FEATURE)
-           ============================================ */
-        .quick-actions-fab {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 999;
-            display: none; /* Shown only when windowing enabled */
-        }
-
-        .quick-actions-fab.active {
-            display: block;
-        }
-
-        .fab-button {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: var(--gradient-primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.75rem;
-            transition: var(--transition);
-        }
-
-        .fab-button:hover {
-            transform: scale(1.1) rotate(90deg);
-            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
-        }
-
-        .fab-menu {
-            position: absolute;
-            bottom: 80px;
-            right: 0;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            padding: 0.5rem;
-            min-width: 200px;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(10px);
-            transition: var(--transition);
-        }
-
-        .fab-menu.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .fab-menu-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1rem;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: var(--transition);
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .fab-menu-item:hover {
-            background: var(--surface-hover);
-        }
-
-        /* ============================================
-           RESPONSIVE
-           ============================================ */
         .sidebar.desktop-hidden {
             transform: translateX(-100%);
         }
@@ -557,20 +434,8 @@
             .main-content {
                 margin-left: 0;
             }
-
-            .windowing-status {
-                display: none;
-            }
-
-            .quick-actions-fab {
-                bottom: 1rem;
-                right: 1rem;
-            }
         }
 
-        /* ============================================
-           UTILITIES
-           ============================================ */
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -591,14 +456,10 @@
     </style>
 </head>
 <body data-theme="light">
-    <!-- SIDEBAR -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    SteadyManager
-                    <span class="pro-badge-sidebar">PRO</span>
-                </div>
+                <div class="sidebar-logo">SteadyManager</div>
             </div>
 
             <nav>
@@ -612,7 +473,7 @@
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="leads">
                             <span class="nav-emoji">👥</span>
-                            <span>Leads</span>
+                            <span>Add Leads</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -622,21 +483,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="jobs">
-                            <span class="nav-emoji">💼</span>
-                            <span>Jobs</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="#" class="nav-link" data-page="tasks">
                             <span class="nav-emoji">📋</span>
                             <span>Tasks</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="goals">
-                            <span class="nav-emoji">🎯</span>
-                            <span>Goals</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -647,20 +496,18 @@
                     </li>
                 </ul>
             </nav>
+
+            <div class="upgrade-nav-item">
+                <a href="#" class="upgrade-nav-link" data-page="upgrade">
+                    <span>🚀 Upgrade Plan</span>
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main-content">
-        <!-- HEADER -->
         <header class="header">
-            <div class="header-left">
-                <h1 class="header-title" id="pageTitle">Dashboard</h1>
-                <div class="windowing-status" id="windowingStatus">
-                    <span class="status-indicator"></span>
-                    <span>Multi-Tasking Off</span>
-                </div>
-            </div>
+            <h1 class="header-title" id="pageTitle">Dashboard</h1>
             
             <div class="user-menu-container">
                 <div class="user-menu" id="userMenu">
@@ -669,7 +516,7 @@
                     </div>
                     <div class="user-info">
                         <div class="user-name" id="userName">Loading...</div>
-                        <div class="user-tier" id="userTier">Pro</div>
+                        <div class="user-tier" id="userTier">Free Plan</div>
                     </div>
                 </div>
                 
@@ -690,44 +537,18 @@
             </div>
         </header>
 
-        <!-- PAGE CONTENT -->
         <main class="dashboard-content">
             <div class="content-container">
                 <div id="dashboard-content" class="page-content active"></div>
                 <div id="leads-content" class="page-content"></div>
                 <div id="pipeline-content" class="page-content"></div>
-                <div id="jobs-content" class="page-content"></div>
                 <div id="tasks-content" class="page-content"></div>
-                <div id="goals-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
+                <div id="upgrade-content" class="page-content"></div>
             </div>
         </main>
     </div>
 
-    <!-- QUICK ACTIONS FAB (PRO) -->
-    <div class="quick-actions-fab" id="quickActionsFab">
-        <button class="fab-button" id="fabButton">✨</button>
-        <div class="fab-menu" id="fabMenu">
-            <div class="fab-menu-item" data-action="new-lead">
-                <span>👤</span>
-                <span>New Lead</span>
-            </div>
-            <div class="fab-menu-item" data-action="new-job">
-                <span>💼</span>
-                <span>New Job</span>
-            </div>
-            <div class="fab-menu-item" data-action="new-task">
-                <span>📋</span>
-                <span>New Task</span>
-            </div>
-            <div class="fab-menu-item" data-action="new-goal">
-                <span>🎯</span>
-                <span>New Goal</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- CORE SCRIPTS -->
     <script type="module">
         import { supabase } from '/dashboard/shared/js/supabase.js';
         import API from '/dashboard/shared/js/api.js';
@@ -739,9 +560,7 @@
         const appState = {
             currentPage: null,
             loadedModules: new Set(),
-            profile: null,
-            preferences: null, // PRO: Store user preferences
-            windowingEnabled: false // PRO: Windowing system state
+            profile: null
         };
 
         // Security
@@ -752,14 +571,13 @@
 
         // Initialize on DOM ready
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔒 SteadyManager Pro Shell initializing...');
+            console.log('🔒 SteadyManager Shell initializing...');
             
             if (typeof lucide !== 'undefined') lucide.createIcons();
             
             setupNavigation();
             setupUserMenu();
             setupMobileTitleClick();
-            setupQuickActionsFab(); // PRO
             
             await initializeShell();
         });
@@ -786,10 +604,7 @@
                 appState.profile = profile;
                 loadUserProfile(profile);
                 
-                // PRO: Load preferences
-                await loadPreferences();
-                
-                console.log('✅ Pro Shell initialized');
+                console.log('✅ Shell initialized');
                 await loadPage('dashboard');
                 
             } catch (error) {
@@ -798,39 +613,8 @@
             }
         }
 
-        // PRO: Load user preferences
-        async function loadPreferences() {
-            try {
-                const prefs = await API.getPreferences();
-                appState.preferences = prefs;
-                appState.windowingEnabled = prefs.windowing_enabled !== false; // Default true
-                
-                updateWindowingUI();
-                
-                console.log('[Preferences] Loaded:', prefs);
-            } catch (error) {
-                console.error('[Preferences] Load failed:', error);
-                appState.windowingEnabled = false;
-            }
-        }
-
-        // PRO: Update windowing UI indicators
-        function updateWindowingUI() {
-            const status = document.getElementById('windowingStatus');
-            const fab = document.getElementById('quickActionsFab');
-            
-            if (appState.windowingEnabled) {
-                status.classList.add('active');
-                status.querySelector('span:last-child').textContent = 'Multi-Tasking On';
-                fab.classList.add('active');
-            } else {
-                status.classList.remove('active');
-                status.querySelector('span:last-child').textContent = 'Multi-Tasking Off';
-                fab.classList.remove('active');
-            }
-        }
-
         async function loadPage(pageName) {
+            // Skip if already on this page
             if (appState.currentPage === pageName) {
                 console.log(`Already on ${pageName}`);
                 return;
@@ -842,22 +626,27 @@
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${pageName}-content`)?.classList.add('active');
             
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(l => l.classList.remove('active'));
+            if (pageName === 'upgrade') {
+                document.querySelector('.upgrade-nav-link')?.classList.add('active');
+            } else {
+                document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
+            }
             
             const titles = {
                 dashboard: 'Dashboard',
-                leads: 'Leads',
+                leads: 'Add Leads',
                 pipeline: 'Pipeline',
-                jobs: 'Jobs',
                 tasks: 'Tasks',
-                goals: 'Goals',
-                settings: 'Settings'
+                settings: 'Settings',
+                upgrade: 'Upgrade Plan'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
             
+            // Update state
             appState.currentPage = pageName;
             
+            // Load module
             await loadModule(pageName);
         }
 
@@ -865,17 +654,16 @@
             try {
                 const modules = {
                     dashboard: window.DashboardModule,
-                    leads: window.LeadsModule,
+                    leads: window.AddLeadModule,
                     pipeline: window.PipelineModule,
-                    jobs: window.JobsModule,
-                    tasks: window.TasksModule,
-                    goals: window.GoalsModule,
+                    tasks: window.SchedulingModule,
                     settings: window.SettingsModule
                 };
                 
                 const module = modules[pageName];
                 if (!module?.init) return;
                 
+                // Always reload to get fresh data
                 await module.init(`${pageName}-content`);
                 appState.loadedModules.add(pageName);
                 console.log(`📦 ${pageName} loaded`);
@@ -890,16 +678,16 @@
             const initials = generateInitials(email);
             
             const tierNames = {
-                'free': 'Free',
-                'professional': 'Pro',
-                'professional_trial': 'Pro Trial',
+                'free': 'Free Plan',
+                'professional': 'Professional',
+                'professional_trial': 'Trial',
                 'business': 'Business',
                 'enterprise': 'Enterprise',
                 'admin': 'Admin'
             };
             
             document.getElementById('userName').textContent = email;
-            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Free';
+            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Free Plan';
             
             const avatar = document.getElementById('userAvatar');
             avatar.innerHTML = '';
@@ -925,7 +713,7 @@
         }
 
         function setupNavigation() {
-            document.querySelectorAll('.nav-link').forEach(link => {
+            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
@@ -996,67 +784,6 @@
             });
         }
 
-        // PRO: Quick Actions FAB
-        function setupQuickActionsFab() {
-            const button = document.getElementById('fabButton');
-            const menu = document.getElementById('fabMenu');
-            
-            button.onclick = (e) => {
-                e.stopPropagation();
-                menu.classList.toggle('show');
-            };
-            
-            document.addEventListener('click', () => menu.classList.remove('show'));
-            
-            document.querySelectorAll('.fab-menu-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const action = item.dataset.action;
-                    handleQuickAction(action);
-                    menu.classList.remove('show');
-                });
-            });
-        }
-
-        // PRO: Handle quick actions
-        function handleQuickAction(action) {
-            if (!window.OverlayComponents) {
-                console.error('OverlayComponents not loaded');
-                return;
-            }
-            
-            switch(action) {
-                case 'new-lead':
-                    OverlayComponents.openLeadCreator(() => {
-                        if (appState.currentPage === 'leads' || appState.currentPage === 'pipeline') {
-                            loadModule(appState.currentPage);
-                        }
-                    });
-                    break;
-                case 'new-job':
-                    OverlayComponents.openJobCreator(() => {
-                        if (appState.currentPage === 'jobs') {
-                            loadModule(appState.currentPage);
-                        }
-                    });
-                    break;
-                case 'new-task':
-                    OverlayComponents.openTaskCreator(() => {
-                        if (appState.currentPage === 'tasks') {
-                            loadModule(appState.currentPage);
-                        }
-                    });
-                    break;
-                case 'new-goal':
-                    OverlayComponents.openGoalCreator(() => {
-                        if (appState.currentPage === 'goals') {
-                            loadModule(appState.currentPage);
-                        }
-                    });
-                    break;
-            }
-        }
-
         function showError(msg) {
             const container = document.getElementById('dashboard-content');
             if (!container) return;
@@ -1071,23 +798,14 @@
         }
 
         window.loadPage = loadPage;
-        window.appState = appState; // Expose for modules
     </script>
 
-    <!-- SHARED UTILITIES -->
     <script src="/dashboard/shared/js/utils.js"></script>
-    
-    <!-- OVERLAY SYSTEM (PRO) -->
-    <script src="/dashboard/shared/js/OverlayManager.js"></script>
-    <script src="/dashboard/shared/js/OverlayComponents.js"></script>
-    
-    <!-- MODULES -->
-    <script src="/dashboard/tiers/professional/scripts/Dashboard.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Leads.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Pipeline.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Jobs.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Tasks.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Goals.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Settings.js"></script>
+    <script src="/dashboard/tiers/free/scripts/dashboard.js"></script>
+    <script src="/dashboard/tiers/free/scripts/AddLead.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
+    <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
+    <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
 </body>
 </html>
