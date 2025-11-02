@@ -571,7 +571,7 @@ modal.addEventListener('mouseup', (e) => {
                             <div class="addlead-detail-item">
                                 <div class="addlead-detail-label">Email:</div>
                                 <div class="addlead-detail-value">
-                                    <a href="mailto:${safeEmail}" class="addlead-contact-link">📧 ${safeEmail}</a>
+                                    <a href="mailto:${safeEmail}" class="addlead-contact-link"><i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safeEmail}</a>
                                 </div>
                             </div>
                         ` : ''}
@@ -580,7 +580,7 @@ modal.addEventListener('mouseup', (e) => {
                             <div class="addlead-detail-item">
                                 <div class="addlead-detail-label">Phone:</div>
                                 <div class="addlead-detail-value">
-                                    <a href="tel:${safePhone}" class="addlead-contact-link">📞 ${safePhone}</a>
+                                    <a href="tel:${safePhone}" class="addlead-contact-link"><i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safePhone}</a>
                                 </div>
                             </div>
                         ` : ''}
@@ -589,7 +589,7 @@ modal.addEventListener('mouseup', (e) => {
                             <div class="addlead-detail-item">
                                 <div class="addlead-detail-label">Website:</div>
                                 <div class="addlead-detail-value">
-                                    <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="addlead-contact-link">🌐 ${safeWebsite}</a>
+                                    <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="addlead-contact-link"><i data-lucide="globe" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safeWebsite}</a>
                                 </div>
                             </div>
                         ` : ''}
@@ -598,7 +598,7 @@ modal.addEventListener('mouseup', (e) => {
                             <div class="addlead-detail-item">
                                 <div class="addlead-detail-label">LinkedIn:</div>
                                 <div class="addlead-detail-value">
-                                    <a href="${safeLinkedIn}" target="_blank" rel="noopener noreferrer" class="addlead-contact-link">💼 View Profile</a>
+                                    <a href="${safeLinkedIn}" target="_blank" rel="noopener noreferrer" class="addlead-contact-link"><i data-lucide="linkedin" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>View Profile</a>
                                 </div>
                             </div>
                         ` : ''}
@@ -805,12 +805,12 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Status</label>
                         <select name="status" class="addlead-form-select">
-                            <option value="new" ${lead.status === 'new' ? 'selected' : ''}>🆕 New Lead</option>
-                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>📞 Contacted</option>
-                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>✅ Qualified</option>
-                            <option value="negotiation" ${lead.status === 'negotiation' ? 'selected' : ''}>🤝 Negotiation</option>
-                            <option value="closed" ${lead.status === 'closed' ? 'selected' : ''}>🎉 Closed Won</option>
-                            <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>❌ Lost</option>
+                            <option value="new" ${lead.status === 'new' ? 'selected' : ''}>New Lead</option>
+                            <option value="contacted" ${lead.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                            <option value="qualified" ${lead.status === 'qualified' ? 'selected' : ''}>Qualified</option>
+                            <option value="negotiation" ${lead.status === 'negotiation' ? 'selected' : ''}>Negotiation</option>
+                            <option value="closed" ${lead.status === 'closed' ? 'selected' : ''}>Closed Won</option>
+                            <option value="lost" ${lead.status === 'lost' ? 'selected' : ''}>Lost</option>
                         </select>
                     </div>
                     
@@ -827,8 +827,8 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Lead Type</label>
                         <select name="type" class="addlead-form-select">
-                            <option value="cold" ${lead.type === 'cold' ? 'selected' : ''}>❄️ Cold Lead</option>
-                            <option value="warm" ${lead.type === 'warm' ? 'selected' : ''}>🔥 Warm Lead</option>
+                            <option value="cold" ${lead.type === 'cold' ? 'selected' : ''}>Cold Lead</option>
+                            <option value="warm" ${lead.type === 'warm' ? 'selected' : ''}>Warm Lead</option>
                         </select>
                     </div>
                     
@@ -881,7 +881,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="addlead-form-actions">
                     <button type="button" class="addlead-btn-danger" onclick="AddLeadModule.addlead_showDeleteConfirmation('${lead.id}')">
-                         🗑️ Delete
+                         <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete
                     </button>
                     <div class="addlead-form-actions-right">
                         <button type="button" class="addlead-btn-secondary" onclick="AddLeadModule.addlead_hideEditLeadModal()">
@@ -1450,7 +1450,7 @@ addlead_showCustomSourceInput(targetInput) {
         modal.innerHTML = `
             <div class="addlead-upgrade-prompt">
                 <div class="addlead-upgrade-header">
-                    <div class="addlead-upgrade-icon">🚀</div>
+                    <i data-lucide="rocket" class="addlead-upgrade-icon" style="width: 48px; height: 48px;"></i>
                     <h3>Upgrade to Pro</h3>
                 </div>
                 <div class="addlead-upgrade-content">
@@ -1674,9 +1674,9 @@ addlead_showCustomSourceInput(targetInput) {
                         <div class="addlead-lead-info-simple">
                             <h4>${safeName}</h4>
                             <div class="addlead-lead-details">
-                                ${safeEmail ? `<p>📧 ${safeEmail}</p>` : ''}
-                                ${safeCompany ? `<p>🏢 ${safeCompany}</p>` : ''}
-                                <p class="addlead-added-time">📅 Added ${timeAgo}</p>
+                                ${safeEmail ? `<p><i data-lucide="mail" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeEmail}</p>` : ''}
+                                ${safeCompany ? `<p><i data-lucide="building" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeCompany}</p>` : ''}
+                                <p class="addlead-added-time"><i data-lucide="calendar" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Added ${timeAgo}</p>
                             </div>
                         </div>
                         <div class="addlead-lead-avatar-right">
@@ -1734,9 +1734,9 @@ addlead_showCustomSourceInput(targetInput) {
                         <div class="addlead-lead-info-simple">
                             <h4>${safeName}</h4>
                             <div class="addlead-lead-details">
-                                ${safeEmail ? `<p>📧 ${safeEmail}</p>` : ''}
-                                ${safeCompany ? `<p>🏢 ${safeCompany}</p>` : ''}
-                                <p class="addlead-added-time">📅 Added ${timeAgo}</p>
+                                ${safeEmail ? `<p><i data-lucide="mail" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeEmail}</p>` : ''}
+                                ${safeCompany ? `<p><i data-lucide="building" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeCompany}</p>` : ''}
+                                <p class="addlead-added-time"><i data-lucide="calendar" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>Added ${timeAgo}</p>
                             </div>
                         </div>
                         <div class="addlead-similarity-section">
@@ -1868,34 +1868,34 @@ addlead_showCustomSourceInput(targetInput) {
     // Filter dropdowns
     addlead_showStatusFilter(event) {
         this.addlead_showMultiFilterDropdown('statuses', event, [
-            { value: '', label: '📋 All Statuses', action: 'clear' },
+            { value: '', label: 'All Statuses', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'new', label: '🆕 New' },
-            { value: 'contacted', label: '📞 Contacted' },
-            { value: 'qualified', label: '✅ Qualified' },
-            { value: 'negotiation', label: '🤝 Negotiation' },
-            { value: 'closed', label: '🎉 Closed' },
-            { value: 'lost', label: '❌ Lost' }
+            { value: 'new', label: 'New' },
+            { value: 'contacted', label: 'Contacted' },
+            { value: 'qualified', label: 'Qualified' },
+            { value: 'negotiation', label: 'Negotiation' },
+            { value: 'closed', label: 'Closed' },
+            { value: 'lost', label: 'Lost' }
         ]);
     },
 
     addlead_showSourceFilter(event) {
         this.addlead_showMultiFilterDropdown('sources', event, [
-            { value: '', label: '🔍 All Sources', action: 'clear' },
+            { value: '', label: 'All Sources', action: 'clear' },
             { value: '', label: '──────────', divider: true },
             ...this.addlead_getSourceOptions().slice(0, -1).map(s => ({ value: s.value, label: s.label })),
-            { value: null, label: '❓ Unknown' }
+            { value: null, label: 'Unknown' }
         ]);
     },
 
     addlead_showValueFilter(event) {
         this.addlead_showSingleFilterDropdown('value', event, [
-            { value: '', label: '💰 All Values', action: 'clear' },
+            { value: '', label: 'All Values', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'highest', label: '💰 Highest First' },
-            { value: 'lowest', label: '💸 Lowest First' },
-            { value: 'has_value', label: '💵 Has Value Only' },
-            { value: 'no_value', label: '🚫 No Value Only' }
+            { value: 'highest', label: 'Highest First' },
+            { value: 'lowest', label: 'Lowest First' },
+            { value: 'has_value', label: 'Has Value Only' },
+            { value: 'no_value', label: 'No Value Only' }
         ]);
     },
 
@@ -2304,11 +2304,11 @@ addlead_showCustomSourceInput(targetInput) {
             container.innerHTML = `
                 <div class="addlead-container">
                     <div class="addlead-error-container">
-                        <div class="addlead-error-icon">⚠️</div>
+                        <i data-lucide="alert-triangle" class="addlead-error-icon" style="width: 64px; height: 64px;"></i>
                         <h2 class="addlead-error-title">Connection Error</h2>
                         <p class="addlead-error-message">${safeMessage}</p>
                         <button onclick="AddLeadModule.init()" class="addlead-retry-btn">
-                            <span>🔄 Try Again</span>
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i><span>Try Again</span>
                         </button>
                     </div>
                 </div>

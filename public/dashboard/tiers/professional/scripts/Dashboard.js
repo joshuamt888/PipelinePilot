@@ -852,7 +852,7 @@ window.DashboardModule = {
                 <div class="dashboard-modal-body">
                     <div class="dashboard-winrate-stats">
                         <div class="dashboard-winrate-card dashboard-winrate-won">
-                            <i data-lucide="trophy" class="dashboard-winrate-icon" style="width: 32px; height: 32px;"></i>
+                            <i data-lucide="trophy" class="dashboard-winrate-icon" style="width: 48px; height: 48px; min-width: 48px; margin-right: 20px;"></i>
                             <div class="dashboard-winrate-content">
                                 <div class="dashboard-winrate-label">Won</div>
                                 <div class="dashboard-winrate-count">${closedLeads.length}</div>
@@ -861,7 +861,7 @@ window.DashboardModule = {
                         </div>
 
                         <div class="dashboard-winrate-card dashboard-winrate-lost">
-                            <i data-lucide="x-circle" class="dashboard-winrate-icon" style="width: 32px; height: 32px;"></i>
+                            <i data-lucide="x-circle" class="dashboard-winrate-icon" style="width: 48px; height: 48px; min-width: 48px; margin-right: 20px;"></i>
                             <div class="dashboard-winrate-content">
                                 <div class="dashboard-winrate-label">Lost</div>
                                 <div class="dashboard-winrate-count">${lostLeads.length}</div>
@@ -1686,13 +1686,14 @@ window.DashboardModule = {
 }
 
 .dashboard-task-status-icon {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.25rem;
     flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .dashboard-item-content {
