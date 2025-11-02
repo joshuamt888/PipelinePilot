@@ -1168,9 +1168,10 @@ window.SettingsModule = {
                     position: relative;
                     width: 50px;
                     height: 26px;
-                    background: var(--border);
+                    background: #cbd5e1;
                     border-radius: 9999px;
                     transition: var(--transition);
+                    flex-shrink: 0;
                 }
 
                 .toggle-slider::before {
@@ -1180,9 +1181,10 @@ window.SettingsModule = {
                     left: 3px;
                     width: 20px;
                     height: 20px;
-                    background: white;
+                    background: #ffffff;
                     border-radius: 50%;
                     transition: var(--transition);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
                 }
 
                 .toggle-input:checked + .toggle-slider {
@@ -1193,9 +1195,18 @@ window.SettingsModule = {
                     transform: translateX(24px);
                 }
 
+                [data-theme="dark"] .toggle-slider {
+                    background: #475569;
+                }
+
+                [data-theme="dark"] .toggle-slider::before {
+                    background: #f1f5f9;
+                }
+
                 .toggle-text {
                     font-weight: 600;
                     color: var(--text-primary);
+                    user-select: none;
                 }
 
                 /* Auto-save Indicator */
