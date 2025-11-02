@@ -63,6 +63,7 @@ window.GoalsModule = {
         setTimeout(() => {
             container.style.opacity = '1';
             this.goals_attachEvents();
+            this.goals_startCountdownTimer(); // Start live countdown for urgent goals
         }, 50);
     },
 
@@ -182,10 +183,18 @@ window.GoalsModule = {
         const progress = Math.min(goal.progress || 0, 100);
         const isCompleted = goal.status === 'completed';
         const isAtRisk = goal.daysRemaining < 7 && progress < 50 && !isCompleted;
-        const daysText = goal.daysRemaining === 0 ? 'Today' : 
-                        goal.daysRemaining === 1 ? '1 day left' :
-                        goal.daysRemaining < 0 ? 'Overdue' :
-                        `${goal.daysRemaining} days left`;
+
+        // For urgent goals (1 day or less), show live countdown timer
+        let daysText;
+        let useCountdown = false;
+        if (goal.daysRemaining < 0) {
+            daysText = 'Overdue';
+        } else if (goal.daysRemaining <= 1 && !isCompleted) {
+            useCountdown = true;
+            daysText = this.goals_getCountdownText(goal.end_date);
+        } else {
+            daysText = goal.daysRemaining === 1 ? '1 day left' : `${goal.daysRemaining} days left`;
+        }
 
         const statusClass = isCompleted ? 'completed' : isAtRisk ? 'at-risk' : 'active';
         const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
@@ -196,7 +205,6 @@ window.GoalsModule = {
 
         return `
             <div class="goals-card goals-card-${statusClass}" data-action="view-goal" data-id="${goal.id}">
-                <div class="goals-card-glow"></div>
                 ${cardColor ? `<div class="goals-card-accent" style="background: ${cardColor}"></div>` : ''}
                 
                 <div class="goals-card-header">
@@ -225,12 +233,12 @@ window.GoalsModule = {
                 </div>
 
                 <div class="goals-card-footer">
-                    <div class="goals-card-time ${isAtRisk ? 'goals-time-warning' : ''}">
+                    <div class="goals-card-time ${isAtRisk ? 'goals-time-warning' : ''}" ${useCountdown ? `data-countdown="${goal.end_date}" data-goal-id="${goal.id}"` : ''}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <circle cx="12" cy="12" r="10" stroke-width="2"/>
                             <polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        ${isCompleted ? 'Completed' : daysText}
+                        <span class="goals-countdown-text">${isCompleted ? 'Completed' : daysText}</span>
                     </div>
                     ${goal.is_recurring ? `
                         <div class="goals-card-recurring">
@@ -433,8 +441,33 @@ window.GoalsModule = {
         const form = document.getElementById('goalForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            await this.goals_createGoal();
-            modal.remove();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) return; // Prevent spam clicking
+
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = `
+                <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Creating...
+            `;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+
+            try {
+                await this.goals_createGoal();
+                modal.remove();
+            } catch (error) {
+                // Re-enable button on error
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
         });
 
         this.goals_setupModalEvents(modal);
@@ -617,8 +650,33 @@ window.GoalsModule = {
         const form = document.getElementById('goalForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            await this.goals_updateGoal();
-            modal.remove();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) return; // Prevent spam clicking
+
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = `
+                <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Saving...
+            `;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+
+            try {
+                await this.goals_updateGoal();
+                modal.remove();
+            } catch (error) {
+                // Re-enable button on error
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
         });
 
         this.goals_setupModalEvents(modal);
@@ -939,10 +997,35 @@ window.GoalsModule = {
         const form = document.getElementById('updateProgressForm');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const newValue = parseFloat(document.getElementById('newProgressValue').value);
-            await this.goals_updateProgress(goalId, newValue);
-            modal.remove();
-            document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) return; // Prevent spam clicking
+
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = `
+                <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Updating...
+            `;
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+
+            try {
+                const newValue = parseFloat(document.getElementById('newProgressValue').value);
+                await this.goals_updateProgress(goalId, newValue);
+                modal.remove();
+                document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
+            } catch (error) {
+                // Re-enable button on error
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
         });
 
         this.goals_setupModalEvents(modal);
@@ -1255,7 +1338,7 @@ window.GoalsModule = {
 
     goals_formatValue(value, unit) {
         if (!value) return '0';
-        
+
         switch (unit) {
             case 'dollars':
                 return window.SteadyUtils.formatCurrency(value);
@@ -1264,6 +1347,49 @@ window.GoalsModule = {
             default:
                 return window.SteadyUtils.formatNumber(value);
         }
+    },
+
+    // COUNTDOWN TIMER
+    goals_getCountdownText(endDate) {
+        const now = new Date();
+        const end = new Date(endDate + 'T23:59:59'); // End of day
+        const diff = end - now;
+
+        if (diff <= 0) return 'Expired';
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        return `${hours}h ${minutes}m ${seconds}s`;
+    },
+
+    goals_startCountdownTimer() {
+        // Clear existing timer if any
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+        }
+
+        // Update countdown every second
+        this.countdownInterval = setInterval(() => {
+            const countdownElements = document.querySelectorAll('[data-countdown]');
+
+            countdownElements.forEach(el => {
+                const endDate = el.dataset.countdown;
+                const countdownText = this.goals_getCountdownText(endDate);
+                const textElement = el.querySelector('.goals-countdown-text');
+
+                if (textElement) {
+                    textElement.textContent = countdownText;
+
+                    // If expired, reload data to update status
+                    if (countdownText === 'Expired') {
+                        clearInterval(this.countdownInterval);
+                        this.goals_loadData().then(() => this.goals_render());
+                    }
+                }
+            });
+        }, 1000);
     },
 
     // LOADING & ERROR
@@ -1567,21 +1693,7 @@ window.GoalsModule = {
     overflow: hidden;
 }
 
-.goals-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--gradient-primary);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.goals-card:hover::before {
-    opacity: 1;
-}
+/* Top banner removed - using only border outline on hover */
 
 .goals-card-accent {
     position: absolute;
@@ -1595,7 +1707,7 @@ window.GoalsModule = {
 .goals-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-    border-color: var(--primary);
+    border-color: #667eea; /* Always blue outline on hover */
 }
 
 .goals-card.goals-card-completed {
@@ -1610,18 +1722,7 @@ window.GoalsModule = {
     background: linear-gradient(90deg, var(--warning), var(--danger));
 }
 
-.goals-card-glow {
-    position: absolute;
-    inset: -50%;
-    background: radial-gradient(circle at center, var(--primary) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    pointer-events: none;
-}
-
-.goals-card:hover .goals-card-glow {
-    opacity: 0.08;
-}
+/* Glow effect removed - using only border outline on hover */
 
 .goals-card-edit-btn {
     position: absolute;
@@ -1650,9 +1751,11 @@ window.GoalsModule = {
 }
 
 .goals-card-edit-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #667eea;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.15);
+    transform: translateY(0) scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .goals-card-edit-btn svg {
@@ -1756,6 +1859,27 @@ window.GoalsModule = {
 @keyframes goalsShimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+}
+
+@keyframes goalsSpin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes goalsPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.goals-spinner {
+    width: 1rem;
+    height: 1rem;
+    animation: goalsSpin 0.8s linear infinite;
+}
+
+[data-countdown] .goals-countdown-text {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    animation: goalsPulse 2s ease-in-out infinite;
 }
 
 .goals-progress-label {
