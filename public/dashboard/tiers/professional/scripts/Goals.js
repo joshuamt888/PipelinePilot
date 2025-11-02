@@ -182,12 +182,14 @@ window.GoalsModule = {
     goals_renderGoalCard(goal) {
         const progress = Math.min(goal.progress || 0, 100);
         const isCompleted = goal.status === 'completed';
-        const isAtRisk = goal.daysRemaining < 7 && progress < 50 && !isCompleted;
+        const isAtRisk = goal.period !== 'none' && goal.daysRemaining < 7 && progress < 50 && !isCompleted;
 
         // For urgent goals (today only), show live countdown timer
         let daysText;
         let useCountdown = false;
-        if (goal.daysRemaining < 0) {
+        if (goal.period === 'none') {
+            daysText = 'Ongoing';
+        } else if (goal.daysRemaining < 0) {
             daysText = 'Overdue';
         } else if (goal.daysRemaining === 0 && !isCompleted) {
             // Only show countdown for goals ending TODAY
@@ -372,6 +374,7 @@ window.GoalsModule = {
                                 <button type="button" class="goals-period-pill active" data-period="monthly">M</button>
                                 <button type="button" class="goals-period-pill" data-period="quarterly">Q</button>
                                 <button type="button" class="goals-period-pill" data-period="yearly">Y</button>
+                                <button type="button" class="goals-period-pill" data-period="none">∞</button>
                             </div>
                         </div>
 
@@ -606,6 +609,7 @@ window.GoalsModule = {
                                 <button type="button" class="goals-period-pill ${goal.period === 'monthly' ? 'active' : ''}" data-period="monthly">M</button>
                                 <button type="button" class="goals-period-pill ${goal.period === 'quarterly' ? 'active' : ''}" data-period="quarterly">Q</button>
                                 <button type="button" class="goals-period-pill ${goal.period === 'yearly' ? 'active' : ''}" data-period="yearly">Y</button>
+                                <button type="button" class="goals-period-pill ${goal.period === 'none' ? 'active' : ''}" data-period="none">∞</button>
                             </div>
                         </div>
 
@@ -901,6 +905,9 @@ window.GoalsModule = {
                     case 'yearly':
                         endDate.setFullYear(endDate.getFullYear() + 1);
                         break;
+                    case 'none':
+                        endDate.setFullYear(endDate.getFullYear() + 10);
+                        break;
                 }
                 
                 document.getElementById('goalEndDate').valueAsDate = endDate;
@@ -983,7 +990,7 @@ window.GoalsModule = {
                             </div>
                             <div class="goals-detail-stat">
                                 <div class="goals-detail-stat-label">Days Left</div>
-                                <div class="goals-detail-stat-value">${goal.daysRemaining < 0 ? 'Overdue' : goal.daysRemaining}</div>
+                                <div class="goals-detail-stat-value">${goal.period === 'none' ? 'Ongoing' : (goal.daysRemaining < 0 ? 'Overdue' : goal.daysRemaining)}</div>
                             </div>
                         </div>
                     </div>
@@ -1524,7 +1531,8 @@ window.GoalsModule = {
             weekly: 'Weekly',
             monthly: 'Monthly',
             quarterly: 'Quarterly',
-            yearly: 'Yearly'
+            yearly: 'Yearly',
+            none: 'Ongoing'
         };
         return periods[period] || 'Monthly';
     },
