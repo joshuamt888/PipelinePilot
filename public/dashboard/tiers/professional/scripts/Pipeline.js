@@ -372,9 +372,9 @@ window.PipelineModule = {
                     
                     ${lead.potential_value ? `
                         <div class="deal-value-display">
-                            <i data-lucide="dollar-sign" class="value-icon" style="width: 16px; height: 16px;"></i>
+                            <i data-lucide="dollar-sign" class="value-icon" style="width: 16px; height: 16px; color: var(--success); stroke: var(--success);"></i>
                             <span class="value-amount">$${lead.potential_value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
+                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px; color: var(--primary); stroke: var(--primary);"></i></button>
                         </div>
                     ` : `
                         <button class="deal-value-btn" onclick="PipelineModule.addDealValue('${lead.id}')">
@@ -387,7 +387,7 @@ window.PipelineModule = {
                             <div class="loss-reason-display">
                                 <i data-lucide="x-circle" class="loss-icon" style="width: 16px; height: 16px;"></i>
                                 <span class="loss-text">${API.escapeHtml(lead.lost_reason)}</span>
-                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
+                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px; color: var(--primary); stroke: var(--primary);"></i></button>
                             </div>
                         ` : `
                             <button class="loss-reason-btn" onclick="PipelineModule.addLossReason('${lead.id}')">
@@ -400,8 +400,8 @@ window.PipelineModule = {
                 <div class="card-footer">
                     <div class="card-date">${timeAgo}</div>
                     <div class="card-actions">
-                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i></button>
-                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')"><i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i></button>
+                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')"><i data-lucide="pencil" style="width: 16px; height: 16px; color: var(--primary); stroke: var(--primary);"></i></button>
+                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')"><i data-lucide="arrow-right" style="width: 16px; height: 16px; color: var(--primary); stroke: var(--primary);"></i></button>
                     </div>
                 </div>
             </div>
@@ -1685,23 +1685,14 @@ window.PipelineModule = {
                     .modal-body { padding: 1.5rem; max-height: 50vh; }
                 }
 
-                /* Light mode - keep icons blue/primary color */
-                @media (prefers-color-scheme: light) {
-                    .action-btn svg,
-                    .value-edit-btn svg,
-                    .loss-edit-btn svg {
-                        color: var(--primary);
-                        stroke: var(--primary);
-                    }
-                }
-
-                /* Dark mode - make pencil/edit icons white */
+                /* Dark mode - override inline styles to make icons white */
                 @media (prefers-color-scheme: dark) {
                     .action-btn svg,
                     .value-edit-btn svg,
-                    .loss-edit-btn svg {
-                        color: #ffffff;
-                        stroke: #ffffff;
+                    .loss-edit-btn svg,
+                    .value-icon svg {
+                        color: #ffffff !important;
+                        stroke: #ffffff !important;
                     }
                 }
             </style>
