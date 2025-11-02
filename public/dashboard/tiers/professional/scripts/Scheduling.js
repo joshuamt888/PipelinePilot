@@ -98,6 +98,9 @@ window.SchedulingModule = {
         this.scheduling_setupEventListeners();
         this.scheduling_updateHeaderIndicators();
         this.scheduling_updateActiveFiltersPanel();
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     // Dashboard View
@@ -287,7 +290,7 @@ window.SchedulingModule = {
                 </td>
                 <td class="scheduling-task-cell">
                     <div class="scheduling-task-title ${isCompleted ? 'scheduling-completed-text' : ''}">${safeTitle}</div>
-                    ${safeTime ? `<div class="scheduling-task-time">⏰ ${safeTime}</div>` : ''}
+                    ${safeTime ? `<div class="scheduling-task-time"><i data-lucide="clock" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeTime}</div>` : ''}
                 </td>
                 <td class="scheduling-lead-cell">
                     <span class="scheduling-lead-name">${safeLeadName}</span>
@@ -347,12 +350,15 @@ modal.addEventListener('mouseup', (e) => {
 });
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Setup form functionality after insertion
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
-            
+
             const form = document.getElementById('scheduling_form');
             if (form) {
                 form.onsubmit = (e) => this.scheduling_handleSubmit(e);
@@ -496,12 +502,15 @@ modal.addEventListener('mouseup', (e) => {
 });
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Setup form functionality after insertion
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
-            
+
             const editForm = document.getElementById('scheduling_editForm');
             if (editForm) {
                 editForm.onsubmit = (e) => this.scheduling_handleEditSubmit(e);
@@ -565,15 +574,15 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
                         <select name="task_type" class="scheduling-form-select">
-                            <option value="follow_up" ${task.task_type === 'follow_up' ? 'selected' : ''}>📋 Follow-up</option>
-                            <option value="call" ${task.task_type === 'call' ? 'selected' : ''}>📞 Call</option>
-                            <option value="email" ${task.task_type === 'email' ? 'selected' : ''}>📧 Email</option>
-                            <option value="meeting" ${task.task_type === 'meeting' ? 'selected' : ''}>🤝 Meeting</option>
-                            <option value="demo" ${task.task_type === 'demo' ? 'selected' : ''}>🎥 Demo</option>
-                            <option value="research" ${task.task_type === 'research' ? 'selected' : ''}>🔍 Research</option>
-                            <option value="proposal" ${task.task_type === 'proposal' ? 'selected' : ''}>📊 Proposal</option>
-                            <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>📄 Contract</option>
-                            <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>📝 Task</option>
+                            <option value="follow_up" ${task.task_type === 'follow_up' ? 'selected' : ''}>Follow-up</option>
+                            <option value="call" ${task.task_type === 'call' ? 'selected' : ''}>Call</option>
+                            <option value="email" ${task.task_type === 'email' ? 'selected' : ''}>Email</option>
+                            <option value="meeting" ${task.task_type === 'meeting' ? 'selected' : ''}>Meeting</option>
+                            <option value="demo" ${task.task_type === 'demo' ? 'selected' : ''}>Demo</option>
+                            <option value="research" ${task.task_type === 'research' ? 'selected' : ''}>Research</option>
+                            <option value="proposal" ${task.task_type === 'proposal' ? 'selected' : ''}>Proposal</option>
+                            <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>Contract</option>
+                            <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>Task</option>
                         </select>
                     </div>
                     
@@ -590,7 +599,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="scheduling-form-actions">
                     <button type="button" class="scheduling-btn-danger" onclick="SchedulingModule.scheduling_showDeleteConfirmation('${task.id}')">
-                        🗑️ Delete
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete
                     </button>
                     <div class="scheduling-form-actions-right">
                         <button type="button" class="scheduling-btn-secondary" onclick="SchedulingModule.scheduling_hideEditTaskModal()">
@@ -937,7 +946,7 @@ modal.addEventListener('mouseup', (e) => {
         confirmModal.innerHTML = `
             <div class="scheduling-delete-confirm-modal">
                 <div class="scheduling-confirm-header">
-                    <div class="scheduling-confirm-icon">⚠️</div>
+                    <div class="scheduling-confirm-icon"><i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--warning);"></i></div>
                     <h3 class="scheduling-confirm-title">Delete Task</h3>
                 </div>
                 
@@ -972,7 +981,10 @@ modal.addEventListener('mouseup', (e) => {
         `;
 
         document.body.appendChild(confirmModal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         confirmModal.querySelector('.scheduling-btn-cancel-delete').onclick = () => confirmModal.remove();
         confirmModal.querySelector('.scheduling-btn-confirm-delete').onclick = () => {
             this.scheduling_confirmDelete(taskId);
@@ -1069,15 +1081,15 @@ modal.addEventListener('mouseup', (e) => {
         popup.innerHTML = `
             <div class="scheduling-day-popup" onclick="event.stopPropagation()">
                 <div class="scheduling-popup-header">
-                    <h3 class="scheduling-popup-title">📅 ${this.scheduling_formatPopupDate(date)}</h3>
+                    <h3 class="scheduling-popup-title"><i data-lucide="calendar" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>${this.scheduling_formatPopupDate(date)}</h3>
                     <button class="scheduling-popup-close" onclick="SchedulingModule.scheduling_closeDayPopup()">×</button>
                 </div>
-                
+
                 <div class="scheduling-popup-body">
-                    ${dayTasks.length > 0 ? 
+                    ${dayTasks.length > 0 ?
                         dayTasks.map(task => this.scheduling_renderPopupTaskItem(task)).join('') :
                         `<div class="scheduling-empty-day">
-                            <div class="scheduling-empty-icon">🗓️</div>
+                            <div class="scheduling-empty-icon"><i data-lucide="calendar-days" style="width: 64px; height: 64px; opacity: 0.3;"></i></div>
                             <div class="scheduling-empty-message">No tasks scheduled for this day</div>
                         </div>`
                     }
@@ -1086,8 +1098,11 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         popup.onclick = () => this.scheduling_closeDayPopup();
-        
+
         document.body.appendChild(popup);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     scheduling_renderPopupTaskItem(task) {
@@ -1215,17 +1230,17 @@ modal.addEventListener('mouseup', (e) => {
                         <div class="scheduling-quick-actions-grid">
                             ${lead?.phone ? `
                                 <button class="scheduling-quick-action-btn scheduling-call" onclick="SchedulingModule.scheduling_quickCall('${lead.id}')">
-                                    📞 Call
+                                    <i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Call
                                 </button>
                             ` : ''}
                             ${lead?.email ? `
                                 <button class="scheduling-quick-action-btn scheduling-email" onclick="SchedulingModule.scheduling_quickEmail('${lead.id}')">
-                                    📧 Email
+                                    <i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Email
                                 </button>
                             ` : ''}
                             <button class="scheduling-quick-action-btn scheduling-complete ${isCompleted ? 'scheduling-undo' : ''}"
                                     onclick="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', ${!isCompleted}); SchedulingModule.scheduling_closeTaskView();">
-                                ${isCompleted ? '↩️ Mark Pending' : '✅ Mark Complete'}
+                                ${isCompleted ? '<i data-lucide="rotate-ccw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Mark Pending' : '<i data-lucide="check-circle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Mark Complete'}
                             </button>
                         </div>
                     </div>
@@ -1243,8 +1258,11 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         taskView.onclick = () => this.scheduling_closeTaskView();
-        
+
         document.body.appendChild(taskView);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Attach handlers after insertion
         document.getElementById('taskViewEditBtn').onclick = () => {
@@ -1322,18 +1340,21 @@ modal.addEventListener('mouseup', (e) => {
                 </div>
                 
                 <div class="scheduling-lead-picker-actions">
-                    <button class="scheduling-lead-picker-btn scheduling-secondary" 
+                    <button class="scheduling-lead-picker-btn scheduling-secondary"
                             onclick="SchedulingModule.scheduling_selectLead(null, '${formType}')">
-                        ❌ Clear Selection
+                        <i data-lucide="x-circle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Clear Selection
                     </button>
                 </div>
             </div>
         `;
         
         picker.onclick = () => this.scheduling_closeLeadPicker();
-        
+
         this.scheduling_state.currentLeadPickerType = formType;
         document.body.appendChild(picker);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         
         // Disable parent modal
         const addModal = document.getElementById('scheduling_addModal');
@@ -1486,32 +1507,32 @@ modal.addEventListener('mouseup', (e) => {
     // Filters
     scheduling_showTypeFilter(event) {
         this.scheduling_showMultiFilterDropdown('types', event, [
-            { value: '', label: '📋 All Types', action: 'clear' },
+            { value: '', label: 'All Types', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'call', label: '📞 Call' },
-            { value: 'email', label: '📧 Email' },
-            { value: 'meeting', label: '🤝 Meeting' },
-            { value: 'follow_up', label: '📋 Follow-up' },
-            { value: 'demo', label: '🎥 Demo' },
-            { value: 'research', label: '🔍 Research' },
-            { value: 'proposal', label: '📊 Proposal' },
-            { value: 'contract', label: '📄 Contract' },
-            { value: 'task', label: '📝 Task' }
+            { value: 'call', label: 'Call' },
+            { value: 'email', label: 'Email' },
+            { value: 'meeting', label: 'Meeting' },
+            { value: 'follow_up', label: 'Follow-up' },
+            { value: 'demo', label: 'Demo' },
+            { value: 'research', label: 'Research' },
+            { value: 'proposal', label: 'Proposal' },
+            { value: 'contract', label: 'Contract' },
+            { value: 'task', label: 'Task' }
         ]);
     },
 
     scheduling_showDateFilter(event) {
         this.scheduling_showSingleFilterDropdown('date', event, [
-            { value: '', label: '📅 All Tasks', action: 'clear' },
+            { value: '', label: 'All Tasks', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'completed_only', label: '✅ Completed Only' },
-            { value: 'pending_only', label: '⏳ Pending Only' }
+            { value: 'completed_only', label: 'Completed Only' },
+            { value: 'pending_only', label: 'Pending Only' }
         ]);
     },
 
     scheduling_showPriorityFilter(event) {
         this.scheduling_showMultiFilterDropdown('priorities', event, [
-            { value: '', label: '⚡ All Priorities', action: 'clear' },
+            { value: '', label: 'All Priorities', action: 'clear' },
             { value: '', label: '──────────', divider: true },
             { value: 'urgent', label: 'Urgent' },
             { value: 'high', label: 'High' },
@@ -1974,11 +1995,11 @@ modal.addEventListener('mouseup', (e) => {
             container.innerHTML = `
                 <div class="scheduling-container">
                     <div class="scheduling-error-container">
-                        <div class="scheduling-error-icon">⚠️</div>
+                        <div class="scheduling-error-icon"><i data-lucide="alert-triangle" style="width: 64px; height: 64px; color: var(--warning);"></i></div>
                         <h2 class="scheduling-error-title">Connection Error</h2>
                         <p class="scheduling-error-message">${safeMessage}</p>
                         <button onclick="SchedulingModule.init()" class="scheduling-retry-btn">
-                            <span>🔄 Try Again</span>
+                            <span><i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Try Again</span>
                         </button>
                     </div>
                 </div>
@@ -2012,7 +2033,7 @@ modal.addEventListener('mouseup', (e) => {
         modal.innerHTML = `
             <div class="scheduling-upgrade-prompt">
                 <div class="scheduling-upgrade-header">
-                    <div class="scheduling-upgrade-icon">🚀</div>
+                    <div class="scheduling-upgrade-icon"><i data-lucide="alert-circle" style="width: 48px; height: 48px; color: var(--primary);"></i></div>
                     <h3>Task Limit Reached</h3>
                 </div>
                 <div class="scheduling-upgrade-content">
@@ -2028,7 +2049,10 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         modal.querySelector('.scheduling-btn-secondary').onclick = () => modal.remove();
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
@@ -2060,17 +2084,17 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_getTaskTypeIcon(type) {
         const iconMap = {
-            'call': '📞',
-            'email': '📧',
-            'meeting': '🤝',
-            'demo': '🎥',
-            'follow_up': '📋',
-            'research': '🔍',
-            'proposal': '📊',
-            'contract': '📄',
-            'task': '📝'
+            'call': '<i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'email': '<i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'meeting': '<i data-lucide="users" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'demo': '<i data-lucide="video" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'follow_up': '<i data-lucide="clipboard-list" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'research': '<i data-lucide="search" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'proposal': '<i data-lucide="bar-chart" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'contract': '<i data-lucide="file-text" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'task': '<i data-lucide="check-square" style="width: 16px; height: 16px; vertical-align: middle;"></i>'
         };
-        return iconMap[type] || '📋';
+        return iconMap[type] || '<i data-lucide="clipboard-list" style="width: 16px; height: 16px; vertical-align: middle;"></i>';
     },
 
     scheduling_formatTaskType(type) {

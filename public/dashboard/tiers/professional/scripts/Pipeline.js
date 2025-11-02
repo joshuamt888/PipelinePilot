@@ -465,7 +465,7 @@ window.PipelineModule = {
                     
                     <div class="analytics-card">
                         <div class="card-header-analytics">
-                            <span class="card-icon">❌</span>
+                            <i data-lucide="x-circle" class="card-icon" style="width: 20px; height: 20px;"></i>
                             <span class="card-title">Top Loss Reason</span>
                         </div>
                         <div class="card-content-analytics">
@@ -1246,7 +1246,7 @@ window.PipelineModule = {
                 </div>
                 <div class="modal-body">
                     <div style="text-align: center; padding: 2rem 1rem;">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+                        <div style="margin-bottom: 1rem;"><i data-lucide="alert-triangle" style="width: 64px; height: 64px; color: var(--danger);"></i></div>
                         <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">
                             Are you sure you want to delete this lead?
                         </h3>
