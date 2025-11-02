@@ -371,10 +371,10 @@ window.PipelineModule = {
                     ${safeNotes ? `<div class="lead-notes">${safeNotes}</div>` : ''}
                     
                     ${lead.potential_value ? `
-                        <div class="deal-value-display">
+                        <div class="deal-value-display" onclick="PipelineModule.editDealValue('${lead.id}')" style="cursor: pointer;" title="Click to edit value">
                             <i data-lucide="dollar-sign" class="value-icon" style="width: 16px; height: 16px;"></i>
                             <span class="value-amount">$${lead.potential_value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
+                            <button class="value-edit-btn" onclick="event.stopPropagation(); PipelineModule.editDealValue('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
                         </div>
                     ` : `
                         <button class="deal-value-btn" onclick="PipelineModule.addDealValue('${lead.id}')">
@@ -384,10 +384,10 @@ window.PipelineModule = {
                     
                     ${lead.status === 'lost' ? (
                         lead.lost_reason ? `
-                            <div class="loss-reason-display">
+                            <div class="loss-reason-display" onclick="PipelineModule.editLossReason('${lead.id}')" style="cursor: pointer;" title="Click to edit loss reason">
                                 <i data-lucide="x-circle" class="loss-icon" style="width: 16px; height: 16px;"></i>
                                 <span class="loss-text">${API.escapeHtml(lead.lost_reason)}</span>
-                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
+                                <button class="loss-edit-btn" onclick="event.stopPropagation(); PipelineModule.editLossReason('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
                             </div>
                         ` : `
                             <button class="loss-reason-btn" onclick="PipelineModule.addLossReason('${lead.id}')">
@@ -1485,7 +1485,8 @@ window.PipelineModule = {
                 .contact-item { font-size: 0.8rem; color: var(--text-secondary); }
                 .lead-notes { font-size: 0.8rem; color: var(--text-tertiary); font-style: italic; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--surface-hover); border-radius: var(--radius); border-left: 3px solid var(--border); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-height: 5.5rem; overflow: hidden; }
                 
-                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; }
+                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .deal-value-display:hover { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
                 .value-icon { font-size: 1rem; }
                 .value-amount { font-weight: 700; color: var(--success); flex: 1; }
                 .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
@@ -1494,7 +1495,8 @@ window.PipelineModule = {
                 .deal-value-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .deal-value-btn:hover { background: rgba(102, 126, 234, 0.2); }
                 
-                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; }
+                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .loss-reason-display:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
                 .loss-icon { font-size: 0.9rem; }
                 .loss-text { font-size: 0.8rem; color: var(--danger); font-weight: 600; flex: 1; }
                 .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
