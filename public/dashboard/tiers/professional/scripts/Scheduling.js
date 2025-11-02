@@ -207,7 +207,7 @@ window.SchedulingModule = {
                             🔄 Refresh
                         </button>
                         <div class="scheduling-search-box">
-                            <span class="scheduling-search-icon">🔍</span>
+                            <i data-lucide="search" class="scheduling-search-icon" style="width: 18px; height: 18px;"></i>
                             <input type="text"
                                    class="scheduling-search-input"
                                    placeholder="Search tasks..."
@@ -419,15 +419,15 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
                         <select name="task_type" class="scheduling-form-select">
-                            <option value="follow_up">📋 Follow-up</option>
-                            <option value="call">📞 Call</option>
-                            <option value="email">📧 Email</option>
-                            <option value="meeting">🤝 Meeting</option>
-                            <option value="demo">🎥 Demo</option>
-                            <option value="research">🔍 Research</option>
-                            <option value="proposal">📊 Proposal</option>
-                            <option value="contract">📄 Contract</option>
-                            <option value="task">📝 Task</option>
+                            <option value="follow_up">Follow-up</option>
+                            <option value="call">Call</option>
+                            <option value="email">Email</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="demo">Demo</option>
+                            <option value="research">Research</option>
+                            <option value="proposal">Proposal</option>
+                            <option value="contract">Contract</option>
+                            <option value="task">Task</option>
                         </select>
                     </div>
                     

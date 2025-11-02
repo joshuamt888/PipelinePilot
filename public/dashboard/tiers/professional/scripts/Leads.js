@@ -35,7 +35,10 @@ window.AddLeadModule = {
             
             // Fade in
             setTimeout(() => {
-                if (container) container.style.opacity = '1';
+                if (container) {
+                    container.style.opacity = '1';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
             }, 50);
             
             console.log('AddLead module ready');
@@ -110,7 +113,7 @@ window.AddLeadModule = {
                 </div>
                 
                 <div class="addlead-action-bubble addlead-bubble-secondary" onclick="AddLeadModule.addlead_showTableView()">
-                    <div class="addlead-bubble-icon">📊</div>
+                    <i data-lucide="database" class="addlead-bubble-icon" style="width: 48px; height: 48px;"></i>
                     <div class="addlead-bubble-content">
                         <h2 class="addlead-bubble-title">Manage Leads</h2>
                         <p class="addlead-bubble-subtitle">View, search, and manage your complete lead database</p>
@@ -197,7 +200,7 @@ window.AddLeadModule = {
                                    placeholder="Search leads..." 
                                    value="${API.escapeHtml(this.addlead_state.searchTerm)}"
                                    id="addlead_searchInput">
-                            <span class="addlead-search-icon">🔍</span>
+                            <i data-lucide="search" class="addlead-search-icon" style="width: 18px; height: 18px;"></i>
                         </div>
                         <button class="addlead-add-btn" onclick="AddLeadModule.addlead_showAddLeadModal()">
                             + Add Lead
@@ -275,8 +278,8 @@ window.AddLeadModule = {
                     </div>
                 </td>
                 <td class="addlead-contact-cell">
-                    ${safeEmail ? `<div class="addlead-contact-item">📧 ${safeEmail}</div>` : ''}
-                    ${safePhone ? `<div class="addlead-contact-item">📞 ${safePhone}</div>` : ''}
+                    ${safeEmail ? `<div class="addlead-contact-item"><i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safeEmail}</div>` : ''}
+                    ${safePhone ? `<div class="addlead-contact-item"><i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safePhone}</div>` : ''}
                 </td>
                 <td class="addlead-status-cell">
                     <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
@@ -303,7 +306,7 @@ window.AddLeadModule = {
         
         return `
             <div class="addlead-empty-state">
-                <div class="addlead-empty-icon">🎯</div>
+                <i data-lucide="target" class="addlead-empty-icon" style="width: 64px; height: 64px;"></i>
                 <div class="addlead-empty-title">No leads found</div>
                 <div class="addlead-empty-subtitle">
                     ${this.addlead_state.searchTerm ? 
@@ -435,12 +438,12 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Status</label>
                         <select name="status" class="addlead-form-select">
-                            <option value="new">🆕 New Lead</option>
-                            <option value="contacted">📞 Contacted</option>
-                            <option value="qualified">✅ Qualified</option>
-                            <option value="negotiation">🤝 Negotiation</option>
-                            <option value="closed">🎉 Closed Won</option>
-                            <option value="lost">❌ Lost</option>
+                            <option value="new">New Lead</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="negotiation">Negotiation</option>
+                            <option value="closed">Closed Won</option>
+                            <option value="lost">Lost</option>
                         </select>
                     </div>
                     
@@ -456,8 +459,8 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Lead Type</label>
                         <select name="type" class="addlead-form-select">
-                            <option value="cold">❄️ Cold Lead</option>
-                            <option value="warm">🔥 Warm Lead</option>
+                            <option value="cold">Cold Lead</option>
+                            <option value="warm">Warm Lead</option>
                         </select>
                     </div>
                     
@@ -1231,26 +1234,26 @@ modal.addEventListener('mouseup', (e) => {
 
     addlead_getSourceOptions() {
         return [
-            { icon: '🌐', label: 'Website', value: '🌐 Website' },
-            { icon: '💼', label: 'LinkedIn', value: '💼 LinkedIn' },
-            { icon: '📘', label: 'Facebook', value: '📘 Facebook' },
-            { icon: '📸', label: 'Instagram', value: '📸 Instagram' },
-            { icon: '🐦', label: 'Twitter', value: '🐦 Twitter' },
-            { icon: '👥', label: 'Referral', value: '👥 Referral' },
-            { icon: '📧', label: 'Email', value: '📧 Email' },
-            { icon: '📞', label: 'Phone', value: '📞 Phone' },
-            { icon: '🎪', label: 'Event', value: '🎪 Event' },
-            { icon: '📢', label: 'Advertisement', value: '📢 Advertisement' },
-            { icon: '🎯', label: 'Direct', value: '🎯 Direct' },
-            { icon: '🔍', label: 'Google', value: '🔍 Google' },
-            { icon: '🌱', label: 'Organic', value: '🌱 Organic' },
-            { icon: '💰', label: 'Paid Ads', value: '💰 Paid Ads' },
-            { icon: '❄️', label: 'Cold Call', value: '❄️ Cold Call' },
-            { icon: '🏢', label: 'Trade Show', value: '🏢 Trade Show' },
-            { icon: '💻', label: 'Webinar', value: '💻 Webinar' },
-            { icon: '📝', label: 'Content', value: '📝 Content' },
-            { icon: '🤝', label: 'Partnership', value: '🤝 Partnership' },
-            { icon: '✨', label: 'Custom Source', value: 'custom' }
+            { icon: 'globe', label: 'Website', value: 'Website' },
+            { icon: 'linkedin', label: 'LinkedIn', value: 'LinkedIn' },
+            { icon: 'facebook', label: 'Facebook', value: 'Facebook' },
+            { icon: 'instagram', label: 'Instagram', value: 'Instagram' },
+            { icon: 'twitter', label: 'Twitter', value: 'Twitter' },
+            { icon: 'users', label: 'Referral', value: 'Referral' },
+            { icon: 'mail', label: 'Email', value: 'Email' },
+            { icon: 'phone', label: 'Phone', value: 'Phone' },
+            { icon: 'calendar', label: 'Event', value: 'Event' },
+            { icon: 'megaphone', label: 'Advertisement', value: 'Advertisement' },
+            { icon: 'target', label: 'Direct', value: 'Direct' },
+            { icon: 'search', label: 'Google', value: 'Google' },
+            { icon: 'leaf', label: 'Organic', value: 'Organic' },
+            { icon: 'dollar-sign', label: 'Paid Ads', value: 'Paid Ads' },
+            { icon: 'phone-call', label: 'Cold Call', value: 'Cold Call' },
+            { icon: 'building', label: 'Trade Show', value: 'Trade Show' },
+            { icon: 'monitor', label: 'Webinar', value: 'Webinar' },
+            { icon: 'file-text', label: 'Content', value: 'Content' },
+            { icon: 'handshake', label: 'Partnership', value: 'Partnership' },
+            { icon: 'sparkles', label: 'Custom Source', value: 'custom' }
         ];
     },
 
