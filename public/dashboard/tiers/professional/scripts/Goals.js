@@ -356,6 +356,14 @@ window.GoalsModule = {
                             </div>
                         </div>
 
+                        <div class="goals-form-group-v2" id="customUnitInput" style="display: none;">
+                            <label class="goals-form-label-v2">Custom Unit Name</label>
+                            <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
+                                   placeholder="e.g., Appointments, Deals, Projects..."
+                                   maxlength="25">
+                            <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
+                        </div>
+
                         <div class="goals-form-group-v2">
                             <label class="goals-form-label-v2">⏱ Time Period</label>
                             <div class="goals-period-pills">
@@ -576,9 +584,18 @@ window.GoalsModule = {
                                     <option value="calls" ${goal.unit === 'calls' ? 'selected' : ''}>Calls</option>
                                     <option value="meetings" ${goal.unit === 'meetings' ? 'selected' : ''}>Meetings</option>
                                     <option value="hours" ${goal.unit === 'hours' ? 'selected' : ''}>Hours</option>
-                                    <option value="custom" ${goal.unit === 'custom' ? 'selected' : ''}>Custom</option>
+                                    <option value="custom" ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'selected' : ''}>Custom</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div class="goals-form-group-v2" id="customUnitInput" style="display: ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'block' : 'none'};">
+                            <label class="goals-form-label-v2">Custom Unit Name</label>
+                            <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
+                                   placeholder="e.g., Appointments, Deals, Projects..."
+                                   maxlength="25"
+                                   value="${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? API.escapeHtml(goal.unit) : ''}">
+                            <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
                         </div>
 
                         <div class="goals-form-group-v2">
@@ -812,6 +829,51 @@ window.GoalsModule = {
 
         descriptionInput.addEventListener('input', updateDescriptionCounter);
         if (mode === 'edit') updateDescriptionCounter();
+
+        // Custom unit input toggle and counter
+        const unitSelect = document.getElementById('goalUnit');
+        const customUnitContainer = document.getElementById('customUnitInput');
+        const customUnitInput = document.getElementById('goalCustomUnit');
+        const customUnitCounter = document.getElementById('customUnitCounter');
+
+        unitSelect.addEventListener('change', () => {
+            if (unitSelect.value === 'custom') {
+                customUnitContainer.style.display = 'block';
+            } else {
+                customUnitContainer.style.display = 'none';
+            }
+        });
+
+        const updateCustomUnitCounter = () => {
+            let value = customUnitInput.value;
+            if (value.length > 25) {
+                value = value.substring(0, 25);
+                customUnitInput.value = value;
+            }
+
+            const remaining = 25 - value.length;
+            customUnitCounter.textContent = remaining === 1
+                ? '1 character remaining'
+                : `${remaining} characters remaining`;
+
+            if (remaining === 0) {
+                customUnitCounter.textContent = 'Max reached';
+                customUnitCounter.style.color = 'var(--danger)';
+                customUnitCounter.style.fontWeight = '700';
+            } else if (remaining <= 5) {
+                customUnitCounter.style.color = 'var(--danger)';
+                customUnitCounter.style.fontWeight = '700';
+            } else if (remaining <= 10) {
+                customUnitCounter.style.color = 'var(--warning)';
+                customUnitCounter.style.fontWeight = '600';
+            } else {
+                customUnitCounter.style.color = 'var(--text-tertiary)';
+                customUnitCounter.style.fontWeight = '500';
+            }
+        };
+
+        customUnitInput.addEventListener('input', updateCustomUnitCounter);
+        if (mode === 'edit') updateCustomUnitCounter();
 
         // PERIOD PILL EVENTS WITH FIXED DATE CALCULATION
         modal.querySelectorAll('.goals-period-pill').forEach(btn => {
@@ -1296,6 +1358,18 @@ window.GoalsModule = {
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
             const description = document.getElementById('goalDescription').value.trim();
 
+            // Get unit value - use custom input if 'custom' is selected
+            const unitSelect = document.getElementById('goalUnit').value;
+            let unitValue = unitSelect;
+            if (unitSelect === 'custom') {
+                const customUnit = document.getElementById('goalCustomUnit').value.trim();
+                if (!customUnit) {
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
+                }
+                unitValue = customUnit;
+            }
+
             const goalData = {
                 title: title,
                 description: description || null,
@@ -1303,7 +1377,7 @@ window.GoalsModule = {
                     document.getElementById('goalTrackType').value : 'custom',
                 target_value: targetValue,
                 current_value: 0,
-                unit: document.getElementById('goalUnit').value,
+                unit: unitValue,
                 period: activePeriod,
                 start_date: startDate,
                 end_date: endDate,
@@ -1369,13 +1443,25 @@ window.GoalsModule = {
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
             const description = document.getElementById('goalDescription').value.trim();
 
+            // Get unit value - use custom input if 'custom' is selected
+            const unitSelect = document.getElementById('goalUnit').value;
+            let unitValue = unitSelect;
+            if (unitSelect === 'custom') {
+                const customUnit = document.getElementById('goalCustomUnit').value.trim();
+                if (!customUnit) {
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
+                }
+                unitValue = customUnit;
+            }
+
             const updates = {
                 title: title,
                 description: description || null,
                 goal_type: trackingMethod === 'auto' ?
                     document.getElementById('goalTrackType').value : 'custom',
                 target_value: targetValue,
-                unit: document.getElementById('goalUnit').value,
+                unit: unitValue,
                 period: activePeriod,
                 start_date: startDate,
                 end_date: endDate,
@@ -1446,13 +1532,21 @@ window.GoalsModule = {
     goals_formatValue(value, unit) {
         if (!value) return '0';
 
+        const formattedNumber = window.SteadyUtils.formatNumber(value);
+
         switch (unit) {
             case 'dollars':
                 return window.SteadyUtils.formatCurrency(value);
             case 'hours':
-                return `${value}h`;
+                return `${formattedNumber}h`;
+            case 'leads':
+            case 'tasks':
+            case 'calls':
+            case 'meetings':
+                return `${formattedNumber} ${unit}`;
             default:
-                return window.SteadyUtils.formatNumber(value);
+                // Custom unit - display the unit name
+                return unit ? `${formattedNumber} ${unit}` : formattedNumber;
         }
     },
 
