@@ -3936,6 +3936,10 @@ addlead_showCustomSourceInput(targetInput) {
                 border-radius: 8px;
                 border: 1px solid var(--border);
                 white-space: pre-wrap;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                max-width: 100%;
+                overflow: hidden;
                 line-height: 1.6;
             }
 

@@ -1223,8 +1223,8 @@ modal.addEventListener('mouseup', (e) => {
                                     📧 Email
                                 </button>
                             ` : ''}
-                            <button class="scheduling-quick-action-btn scheduling-complete ${isCompleted ? 'scheduling-undo' : ''}" 
-                                    onclick="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', ${!isCompleted})">
+                            <button class="scheduling-quick-action-btn scheduling-complete ${isCompleted ? 'scheduling-undo' : ''}"
+                                    onclick="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', ${!isCompleted}); SchedulingModule.scheduling_closeTaskView();">
                                 ${isCompleted ? '↩️ Mark Pending' : '✅ Mark Complete'}
                             </button>
                         </div>
