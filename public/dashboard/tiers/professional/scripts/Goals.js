@@ -326,6 +326,15 @@ window.GoalsModule = {
                             </div>
                         </div>
 
+                        <div class="goals-form-group-v2">
+                            <label class="goals-form-label-v2">Description (Optional)</label>
+                            <textarea id="goalDescription" class="goals-form-textarea-v2"
+                                      placeholder="Add notes about this goal..."
+                                      maxlength="500"
+                                      rows="3"></textarea>
+                            <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
+                        </div>
+
                         <div class="goals-form-row-v2">
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
@@ -542,10 +551,19 @@ window.GoalsModule = {
                             </div>
                         </div>
 
+                        <div class="goals-form-group-v2">
+                            <label class="goals-form-label-v2">Description (Optional)</label>
+                            <textarea id="goalDescription" class="goals-form-textarea-v2"
+                                      placeholder="Add notes about this goal..."
+                                      maxlength="500"
+                                      rows="3">${goal.description ? API.escapeHtml(goal.description) : ''}</textarea>
+                            <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
+                        </div>
+
                         <div class="goals-form-row-v2">
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
-                                <input type="text" id="goalTarget" class="goals-form-input-v2" 
+                                <input type="text" id="goalTarget" class="goals-form-input-v2"
                                        placeholder="10000" required value="${goal.target_value}">
                                 <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
                             </div>
@@ -759,6 +777,41 @@ window.GoalsModule = {
 
         targetInput.addEventListener('input', updateTargetCounter);
         if (mode === 'edit') updateTargetCounter();
+
+        // Description counter
+        const descriptionInput = document.getElementById('goalDescription');
+        const descriptionCounter = document.getElementById('descriptionCounter');
+
+        const updateDescriptionCounter = () => {
+            let value = descriptionInput.value;
+            if (value.length > 500) {
+                value = value.substring(0, 500);
+                descriptionInput.value = value;
+            }
+
+            const remaining = 500 - value.length;
+            descriptionCounter.textContent = remaining === 1
+                ? '1 character remaining'
+                : `${remaining} characters remaining`;
+
+            if (remaining === 0) {
+                descriptionCounter.textContent = 'Max reached';
+                descriptionCounter.style.color = 'var(--danger)';
+                descriptionCounter.style.fontWeight = '700';
+            } else if (remaining <= 50) {
+                descriptionCounter.style.color = 'var(--danger)';
+                descriptionCounter.style.fontWeight = '700';
+            } else if (remaining <= 100) {
+                descriptionCounter.style.color = 'var(--warning)';
+                descriptionCounter.style.fontWeight = '600';
+            } else {
+                descriptionCounter.style.color = 'var(--text-tertiary)';
+                descriptionCounter.style.fontWeight = '500';
+            }
+        };
+
+        descriptionInput.addEventListener('input', updateDescriptionCounter);
+        if (mode === 'edit') updateDescriptionCounter();
 
         // PERIOD PILL EVENTS WITH FIXED DATE CALCULATION
         modal.querySelectorAll('.goals-period-pill').forEach(btn => {
@@ -1241,10 +1294,12 @@ window.GoalsModule = {
             }
 
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-            
+            const description = document.getElementById('goalDescription').value.trim();
+
             const goalData = {
                 title: title,
-                goal_type: trackingMethod === 'auto' ? 
+                description: description || null,
+                goal_type: trackingMethod === 'auto' ?
                     document.getElementById('goalTrackType').value : 'custom',
                 target_value: targetValue,
                 current_value: 0,
@@ -1312,10 +1367,12 @@ window.GoalsModule = {
             }
 
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-            
+            const description = document.getElementById('goalDescription').value.trim();
+
             const updates = {
                 title: title,
-                goal_type: trackingMethod === 'auto' ? 
+                description: description || null,
+                goal_type: trackingMethod === 'auto' ?
                     document.getElementById('goalTrackType').value : 'custom',
                 target_value: targetValue,
                 unit: document.getElementById('goalUnit').value,
@@ -2088,6 +2145,31 @@ window.GoalsModule = {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
     background: var(--surface);
+}
+
+.goals-form-textarea-v2 {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    background: var(--background);
+    color: var(--text-primary);
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.2s ease;
+}
+
+.goals-form-textarea-v2:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    background: var(--surface);
+}
+
+.goals-form-textarea-v2::placeholder {
+    color: var(--text-tertiary);
 }
 
 .goals-period-pills {
