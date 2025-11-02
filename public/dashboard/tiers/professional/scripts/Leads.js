@@ -543,7 +543,8 @@ modal.addEventListener('mouseup', (e) => {
         const safeLinkedIn = API.escapeHtml(lead.linkedin_url || '');
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
         const safeNotes = API.escapeHtml(lead.notes || '');
-        const safeType = lead.type === 'warm' ? '🔥 Warm Lead' : '❄️ Cold Lead';
+        const typeIcon = lead.type === 'warm' ? 'flame' : 'snowflake';
+        const typeLabel = lead.type === 'warm' ? 'Warm Lead' : 'Cold Lead';
 
         const leadView = document.createElement('div');
         leadView.className = 'addlead-lead-view-overlay';
@@ -605,7 +606,7 @@ modal.addEventListener('mouseup', (e) => {
 
                         <div class="addlead-detail-item">
                             <div class="addlead-detail-label">Lead Type:</div>
-                            <div class="addlead-detail-value">${safeType}</div>
+                            <div class="addlead-detail-value"><i data-lucide="${typeIcon}" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>${typeLabel}</div>
                         </div>
 
                         <div class="addlead-detail-item">
@@ -656,6 +657,7 @@ modal.addEventListener('mouseup', (e) => {
         leadView.onclick = () => this.addlead_closeLeadView();
 
         document.body.appendChild(leadView);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Attach handlers after insertion
         document.getElementById('leadViewEditBtn').onclick = () => {
@@ -1190,7 +1192,7 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-source-grid">
                         ${this.addlead_getSourceOptions().map(source => `
                             <div class="addlead-source-option" data-value="${API.escapeHtml(source.value)}">
-                                <span class="addlead-source-icon">${source.icon}</span>
+                                <i data-lucide="${source.icon}" class="addlead-source-icon" style="width: 20px; height: 20px;"></i>
                                 <span class="addlead-source-name">${API.escapeHtml(source.label)}</span>
                             </div>
                         `).join('')}
@@ -1198,9 +1200,10 @@ modal.addEventListener('mouseup', (e) => {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(popup);
-        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Add source popup styles if not already present
         if (!document.getElementById('addlead_sourcePopupStyles')) {
             this.addlead_addSourcePopupStyles();
