@@ -7,13 +7,12 @@ window.SettingsModule = {
     },
 
     async settings_init(targetContainer = 'settings-content') {
-        console.log('Settings module loading');
+        console.log('⚙️ Settings module initializing...');
 
         this.state.container = targetContainer;
         this.showLoading();
 
         try {
-            // Load profile and preferences in parallel
             const [profile, preferences] = await Promise.all([
                 API.getProfile(),
                 API.getPreferences()
@@ -25,10 +24,10 @@ window.SettingsModule = {
             this.render();
             this.attachEvents();
 
-            console.log('Settings module ready');
+            console.log('✅ Settings module ready');
 
         } catch (error) {
-            console.error('Settings init failed:', error);
+            console.error('❌ Settings init failed:', error);
             this.showError('Failed to load settings');
         }
     },
@@ -39,51 +38,49 @@ window.SettingsModule = {
 
         container.innerHTML = `
             ${this.renderStyles()}
-            <div class="settings-wrapper">
-                ${this.renderTabs()}
-                ${this.renderTabContent()}
+            <div class="settings-shell">
+                <div class="settings-header">
+                    <h1 class="settings-title">Settings</h1>
+                    <p class="settings-subtitle">Manage your account and preferences</p>
+                </div>
+
+                <div class="settings-body">
+                    <div class="settings-tabs">
+                        ${this.renderTabButton('account', '👤', 'Account')}
+                        ${this.renderTabButton('preferences', '⚙️', 'Preferences')}
+                        ${this.renderTabButton('security', '🔐', 'Security')}
+                    </div>
+
+                    <div class="settings-content">
+                        ${this.renderTabContent('account', this.renderAccountTab())}
+                        ${this.renderTabContent('preferences', this.renderPreferencesTab())}
+                        ${this.renderTabContent('security', this.renderSecurityTab())}
+                    </div>
+                </div>
             </div>
         `;
 
-        // Fade in
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
-            container.style.opacity = '1';
+            container.querySelector('.settings-shell').classList.add('loaded');
         }, 50);
     },
 
-    renderTabs() {
+    renderTabButton(tab, icon, label) {
+        const isActive = this.state.currentTab === tab;
         return `
-            <div class="settings-tabs">
-                <button class="tab-btn ${this.state.currentTab === 'account' ? 'active' : ''}" data-tab="account">
-                    <span class="tab-icon">👤</span>
-                    <span class="tab-label">Account</span>
-                </button>
-                <button class="tab-btn ${this.state.currentTab === 'preferences' ? 'active' : ''}" data-tab="preferences">
-                    <span class="tab-icon">⚙️</span>
-                    <span class="tab-label">Preferences</span>
-                </button>
-                <button class="tab-btn ${this.state.currentTab === 'security' ? 'active' : ''}" data-tab="security">
-                    <span class="tab-icon">🔐</span>
-                    <span class="tab-label">Security & Data</span>
-                </button>
-            </div>
+            <button class="tab-button ${isActive ? 'active' : ''}" data-tab="${tab}">
+                <span class="tab-icon">${icon}</span>
+                <span class="tab-label">${label}</span>
+                <div class="tab-indicator"></div>
+            </button>
         `;
     },
 
-    renderTabContent() {
+    renderTabContent(tab, content) {
+        const isActive = this.state.currentTab === tab;
         return `
-            <div class="tab-content-wrapper">
-                <div class="tab-content ${this.state.currentTab === 'account' ? 'active' : ''}" data-tab="account">
-                    ${this.renderAccountTab()}
-                </div>
-                <div class="tab-content ${this.state.currentTab === 'preferences' ? 'active' : ''}" data-tab="preferences">
-                    ${this.renderPreferencesTab()}
-                </div>
-                <div class="tab-content ${this.state.currentTab === 'security' ? 'active' : ''}" data-tab="security">
-                    ${this.renderSecurityTab()}
-                </div>
+            <div class="tab-panel ${isActive ? 'active' : ''}" data-tab="${tab}">
+                ${content}
             </div>
         `;
     },
@@ -91,61 +88,46 @@ window.SettingsModule = {
     renderAccountTab() {
         const { email, user_type, created_at, current_leads, current_lead_limit } = this.state.profile;
 
-        const tierNames = {
-            'free': 'Free Plan',
-            'professional': 'Professional',
-            'professional_trial': 'Pro Trial',
-            'business': 'Business',
-            'enterprise': 'Enterprise',
-            'admin': 'Admin'
+        const tierConfig = {
+            'free': { name: 'Free Plan', color: '#6b7280', gradient: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' },
+            'professional': { name: 'Professional', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+            'professional_trial': { name: 'Pro Trial', color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+            'business': { name: 'Business', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
+            'enterprise': { name: 'Enterprise', color: '#667eea', gradient: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)' },
+            'admin': { name: 'Admin', color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }
         };
 
-        const tierColors = {
-            'free': '#6b7280',
-            'professional': '#10b981',
-            'professional_trial': '#f59e0b',
-            'business': '#8b5cf6',
-            'enterprise': '#667eea',
-            'admin': '#ef4444'
-        };
-
-        const tierName = tierNames[user_type] || 'Free Plan';
-        const tierColor = tierColors[user_type] || '#6b7280';
+        const tier = tierConfig[user_type] || tierConfig['free'];
         const memberSince = this.formatDate(created_at);
         const leadsUsed = current_leads || 0;
         const leadsLimit = current_lead_limit || 50;
-        const leadsPercentage = Math.round((leadsUsed / leadsLimit) * 100);
+        const leadsPercent = Math.min(Math.round((leadsUsed / leadsLimit) * 100), 100);
 
         return `
-            <div class="settings-section">
-                <h2 class="section-title">Account Information</h2>
-
-                <div class="info-card">
-                    <div class="info-row">
-                        <span class="info-label">Email Address</span>
-                        <span class="info-value">${API.escapeHtml(email)}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label">Current Plan</span>
-                        <span class="plan-badge" style="background: ${tierColor}">${tierName}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label">Member Since</span>
-                        <span class="info-value">${memberSince}</span>
-                    </div>
-
-                    <div class="info-row">
-                        <span class="info-label">Lead Usage</span>
-                        <span class="info-value">${leadsUsed} / ${leadsLimit}</span>
-                    </div>
-
-                    <div class="usage-bar-wrapper">
-                        <div class="usage-bar">
-                            <div class="usage-bar-fill" style="width: ${leadsPercentage}%; background: ${tierColor}"></div>
+            <div class="account-overview">
+                <div class="overview-card gradient-card">
+                    <div class="card-glow" style="background: ${tier.gradient}"></div>
+                    <div class="card-content">
+                        <div class="plan-badge-large" style="background: ${tier.gradient}">
+                            <span class="plan-name">${tier.name}</span>
                         </div>
-                        <div class="usage-label">${leadsPercentage}% used</div>
+                        <div class="account-email">${API.escapeHtml(email)}</div>
+                        <div class="account-member">Member since ${memberSince}</div>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-header">
+                        <h3 class="stat-title">Lead Usage</h3>
+                        <span class="stat-count">${leadsUsed} / ${leadsLimit}</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" style="width: ${leadsPercent}%; background: ${tier.gradient}">
+                                <div class="progress-shimmer"></div>
+                            </div>
+                        </div>
+                        <div class="progress-label">${leadsPercent}% capacity</div>
                     </div>
                 </div>
             </div>
@@ -154,82 +136,117 @@ window.SettingsModule = {
 
     renderPreferencesTab() {
         const prefs = this.state.preferences;
-        const currentTheme = prefs.theme || 'light';
+        const theme = prefs.theme || 'light';
         const defaultView = prefs.default_view || 'dashboard';
-        const windowingEnabled = prefs.windowing_enabled || false;
+        const windowing = prefs.windowing_enabled || false;
 
         return `
-            <div class="settings-section">
-                <h2 class="section-title">Preferences</h2>
-                <p class="section-description">Customize your SteadyManager experience. Changes save automatically.</p>
+            <div class="preferences-grid">
+                <div class="pref-section">
+                    <h3 class="pref-section-title">Appearance</h3>
 
-                <!-- Theme Selection -->
-                <div class="pref-card">
-                    <div class="pref-header">
-                        <div class="pref-icon">🎨</div>
-                        <div class="pref-info">
-                            <h3 class="pref-title">Theme</h3>
-                            <p class="pref-description">Choose your preferred color scheme</p>
+                    <!-- Theme -->
+                    <div class="pref-item">
+                        <div class="pref-item-header">
+                            <div class="pref-item-icon">🎨</div>
+                            <div class="pref-item-info">
+                                <div class="pref-item-label">Theme</div>
+                                <div class="pref-item-description">Choose your color scheme</div>
+                            </div>
+                        </div>
+                        <div class="pref-item-control">
+                            <div class="theme-grid">
+                                <label class="theme-card ${theme === 'light' ? 'active' : ''}" data-theme="light">
+                                    <input type="radio" name="theme" value="light" ${theme === 'light' ? 'checked' : ''}>
+                                    <div class="theme-preview light-preview">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-line"></div>
+                                            <div class="preview-line short"></div>
+                                        </div>
+                                    </div>
+                                    <div class="theme-label">
+                                        <span class="theme-icon">☀️</span>
+                                        <span class="theme-name">Light</span>
+                                    </div>
+                                    <div class="theme-checkmark">✓</div>
+                                </label>
+
+                                <label class="theme-card ${theme === 'dark' ? 'active' : ''}" data-theme="dark">
+                                    <input type="radio" name="theme" value="dark" ${theme === 'dark' ? 'checked' : ''}>
+                                    <div class="theme-preview dark-preview">
+                                        <div class="preview-bar"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-line"></div>
+                                            <div class="preview-line short"></div>
+                                        </div>
+                                    </div>
+                                    <div class="theme-label">
+                                        <span class="theme-icon">🌙</span>
+                                        <span class="theme-name">Dark</span>
+                                    </div>
+                                    <div class="theme-checkmark">✓</div>
+                                </label>
+                            </div>
                         </div>
                     </div>
-                    <div class="pref-control">
-                        <div class="theme-selector">
-                            <label class="theme-option ${currentTheme === 'light' ? 'active' : ''}" data-theme="light">
-                                <input type="radio" name="theme" value="light" ${currentTheme === 'light' ? 'checked' : ''}>
-                                <span class="theme-icon">☀️</span>
-                                <span class="theme-name">Light</span>
+                </div>
+
+                <div class="pref-section">
+                    <h3 class="pref-section-title">Navigation</h3>
+
+                    <!-- Default View -->
+                    <div class="pref-item">
+                        <div class="pref-item-header">
+                            <div class="pref-item-icon">🏠</div>
+                            <div class="pref-item-info">
+                                <div class="pref-item-label">Default View</div>
+                                <div class="pref-item-description">Page to show after login</div>
+                            </div>
+                        </div>
+                        <div class="pref-item-control">
+                            <div class="select-wrapper">
+                                <select id="default-view-select" class="styled-select">
+                                    <option value="dashboard" ${defaultView === 'dashboard' ? 'selected' : ''}>📊 Dashboard</option>
+                                    <option value="pipeline" ${defaultView === 'pipeline' ? 'selected' : ''}>🌿 Pipeline</option>
+                                    <option value="tasks" ${defaultView === 'tasks' ? 'selected' : ''}>📋 Tasks</option>
+                                    <option value="jobs" ${defaultView === 'jobs' ? 'selected' : ''}>💼 Jobs</option>
+                                    <option value="goals" ${defaultView === 'goals' ? 'selected' : ''}>🎯 Goals</option>
+                                </select>
+                                <div class="select-arrow">
+                                    <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                                        <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pref-section">
+                    <h3 class="pref-section-title">Advanced</h3>
+
+                    <!-- Windowing -->
+                    <div class="pref-item">
+                        <div class="pref-item-header">
+                            <div class="pref-item-icon">🪟</div>
+                            <div class="pref-item-info">
+                                <div class="pref-item-label">Windowing System</div>
+                                <div class="pref-item-description">Enable draggable modals (experimental)</div>
+                            </div>
+                        </div>
+                        <div class="pref-item-control">
+                            <label class="switch">
+                                <input type="checkbox" id="windowing-toggle" ${windowing ? 'checked' : ''}>
+                                <span class="switch-slider"></span>
                             </label>
-
-                            <label class="theme-option ${currentTheme === 'dark' ? 'active' : ''}" data-theme="dark">
-                                <input type="radio" name="theme" value="dark" ${currentTheme === 'dark' ? 'checked' : ''}>
-                                <span class="theme-icon">🌙</span>
-                                <span class="theme-name">Dark</span>
-                            </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- Default View -->
-                <div class="pref-card">
-                    <div class="pref-header">
-                        <div class="pref-icon">🏠</div>
-                        <div class="pref-info">
-                            <h3 class="pref-title">Default View</h3>
-                            <p class="pref-description">Choose which page loads when you log in</p>
-                        </div>
-                    </div>
-                    <div class="pref-control">
-                        <select id="default-view-select" class="pref-select">
-                            <option value="dashboard" ${defaultView === 'dashboard' ? 'selected' : ''}>📊 Dashboard</option>
-                            <option value="pipeline" ${defaultView === 'pipeline' ? 'selected' : ''}>🌿 Pipeline</option>
-                            <option value="tasks" ${defaultView === 'tasks' ? 'selected' : ''}>📋 Tasks</option>
-                            <option value="jobs" ${defaultView === 'jobs' ? 'selected' : ''}>💼 Jobs</option>
-                            <option value="goals" ${defaultView === 'goals' ? 'selected' : ''}>🎯 Goals</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Windowing System -->
-                <div class="pref-card">
-                    <div class="pref-header">
-                        <div class="pref-icon">🪟</div>
-                        <div class="pref-info">
-                            <h3 class="pref-title">Windowing System</h3>
-                            <p class="pref-description">Enable draggable windows for modals (experimental)</p>
-                        </div>
-                    </div>
-                    <div class="pref-control">
-                        <label class="toggle-label">
-                            <input type="checkbox" id="windowing-toggle" class="toggle-input" ${windowingEnabled ? 'checked' : ''}>
-                            <span class="toggle-slider"></span>
-                            <span class="toggle-text">${windowingEnabled ? 'Enabled' : 'Disabled'}</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="auto-save-indicator">
-                    <span class="save-icon">💾</span>
-                    <span>All changes save automatically</span>
+                <div class="save-indicator">
+                    <div class="save-pulse"></div>
+                    <span class="save-text">Changes save automatically</span>
                 </div>
             </div>
         `;
@@ -237,64 +254,63 @@ window.SettingsModule = {
 
     renderSecurityTab() {
         return `
-            <div class="settings-section">
-                <h2 class="section-title">Security & Data</h2>
+            <div class="security-grid">
+                <div class="security-section">
+                    <h3 class="security-section-title">Security</h3>
 
-                <!-- Security -->
-                <div class="settings-card">
-                    <div class="card-header-simple">
-                        <div class="card-icon">🔐</div>
-                        <h3 class="card-title-simple">Security</h3>
-                    </div>
-                    <div class="card-body">
+                    <div class="security-card">
                         <div class="security-item">
+                            <div class="security-icon">🔑</div>
                             <div class="security-info">
                                 <div class="security-label">Password</div>
-                                <div class="security-description">Change your account password</div>
+                                <div class="security-desc">Update your account password</div>
                             </div>
-                            <button class="btn-secondary" onclick="SettingsModule.changePassword()">
+                            <button class="btn-outline" onclick="SettingsModule.changePassword()">
                                 Change Password
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Export Data -->
-                <div class="settings-card">
-                    <div class="card-header-simple">
-                        <div class="card-icon">📊</div>
-                        <h3 class="card-title-simple">Export Data</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="export-description">
-                            Download your data as CSV files for backup or analysis
-                        </div>
-                        <div class="export-buttons">
-                            <button class="btn-export" onclick="SettingsModule.exportLeads()">
-                                <span class="export-icon">📥</span>
-                                <span>Export Leads</span>
+                <div class="security-section">
+                    <h3 class="security-section-title">Data Export</h3>
+
+                    <div class="security-card">
+                        <p class="export-description">Download your data as CSV files for backup or analysis</p>
+                        <div class="export-grid">
+                            <button class="export-btn" onclick="SettingsModule.exportLeads()">
+                                <div class="export-icon">📥</div>
+                                <div class="export-info">
+                                    <div class="export-label">Export Leads</div>
+                                    <div class="export-desc">CSV file with all leads</div>
+                                </div>
                             </button>
-                            <button class="btn-export" onclick="SettingsModule.exportTasks()">
-                                <span class="export-icon">📥</span>
-                                <span>Export Tasks</span>
+
+                            <button class="export-btn" onclick="SettingsModule.exportTasks()">
+                                <div class="export-icon">📥</div>
+                                <div class="export-info">
+                                    <div class="export-label">Export Tasks</div>
+                                    <div class="export-desc">CSV file with all tasks</div>
+                                </div>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Danger Zone -->
-                <div class="settings-card danger-card">
-                    <div class="card-header-simple">
-                        <div class="card-icon">🗑️</div>
-                        <h3 class="card-title-simple">Danger Zone</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="danger-description">
-                            ⚠️ Permanently delete your account and all associated data
+                <div class="security-section danger-section">
+                    <h3 class="security-section-title">Danger Zone</h3>
+
+                    <div class="security-card danger-card">
+                        <div class="danger-content">
+                            <div class="danger-icon">⚠️</div>
+                            <div class="danger-info">
+                                <div class="danger-label">Delete Account</div>
+                                <div class="danger-desc">Permanently delete your account and all data</div>
+                            </div>
+                            <button class="btn-danger" onclick="SettingsModule.deleteAccount()">
+                                Delete Account
+                            </button>
                         </div>
-                        <button class="btn-danger" onclick="SettingsModule.deleteAccount()">
-                            Delete Account
-                        </button>
                     </div>
                 </div>
             </div>
@@ -303,22 +319,22 @@ window.SettingsModule = {
 
     attachEvents() {
         // Tab switching
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.tab-button').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
                 this.switchTab(tab);
             });
         });
 
-        // Theme toggle - auto-save
-        document.querySelectorAll('.theme-option').forEach(option => {
-            option.addEventListener('click', async (e) => {
-                const theme = option.dataset.theme;
+        // Theme selection
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('click', async () => {
+                const theme = card.dataset.theme;
                 await this.updatePreference('theme', theme);
             });
         });
 
-        // Default view - auto-save
+        // Default view
         const defaultViewSelect = document.getElementById('default-view-select');
         if (defaultViewSelect) {
             defaultViewSelect.addEventListener('change', async (e) => {
@@ -326,50 +342,37 @@ window.SettingsModule = {
             });
         }
 
-        // Windowing toggle - auto-save
+        // Windowing toggle
         const windowingToggle = document.getElementById('windowing-toggle');
         if (windowingToggle) {
             windowingToggle.addEventListener('change', async (e) => {
                 await this.updatePreference('windowing_enabled', e.target.checked);
-
-                // Update toggle text
-                const toggleText = e.target.parentElement.querySelector('.toggle-text');
-                if (toggleText) {
-                    toggleText.textContent = e.target.checked ? 'Enabled' : 'Disabled';
-                }
             });
         }
     },
 
     async updatePreference(key, value) {
         try {
-            // Update local state
             this.state.preferences[key] = value;
 
-            // Save to Supabase
             await API.updatePreferences(this.state.preferences);
 
-            // Apply theme immediately if changed
             if (key === 'theme') {
                 document.documentElement.setAttribute('data-theme', value);
                 localStorage.setItem('dashboard-theme', value);
 
-                // Update theme option UI
-                document.querySelectorAll('.theme-option').forEach(opt => {
-                    opt.classList.remove('active');
-                    if (opt.dataset.theme === value) {
-                        opt.classList.add('active');
-                        opt.querySelector('input').checked = true;
-                    }
+                document.querySelectorAll('.theme-card').forEach(card => {
+                    card.classList.toggle('active', card.dataset.theme === value);
+                    const input = card.querySelector('input');
+                    if (input) input.checked = card.dataset.theme === value;
                 });
             }
 
-            // Apply windowing state globally
             if (key === 'windowing_enabled') {
                 window.windowingEnabled = value;
             }
 
-            this.showSaveIndicator();
+            this.showSaveAnimation();
 
         } catch (error) {
             console.error('Failed to update preference:', error);
@@ -377,392 +380,259 @@ window.SettingsModule = {
         }
     },
 
-    showSaveIndicator() {
-        const indicator = document.querySelector('.auto-save-indicator');
+    showSaveAnimation() {
+        const indicator = document.querySelector('.save-indicator');
         if (indicator) {
-            indicator.style.color = 'var(--success)';
-            indicator.style.fontWeight = '600';
+            indicator.classList.add('saving');
             setTimeout(() => {
-                indicator.style.color = '';
-                indicator.style.fontWeight = '';
-            }, 1500);
+                indicator.classList.remove('saving');
+            }, 2000);
         }
     },
 
     switchTab(tabName) {
         this.state.currentTab = tabName;
 
-        // Update tab buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => {
+        document.querySelectorAll('.tab-button').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
 
-        // Update tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.toggle('active', content.dataset.tab === tabName);
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.toggle('active', panel.dataset.tab === tabName);
         });
     },
 
-    // Change Password Modal
     changePassword() {
         const modal = document.createElement('div');
-        modal.className = 'settings-modal show';
-        modal.id = 'changePasswordModal';
+        modal.className = 'modal-overlay';
+        modal.id = 'passwordModal';
         modal.innerHTML = `
-            <div class="modal-backdrop" id="changePasswordBackdrop"></div>
-            <div class="modal-content">
+            <div class="modal-container">
                 <div class="modal-header">
-                    <h3 class="modal-title">Change Password</h3>
-                    <button class="modal-close" onclick="document.getElementById('changePasswordModal').remove()">×</button>
+                    <h2 class="modal-title">Change Password</h2>
+                    <button class="modal-close" onclick="document.getElementById('passwordModal').remove()">×</button>
                 </div>
-                <div class="modal-body">
-                    <form id="changePasswordForm">
-                        <div class="form-section">
-                            <label class="form-label">Current Password</label>
-                            <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password" required>
-                            <div class="input-feedback" id="currentPasswordFeedback"></div>
-                        </div>
+                <form id="passwordForm" class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password" required>
+                        <div class="form-error" id="currentError"></div>
+                    </div>
 
-                        <div class="form-section">
-                            <label class="form-label">New Password</label>
-                            <input type="password" id="newPassword" class="form-input" placeholder="Enter new password" minlength="6" required>
-                            <div class="password-strength" id="passwordStrength"></div>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" id="newPassword" class="form-input" placeholder="Enter new password" minlength="6" required>
+                        <div class="password-strength" id="strengthIndicator"></div>
+                    </div>
 
-                        <div class="form-section">
-                            <label class="form-label">Confirm New Password</label>
-                            <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password" minlength="6" required>
-                            <div class="input-feedback" id="passwordFeedback"></div>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password" required>
+                        <div class="form-error" id="confirmError"></div>
+                    </div>
 
-                        <div class="form-actions">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('changePasswordModal').remove()">Cancel</button>
-                            <button type="submit" class="btn-primary">
-                                <span class="btn-text">Change Password</span>
-                                <span class="btn-loading" style="display: none;">⏳</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" onclick="document.getElementById('passwordModal').remove()">Cancel</button>
+                        <button type="submit" class="btn-primary">
+                            <span class="btn-text">Update Password</span>
+                            <span class="btn-loader" style="display: none;">⏳</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         `;
 
         document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
 
-        // Backdrop pattern
-        const backdrop = document.getElementById('changePasswordBackdrop');
-        let mouseDownTarget = null;
-
-        backdrop.addEventListener('mousedown', (e) => {
-            mouseDownTarget = e.target;
-        });
-
-        backdrop.addEventListener('mouseup', (e) => {
-            if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('changePasswordModal').remove();
-            }
-            mouseDownTarget = null;
-        });
-
-        const currentPasswordInput = document.getElementById('currentPassword');
+        const form = document.getElementById('passwordForm');
         const newPasswordInput = document.getElementById('newPassword');
         const confirmPasswordInput = document.getElementById('confirmPassword');
-        const strengthDisplay = document.getElementById('passwordStrength');
-        const feedback = document.getElementById('passwordFeedback');
-        const currentFeedback = document.getElementById('currentPasswordFeedback');
+        const strengthIndicator = document.getElementById('strengthIndicator');
 
-        // Password strength checker
-        newPasswordInput.oninput = (e) => {
-            const password = e.target.value;
-            const strength = this.checkPasswordStrength(password);
+        newPasswordInput.addEventListener('input', (e) => {
+            const strength = this.checkPasswordStrength(e.target.value);
+            strengthIndicator.textContent = strength.text ? `Strength: ${strength.text}` : '';
+            strengthIndicator.className = `password-strength ${strength.level}`;
+        });
 
-            strengthDisplay.textContent = `Strength: ${strength.text}`;
-            strengthDisplay.className = `password-strength strength-${strength.level}`;
-        };
-
-        // Confirm password validation
-        confirmPasswordInput.oninput = (e) => {
-            const newPass = newPasswordInput.value;
-            const confirmPass = e.target.value;
-
-            if (confirmPass && newPass !== confirmPass) {
-                feedback.textContent = 'Passwords do not match';
-                feedback.className = 'input-feedback feedback-error';
+        confirmPasswordInput.addEventListener('input', (e) => {
+            const error = document.getElementById('confirmError');
+            if (e.target.value && newPasswordInput.value !== e.target.value) {
+                error.textContent = 'Passwords do not match';
             } else {
-                feedback.textContent = '';
+                error.textContent = '';
             }
-        };
+        });
 
-        document.getElementById('changePasswordForm').onsubmit = async (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const currentPassword = currentPasswordInput.value;
+            const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = newPasswordInput.value;
             const confirmPassword = confirmPasswordInput.value;
 
-            // Clear previous errors
-            currentFeedback.textContent = '';
-            feedback.textContent = '';
-
             if (newPassword !== confirmPassword) {
-                feedback.textContent = 'Passwords do not match';
-                feedback.className = 'input-feedback feedback-error';
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                feedback.textContent = 'Password must be at least 6 characters';
-                feedback.className = 'input-feedback feedback-error';
+                document.getElementById('confirmError').textContent = 'Passwords do not match';
                 return;
             }
 
             if (currentPassword === newPassword) {
-                feedback.textContent = 'New password must be different from current password';
-                feedback.className = 'input-feedback feedback-error';
+                document.getElementById('confirmError').textContent = 'New password must be different';
                 return;
             }
 
-            const btn = e.target.querySelector('.btn-primary');
+            const btn = form.querySelector('.btn-primary');
             const btnText = btn.querySelector('.btn-text');
-            const btnLoading = btn.querySelector('.btn-loading');
+            const btnLoader = btn.querySelector('.btn-loader');
 
             try {
                 btnText.style.display = 'none';
-                btnLoading.style.display = 'inline-block';
+                btnLoader.style.display = 'inline-block';
                 btn.disabled = true;
 
-                // Verify current password by attempting to sign in
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email: this.state.profile.email,
                     password: currentPassword
                 });
 
                 if (signInError) {
-                    currentFeedback.textContent = 'Current password is incorrect';
-                    currentFeedback.className = 'input-feedback feedback-error';
+                    document.getElementById('currentError').textContent = 'Current password is incorrect';
                     btnText.style.display = 'inline-block';
-                    btnLoading.style.display = 'none';
+                    btnLoader.style.display = 'none';
                     btn.disabled = false;
                     return;
                 }
 
-                // Current password verified, now update to new password
                 await API.updatePassword(newPassword);
 
                 modal.remove();
-                this.notify('Password changed successfully!', 'success');
+                this.notify('Password updated successfully!', 'success');
 
             } catch (error) {
-                console.error('Change password error:', error);
-                feedback.textContent = 'Failed to change password. Please try again.';
-                feedback.className = 'input-feedback feedback-error';
+                console.error('Password change error:', error);
+                document.getElementById('confirmError').textContent = 'Failed to update password';
                 btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
+                btnLoader.style.display = 'none';
                 btn.disabled = false;
             }
-        };
+        });
     },
 
     checkPasswordStrength(password) {
-        if (password.length === 0) return { level: '', text: '' };
+        if (!password) return { level: '', text: '' };
         if (password.length < 6) return { level: 'weak', text: 'Too short' };
 
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (password.length >= 12) strength++;
-        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-        if (/[0-9]/.test(password)) strength++;
-        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+        let score = 0;
+        if (password.length >= 8) score++;
+        if (password.length >= 12) score++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+        if (/[0-9]/.test(password)) score++;
+        if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-        if (strength <= 1) return { level: 'weak', text: 'Weak' };
-        if (strength <= 3) return { level: 'medium', text: 'Medium' };
+        if (score <= 1) return { level: 'weak', text: 'Weak' };
+        if (score <= 3) return { level: 'medium', text: 'Medium' };
         return { level: 'strong', text: 'Strong' };
     },
 
-    // Export Leads
     async exportLeads() {
         try {
             this.notify('Preparing export...', 'info');
-
             const leads = await API.getLeads();
-            const csv = this.convertLeadsToCSV(leads.all);
-            const filename = `steadymanager-leads-${this.getDateStamp()}.csv`;
-
-            this.downloadFile(csv, filename);
+            const csv = this.convertToCSV(leads.all, [
+                'name', 'email', 'phone', 'company', 'type', 'status',
+                'quality_score', 'potential_value', 'source', 'notes',
+                'lost_reason', 'created_at', 'last_contact_date'
+            ]);
+            this.downloadCSV(csv, `leads-${this.getTimestamp()}.csv`);
             this.notify('Leads exported successfully!', 'success');
-
         } catch (error) {
-            console.error('Export leads error:', error);
+            console.error('Export error:', error);
             this.notify('Failed to export leads', 'error');
         }
     },
 
-    convertLeadsToCSV(leads) {
-        if (!leads || leads.length === 0) {
-            return 'No leads to export';
-        }
-
-        const headers = [
-            'Name',
-            'Email',
-            'Phone',
-            'Company',
-            'Type',
-            'Status',
-            'Quality Score',
-            'Potential Value',
-            'Source',
-            'Notes',
-            'Lost Reason',
-            'Created At',
-            'Last Contact'
-        ];
-
-        const rows = leads.map(lead => [
-            lead.name || '',
-            lead.email || '',
-            lead.phone || '',
-            lead.company || '',
-            lead.type || '',
-            lead.status || '',
-            lead.quality_score || '',
-            lead.potential_value || '',
-            lead.source || '',
-            (lead.notes || '').replace(/"/g, '""'), // Escape quotes
-            lead.lost_reason || '',
-            lead.created_at || '',
-            lead.last_contact_date || ''
-        ]);
-
-        const csvContent = [
-            headers.map(h => `"${h}"`).join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
-
-        return csvContent;
-    },
-
-    // Export Tasks
     async exportTasks() {
         try {
             this.notify('Preparing export...', 'info');
-
             const tasks = await API.getTasks();
-            const csv = this.convertTasksToCSV(tasks);
-            const filename = `steadymanager-tasks-${this.getDateStamp()}.csv`;
-
-            this.downloadFile(csv, filename);
+            const csv = this.convertToCSV(tasks, [
+                'title', 'description', 'status', 'task_type', 'priority',
+                'due_date', 'due_time', 'completed_at', 'completion_notes', 'created_at'
+            ]);
+            this.downloadCSV(csv, `tasks-${this.getTimestamp()}.csv`);
             this.notify('Tasks exported successfully!', 'success');
-
         } catch (error) {
-            console.error('Export tasks error:', error);
+            console.error('Export error:', error);
             this.notify('Failed to export tasks', 'error');
         }
     },
 
-    convertTasksToCSV(tasks) {
-        if (!tasks || tasks.length === 0) {
-            return 'No tasks to export';
-        }
+    convertToCSV(data, fields) {
+        if (!data || data.length === 0) return 'No data to export';
 
-        const headers = [
-            'Title',
-            'Description',
-            'Status',
-            'Type',
-            'Priority',
-            'Due Date',
-            'Due Time',
-            'Completed At',
-            'Completion Notes',
-            'Created At'
-        ];
+        const headers = fields.map(f => f.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        const rows = data.map(item =>
+            fields.map(field => {
+                const value = item[field] || '';
+                return `"${String(value).replace(/"/g, '""')}"`;
+            }).join(',')
+        );
 
-        const rows = tasks.map(task => [
-            task.title || '',
-            (task.description || '').replace(/"/g, '""'),
-            task.status || '',
-            task.task_type || '',
-            task.priority || '',
-            task.due_date || '',
-            task.due_time || '',
-            task.completed_at || '',
-            (task.completion_notes || '').replace(/"/g, '""'),
-            task.created_at || ''
-        ]);
-
-        const csvContent = [
-            headers.map(h => `"${h}"`).join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
-
-        return csvContent;
+        return [headers.join(','), ...rows].join('\n');
     },
 
-    downloadFile(content, filename) {
+    downloadCSV(content, filename) {
         const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = URL.createObjectURL(blob);
         link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        URL.revokeObjectURL(link.href);
     },
 
-    getDateStamp() {
+    getTimestamp() {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     },
 
-    // Delete Account
     deleteAccount() {
         const modal = document.createElement('div');
-        modal.className = 'settings-modal show';
-        modal.id = 'deleteAccountModal';
+        modal.className = 'modal-overlay';
+        modal.id = 'deleteModal';
         modal.innerHTML = `
-            <div class="modal-backdrop" id="deleteAccountBackdrop"></div>
-            <div class="modal-content">
+            <div class="modal-container danger-modal">
                 <div class="modal-header">
-                    <h3 class="modal-title">Delete Account</h3>
-                    <button class="modal-close" onclick="document.getElementById('deleteAccountModal').remove()">×</button>
+                    <h2 class="modal-title">Delete Account</h2>
+                    <button class="modal-close" onclick="document.getElementById('deleteModal').remove()">×</button>
                 </div>
                 <div class="modal-body">
-                    <div class="delete-warning">
+                    <div class="danger-warning">
                         <div class="warning-icon">⚠️</div>
-                        <h4 class="warning-title">Are you absolutely sure?</h4>
+                        <h3 class="warning-title">This action cannot be undone</h3>
                         <p class="warning-text">
-                            This action <strong>cannot be undone</strong>. This will permanently delete your account and remove all data including:
+                            This will permanently delete your account and remove all associated data including:
                         </p>
                         <ul class="warning-list">
-                            <li>All your leads (${this.state.profile.current_leads || 0} leads)</li>
-                            <li>All your tasks</li>
-                            <li>All your account data</li>
+                            <li>All leads (${this.state.profile.current_leads || 0} leads)</li>
+                            <li>All tasks and schedules</li>
+                            <li>All account settings</li>
+                            <li>All historical data</li>
                         </ul>
                         <p class="warning-text">
                             Please type <strong>DELETE</strong> to confirm.
                         </p>
                     </div>
 
-                    <div class="form-section">
-                        <input type="text"
-                               id="deleteConfirmation"
-                               class="form-input"
-                               placeholder="Type DELETE to confirm"
-                               autocomplete="off">
-                        <div class="input-feedback" id="deleteFeedback"></div>
+                    <div class="form-group">
+                        <input type="text" id="deleteConfirm" class="form-input" placeholder="Type DELETE to confirm" autocomplete="off">
                     </div>
 
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('deleteAccountModal').remove()">Cancel</button>
-                        <button type="button" class="btn-danger" id="confirmDeleteBtn" disabled>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-outline" onclick="document.getElementById('deleteModal').remove()">Cancel</button>
+                        <button type="button" class="btn-danger" id="confirmDelete" disabled>
                             <span class="btn-text">Delete My Account</span>
-                            <span class="btn-loading" style="display: none;">⏳</span>
+                            <span class="btn-loader" style="display: none;">⏳</span>
                         </button>
                     </div>
                 </div>
@@ -770,74 +640,40 @@ window.SettingsModule = {
         `;
 
         document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
 
-        // Backdrop pattern
-        const backdrop = document.getElementById('deleteAccountBackdrop');
-        let mouseDownTarget = null;
+        const confirmInput = document.getElementById('deleteConfirm');
+        const confirmBtn = document.getElementById('confirmDelete');
 
-        backdrop.addEventListener('mousedown', (e) => {
-            mouseDownTarget = e.target;
+        confirmInput.addEventListener('input', (e) => {
+            confirmBtn.disabled = e.target.value.trim() !== 'DELETE';
         });
 
-        backdrop.addEventListener('mouseup', (e) => {
-            if (mouseDownTarget === backdrop && e.target === backdrop) {
-                document.getElementById('deleteAccountModal').remove();
-            }
-            mouseDownTarget = null;
-        });
-
-        const confirmInput = document.getElementById('deleteConfirmation');
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const feedback = document.getElementById('deleteFeedback');
-
-        confirmInput.oninput = (e) => {
-            const value = e.target.value.trim();
-
-            if (value === 'DELETE') {
-                confirmBtn.disabled = false;
-                feedback.textContent = '';
-            } else {
-                confirmBtn.disabled = true;
-            }
-        };
-
-        confirmBtn.onclick = async () => {
+        confirmBtn.addEventListener('click', async () => {
             const btnText = confirmBtn.querySelector('.btn-text');
-            const btnLoading = confirmBtn.querySelector('.btn-loading');
+            const btnLoader = confirmBtn.querySelector('.btn-loader');
 
             try {
                 btnText.style.display = 'none';
-                btnLoading.style.display = 'inline-block';
+                btnLoader.style.display = 'inline-block';
                 confirmBtn.disabled = true;
 
                 await API.deleteAccount();
-
-                // Account deleted - redirect to homepage
                 window.location.href = '/?message=Account deleted successfully';
 
             } catch (error) {
-                console.error('Delete account error:', error);
-                feedback.textContent = 'Failed to delete account. Please try again or contact support.';
-                feedback.className = 'input-feedback feedback-error';
+                console.error('Delete error:', error);
+                this.notify('Failed to delete account', 'error');
                 btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
+                btnLoader.style.display = 'none';
                 confirmBtn.disabled = false;
             }
-        };
-    },
-
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            this.notify('Copied to clipboard!', 'success');
-        }).catch(() => {
-            this.notify('Failed to copy', 'error');
         });
     },
 
     formatDate(dateString) {
         if (!dateString) return 'Unknown';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
+        return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -856,8 +692,9 @@ window.SettingsModule = {
         const container = document.getElementById(this.state.container);
         if (container) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 4rem;">
-                    <div class="loading-spinner" style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                <div class="loading-state">
+                    <div class="loader"></div>
+                    <p class="loading-text">Loading settings...</p>
                 </div>
             `;
         }
@@ -867,11 +704,13 @@ window.SettingsModule = {
         const container = document.getElementById(this.state.container);
         if (container) {
             container.innerHTML = `
-                <div style="text-align: center; padding: 4rem;">
-                    <div style="font-size: 4rem; margin-bottom: 2rem;">⚠️</div>
-                    <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">Settings Error</h2>
-                    <p style="margin-bottom: 2rem; font-size: 1.125rem; color: var(--text-secondary);">${API.escapeHtml(message)}</p>
-                    <button onclick="SettingsModule.settings_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;">🔄 Try Again</button>
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <h2 class="error-title">Failed to Load</h2>
+                    <p class="error-message">${API.escapeHtml(message)}</p>
+                    <button class="btn-primary" onclick="SettingsModule.settings_init()">
+                        Try Again
+                    </button>
                 </div>
             `;
         }
@@ -880,139 +719,233 @@ window.SettingsModule = {
     renderStyles() {
         return `
             <style>
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                }
+
+                @keyframes shimmer {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+
                 @keyframes spin {
                     to { transform: rotate(360deg); }
                 }
 
-                .settings-wrapper {
-                    max-width: 900px;
-                    margin: 0 auto;
+                .settings-shell {
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
                 }
 
-                /* Tab Navigation */
+                .settings-shell.loaded {
+                    opacity: 1;
+                }
+
+                .settings-header {
+                    margin-bottom: 2rem;
+                    animation: slideUp 0.4s ease;
+                }
+
+                .settings-title {
+                    font-size: 2rem;
+                    font-weight: 900;
+                    background: var(--gradient-primary);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-bottom: 0.5rem;
+                }
+
+                .settings-subtitle {
+                    font-size: 1rem;
+                    color: var(--text-secondary);
+                }
+
+                .settings-body {
+                    display: grid;
+                    grid-template-columns: 280px 1fr;
+                    gap: 2rem;
+                    animation: slideUp 0.5s ease 0.1s both;
+                }
+
+                /* Tabs */
                 .settings-tabs {
                     display: flex;
-                    gap: 1rem;
-                    margin-bottom: 2rem;
-                    border-bottom: 2px solid var(--border);
+                    flex-direction: column;
+                    gap: 0.5rem;
                 }
 
-                .tab-btn {
+                .tab-button {
+                    position: relative;
                     display: flex;
                     align-items: center;
-                    gap: 0.75rem;
+                    gap: 1rem;
                     padding: 1rem 1.5rem;
-                    background: none;
-                    border: none;
-                    border-bottom: 3px solid transparent;
-                    color: var(--text-secondary);
-                    font-weight: 600;
-                    font-size: 0.95rem;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
                     cursor: pointer;
-                    transition: var(--transition);
-                    position: relative;
-                    bottom: -2px;
+                    transition: all 0.2s ease;
+                    font-weight: 600;
+                    color: var(--text-secondary);
                 }
 
-                .tab-btn:hover {
-                    color: var(--primary);
+                .tab-button:hover {
                     background: var(--surface-hover);
+                    border-color: var(--primary);
+                    transform: translateX(4px);
                 }
 
-                .tab-btn.active {
-                    color: var(--primary);
-                    border-bottom-color: var(--primary);
+                .tab-button.active {
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+                    border-color: var(--primary);
+                    color: white;
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
                 }
 
                 .tab-icon {
-                    font-size: 1.25rem;
+                    font-size: 1.5rem;
                 }
 
                 .tab-label {
-                    font-size: 1rem;
+                    flex: 1;
+                }
+
+                .tab-indicator {
+                    width: 6px;
+                    height: 6px;
+                    background: white;
+                    border-radius: 50%;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .tab-button.active .tab-indicator {
+                    opacity: 1;
                 }
 
                 /* Tab Content */
-                .tab-content-wrapper {
-                    position: relative;
-                    min-height: 400px;
+                .settings-content {
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
+                    min-height: 500px;
                 }
 
-                .tab-content {
+                .tab-panel {
                     display: none;
-                    animation: fadeIn 0.3s ease;
+                    animation: slideUp 0.3s ease;
                 }
 
-                .tab-content.active {
+                .tab-panel.active {
                     display: block;
                 }
 
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
+                /* Account Tab */
+                .account-overview {
+                    display: grid;
+                    gap: 1.5rem;
                 }
 
-                .settings-section {
-                    margin-bottom: 2rem;
+                .gradient-card {
+                    position: relative;
+                    overflow: hidden;
+                    background: var(--surface);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
+                    border: 1px solid var(--border);
                 }
 
-                .section-title {
-                    font-size: 1.5rem;
+                .card-glow {
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    opacity: 0.05;
+                    filter: blur(60px);
+                    pointer-events: none;
+                }
+
+                .card-content {
+                    position: relative;
+                    z-index: 1;
+                    text-align: center;
+                }
+
+                .plan-badge-large {
+                    display: inline-block;
+                    padding: 0.75rem 2rem;
+                    border-radius: 9999px;
+                    margin-bottom: 1.5rem;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                }
+
+                .plan-name {
+                    color: white;
                     font-weight: 800;
+                    font-size: 1.125rem;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                .account-email {
+                    font-size: 1.25rem;
+                    font-weight: 700;
                     color: var(--text-primary);
                     margin-bottom: 0.5rem;
                 }
 
-                .section-description {
+                .account-member {
                     color: var(--text-secondary);
-                    margin-bottom: 2rem;
                     font-size: 0.95rem;
                 }
 
-                /* Info Card */
-                .info-card {
+                .stats-card {
                     background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: var(--radius-lg);
                     padding: 1.5rem;
                 }
 
-                .info-row {
+                .stat-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 1rem 0;
-                    border-bottom: 1px solid var(--border);
+                    margin-bottom: 1rem;
                 }
 
-                .info-row:last-of-type {
-                    border-bottom: none;
-                    padding-bottom: 0;
-                }
-
-                .info-label {
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                }
-
-                .info-value {
-                    color: var(--text-primary);
-                    font-weight: 500;
-                }
-
-                .plan-badge {
-                    color: white;
-                    padding: 0.375rem 0.875rem;
-                    border-radius: 9999px;
-                    font-size: 0.85rem;
+                .stat-title {
+                    font-size: 1.125rem;
                     font-weight: 700;
+                    color: var(--text-primary);
                 }
 
-                .usage-bar-wrapper {
-                    margin-top: 1.5rem;
+                .stat-count {
+                    font-size: 1.5rem;
+                    font-weight: 900;
+                    background: var(--gradient-primary);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
                 }
 
-                .usage-bar {
+                .progress-bar-container {
+                    margin-top: 1rem;
+                }
+
+                .progress-bar-track {
                     width: 100%;
                     height: 12px;
                     background: var(--border);
@@ -1021,101 +954,180 @@ window.SettingsModule = {
                     margin-bottom: 0.5rem;
                 }
 
-                .usage-bar-fill {
+                .progress-bar-fill {
                     height: 100%;
                     border-radius: 9999px;
-                    transition: width 0.5s ease;
+                    position: relative;
+                    overflow: hidden;
+                    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
                 }
 
-                .usage-label {
+                .progress-shimmer {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    animation: shimmer 2s infinite;
+                }
+
+                .progress-label {
                     text-align: right;
                     font-size: 0.85rem;
                     color: var(--text-secondary);
                     font-weight: 600;
                 }
 
-                /* Preference Cards */
-                .pref-card {
-                    background: var(--surface);
+                /* Preferences Tab */
+                .preferences-grid {
+                    display: grid;
+                    gap: 2rem;
+                }
+
+                .pref-section {
+                    display: grid;
+                    gap: 1rem;
+                }
+
+                .pref-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--text-secondary);
+                }
+
+                .pref-item {
+                    background: var(--background);
                     border: 1px solid var(--border);
                     border-radius: var(--radius-lg);
                     padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                    transition: var(--transition);
+                    transition: all 0.2s ease;
                 }
 
-                .pref-card:hover {
-                    box-shadow: var(--shadow);
+                .pref-item:hover {
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 }
 
-                .pref-header {
+                .pref-item-header {
                     display: flex;
                     align-items: flex-start;
                     gap: 1rem;
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 1rem;
                 }
 
-                .pref-icon {
+                .pref-item-icon {
                     font-size: 2rem;
                     flex-shrink: 0;
                 }
 
-                .pref-info {
+                .pref-item-info {
                     flex: 1;
                 }
 
-                .pref-title {
+                .pref-item-label {
                     font-size: 1.125rem;
                     font-weight: 700;
                     color: var(--text-primary);
                     margin-bottom: 0.25rem;
                 }
 
-                .pref-description {
+                .pref-item-description {
                     font-size: 0.9rem;
                     color: var(--text-secondary);
                 }
 
-                .pref-control {
+                .pref-item-control {
                     margin-top: 1rem;
                 }
 
-                /* Theme Selector */
-                .theme-selector {
-                    display: flex;
+                /* Theme Selection */
+                .theme-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
                     gap: 1rem;
                 }
 
-                .theme-option {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 1.5rem;
+                .theme-card {
+                    position: relative;
                     border: 2px solid var(--border);
                     border-radius: var(--radius-lg);
+                    padding: 1rem;
                     cursor: pointer;
-                    transition: var(--transition);
+                    transition: all 0.2s ease;
                     background: var(--surface);
                 }
 
-                .theme-option:hover {
+                .theme-card:hover {
                     border-color: var(--primary);
-                    background: var(--surface-hover);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
                 }
 
-                .theme-option.active {
+                .theme-card.active {
                     border-color: var(--primary);
-                    background: rgba(102, 126, 234, 0.1);
+                    background: rgba(102, 126, 234, 0.05);
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
-                .theme-option input {
+                .theme-card input {
                     display: none;
                 }
 
+                .theme-preview {
+                    width: 100%;
+                    height: 80px;
+                    border-radius: var(--radius);
+                    margin-bottom: 0.75rem;
+                    overflow: hidden;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+
+                .light-preview {
+                    background: #f8fafc;
+                }
+
+                .dark-preview {
+                    background: #0f172a;
+                }
+
+                .preview-bar {
+                    height: 20px;
+                    background: rgba(102, 126, 234, 0.3);
+                }
+
+                .preview-content {
+                    padding: 0.75rem;
+                    display: grid;
+                    gap: 0.5rem;
+                }
+
+                .light-preview .preview-line {
+                    height: 8px;
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 4px;
+                }
+
+                .dark-preview .preview-line {
+                    height: 8px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 4px;
+                }
+
+                .preview-line.short {
+                    width: 60%;
+                }
+
+                .theme-label {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                }
+
                 .theme-icon {
-                    font-size: 2.5rem;
+                    font-size: 1.25rem;
                 }
 
                 .theme-name {
@@ -1123,161 +1135,189 @@ window.SettingsModule = {
                     color: var(--text-secondary);
                 }
 
-                .theme-option.active .theme-name {
+                .theme-card.active .theme-name {
                     color: var(--primary);
                     font-weight: 700;
                 }
 
+                .theme-checkmark {
+                    position: absolute;
+                    top: 0.5rem;
+                    right: 0.5rem;
+                    width: 24px;
+                    height: 24px;
+                    background: var(--primary);
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 700;
+                    opacity: 0;
+                    transform: scale(0);
+                    transition: all 0.2s ease;
+                }
+
+                .theme-card.active .theme-checkmark {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+
                 /* Select Dropdown */
-                .pref-select {
+                .select-wrapper {
+                    position: relative;
+                }
+
+                .styled-select {
                     width: 100%;
-                    padding: 0.875rem 1rem;
+                    padding: 0.875rem 3rem 0.875rem 1rem;
                     border: 2px solid var(--border);
                     border-radius: var(--radius);
                     font-size: 1rem;
-                    background: var(--background);
+                    font-weight: 500;
+                    background: var(--surface);
                     color: var(--text-primary);
                     cursor: pointer;
-                    transition: var(--transition);
-                    font-weight: 500;
+                    appearance: none;
+                    transition: all 0.2s ease;
                 }
 
-                .pref-select:hover {
+                .styled-select:hover {
                     border-color: var(--primary);
                 }
 
-                .pref-select:focus {
+                .styled-select:focus {
                     outline: none;
                     border-color: var(--primary);
                     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
-                /* Toggle Switch */
-                .toggle-label {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    cursor: pointer;
-                }
-
-                .toggle-input {
-                    display: none;
-                }
-
-                .toggle-slider {
-                    position: relative;
-                    width: 50px;
-                    height: 26px;
-                    background: #cbd5e1;
-                    border-radius: 9999px;
-                    transition: var(--transition);
-                    flex-shrink: 0;
-                }
-
-                .toggle-slider::before {
-                    content: '';
+                .select-arrow {
                     position: absolute;
-                    top: 3px;
+                    right: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    pointer-events: none;
+                    color: var(--text-secondary);
+                }
+
+                /* Switch Toggle */
+                .switch {
+                    position: relative;
+                    display: inline-block;
+                    width: 52px;
+                    height: 28px;
+                }
+
+                .switch input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+
+                .switch-slider {
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: #cbd5e1;
+                    border-radius: 34px;
+                    transition: all 0.3s ease;
+                }
+
+                .switch-slider:before {
+                    content: "";
+                    position: absolute;
+                    height: 22px;
+                    width: 22px;
                     left: 3px;
-                    width: 20px;
-                    height: 20px;
-                    background: #ffffff;
+                    bottom: 3px;
+                    background: white;
                     border-radius: 50%;
-                    transition: var(--transition);
+                    transition: all 0.3s ease;
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
                 }
 
-                .toggle-input:checked + .toggle-slider {
+                .switch input:checked + .switch-slider {
                     background: var(--primary);
                 }
 
-                .toggle-input:checked + .toggle-slider::before {
+                .switch input:checked + .switch-slider:before {
                     transform: translateX(24px);
                 }
 
-                [data-theme="dark"] .toggle-slider {
+                [data-theme="dark"] .switch-slider {
                     background: #475569;
                 }
 
-                [data-theme="dark"] .toggle-slider::before {
-                    background: #f1f5f9;
-                }
-
-                .toggle-text {
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    user-select: none;
-                }
-
-                /* Auto-save Indicator */
-                .auto-save-indicator {
+                /* Save Indicator */
+                .save-indicator {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 0.5rem;
-                    margin-top: 2rem;
+                    gap: 0.75rem;
                     padding: 1rem;
                     background: var(--surface-hover);
-                    border-radius: var(--radius);
+                    border-radius: var(--radius-lg);
+                    margin-top: 1rem;
+                }
+
+                .save-pulse {
+                    width: 8px;
+                    height: 8px;
+                    background: var(--text-secondary);
+                    border-radius: 50%;
+                    transition: all 0.3s ease;
+                }
+
+                .save-indicator.saving .save-pulse {
+                    background: var(--success);
+                    animation: pulse 1s ease infinite;
+                }
+
+                .save-text {
                     font-size: 0.9rem;
                     color: var(--text-secondary);
-                    transition: var(--transition);
+                    font-weight: 500;
                 }
 
-                .save-icon {
-                    font-size: 1.25rem;
+                .save-indicator.saving .save-text {
+                    color: var(--success);
                 }
 
-                /* Settings Card (for Security tab) */
-                .settings-card {
-                    background: var(--surface);
+                /* Security Tab */
+                .security-grid {
+                    display: grid;
+                    gap: 2rem;
+                }
+
+                .security-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--text-secondary);
+                    margin-bottom: 1rem;
+                }
+
+                .security-card {
+                    background: var(--background);
                     border: 1px solid var(--border);
                     border-radius: var(--radius-lg);
                     padding: 1.5rem;
-                    margin-bottom: 1.5rem;
-                    transition: var(--transition);
-                }
-
-                .settings-card:hover {
-                    box-shadow: var(--shadow);
-                }
-
-                .danger-card {
-                    border-color: var(--danger);
-                    border-width: 2px;
-                }
-
-                .card-header-simple {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    margin-bottom: 1.5rem;
-                    padding-bottom: 1rem;
-                    border-bottom: 2px solid var(--border);
-                }
-
-                .card-icon {
-                    font-size: 1.75rem;
-                }
-
-                .card-title-simple {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                    margin: 0;
-                }
-
-                .card-body {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1.5rem;
                 }
 
                 .security-item {
                     display: flex;
-                    justify-content: space-between;
                     align-items: center;
-                    gap: 2rem;
+                    gap: 1.5rem;
+                }
+
+                .security-icon {
+                    font-size: 2.5rem;
+                    flex-shrink: 0;
                 }
 
                 .security-info {
@@ -1285,64 +1325,110 @@ window.SettingsModule = {
                 }
 
                 .security-label {
+                    font-size: 1.125rem;
                     font-weight: 700;
                     color: var(--text-primary);
                     margin-bottom: 0.25rem;
                 }
 
-                .security-description {
+                .security-desc {
                     font-size: 0.9rem;
                     color: var(--text-secondary);
                 }
 
                 .export-description {
-                    font-size: 0.95rem;
                     color: var(--text-secondary);
+                    margin-bottom: 1.5rem;
                     line-height: 1.6;
                 }
 
-                .export-buttons {
-                    display: flex;
+                .export-grid {
+                    display: grid;
                     gap: 1rem;
                 }
 
-                .btn-export {
-                    flex: 1;
+                .export-btn {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 0.75rem;
-                    padding: 1rem 1.5rem;
-                    background: var(--primary);
-                    color: white;
-                    border: none;
-                    border-radius: var(--radius);
-                    font-weight: 600;
+                    gap: 1rem;
+                    padding: 1.25rem;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
                     cursor: pointer;
-                    transition: var(--transition);
+                    transition: all 0.2s ease;
                 }
 
-                .btn-export:hover {
-                    background: var(--primary-dark);
+                .export-btn:hover {
+                    border-color: var(--primary);
+                    background: var(--surface-hover);
                     transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
                 }
 
                 .export-icon {
-                    font-size: 1.25rem;
+                    font-size: 2rem;
+                    flex-shrink: 0;
                 }
 
-                .danger-description {
-                    font-size: 0.95rem;
+                .export-info {
+                    flex: 1;
+                    text-align: left;
+                }
+
+                .export-label {
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 0.25rem;
+                }
+
+                .export-desc {
+                    font-size: 0.875rem;
                     color: var(--text-secondary);
-                    line-height: 1.6;
                 }
 
-                .btn-primary, .btn-secondary, .btn-danger {
-                    padding: 0.875rem 1.5rem;
+                .danger-card {
+                    border-color: rgba(239, 68, 68, 0.3);
+                    background: rgba(239, 68, 68, 0.02);
+                }
+
+                .danger-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                }
+
+                .danger-icon {
+                    font-size: 2.5rem;
+                    flex-shrink: 0;
+                }
+
+                .danger-info {
+                    flex: 1;
+                }
+
+                .danger-label {
+                    font-size: 1.125rem;
+                    font-weight: 700;
+                    color: var(--danger);
+                    margin-bottom: 0.25rem;
+                }
+
+                .danger-desc {
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                }
+
+                /* Buttons */
+                .btn-primary,
+                .btn-outline,
+                .btn-danger {
+                    padding: 0.75rem 1.5rem;
                     border-radius: var(--radius);
-                    font-weight: 600;
+                    font-weight: 700;
+                    font-size: 0.9rem;
                     cursor: pointer;
-                    transition: var(--transition);
+                    transition: all 0.2s ease;
                     border: none;
                     display: inline-flex;
                     align-items: center;
@@ -1351,13 +1437,13 @@ window.SettingsModule = {
                 }
 
                 .btn-primary {
-                    background: var(--primary);
+                    background: var(--gradient-primary);
                     color: white;
                 }
 
                 .btn-primary:hover:not(:disabled) {
-                    background: var(--primary-dark);
                     transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
                 }
 
                 .btn-primary:disabled {
@@ -1365,13 +1451,13 @@ window.SettingsModule = {
                     cursor: not-allowed;
                 }
 
-                .btn-secondary {
-                    background: var(--surface-hover);
-                    color: var(--text-primary);
+                .btn-outline {
+                    background: transparent;
                     border: 2px solid var(--border);
+                    color: var(--text-primary);
                 }
 
-                .btn-secondary:hover {
+                .btn-outline:hover {
                     border-color: var(--primary);
                     color: var(--primary);
                 }
@@ -1384,6 +1470,7 @@ window.SettingsModule = {
                 .btn-danger:hover:not(:disabled) {
                     background: #dc2626;
                     transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
                 }
 
                 .btn-danger:disabled {
@@ -1391,66 +1478,47 @@ window.SettingsModule = {
                     cursor: not-allowed;
                 }
 
-                .btn-loading {
-                    display: inline-block;
-                    width: 16px;
-                    height: 16px;
-                    border: 2px solid transparent;
-                    border-top-color: currentColor;
-                    border-radius: 50%;
-                    animation: spin 0.8s linear infinite;
-                }
-
-                .settings-modal {
+                /* Modal */
+                .modal-overlay {
                     position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    z-index: 10000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 2rem;
-                    opacity: 0;
-                    visibility: hidden;
-                    transition: all 0.3s ease;
-                }
-
-                .settings-modal.show {
-                    opacity: 1;
-                    visibility: visible;
-                }
-
-                .modal-backdrop {
-                    position: absolute;
                     top: 0;
                     left: 0;
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.6);
                     backdrop-filter: blur(8px);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 2rem;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
                 }
 
-                .modal-content {
+                .modal-overlay.show {
+                    opacity: 1;
+                }
+
+                .modal-container {
                     background: var(--surface);
-                    border-radius: 24px;
-                    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
-                    width: 100%;
+                    border-radius: var(--radius-lg);
                     max-width: 500px;
+                    width: 100%;
+                    border: 1px solid var(--border);
+                    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
                     max-height: 90vh;
                     overflow: hidden;
-                    position: relative;
-                    z-index: 1;
-                    border: 1px solid var(--border);
+                    display: flex;
+                    flex-direction: column;
                 }
 
                 .modal-header {
-                    padding: 2rem 2rem 1rem;
-                    border-bottom: 1px solid var(--border);
                     display: flex;
-                    justify-content: space-between;
                     align-items: center;
+                    justify-content: space-between;
+                    padding: 1.5rem 2rem;
+                    border-bottom: 1px solid var(--border);
                     background: var(--surface-hover);
                 }
 
@@ -1462,15 +1530,15 @@ window.SettingsModule = {
                 }
 
                 .modal-close {
-                    background: none;
-                    border: none;
                     width: 2.5rem;
                     height: 2.5rem;
-                    border-radius: var(--radius);
-                    cursor: pointer;
+                    border: none;
+                    background: none;
                     font-size: 1.5rem;
                     color: var(--text-secondary);
-                    transition: var(--transition);
+                    cursor: pointer;
+                    border-radius: var(--radius);
+                    transition: all 0.2s ease;
                 }
 
                 .modal-close:hover {
@@ -1481,10 +1549,9 @@ window.SettingsModule = {
                 .modal-body {
                     padding: 2rem;
                     overflow-y: auto;
-                    max-height: calc(90vh - 120px);
                 }
 
-                .form-section {
+                .form-group {
                     margin-bottom: 1.5rem;
                 }
 
@@ -1492,7 +1559,7 @@ window.SettingsModule = {
                     display: block;
                     font-weight: 700;
                     color: var(--text-primary);
-                    margin-bottom: 0.75rem;
+                    margin-bottom: 0.5rem;
                 }
 
                 .form-input {
@@ -1503,7 +1570,7 @@ window.SettingsModule = {
                     font-size: 1rem;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: var(--transition);
+                    transition: all 0.2s ease;
                 }
 
                 .form-input:focus {
@@ -1512,53 +1579,50 @@ window.SettingsModule = {
                     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
-                .input-feedback {
-                    font-size: 0.85rem;
+                .form-error {
+                    color: var(--danger);
+                    font-size: 0.875rem;
                     margin-top: 0.5rem;
                     font-weight: 500;
                 }
 
-                .feedback-error {
-                    color: var(--danger);
-                }
-
                 .password-strength {
-                    font-size: 0.85rem;
-                    margin-top: 0.5rem;
+                    font-size: 0.875rem;
                     font-weight: 600;
+                    margin-top: 0.5rem;
                 }
 
-                .strength-weak {
+                .password-strength.weak {
                     color: var(--danger);
                 }
 
-                .strength-medium {
+                .password-strength.medium {
                     color: var(--warning);
                 }
 
-                .strength-strong {
+                .password-strength.strong {
                     color: var(--success);
                 }
 
-                .form-actions {
+                .modal-actions {
                     display: flex;
                     gap: 1rem;
                     justify-content: flex-end;
-                    padding-top: 1.5rem;
+                    padding-top: 1rem;
                     border-top: 1px solid var(--border);
                 }
 
-                .delete-warning {
+                .danger-warning {
                     text-align: center;
                     padding: 1.5rem;
                     background: rgba(239, 68, 68, 0.05);
                     border: 2px solid rgba(239, 68, 68, 0.2);
                     border-radius: var(--radius-lg);
-                    margin-bottom: 2rem;
+                    margin-bottom: 1.5rem;
                 }
 
                 .warning-icon {
-                    font-size: 4rem;
+                    font-size: 3rem;
                     margin-bottom: 1rem;
                 }
 
@@ -1570,7 +1634,6 @@ window.SettingsModule = {
                 }
 
                 .warning-text {
-                    font-size: 0.95rem;
                     color: var(--text-secondary);
                     line-height: 1.6;
                     margin-bottom: 1rem;
@@ -1580,12 +1643,11 @@ window.SettingsModule = {
                     text-align: left;
                     list-style: none;
                     padding: 0;
-                    margin: 1.5rem 0;
+                    margin: 1rem 0;
                 }
 
                 .warning-list li {
-                    padding: 0.5rem 0;
-                    padding-left: 1.5rem;
+                    padding: 0.5rem 0 0.5rem 1.5rem;
                     position: relative;
                     color: var(--text-secondary);
                 }
@@ -1598,53 +1660,90 @@ window.SettingsModule = {
                     font-weight: bold;
                 }
 
-                @media (max-width: 768px) {
+                /* Loading & Error States */
+                .loading-state,
+                .error-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4rem 2rem;
+                    text-align: center;
+                }
+
+                .loader {
+                    width: 40px;
+                    height: 40px;
+                    border: 4px solid var(--border);
+                    border-top-color: var(--primary);
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                    margin-bottom: 1rem;
+                }
+
+                .loading-text {
+                    color: var(--text-secondary);
+                    font-size: 1rem;
+                }
+
+                .error-icon {
+                    font-size: 4rem;
+                    margin-bottom: 1rem;
+                }
+
+                .error-title {
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .error-message {
+                    color: var(--text-secondary);
+                    margin-bottom: 2rem;
+                }
+
+                /* Responsive */
+                @media (max-width: 1024px) {
+                    .settings-body {
+                        grid-template-columns: 1fr;
+                    }
+
                     .settings-tabs {
+                        flex-direction: row;
+                        overflow-x: auto;
+                    }
+
+                    .tab-button {
+                        flex-shrink: 0;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .settings-content {
+                        padding: 1.5rem;
+                    }
+
+                    .theme-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .security-item,
+                    .danger-content {
                         flex-direction: column;
-                        gap: 0.5rem;
+                        align-items: flex-start;
+                        text-align: left;
                     }
 
-                    .tab-btn {
-                        justify-content: flex-start;
-                        border-bottom: none;
-                        border-left: 3px solid transparent;
-                    }
-
-                    .tab-btn.active {
-                        border-left-color: var(--primary);
-                        border-bottom-color: transparent;
-                    }
-
-                    .theme-selector {
-                        flex-direction: column;
-                    }
-
-                    .export-buttons {
-                        flex-direction: column;
-                    }
-
-                    .security-item {
-                        flex-direction: column;
-                        align-items: stretch;
-                        gap: 1rem;
-                    }
-
-                    .form-actions {
+                    .modal-actions {
                         flex-direction: column-reverse;
                     }
 
-                    .btn-primary, .btn-secondary, .btn-danger {
+                    .btn-primary,
+                    .btn-outline,
+                    .btn-danger {
                         width: 100%;
                         justify-content: center;
-                    }
-
-                    .settings-modal {
-                        padding: 1rem;
-                    }
-
-                    .modal-content {
-                        max-width: 100%;
-                        border-radius: var(--radius);
                     }
                 }
             </style>
@@ -1652,11 +1751,11 @@ window.SettingsModule = {
     }
 };
 
-// Shell compatibility
+// Module initialization
 if (typeof window !== 'undefined') {
     window.SettingsModule = SettingsModule;
     SettingsModule.init = function(targetContainer) {
         return this.settings_init(targetContainer);
     };
-    console.log('Settings module loaded');
+    console.log('✅ Settings module loaded');
 }
