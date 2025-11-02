@@ -184,16 +184,19 @@ window.GoalsModule = {
         const isCompleted = goal.status === 'completed';
         const isAtRisk = goal.daysRemaining < 7 && progress < 50 && !isCompleted;
 
-        // For urgent goals (1 day or less), show live countdown timer
+        // For urgent goals (today only), show live countdown timer
         let daysText;
         let useCountdown = false;
         if (goal.daysRemaining < 0) {
             daysText = 'Overdue';
-        } else if (goal.daysRemaining <= 1 && !isCompleted) {
+        } else if (goal.daysRemaining === 0 && !isCompleted) {
+            // Only show countdown for goals ending TODAY
             useCountdown = true;
             daysText = this.goals_getCountdownText(goal.end_date);
+        } else if (goal.daysRemaining === 1) {
+            daysText = 'Tomorrow';
         } else {
-            daysText = goal.daysRemaining === 1 ? '1 day left' : `${goal.daysRemaining} days left`;
+            daysText = `${goal.daysRemaining} days left`;
         }
 
         const statusClass = isCompleted ? 'completed' : isAtRisk ? 'at-risk' : 'active';
@@ -250,15 +253,6 @@ window.GoalsModule = {
                         </div>
                     ` : ''}
                 </div>
-
-                <!-- EDIT BUTTON -->
-                <button class="goals-card-edit-btn" data-action="edit-goal" data-id="${goal.id}" onclick="event.stopPropagation()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
-                    </svg>
-                    Edit
-                </button>
             </div>
         `;
     },
@@ -911,6 +905,13 @@ window.GoalsModule = {
                     ` : ''}
 
                     <div class="goals-modal-actions">
+                        <button class="goals-btn-secondary" data-action="edit-goal" data-id="${goal.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
+                            </svg>
+                            Edit Goal
+                        </button>
                         ${!isCompleted && !goal.auto_track ? `
                             <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -1120,6 +1121,8 @@ window.GoalsModule = {
                     this.goals_showCreateModal();
                     break;
                 case 'edit-goal':
+                    // Close detail modal if open
+                    document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
                     await this.goals_showEditModal(id);
                     break;
                 case 'view-goal':
@@ -1709,46 +1712,7 @@ window.GoalsModule = {
 }
 
 /* Glow effect removed - using only border outline on hover */
-
-.goals-card-edit-btn {
-    position: absolute;
-    bottom: 1rem;
-    left: 1.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 0.875rem;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    cursor: pointer;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: all 0.3s ease;
-    z-index: 10;
-}
-
-.goals-card:hover .goals-card-edit-btn {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.goals-card-edit-btn:hover {
-    border-color: #667eea;
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.15);
-    transform: translateY(0) scale(1.05);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.goals-card-edit-btn svg {
-    width: 0.875rem;
-    height: 0.875rem;
-    stroke-width: 2;
-}
+/* Edit button removed from cards - now in view modal */
 
 .goals-card-header {
     display: flex;

@@ -1237,10 +1237,20 @@ class TierScalingAPI {
 
   static calculateDaysUntil(dateString) {
     if (!dateString) return null;
-    const targetDate = new Date(dateString);
+
+    // Normalize dates to midnight for accurate day counting
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const targetDate = new Date(dateString);
+    targetDate.setHours(23, 59, 59, 999); // End of target day
+
     const diffTime = targetDate - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    // Round down because if we're in the same day, it's 0 days
+    // If we're partway through tomorrow, it's still 0 days until tomorrow
+    return Math.floor(diffDays);
   }
 
   static getStatusColor(status) {
