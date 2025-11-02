@@ -122,7 +122,7 @@ window.SchedulingModule = {
                 </div>
                 
                 <div class="scheduling-action-bubble scheduling-bubble-secondary" onclick="SchedulingModule.scheduling_showTableView()">
-                    <div class="scheduling-bubble-icon">📊</div>
+                    <div class="scheduling-bubble-icon"><i data-lucide="list-checks" style="width: 48px; height: 48px;"></i></div>
                     <div class="scheduling-bubble-content">
                         <h2 class="scheduling-bubble-title">Manage Tasks</h2>
                         <p class="scheduling-bubble-subtitle">View, edit and organize your complete task database</p>
@@ -1377,15 +1377,21 @@ modal.addEventListener('mouseup', (e) => {
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(lead => {
                 const statusColor = API.getStatusColor(lead.status);
-                const typeIcon = API.getTypeIcon(lead.type);
-                
+                // Use Lucide icons instead of emojis for lead type
+                const typeIconMap = {
+                    'cold': '<i data-lucide="snowflake" style="width: 16px; height: 16px; color: #3b82f6;"></i>',
+                    'warm': '<i data-lucide="flame" style="width: 16px; height: 16px; color: #f59e0b;"></i>',
+                    'hot': '<i data-lucide="zap" style="width: 16px; height: 16px; color: #ef4444;"></i>'
+                };
+                const typeIcon = typeIconMap[lead.type?.toLowerCase()] || '';
+
                 const safeName = API.escapeHtml(lead.name);
                 const safeCompany = lead.company ? API.escapeHtml(lead.company) : '';
                 const safeEmail = lead.email ? API.escapeHtml(lead.email) : '';
                 const safeStatus = API.escapeHtml(lead.status || 'new');
-                
+
                 return `
-                    <div class="scheduling-lead-picker-item" 
+                    <div class="scheduling-lead-picker-item"
                          data-lead-id="${lead.id}"
                          onclick="SchedulingModule.scheduling_handleLeadClick(this)">
                         <div class="scheduling-lead-item-main">
