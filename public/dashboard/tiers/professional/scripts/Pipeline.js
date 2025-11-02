@@ -10,12 +10,12 @@ window.PipelineModule = {
 
     // Stage definitions
     stages: [
-    { id: 'new', name: 'New Leads', icon: '🆕', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
-    { id: 'contacted', name: 'Contacted', icon: '📞', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
-    { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
-    { id: 'qualified', name: 'Qualified', icon: '✅', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
-    { id: 'closed', name: 'Closed Won', icon: '🎉', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
-    { id: 'lost', name: 'Lost', icon: '❌', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
+    { id: 'new', name: 'New Leads', icon: 'sparkles', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
+    { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
+    { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
+    { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
+    { id: 'closed', name: 'Closed Won', icon: 'trophy', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
+    { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
 ],
 
     // Initialize
@@ -79,10 +79,10 @@ window.PipelineModule = {
                 const hasCustomFilter = sources.includes('custom');
     
                 // Predefined sources (from your dropdown)
-                const predefined = ['🌐 Website', '💼 LinkedIn', '📘 Facebook', '📸 Instagram',
-                    '🐦 Twitter', '👥 Referral', '📧 Email', '📞 Phone', '🎪 Event',
-                    '📢 Advertisement', '🎯 Direct', '🔍 Google', '🌱 Organic', '💰 Paid Ads',
-                    '❄️ Cold Call', '🏢 Trade Show', '💻 Webinar', '📝 Content', '🤝 Partnership'];
+                const predefined = ['Website', 'LinkedIn', 'Facebook', 'Instagram',
+                    'Twitter', 'Referral', 'Email', 'Phone', 'Event',
+                    'Advertisement', 'Direct', 'Google', 'Organic', 'Paid Ads',
+                    'Cold Call', 'Trade Show', 'Webinar', 'Content', 'Partnership'];
     
                 // Check if it matches a predefined source OR is a custom source when custom filter is active
                 const matchesPredefined = sources.includes(leadSource);
@@ -161,7 +161,7 @@ window.PipelineModule = {
                 <div class="pipeline-section">
                     <div class="section-header">
                         <div class="section-title-group">
-                            <h2 class="section-title">🎯 Active Pipeline</h2>
+                            <h2 class="section-title"><i data-lucide="target" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>Active Pipeline</h2>
                             <div class="section-badge">${activeCount} leads</div>
                         </div>
                     </div>
@@ -174,7 +174,7 @@ window.PipelineModule = {
                 <div class="pipeline-section">
                     <div class="section-header">
                         <div class="section-title-group">
-                            <h2 class="section-title">🏁 Sales Outcomes</h2>
+                            <h2 class="section-title"><i data-lucide="flag" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>Sales Outcomes</h2>
                             <div class="section-badge">${outcomeCount} leads</div>
                         </div>
                         <div class="section-value">$${outcomeValue.toLocaleString()}</div>
@@ -194,6 +194,7 @@ window.PipelineModule = {
         container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
             container.style.opacity = '1';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             this.attachEvents();
         }, 50);
     },
@@ -209,7 +210,7 @@ window.PipelineModule = {
             <div class="pipeline-header">
                 <div class="header-brand">
                     <h1 class="pipeline-title">
-                        <span class="title-icon">🌿</span>
+                        <i data-lucide="git-branch" class="title-icon" style="width: 28px; height: 28px;"></i>
                         <span class="title-text">Sales Pipeline</span>
                     </h1>
                     <p class="pipeline-subtitle">Track leads from first contact to closed deals</p>
@@ -232,8 +233,8 @@ window.PipelineModule = {
                         </div>
                         <span class="progress-percentage">${Math.round(percentage)}%</span>
                     </div>
-                    ${isAt ? '<div class="progress-warning at-limit">⚠️ Monthly limit reached</div>' : 
-                      isNear ? '<div class="progress-warning near-limit">🔔 Approaching limit</div>' : ''}
+                    ${isAt ? '<div class="progress-warning at-limit"><i data-lucide="alert-triangle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Monthly limit reached</div>' :
+                      isNear ? '<div class="progress-warning near-limit"><i data-lucide="bell" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Approaching limit</div>' : ''}
                 </div>
             </div>
         `;
@@ -245,12 +246,12 @@ window.PipelineModule = {
             <div class="pipeline-filters">
                 <div class="search-group">
                     <div class="search-wrapper">
-                        <input type="text" 
-                               id="pipelineSearch" 
-                               class="search-input" 
+                        <input type="text"
+                               id="pipelineSearch"
+                               class="search-input"
                                placeholder="Search leads, companies, or emails..."
                                value="${API.escapeHtml(this.state.filters.search || '')}">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -299,7 +300,7 @@ window.PipelineModule = {
             <div class="stage-column" data-stage="${stage.id}">
                 <div class="stage-header" style="--stage-color: ${stage.color}">
                     <div class="stage-title-group">
-                        <div class="stage-icon">${stage.icon}</div>
+                        <i data-lucide="${stage.icon}" class="stage-icon" style="width: 20px; height: 20px;"></i>
                         <div class="stage-info">
                             <h3 class="stage-name">${stage.name}</h3>
                             <div class="stage-meta">
@@ -321,9 +322,9 @@ window.PipelineModule = {
 
     // Render lead card with 40-line note truncation
     renderLeadCard(lead, stage) {
-        const typeIcon = lead.type === 'warm' ? '🔥' : '❄️';
-        const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' : 
-                          lead.quality_score >= 6 ? 'var(--success)' : 
+        const typeIcon = lead.type === 'warm' ? 'flame' : 'snowflake';
+        const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' :
+                          lead.quality_score >= 6 ? 'var(--success)' :
                           lead.quality_score >= 4 ? 'var(--warning)' : 'var(--danger)';
         
         const truncateText = (text, maxLength) => {
@@ -355,15 +356,15 @@ window.PipelineModule = {
                     </div>
                     <div class="lead-meta">
                         ${lead.quality_score ? `<span class="lead-score" style="background: ${scoreColor}">${lead.quality_score}</span>` : ''}
-                        <span class="lead-type">${typeIcon}</span>
+                        <i data-lucide="${typeIcon}" class="lead-type" style="width: 16px; height: 16px;"></i>
                     </div>
                 </div>
                 
                 <div class="card-body">
                     ${safeEmail || safePhone ? `
                         <div class="contact-info">
-                            ${safeEmail ? `<div class="contact-item">📧 ${safeEmail}</div>` : ''}
-                            ${safePhone ? `<div class="contact-item">📞 ${safePhone}</div>` : ''}
+                            ${safeEmail ? `<div class="contact-item"><i data-lucide="mail" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeEmail}</div>` : ''}
+                            ${safePhone ? `<div class="contact-item"><i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safePhone}</div>` : ''}
                         </div>
                     ` : ''}
                     
@@ -371,26 +372,26 @@ window.PipelineModule = {
                     
                     ${lead.potential_value ? `
                         <div class="deal-value-display">
-                            <span class="value-icon">💰</span>
+                            <i data-lucide="dollar-sign" class="value-icon" style="width: 16px; height: 16px;"></i>
                             <span class="value-amount">$${lead.potential_value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit">✏️</button>
+                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
                         </div>
                     ` : `
                         <button class="deal-value-btn" onclick="PipelineModule.addDealValue('${lead.id}')">
-                            💰 Add value
+                            <i data-lucide="dollar-sign" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Add value
                         </button>
                     `}
                     
                     ${lead.status === 'lost' ? (
                         lead.lost_reason ? `
                             <div class="loss-reason-display">
-                                <span class="loss-icon">❌</span>
+                                <i data-lucide="x-circle" class="loss-icon" style="width: 16px; height: 16px;"></i>
                                 <span class="loss-text">${API.escapeHtml(lead.lost_reason)}</span>
-                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit">✏️</button>
+                                <button class="loss-edit-btn" onclick="PipelineModule.editLossReason('${lead.id}')" title="Edit"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
                             </div>
                         ` : `
                             <button class="loss-reason-btn" onclick="PipelineModule.addLossReason('${lead.id}')">
-                                ❌ Add loss reason
+                                <i data-lucide="x-circle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Add loss reason
                             </button>
                         `
                     ) : ''}
@@ -399,8 +400,8 @@ window.PipelineModule = {
                 <div class="card-footer">
                     <div class="card-date">${timeAgo}</div>
                     <div class="card-actions">
-                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')">✏️</button>
-                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')">➡️</button>
+                        <button class="action-btn" onclick="PipelineModule.editLead('${lead.id}')"><i data-lucide="pencil" style="width: 16px; height: 16px;"></i></button>
+                        <button class="action-btn" onclick="PipelineModule.moveLead('${lead.id}')"><i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i></button>
                     </div>
                 </div>
             </div>
@@ -412,19 +413,19 @@ window.PipelineModule = {
         if (this.state.leads.length === 0) {
             return `
                 <div class="empty-state">
-                    <span class="empty-icon">🎯</span>
+                    <i data-lucide="target" class="empty-icon" style="width: 48px; height: 48px;"></i>
                     <div class="empty-title">No leads yet!</div>
                     <div class="empty-subtitle">Start building your pipeline</div>
                     <button class="empty-action-btn" onclick="loadPage('leads')">
-                        ➕ Add your first lead
+                        <i data-lucide="plus" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Add your first lead
                     </button>
                 </div>
             `;
         }
-        
+
         return `
             <div class="empty-state">
-                <span class="empty-icon">${stage.icon}</span>
+                <i data-lucide="${stage.icon}" class="empty-icon" style="width: 48px; height: 48px;"></i>
                 <div class="empty-title">No ${stage.name.toLowerCase()} yet</div>
                 <div class="empty-subtitle">Drag leads here or add new ones</div>
             </div>
@@ -436,14 +437,14 @@ window.PipelineModule = {
         return `
             <div class="analytics-section">
                 <div class="analytics-header">
-                    <h2 class="analytics-title">📊 Key Insights</h2>
+                    <h2 class="analytics-title"><i data-lucide="bar-chart-3" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>Key Insights</h2>
                     <p class="analytics-subtitle">Track your pipeline performance</p>
                 </div>
-                
+
                 <div class="analytics-grid">
                     <div class="analytics-card">
                         <div class="card-header-analytics">
-                            <span class="card-icon">📈</span>
+                            <i data-lucide="trending-up" class="card-icon" style="width: 20px; height: 20px;"></i>
                             <span class="card-title">Conversion Rate</span>
                         </div>
                         <div class="card-content-analytics">
@@ -451,10 +452,10 @@ window.PipelineModule = {
                             <div class="metric-detail">Closed vs Lost</div>
                         </div>
                     </div>
-                    
+
                     <div class="analytics-card">
                         <div class="card-header-analytics">
-                            <span class="card-icon">🎯</span>
+                            <i data-lucide="dollar-sign" class="card-icon" style="width: 20px; height: 20px;"></i>
                             <span class="card-title">Total Value</span>
                         </div>
                         <div class="card-content-analytics">
@@ -556,40 +557,40 @@ window.PipelineModule = {
             type: [
                 { value: '', label: 'All Temperatures', clear: true },
                 { value: '', label: '──────────', divider: true },
-                { value: 'cold', label: '❄️ Cold Leads' },
-                { value: 'warm', label: '🔥 Warm Leads' }
+                { value: 'cold', label: 'Cold Leads', icon: 'snowflake' },
+                { value: 'warm', label: 'Warm Leads', icon: 'flame' }
             ],
             score: [
                 { value: '', label: 'All Scores', clear: true },
                 { value: '', label: '──────────', divider: true },
-                { value: 'high', label: '🌟 High (8-10)' },
-                { value: 'medium', label: '⚡ Medium (5-7)' },
-                { value: 'low', label: '📈 Low (1-4)' }
+                { value: 'high', label: 'High (8-10)', icon: 'star' },
+                { value: 'medium', label: 'Medium (5-7)', icon: 'zap' },
+                { value: 'low', label: 'Low (1-4)', icon: 'trending-up' }
             ],
             source: [
                 { value: '', label: 'All Sources', clear: true },
                 { value: '', label: '──────────', divider: true },
-                { value: '🌐 Website', label: '🌐 Website' },
-                { value: '💼 LinkedIn', label: '💼 LinkedIn' },
-                { value: '📘 Facebook', label: '📘 Facebook' },
-                { value: '📸 Instagram', label: '📸 Instagram' },
-                { value: '🐦 Twitter', label: '🐦 Twitter' },
-                { value: '👥 Referral', label: '👥 Referral' },
-                { value: '📧 Email', label: '📧 Email' },
-                { value: '📞 Phone', label: '📞 Phone' },
-                { value: '🎪 Event', label: '🎪 Event' },
-                { value: '📢 Advertisement', label: '📢 Advertisement' },
-                { value: '🎯 Direct', label: '🎯 Direct' },
-                { value: '🔍 Google', label: '🔍 Google' },
-                { value: '🌱 Organic', label: '🌱 Organic' },
-                { value: '💰 Paid Ads', label: '💰 Paid Ads' },
-                { value: '❄️ Cold Call', label: '❄️ Cold Call' },
-                { value: '🏢 Trade Show', label: '🏢 Trade Show' },
-                { value: '💻 Webinar', label: '💻 Webinar' },
-                { value: '📝 Content', label: '📝 Content' },
-                { value: '🤝 Partnership', label: '🤝 Partnership' },
-                { value: 'custom', label: '✨ Custom Source' },
-                { value: null, label: '❓ Unknown' }
+                { value: 'Website', label: 'Website', icon: 'globe' },
+                { value: 'LinkedIn', label: 'LinkedIn', icon: 'linkedin' },
+                { value: 'Facebook', label: 'Facebook', icon: 'facebook' },
+                { value: 'Instagram', label: 'Instagram', icon: 'instagram' },
+                { value: 'Twitter', label: 'Twitter', icon: 'twitter' },
+                { value: 'Referral', label: 'Referral', icon: 'users' },
+                { value: 'Email', label: 'Email', icon: 'mail' },
+                { value: 'Phone', label: 'Phone', icon: 'phone' },
+                { value: 'Event', label: 'Event', icon: 'calendar' },
+                { value: 'Advertisement', label: 'Advertisement', icon: 'megaphone' },
+                { value: 'Direct', label: 'Direct', icon: 'target' },
+                { value: 'Google', label: 'Google', icon: 'search' },
+                { value: 'Organic', label: 'Organic', icon: 'leaf' },
+                { value: 'Paid Ads', label: 'Paid Ads', icon: 'dollar-sign' },
+                { value: 'Cold Call', label: 'Cold Call', icon: 'phone-call' },
+                { value: 'Trade Show', label: 'Trade Show', icon: 'building' },
+                { value: 'Webinar', label: 'Webinar', icon: 'monitor' },
+                { value: 'Content', label: 'Content', icon: 'file-text' },
+                { value: 'Partnership', label: 'Partnership', icon: 'handshake' },
+                { value: 'custom', label: 'Custom Source', icon: 'sparkles' },
+                { value: null, label: 'Unknown', icon: 'help-circle' }
             ]
         };
         
@@ -604,12 +605,13 @@ window.PipelineModule = {
                 ${options.map(opt => {
                     if (opt.divider) return '<div class="filter-divider"></div>';
                     if (opt.clear) return `<div class="filter-option clear-option" onclick="PipelineModule.clearFilter('${column}')">${opt.label}</div>`;
-                    
+
                     const isChecked = this.state.filters[column].includes(opt.value);
+                    const iconHtml = opt.icon ? `<i data-lucide="${opt.icon}" style="width: 16px; height: 16px; margin-right: 6px; vertical-align: middle;"></i>` : '';
                     return `
                         <div class="filter-option" onclick="PipelineModule.toggleFilter('${column}', ${opt.value === null ? 'null' : `'${opt.value}'`}, event)">
                             <div class="checkbox ${isChecked ? 'checked' : ''}">${isChecked ? '✓' : ''}</div>
-                            <span class="option-text">${opt.label}</span>
+                            <span class="option-text">${iconHtml}${opt.label}</span>
                         </div>
                     `;
                 }).join('')}
@@ -621,9 +623,10 @@ window.PipelineModule = {
         dropdown.style.top = `${rect.bottom + 5}px`;
         dropdown.style.left = `${rect.left}px`;
         dropdown.style.zIndex = '10000';
-        
+
         document.body.appendChild(dropdown);
-        
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         setTimeout(() => {
             const closeDropdown = (e) => {
                 if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) {
@@ -730,8 +733,8 @@ window.PipelineModule = {
                         <div class="form-section">
                             <label class="form-label">Lead Temperature</label>
                             <div class="temperature-toggle">
-                                <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold">❄️ Cold</button>
-                                <button type="button" class="temp-btn ${lead.type === 'warm' ? 'active' : ''}" data-temp="warm">🔥 Warm</button>
+                                <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold"><i data-lucide="snowflake" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Cold</button>
+                                <button type="button" class="temp-btn ${lead.type === 'warm' ? 'active' : ''}" data-temp="warm"><i data-lucide="flame" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Warm</button>
                             </div>
                             <input type="hidden" id="editType" value="${lead.type || 'cold'}">
                         </div>
@@ -756,7 +759,7 @@ window.PipelineModule = {
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="btn-danger" onclick="PipelineModule.deleteLead('${lead.id}')">🗑️ Delete</button>
+                            <button type="button" class="btn-danger" onclick="PipelineModule.deleteLead('${lead.id}')"><i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete</button>
                             <div class="form-actions-right">
                                 <button type="button" class="btn-secondary" onclick="document.getElementById('pipelineEditModal').remove()">Cancel</button>
                                 <button type="submit" class="btn-primary">
@@ -771,6 +774,7 @@ window.PipelineModule = {
         `;
         
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('pipelineEditBackdrop');
@@ -875,8 +879,9 @@ window.PipelineModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     async moveToStage(leadId, newStage) {
@@ -927,8 +932,9 @@ window.PipelineModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('dealValueBackdrop');
@@ -1074,15 +1080,15 @@ window.PipelineModule = {
                             <label class="form-label">Why was this lead lost?</label>
                             <select id="lossReasonSelect" class="reason-select" required>
                                 <option value="">Select a reason...</option>
-                                <option value="Price too high">💰 Price too high</option>
-                                <option value="Went with competitor">🏢 Went with competitor</option>
-                                <option value="Budget constraints">💸 Budget constraints</option>
-                                <option value="Timing not right">⏰ Timing not right</option>
-                                <option value="No longer interested">😐 No longer interested</option>
-                                <option value="Poor communication">📞 Poor communication</option>
-                                <option value="Product not a fit">🎯 Product not a fit</option>
-                                <option value="Decision maker changed">👤 Decision maker changed</option>
-                                <option value="other">✍️ Other (specify below)</option>
+                                <option value="Price too high">Price too high</option>
+                                <option value="Went with competitor">Went with competitor</option>
+                                <option value="Budget constraints">Budget constraints</option>
+                                <option value="Timing not right">Timing not right</option>
+                                <option value="No longer interested">No longer interested</option>
+                                <option value="Poor communication">Poor communication</option>
+                                <option value="Product not a fit">Product not a fit</option>
+                                <option value="Decision maker changed">Decision maker changed</option>
+                                <option value="other">Other (specify below)</option>
                             </select>
                         </div>
                         
@@ -1107,8 +1113,9 @@ window.PipelineModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('lossReasonBackdrop');
@@ -1265,8 +1272,9 @@ window.PipelineModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('pipelineDeleteBackdrop');
@@ -1367,12 +1375,13 @@ window.PipelineModule = {
         if (container) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
-                    <div style="font-size: 4rem; margin-bottom: 2rem; opacity: 0.6;">⚠️</div>
+                    <div style="margin-bottom: 2rem; opacity: 0.6;"><i data-lucide="alert-triangle" style="width: 64px; height: 64px; color: var(--warning);"></i></div>
                     <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">Pipeline Error</h2>
                     <p style="margin-bottom: 2rem; font-size: 1.125rem; color: var(--text-secondary);">${API.escapeHtml(message)}</p>
-                    <button onclick="PipelineModule.pipeline_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;">🔄 Try Again</button>
+                    <button onclick="PipelineModule.pipeline_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;"><i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Try Again</button>
                 </div>
             `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     },
 
