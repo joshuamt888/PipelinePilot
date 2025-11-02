@@ -13,8 +13,6 @@
     </script>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
     <title>SteadyManager - Dashboard</title>
-    
-    <link rel="stylesheet" href="/dashboard/shared/styles/SteadyManager.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
@@ -175,32 +173,6 @@
             font-size: 1.2rem;
         }
 
-        .upgrade-nav-item {
-            margin: 1.5rem 0.75rem 1rem;
-        }
-
-        .upgrade-nav-link {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: var(--radius-lg);
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            cursor: pointer;
-        }
-
-        .upgrade-nav-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
         .main-content {
             margin-left: 280px;
             height: 100vh;
@@ -235,49 +207,49 @@
         }
 
         .header-title {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    cursor: pointer;
-    padding: 0.5rem 1.5rem 0.5rem 1rem;
-    border-radius: var(--radius-lg);
-    transition: var(--transition);
-    border: 2px solid transparent;
-    position: relative;
-    display: inline-block;
-}
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: pointer;
+            padding: 0.5rem 1.5rem 0.5rem 1rem;
+            border-radius: var(--radius-lg);
+            transition: var(--transition);
+            border: 2px solid transparent;
+            position: relative;
+            display: inline-block;
+        }
 
-.header-title::before {
-    content: '⛶';
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1rem;
-    opacity: 0;
-    transition: all 0.3s ease;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+        .header-title::before {
+            content: '⛶';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            opacity: 0;
+            transition: all 0.3s ease;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-.header-title:hover {
-    border: 2px solid var(--primary);
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
-    transform: scale(1.05);
-    padding-right: 2.5rem;
-}
+        .header-title:hover {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+            transform: scale(1.05);
+            padding-right: 2.5rem;
+        }
 
-.header-title:hover::before {
-    opacity: 1;
-}
+        .header-title:hover::before {
+            opacity: 1;
+        }
 
-.header-title:active {
-    transform: scale(0.98);
-}
+        .header-title:active {
+            transform: scale(0.98);
+        }
 
         .user-menu-container {
             position: relative;
@@ -329,77 +301,6 @@
             font-size: 0.75rem;
             color: var(--success);
             font-weight: 500;
-        }
-
-        .profile-dropdown {
-            position: fixed !important;
-            top: 80px !important;
-            right: 2rem !important;
-            width: 220px !important;
-            background: var(--surface) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: var(--radius-lg) !important;
-            box-shadow: var(--shadow-xl) !important;
-            overflow: hidden !important;
-            z-index: 2147483647 !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            transform: translateY(-10px) !important;
-            transition: all 0.3s ease !important;
-        }
-
-        .profile-dropdown.show {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateY(0) !important;
-        }
-
-        .dropdown-item {
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.75rem !important;
-            padding: 1rem !important;
-            color: var(--text-primary) !important;
-            cursor: pointer !important;
-            transition: var(--transition) !important;
-            font-size: 0.875rem !important;
-        }
-
-        .dropdown-item:hover {
-            background: var(--surface-hover) !important;
-        }
-
-        .logout-item {
-            color: var(--danger) !important;
-            border-top: 1px solid var(--border) !important;
-        }
-
-        .toggle-switch {
-            position: relative !important;
-            width: 40px !important;
-            height: 20px !important;
-            background: var(--border) !important;
-            border-radius: 9999px !important;
-            margin-left: auto !important;
-        }
-
-        .toggle-slider {
-            position: absolute !important;
-            top: 2px !important;
-            left: 2px !important;
-            width: 16px !important;
-            height: 16px !important;
-            background: white !important;
-            border-radius: 50% !important;
-            transition: var(--transition) !important;
-        }
-
-        [data-theme="dark"] .toggle-switch {
-            background: var(--primary) !important;
-        }
-
-        [data-theme="dark"] .toggle-slider {
-            transform: translateX(20px) !important;
         }
 
         .dashboard-content {
@@ -489,6 +390,18 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="jobs">
+                            <span class="nav-emoji">💼</span>
+                            <span>Jobs</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-page="goals">
+                            <span class="nav-emoji">🎯</span>
+                            <span>Goals</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="#" class="nav-link" data-page="settings">
                             <span class="nav-emoji">⚙️</span>
                             <span>Settings</span>
@@ -496,12 +409,6 @@
                     </li>
                 </ul>
             </nav>
-
-            <div class="upgrade-nav-item">
-                <a href="#" class="upgrade-nav-link" data-page="upgrade">
-                    <span>🚀 Upgrade Plan</span>
-                </a>
-            </div>
         </div>
     </div>
 
@@ -516,22 +423,7 @@
                     </div>
                     <div class="user-info">
                         <div class="user-name" id="userName">Loading...</div>
-                        <div class="user-tier" id="userTier">Free Plan</div>
-                    </div>
-                </div>
-                
-                <div class="profile-dropdown" id="profileDropdown">
-                    <div class="dropdown-item" id="darkModeToggle">
-                        <span>🌙 Dark Mode</span>
-                        <div class="toggle-switch">
-                            <div class="toggle-slider"></div>
-                        </div>
-                    </div>
-                    <div class="dropdown-item" data-page="settings">
-                        <span>⚙️ Settings</span>
-                    </div>
-                    <div class="dropdown-item logout-item" id="logoutBtn">
-                        <span>🚪 Logout</span>
+                        <div class="user-tier" id="userTier">Professional</div>
                     </div>
                 </div>
             </div>
@@ -543,8 +435,9 @@
                 <div id="leads-content" class="page-content"></div>
                 <div id="pipeline-content" class="page-content"></div>
                 <div id="tasks-content" class="page-content"></div>
+                <div id="jobs-content" class="page-content"></div>
+                <div id="goals-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
-                <div id="upgrade-content" class="page-content"></div>
             </div>
         </main>
     </div>
@@ -653,20 +546,17 @@
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${pageName}-content`)?.classList.add('active');
             
-            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(l => l.classList.remove('active'));
-            if (pageName === 'upgrade') {
-                document.querySelector('.upgrade-nav-link')?.classList.add('active');
-            } else {
-                document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-            }
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
             
             const titles = {
                 dashboard: 'Dashboard',
                 leads: 'Add Leads',
                 pipeline: 'Pipeline',
                 tasks: 'Tasks',
-                settings: 'Settings',
-                upgrade: 'Upgrade Plan'
+                jobs: 'Jobs',
+                goals: 'Goals',
+                settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
             
@@ -684,11 +574,16 @@
                     leads: window.AddLeadModule,
                     pipeline: window.PipelineModule,
                     tasks: window.SchedulingModule,
+                    jobs: window.JobsModule,
+                    goals: window.GoalsModule,
                     settings: window.SettingsModule
                 };
                 
                 const module = modules[pageName];
-                if (!module?.init) return;
+                if (!module?.init) {
+                    console.log(`⚠️ Module ${pageName} not loaded yet`);
+                    return;
+                }
                 
                 // Always reload to get fresh data
                 await module.init(`${pageName}-content`);
@@ -707,14 +602,14 @@
             const tierNames = {
                 'free': 'Free Plan',
                 'professional': 'Professional',
-                'professional_trial': 'Trial',
+                'professional_trial': 'Pro Trial',
                 'business': 'Business',
                 'enterprise': 'Enterprise',
                 'admin': 'Admin'
             };
             
             document.getElementById('userName').textContent = email;
-            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Free Plan';
+            document.getElementById('userTier').textContent = tierNames[profile.user_type] || 'Professional';
             
             const avatar = document.getElementById('userAvatar');
             avatar.innerHTML = '';
@@ -729,36 +624,8 @@
             return name.substring(0, 2).toUpperCase();
         }
 
-        async function toggleTheme() {
-            try {
-                const current = document.documentElement.getAttribute('data-theme');
-                const newTheme = current === 'dark' ? 'light' : 'dark';
-
-                // Apply theme immediately (optimistic update)
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('dashboard-theme', newTheme);
-
-                // Save to Supabase
-                const prefs = await API.getPreferences();
-                prefs.theme = newTheme;
-                await API.updatePreferences(prefs);
-
-                if (window.SteadyUtils?.showToast) {
-                    SteadyUtils.showToast(`Switched to ${newTheme} mode`, 'success');
-                }
-
-                console.log(`✅ Theme updated to: ${newTheme}`);
-
-            } catch (error) {
-                console.error('Failed to update theme:', error);
-                if (window.SteadyUtils?.showToast) {
-                    SteadyUtils.showToast('Failed to save theme preference', 'error');
-                }
-            }
-        }
-
         function setupNavigation() {
-            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
+            document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
@@ -776,33 +643,10 @@
 
         function setupUserMenu() {
             const menu = document.getElementById('userMenu');
-            const dropdown = document.getElementById('profileDropdown');
             
-            menu.onclick = (e) => {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
-            };
-            
-            document.addEventListener('click', () => dropdown.classList.remove('show'));
-            
-            document.getElementById('darkModeToggle').onclick = (e) => {
-                e.stopPropagation();
-                toggleTheme();
-            };
-            
-            dropdown.querySelector('[data-page="settings"]').addEventListener('click', () => {
+            // Click profile pic = go to Settings
+            menu.onclick = () => {
                 loadPage('settings');
-                dropdown.classList.remove('show');
-            });
-            
-            document.getElementById('logoutBtn').onclick = async () => {
-                if (!confirm('Logout?')) return;
-                try {
-                    await API.logout();
-                } catch (e) {
-                    console.error('Logout error:', e);
-                }
-                window.location.href = '/auth/login.html';
             };
         }
 
@@ -846,11 +690,12 @@
     </script>
 
     <script src="/dashboard/shared/js/utils.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Dashboard.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Leads.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Pipeline.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Scheduling.js"></script>
-    <script src="/dashboard/tiers/free/scripts/Settings.js"></script>
-    <script src="/dashboard/tiers/free/scripts/upgrade.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Dashboard.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Leads.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Pipeline.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Scheduling.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Jobs.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Goals.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Settings.js"></script>
 </body>
 </html>

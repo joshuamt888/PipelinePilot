@@ -694,7 +694,6 @@ window.SettingsModule = {
             container.innerHTML = `
                 <div class="loading-state">
                     <div class="loader"></div>
-                    <p class="loading-text">Loading settings...</p>
                 </div>
             `;
         }

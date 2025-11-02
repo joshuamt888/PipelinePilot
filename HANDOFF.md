@@ -92,7 +92,7 @@
 │               └── /scripts
 │                   ├── Shell.js       ✅ Navigation manager
 │                   ├── Dashboard.js   ✅ CSS embedded (copied from free)
-│                   ├── AddLead.js     ✅ CSS embedded (copied from free)
+│                   ├── Leads.js     ✅ CSS embedded (copied from free)
 │                   ├── Pipeline.js    ✅ CSS embedded (copied from free)
 │                   ├── Scheduling.js  ✅ CSS embedded (copied from free)
 │                   ├── Settings.js    ✅ CSS embedded (copied from free)
