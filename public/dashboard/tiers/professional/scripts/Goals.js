@@ -2588,6 +2588,10 @@ window.GoalsModule = {
     color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    max-width: 100%;
 }
 
 .goals-update-current {
