@@ -1685,12 +1685,14 @@ window.PipelineModule = {
                     .modal-body { padding: 1.5rem; max-height: 50vh; }
                 }
 
-                /* Ensure icons inherit button color by default */
-                .action-btn svg,
-                .value-edit-btn svg,
-                .loss-edit-btn svg {
-                    color: currentColor;
-                    stroke: currentColor;
+                /* Light mode - keep icons blue/primary color */
+                @media (prefers-color-scheme: light) {
+                    .action-btn svg,
+                    .value-edit-btn svg,
+                    .loss-edit-btn svg {
+                        color: var(--primary);
+                        stroke: var(--primary);
+                    }
                 }
 
                 /* Dark mode - make pencil/edit icons white */
@@ -1698,8 +1700,8 @@ window.PipelineModule = {
                     .action-btn svg,
                     .value-edit-btn svg,
                     .loss-edit-btn svg {
-                        color: #ffffff !important;
-                        stroke: #ffffff !important;
+                        color: #ffffff;
+                        stroke: #ffffff;
                     }
                 }
             </style>
