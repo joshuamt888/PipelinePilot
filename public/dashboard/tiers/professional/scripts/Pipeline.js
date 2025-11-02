@@ -425,7 +425,6 @@ window.PipelineModule = {
 
         return `
             <div class="empty-state">
-                <i data-lucide="${stage.icon}" class="empty-icon" style="width: 48px; height: 48px;"></i>
                 <div class="empty-title">No ${stage.name.toLowerCase()} yet</div>
                 <div class="empty-subtitle">Drag leads here or add new ones</div>
             </div>
@@ -1684,6 +1683,16 @@ window.PipelineModule = {
                     .monthly-progress { min-width: auto; }
                     .search-input { font-size: 16px; }
                     .modal-body { padding: 1.5rem; max-height: 50vh; }
+                }
+
+                /* Dark mode - make pencil/edit icons white */
+                @media (prefers-color-scheme: dark) {
+                    .action-btn svg,
+                    .value-edit-btn svg,
+                    .loss-edit-btn svg {
+                        color: #ffffff;
+                        stroke: #ffffff;
+                    }
                 }
             </style>
         `;
