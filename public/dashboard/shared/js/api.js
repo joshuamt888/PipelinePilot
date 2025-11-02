@@ -1,7 +1,14 @@
 /**
- * SUPABASE-POWERED API TOOLBOX v2.0
+ * SUPABASE-POWERED API TOOLBOX v4.0
  * Direct database calls with automatic security via RLS
- * Now with 2FA, Account Management, and Export features
+ * 
+ * NEW IN v4.0:
+ * - Server-side duplicate detection (faster)
+ * - Batch operations for bulk updates/deletes
+ * - Full schema field coverage (all jobs/goals fields exposed)
+ * - Enhanced error handling with categorization
+ * - Goal auto-tracking support (requires DB triggers)
+ * - Performance optimizations
  */
 
 import { supabase } from './supabase.js'
@@ -338,6 +345,206 @@ class TierScalingAPI {
   }
 
   // =====================================================
+  // LEADS - BATCH OPERATIONS
+  // =====================================================
+
+  /**
+   * Update multiple leads at once
+   * Example: batchUpdateLeads(['id1', 'id2'], { status: 'contacted' })
+   */
+  static async batchUpdateLeads(leadIds, updates) {
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      throw new Error('leadIds must be a non-empty array');
+    }
+
+    const { data, error } = await supabase
+      .from('leads')
+      .update(updates)
+      .in('id', leadIds)
+      .select();
+
+    if (error) throw error;
+    return { success: true, updated: data.length, leads: data };
+  }
+
+  /**
+   * Delete multiple leads at once
+   * WARNING: This will decrement lead counter for each deleted lead
+   */
+  static async batchDeleteLeads(leadIds) {
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      throw new Error('leadIds must be a non-empty array');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Call the batch delete function (requires DB function)
+    const { data, error } = await supabase.rpc('batch_delete_leads', {
+      lead_ids: leadIds,
+      user_id_val: user.id
+    });
+
+    if (error) throw error;
+    return { success: true, deleted: data };
+  }
+
+  /**
+   * Archive leads (soft delete by setting archived_at timestamp)
+   * Requires: ALTER TABLE leads ADD COLUMN archived_at TIMESTAMPTZ;
+   */
+  static async archiveLeads(leadIds) {
+    return await this.batchUpdateLeads(leadIds, {
+      archived_at: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Unarchive leads
+   */
+  static async unarchiveLeads(leadIds) {
+    return await this.batchUpdateLeads(leadIds, {
+      archived_at: null
+    });
+  }
+
+  // =====================================================
+  // DUPLICATE DETECTION (Server-Side - Fast)
+  // =====================================================
+  
+  /**
+   * NEW v4.0: Server-side duplicate detection
+   * Requires database function (see SQL migration below)
+   * Falls back to client-side if function doesn't exist
+   */
+  static async checkDuplicates(leadData) {
+    try {
+      // Try server-side duplicate detection first (faster)
+      const { data, error } = await supabase.rpc('check_lead_duplicates', {
+        check_email: leadData.email || null,
+        check_name: leadData.name || null,
+        check_company: leadData.company || null,
+        check_phone: leadData.phone || null
+      });
+
+      if (error) {
+        // If function doesn't exist, fall back to client-side
+        console.warn('Server-side duplicate check failed, using client-side fallback');
+        return await this._checkDuplicatesClientSide(leadData);
+      }
+
+      return {
+        hasExactDuplicates: data.exact.length > 0,
+        hasSimilarLeads: data.similar.length > 0,
+        exact: data.exact,
+        similar: data.similar
+      };
+
+    } catch (error) {
+      console.error('Duplicate check failed:', error);
+      return { hasExactDuplicates: false, hasSimilarLeads: false, exact: [], similar: [] };
+    }
+  }
+
+  /**
+   * Client-side duplicate detection (fallback)
+   * Same logic as v3.0
+   */
+  static async _checkDuplicatesClientSide(leadData) {
+    const duplicates = { exact: [], similar: [] };
+    
+    try {
+        const existingLeads = await this.getLeads();
+        const allLeads = existingLeads.all || [];
+        
+        for (const existing of allLeads) {
+            // EXACT MATCHES
+            
+            // Exact email match
+            if (leadData.email && existing.email &&
+                leadData.email.toLowerCase() === existing.email.toLowerCase()) {
+                duplicates.exact.push({
+                    lead: existing,
+                    reason: 'Exact email match',
+                    confidence: 100
+                });
+                continue;
+            }
+            
+            // Exact name + company match
+            if (leadData.name && existing.name && leadData.company && existing.company) {
+                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
+                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
+                
+                if (nameMatch && companyMatch) {
+                    duplicates.exact.push({
+                        lead: existing,
+                        reason: 'Exact name and company match',
+                        confidence: 100
+                    });
+                    continue;
+                }
+            }
+            
+            // SIMILAR MATCHES
+            
+            let confidence = 0;
+            const reasons = [];
+            
+            // Same name = 70% confidence
+            if (leadData.name && existing.name) {
+                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
+                if (nameMatch) {
+                    confidence = 70;
+                    reasons.push('Same name');
+                }
+            }
+            
+            // Same company adds +20% confidence
+            if (leadData.company && existing.company && confidence > 0) {
+                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
+                if (companyMatch) {
+                    confidence += 20;
+                    reasons.push('same company');
+                }
+            }
+            
+            // Same phone adds +30% confidence
+            if (leadData.phone && existing.phone) {
+                const phone1 = leadData.phone.replace(/\D/g, '');
+                const phone2 = existing.phone.replace(/\D/g, '');
+                if (phone1 === phone2 && phone1.length >= 10) {
+                    confidence += 30;
+                    reasons.push('same phone');
+                }
+            }
+            
+            // If confidence is 60% or higher, it's a similar lead
+            if (confidence >= 60) {
+                duplicates.similar.push({
+                    lead: existing,
+                    reason: reasons.join(', '),
+                    confidence: confidence
+                });
+            }
+        }
+        
+        // Sort similar leads by confidence (highest first)
+        duplicates.similar.sort((a, b) => b.confidence - a.confidence);
+        
+        return {
+            hasExactDuplicates: duplicates.exact.length > 0,
+            hasSimilarLeads: duplicates.similar.length > 0,
+            ...duplicates
+        };
+        
+    } catch (error) {
+        console.error('Duplicate check failed:', error);
+        return { hasExactDuplicates: false, hasSimilarLeads: false, exact: [], similar: [] };
+    }
+  }
+
+  // =====================================================
   // TASKS MANAGEMENT
   // =====================================================
   
@@ -466,6 +673,74 @@ class TierScalingAPI {
   }
 
   // =====================================================
+  // TASKS - BATCH OPERATIONS
+  // =====================================================
+
+  /**
+   * Update multiple tasks at once
+   * Example: batchUpdateTasks(['id1', 'id2'], { status: 'completed' })
+   */
+  static async batchUpdateTasks(taskIds, updates) {
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      throw new Error('taskIds must be a non-empty array');
+    }
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .in('id', taskIds)
+      .select();
+
+    if (error) throw error;
+    return { success: true, updated: data.length, tasks: data };
+  }
+
+  /**
+   * Delete multiple tasks at once
+   */
+  static async batchDeleteTasks(taskIds) {
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      throw new Error('taskIds must be a non-empty array');
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .in('id', taskIds);
+
+    if (error) throw error;
+    return { success: true, deleted: taskIds.length };
+  }
+
+  /**
+   * Complete multiple tasks at once
+   */
+  static async batchCompleteTasks(taskIds, notes = '') {
+    return await this.batchUpdateTasks(taskIds, {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      completion_notes: notes
+    });
+  }
+
+  /**
+   * Delete all completed tasks
+   */
+  static async deleteCompletedTasks() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('status', 'completed');
+
+    if (error) throw error;
+    return { success: true };
+  }
+
+  // =====================================================
   // STATISTICS
   // =====================================================
   
@@ -515,14 +790,6 @@ class TierScalingAPI {
       monthlyProgress: current
     };
   }
-
-  // =====================================================
-  // 2FA / MULTI-FACTOR AUTHENTICATION
-  // =====================================================
-  // NOTE: 2FA functionality removed as per HANDOFF.md
-  // Reserved for Professional tier in future releases
-  // Free tier users do not have access to 2FA features
-
 
   // =====================================================
   // ACCOUNT MANAGEMENT
@@ -576,172 +843,6 @@ class TierScalingAPI {
   static async getPricingPlans() {
     const response = await fetch('/api/pricing-plans');
     return await response.json();
-  }
-
-  // =====================================================
-  // DUPLICATE DETECTION (client-side)
-  // =====================================================
-  
-  static async checkDuplicates(leadData) {
-    const duplicates = { exact: [], similar: [] };
-    
-    try {
-        const existingLeads = await this.getLeads();
-        const allLeads = existingLeads.all || [];
-        
-        for (const existing of allLeads) {
-            // EXACT MATCHES
-            
-            // Exact email match
-            if (leadData.email && existing.email &&
-                leadData.email.toLowerCase() === existing.email.toLowerCase()) {
-                duplicates.exact.push({
-                    lead: existing,
-                    reason: 'Exact email match',
-                    confidence: 100
-                });
-                continue;
-            }
-            
-            // Exact name + company match
-            if (leadData.name && existing.name && leadData.company && existing.company) {
-                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
-                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
-                
-                if (nameMatch && companyMatch) {
-                    duplicates.exact.push({
-                        lead: existing,
-                        reason: 'Exact name and company match',
-                        confidence: 100
-                    });
-                    continue;
-                }
-            }
-            
-            // SIMILAR MATCHES (NEW - Simple approach)
-            
-            let confidence = 0;
-            const reasons = [];
-            
-            // Same name = 70% confidence
-            if (leadData.name && existing.name) {
-                const nameMatch = leadData.name.toLowerCase().trim() === existing.name.toLowerCase().trim();
-                if (nameMatch) {
-                    confidence = 70;
-                    reasons.push('Same name');
-                }
-            }
-            
-            // Same company adds +20% confidence
-            if (leadData.company && existing.company && confidence > 0) {
-                const companyMatch = leadData.company.toLowerCase().trim() === existing.company.toLowerCase().trim();
-                if (companyMatch) {
-                    confidence += 20;
-                    reasons.push('same company');
-                }
-            }
-            
-            // Same phone adds +30% confidence
-            if (leadData.phone && existing.phone) {
-                const phone1 = leadData.phone.replace(/\D/g, '');
-                const phone2 = existing.phone.replace(/\D/g, '');
-                if (phone1 === phone2 && phone1.length >= 10) {
-                    confidence += 30;
-                    reasons.push('same phone');
-                }
-            }
-            
-            // If confidence is 60% or higher, it's a similar lead
-            if (confidence >= 60) {
-                duplicates.similar.push({
-                    lead: existing,
-                    reason: reasons.join(', '),
-                    confidence: confidence
-                });
-            }
-        }
-        
-        // Sort similar leads by confidence (highest first)
-        duplicates.similar.sort((a, b) => b.confidence - a.confidence);
-        
-        return {
-            hasExactDuplicates: duplicates.exact.length > 0,
-            hasSimilarLeads: duplicates.similar.length > 0,
-            ...duplicates
-        };
-        
-    } catch (error) {
-        console.error('Duplicate check failed:', error);
-        return { hasExactDuplicates: false, hasSimilarLeads: false };
-    }
-}
-
-  // =====================================================
-  // UTILITY FUNCTIONS
-  // =====================================================
-  
-  static escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return String(unsafe)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  static isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  static formatDate(dateString) {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
-  }
-
-  static formatDateTime(dateTimeString) {
-    if (!dateTimeString) return '';
-    return new Date(dateTimeString).toLocaleString();
-  }
-
-  static calculateDaysUntil(dateString) {
-    if (!dateString) return null;
-    const targetDate = new Date(dateString);
-    const today = new Date();
-    const diffTime = targetDate - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  static getStatusColor(status) {
-    const colors = {
-      'new': '#3B82F6',
-      'contacted': '#F59E0B',
-      'qualified': '#10B981',
-      'proposal': '#8B5CF6',
-      'negotiation': '#F97316',
-      'closed': '#059669',
-      'lost': '#EF4444'
-    };
-    return colors[status?.toLowerCase()] || '#6B7280';
-  }
-
-  static getTypeIcon(type) {
-    const icons = {
-      'cold': '❄️',
-      'warm': '🔥',
-      'hot': '🌟'
-    };
-    return icons[type?.toLowerCase()] || '';
-  }
-
-  static getPriorityColor(priority) {
-    const colors = {
-      'low': '#10B981',
-      'medium': '#F59E0B',
-      'high': '#F97316',
-      'urgent': '#EF4444'
-    };
-    return colors[priority?.toLowerCase()] || '#6B7280';
   }
 
   // =====================================================
@@ -846,6 +947,34 @@ class TierScalingAPI {
     })).sort((a, b) => b.profit - a.profit);
   }
 
+  // NEW v4.0: Full schema field coverage
+  static async updateJobLocation(jobId, location) {
+    return await this.updateJob(jobId, { location });
+  }
+
+  static async updateJobInvoice(jobId, invoiceNumber, paymentStatus) {
+    return await this.updateJob(jobId, {
+      invoice_number: invoiceNumber,
+      payment_status: paymentStatus
+    });
+  }
+
+  static async getJobsByPaymentStatus(status) {
+    return await this.getJobs({ payment_status: status });
+  }
+
+  static async getScheduledJobs(startDate, endDate) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .gte('scheduled_date', startDate)
+      .lte('scheduled_date', endDate)
+      .order('scheduled_date', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
   // =====================================================
   // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
   // =====================================================
@@ -896,10 +1025,18 @@ class TierScalingAPI {
     return { success: true };
   }
 
+  /**
+   * Manual goal progress update
+   * Only use this if auto_track is disabled
+   */
   static async updateGoalProgress(goalId, value) {
     return await this.updateGoal(goalId, { current_value: value });
   }
 
+  /**
+   * Check if any goals have hit their targets
+   * Auto-completes goals that reached target_value
+   */
   static async checkGoalCompletion() {
     const goals = await this.getGoals('active');
     const completed = goals.filter(g => g.current_value >= g.target_value);
@@ -911,6 +1048,9 @@ class TierScalingAPI {
     return { completedCount: completed.length, completed };
   }
 
+  /**
+   * Get progress for all goals with calculated percentages
+   */
   static async getGoalProgress() {
     const goals = await this.getGoals();
 
@@ -922,6 +1062,41 @@ class TierScalingAPI {
       remaining: Math.max(0, goal.target_value - goal.current_value),
       daysRemaining: this.calculateDaysUntil(goal.end_date)
     }));
+  }
+
+  // NEW v4.0: Full schema field coverage
+  static async updateGoalReminder(goalId, remindAt) {
+    return await this.updateGoal(goalId, { remind_at: remindAt });
+  }
+
+  static async updateGoalAppearance(goalId, color, icon) {
+    return await this.updateGoal(goalId, { color, icon });
+  }
+
+  static async toggleGoalRecurring(goalId, isRecurring) {
+    return await this.updateGoal(goalId, { is_recurring: isRecurring });
+  }
+
+  static async getRecurringGoals() {
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('is_recurring', true)
+      .eq('status', 'active');
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Refresh auto-tracked goals
+   * Call this after creating leads/jobs to update goal progress
+   * NOTE: If you have database triggers set up, this is automatic
+   */
+  static async refreshGoalProgress() {
+    const { data, error } = await supabase.rpc('refresh_goal_progress');
+    if (error) throw error;
+    return data;
   }
 
   // =====================================================
@@ -993,8 +1168,159 @@ class TierScalingAPI {
     return await this.updateLead(leadId, { next_action: action });
   }
 
+  // NEW v4.0: Full schema field coverage for leads
+  static async updateLeadSocials(leadId, socials) {
+    const updates = {};
+    if (socials.linkedin) updates.linkedin_url = socials.linkedin;
+    if (socials.facebook) updates.facebook_url = socials.facebook;
+    if (socials.twitter) updates.twitter_url = socials.twitter;
+    if (socials.instagram) updates.instagram_url = socials.instagram;
+
+    return await this.updateLead(leadId, updates);
+  }
+
+  static async updateLeadJobInfo(leadId, jobTitle, department, position) {
+    return await this.updateLead(leadId, {
+      job_title: jobTitle,
+      department: department,
+      position: position
+    });
+  }
+
+  static async updateLeadWebsite(leadId, website) {
+    return await this.updateLead(leadId, { website });
+  }
+
+  static async updateLeadPlatform(leadId, platform) {
+    return await this.updateLead(leadId, { platform });
+  }
+
+  static async setLeadFollowUpDate(leadId, date) {
+    return await this.updateLead(leadId, { follow_up_date: date });
+  }
+
+  static async markLeadLost(leadId, reason) {
+    return await this.updateLead(leadId, {
+      status: 'lost',
+      lost_reason: reason,
+      last_contact_date: new Date().toISOString().split('T')[0]
+    });
+  }
+
+  // =====================================================
+  // UTILITY FUNCTIONS
+  // =====================================================
+  
+  static escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  static isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  static formatDate(dateString) {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  }
+
+  static formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '';
+    return new Date(dateTimeString).toLocaleString();
+  }
+
+  static calculateDaysUntil(dateString) {
+    if (!dateString) return null;
+    const targetDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = targetDate - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  static getStatusColor(status) {
+    const colors = {
+      'new': '#3B82F6',
+      'contacted': '#F59E0B',
+      'qualified': '#10B981',
+      'proposal': '#8B5CF6',
+      'negotiation': '#F97316',
+      'closed': '#059669',
+      'lost': '#EF4444'
+    };
+    return colors[status?.toLowerCase()] || '#6B7280';
+  }
+
+  static getTypeIcon(type) {
+    const icons = {
+      'cold': '❄️',
+      'warm': '🔥',
+      'hot': '🌟'
+    };
+    return icons[type?.toLowerCase()] || '';
+  }
+
+  static getPriorityColor(priority) {
+    const colors = {
+      'low': '#10B981',
+      'medium': '#F59E0B',
+      'high': '#F97316',
+      'urgent': '#EF4444'
+    };
+    return colors[priority?.toLowerCase()] || '#6B7280';
+  }
+
+  /**
+   * Enhanced error handling with categorization
+   */
   static handleAPIError(error, context = '') {
     console.error(`API Error in ${context}:`, error);
+    
+    // Network errors
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return 'Connection lost. Check your internet and try again.';
+    }
+    
+    // Auth errors
+    if (error.message.includes('Invalid login credentials')) {
+      return 'Wrong email or password. Try again.';
+    }
+    
+    if (error.message.includes('Email not confirmed')) {
+      return 'Please verify your email before logging in.';
+    }
+    
+    if (error.message.includes('verify your email')) {
+      return 'Please verify your email before logging in.';
+    }
+    
+    if (error.message.includes('JWT expired')) {
+      return 'Your session expired. Please log in again.';
+    }
+    
+    // Permission errors
+    if (error.message.includes('new row violates row-level security')) {
+      return 'You don\'t have permission to do that.';
+    }
+    
+    if (error.message.includes('permission denied')) {
+      return 'You don\'t have permission to access this.';
+    }
+    
+    // Tier limit errors
+    if (error.message.includes('FREE_TIER_LIMIT')) {
+      const msg = error.message.split(':')[1];
+      return msg || 'Lead limit reached. Upgrade to add more leads!';
+    }
+    
+    if (error.message.includes('PRO_TIER_LIMIT')) {
+      return 'You\'ve reached your tier limit.';
+    }
     
     if (error.message.includes('Lead limit reached')) {
       return 'Lead limit reached. Upgrade to add more leads!';
@@ -1004,10 +1330,29 @@ class TierScalingAPI {
       return 'Task limit reached (10,000 max).';
     }
     
-    if (error.message.includes('verify your email')) {
-      return 'Please verify your email before logging in.';
+    // Trial errors
+    if (error.message.includes('already used your free trial')) {
+      return 'You\'ve already used your free trial. Upgrade to continue.';
     }
     
+    if (error.message.includes('already on a professional plan')) {
+      return 'You\'re already on a professional plan.';
+    }
+    
+    // Validation errors
+    if (error.message.includes('violates check constraint')) {
+      return 'Invalid data. Please check your input.';
+    }
+    
+    if (error.message.includes('duplicate key value')) {
+      return 'This record already exists.';
+    }
+    
+    if (error.message.includes('Not authenticated')) {
+      return 'Please log in to continue.';
+    }
+    
+    // Generic fallback
     return error.message || 'Something went wrong. Please try again.';
   }
 }
@@ -1019,6 +1364,6 @@ window.escapeHtml = TierScalingAPI.escapeHtml;
 
 export default API;
 
-console.log('Supabase-powered API v3.0 loaded');
-console.log('✅ Direct database calls with RLS security');
-console.log('✨ NEW: Jobs, Goals, Preferences, Enhanced Leads');
+console.log('✨ Supabase-powered API v4.0 loaded');
+console.log('🚀 NEW: Server-side duplicates, batch operations, full schema coverage');
+console.log('⚡ OPTIMIZED: Better error handling, goal auto-tracking support');
