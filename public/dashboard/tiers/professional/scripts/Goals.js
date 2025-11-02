@@ -1555,26 +1555,12 @@ window.GoalsModule = {
     overflow: hidden;
 }
 
-.goals-banner::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--gradient-primary);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.goals-banner:hover::before, .goals-banner.active::before {
-    opacity: 1;
-}
+/* Top banner removed - using only border outline on hover */
 
 .goals-banner:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary);
+    border-color: #667eea; /* Always blue outline on hover */
 }
 
 .goals-banner.active {
