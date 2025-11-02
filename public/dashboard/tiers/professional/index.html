@@ -585,13 +585,13 @@
         async function initializeShell() {
             try {
                 if (!API) throw new Error('API failed to load');
-                
+
                 const { authenticated } = await API.checkAuth();
                 if (!authenticated) {
                     window.location.href = '/auth/login.html';
                     return;
                 }
-                
+
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.user?.email_confirmed_at) {
                     window.location.href = '/auth/resend-verification.html';
@@ -600,16 +600,43 @@
 
                 const profile = await API.getProfile();
                 if (!profile?.id) throw new Error('Invalid profile');
-                
+
                 appState.profile = profile;
                 loadUserProfile(profile);
-                
+
+                // Load and apply user preferences
+                await loadUserPreferences();
+
                 console.log('✅ Shell initialized');
-                await loadPage('dashboard');
-                
+
             } catch (error) {
                 console.error('❌ Shell init failed:', error);
                 showError(API.handleAPIError(error, 'Shell'));
+            }
+        }
+
+        async function loadUserPreferences() {
+            try {
+                const prefs = await API.getPreferences();
+
+                // Apply theme
+                const theme = prefs.theme || 'light';
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('dashboard-theme', theme);
+
+                // Store windowing preference globally
+                window.windowingEnabled = prefs.windowing_enabled || false;
+
+                // Load default view
+                const defaultView = prefs.default_view || 'dashboard';
+                await loadPage(defaultView);
+
+                console.log(`✅ Preferences loaded - Theme: ${theme}, Default: ${defaultView}, Windowing: ${window.windowingEnabled}`);
+
+            } catch (error) {
+                console.error('Failed to load preferences:', error);
+                // Fallback to defaults
+                await loadPage('dashboard');
             }
         }
 
@@ -702,13 +729,31 @@
             return name.substring(0, 2).toUpperCase();
         }
 
-        function toggleTheme() {
-            const current = document.documentElement.getAttribute('data-theme');
-            const newTheme = current === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('dashboard-theme', newTheme);
-            if (window.SteadyUtils?.showToast) {
-                SteadyUtils.showToast(`Switched to ${newTheme} mode`, 'success');
+        async function toggleTheme() {
+            try {
+                const current = document.documentElement.getAttribute('data-theme');
+                const newTheme = current === 'dark' ? 'light' : 'dark';
+
+                // Apply theme immediately (optimistic update)
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('dashboard-theme', newTheme);
+
+                // Save to Supabase
+                const prefs = await API.getPreferences();
+                prefs.theme = newTheme;
+                await API.updatePreferences(prefs);
+
+                if (window.SteadyUtils?.showToast) {
+                    SteadyUtils.showToast(`Switched to ${newTheme} mode`, 'success');
+                }
+
+                console.log(`✅ Theme updated to: ${newTheme}`);
+
+            } catch (error) {
+                console.error('Failed to update theme:', error);
+                if (window.SteadyUtils?.showToast) {
+                    SteadyUtils.showToast('Failed to save theme preference', 'error');
+                }
             }
         }
 
