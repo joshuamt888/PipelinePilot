@@ -2287,12 +2287,13 @@ window.GoalsModule = {
     cursor: pointer;
     padding: 1rem;
     background: var(--background);
+    border: 2px solid transparent;
     border-radius: var(--radius-lg);
-    transition: background 0.2s ease;
+    transition: border-color 0.2s ease;
 }
 
 .goals-checkbox-v2:hover {
-    background: var(--surface);
+    border-color: var(--primary);
 }
 
 .goals-checkbox-v2 input {
