@@ -12,7 +12,7 @@
         })();
     </script>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
-    <title>SteadyManager Pro - Dashboard</title>
+    <title>SteadyManager Professional</title>
 
     <link rel="stylesheet" href="/dashboard/shared/styles/SteadyManager.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -23,8 +23,6 @@
             --primary-dark: #4f46e5;
             --primary-light: #818cf8;
             --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --gradient-success: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
 
             --success: #10b981;
             --warning: #f59e0b;
@@ -43,12 +41,11 @@
             --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
             --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
             --radius: 8px;
             --radius-lg: 16px;
             --radius-xl: 24px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: all 0.2s ease;
         }
 
         [data-theme="dark"] {
@@ -61,11 +58,6 @@
             --border: #374151;
             --primary: #818cf8;
             --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
         * {
@@ -103,43 +95,6 @@
             transition: var(--transition);
         }
 
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes glow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
         /* Sidebar */
         .sidebar {
             position: fixed;
@@ -150,28 +105,10 @@
             background: var(--gradient-primary);
             z-index: 1000;
             overflow-y: auto;
-            box-shadow: var(--shadow-2xl);
+            box-shadow: var(--shadow-xl);
             transition: var(--transition);
             display: flex;
             flex-direction: column;
-            animation: slideInLeft 0.5s ease;
-        }
-
-        /* Animated gradient background */
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg,
-                rgba(102, 126, 234, 0.8) 0%,
-                rgba(118, 75, 162, 0.9) 50%,
-                rgba(240, 147, 251, 0.8) 100%);
-            opacity: 0;
-            animation: glow 8s ease-in-out infinite;
-            pointer-events: none;
         }
 
         .sidebar-content {
@@ -179,8 +116,6 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            position: relative;
-            z-index: 1;
         }
 
         .sidebar-header {
@@ -196,19 +131,6 @@
             color: white;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             letter-spacing: -0.02em;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        .pro-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-top: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .sidebar-nav {
@@ -235,37 +157,19 @@
             margin: 0 0.75rem;
             border-radius: var(--radius-lg);
             position: relative;
-            overflow: hidden;
-        }
-
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .nav-link:hover::before {
-            left: 100%;
         }
 
         .nav-link:hover {
             background: rgba(255, 255, 255, 0.15);
             color: white;
-            transform: translateX(8px) scale(1.02);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transform: translateX(4px);
         }
 
         .nav-link.active {
             background: rgba(255, 255, 255, 0.25);
             color: white;
             font-weight: 700;
-            transform: translateX(8px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            transform: translateX(4px);
         }
 
         .nav-link.active::after {
@@ -278,7 +182,6 @@
             height: 60%;
             background: white;
             border-radius: 9999px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
 
         .nav-emoji {
@@ -286,51 +189,73 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
         }
 
-        .upgrade-nav-item {
-            margin: 1.5rem 0.75rem 1rem;
+        .nav-shortcut {
+            margin-left: auto;
+            font-size: 0.75rem;
+            opacity: 0.6;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
         }
 
-        .upgrade-nav-link {
+        /* Dark Mode Toggle in Sidebar */
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            margin-top: auto;
+        }
+
+        .theme-toggle-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: var(--radius-xl);
-            color: white;
-            text-decoration: none;
-            font-weight: 800;
-            font-size: 0.95rem;
-            transition: var(--transition);
+            justify-content: space-between;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
             cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle-container:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .theme-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .theme-switch {
             position: relative;
-            overflow: hidden;
+            width: 48px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 9999px;
+            transition: var(--transition);
         }
 
-        .upgrade-nav-link::before {
-            content: '';
+        .theme-switch.active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .theme-slider {
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
-            transform: scale(0);
-            transition: transform 0.5s ease;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .upgrade-nav-link:hover::before {
-            transform: scale(1);
-        }
-
-        .upgrade-nav-link:hover {
-            background: rgba(255, 255, 255, 0.25);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        .theme-switch.active .theme-slider {
+            transform: translateX(24px);
         }
 
         /* Main Content */
@@ -342,18 +267,14 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            animation: slideInRight 0.5s ease;
         }
 
         .page-content {
             display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
         }
 
         .page-content.active {
             display: block;
-            animation: fadeIn 0.4s ease forwards;
         }
 
         /* Header */
@@ -367,7 +288,6 @@
             height: 80px;
             flex-shrink: 0;
             z-index: 100;
-            backdrop-filter: blur(20px);
             box-shadow: var(--shadow-sm);
         }
 
@@ -378,44 +298,16 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             cursor: pointer;
-            padding: 0.5rem 1.5rem 0.5rem 1rem;
+            padding: 0.5rem 1rem;
             border-radius: var(--radius-lg);
             transition: var(--transition);
-            border: 2px solid transparent;
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .header-title::before {
-            content: '⛶';
-            font-size: 1.2rem;
-            opacity: 0;
-            transition: all 0.3s ease;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            transform: scale(0);
         }
 
         .header-title:hover {
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 30px rgba(102, 126, 234, 0.4);
-            transform: scale(1.05);
-        }
-
-        .header-title:hover::before {
-            opacity: 1;
-            transform: scale(1);
+            transform: scale(1.02);
         }
 
         /* User Menu */
-        .user-menu-container {
-            position: relative;
-            z-index: 999999;
-        }
-
         .user-menu {
             display: flex;
             align-items: center;
@@ -426,23 +318,6 @@
             cursor: pointer;
             transition: var(--transition);
             border: 2px solid var(--border);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .user-menu::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, var(--surface-hover), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .user-menu:hover::before {
-            left: 100%;
         }
 
         .user-menu:hover {
@@ -463,20 +338,6 @@
             font-weight: 800;
             font-size: 1rem;
             box-shadow: var(--shadow);
-            position: relative;
-        }
-
-        .user-avatar::after {
-            content: '';
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 10px;
-            height: 10px;
-            background: var(--success);
-            border-radius: 50%;
-            border: 2px solid var(--surface);
-            animation: glow 2s ease-in-out infinite;
         }
 
         .user-info {
@@ -492,175 +353,8 @@
 
         .user-tier {
             font-size: 0.8rem;
-            background: var(--gradient-success);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-        }
-
-        /* Profile Dropdown - REDESIGNED */
-        .profile-dropdown {
-            position: fixed !important;
-            top: 90px !important;
-            right: 2rem !important;
-            width: 280px !important;
-            background: var(--surface) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: var(--radius-xl) !important;
-            box-shadow: var(--shadow-2xl) !important;
-            overflow: hidden !important;
-            z-index: 2147483647 !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            transform: translateY(-10px) scale(0.95) !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            backdrop-filter: blur(20px) !important;
-        }
-
-        .profile-dropdown.show {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateY(0) scale(1) !important;
-        }
-
-        .dropdown-header {
-            padding: 1.5rem !important;
-            background: var(--gradient-primary) !important;
-            color: white !important;
-            text-align: center !important;
-        }
-
-        .dropdown-avatar {
-            width: 60px !important;
-            height: 60px !important;
-            border-radius: 50% !important;
-            background: rgba(255, 255, 255, 0.2) !important;
-            backdrop-filter: blur(10px) !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 auto 0.75rem !important;
-            font-size: 1.5rem !important;
-            font-weight: 800 !important;
-            border: 3px solid rgba(255, 255, 255, 0.3) !important;
-        }
-
-        .dropdown-name {
-            font-weight: 700 !important;
-            font-size: 1rem !important;
-            margin-bottom: 0.25rem !important;
-        }
-
-        .dropdown-tier {
-            font-size: 0.85rem !important;
-            opacity: 0.9 !important;
-        }
-
-        .dropdown-divider {
-            height: 1px !important;
-            background: var(--border) !important;
-            margin: 0.5rem 0 !important;
-        }
-
-        .dropdown-section {
-            padding: 0.5rem !important;
-        }
-
-        .dropdown-section-title {
-            font-size: 0.75rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.05em !important;
-            color: var(--text-tertiary) !important;
-            padding: 0.5rem 1rem !important;
-        }
-
-        .dropdown-item {
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.875rem !important;
-            padding: 0.875rem 1rem !important;
-            color: var(--text-primary) !important;
-            cursor: pointer !important;
-            transition: var(--transition) !important;
-            font-size: 0.9rem !important;
-            font-weight: 500 !important;
-            border-radius: var(--radius) !important;
-            margin: 0 0.5rem !important;
-        }
-
-        .dropdown-item:hover {
-            background: var(--surface-hover) !important;
-            transform: translateX(4px) !important;
-        }
-
-        .dropdown-item-icon {
-            font-size: 1.1rem !important;
-            width: 24px !important;
-            text-align: center !important;
-        }
-
-        .logout-item {
-            color: var(--danger) !important;
-            font-weight: 600 !important;
-        }
-
-        .logout-item:hover {
-            background: rgba(239, 68, 68, 0.1) !important;
-        }
-
-        /* Dark Mode Toggle */
-        .theme-toggle {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            padding: 0.875rem 1rem !important;
-            margin: 0 0.5rem !important;
-            border-radius: var(--radius) !important;
-            transition: var(--transition) !important;
-        }
-
-        .theme-toggle:hover {
-            background: var(--surface-hover) !important;
-        }
-
-        .theme-toggle-label {
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.875rem !important;
-            font-size: 0.9rem !important;
-            font-weight: 500 !important;
-            color: var(--text-primary) !important;
-        }
-
-        .theme-toggle-switch {
-            position: relative !important;
-            width: 48px !important;
-            height: 24px !important;
-            background: var(--border) !important;
-            border-radius: 9999px !important;
-            cursor: pointer !important;
-            transition: var(--transition) !important;
-        }
-
-        .theme-toggle-switch.active {
-            background: var(--primary) !important;
-        }
-
-        .theme-toggle-slider {
-            position: absolute !important;
-            top: 2px !important;
-            left: 2px !important;
-            width: 20px !important;
-            height: 20px !important;
-            background: white !important;
-            border-radius: 50% !important;
-            transition: var(--transition) !important;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-        }
-
-        .theme-toggle-switch.active .theme-toggle-slider {
-            transform: translateX(24px) !important;
+            color: var(--text-secondary);
+            font-weight: 600;
         }
 
         /* Dashboard Content */
@@ -674,6 +368,53 @@
         .content-container {
             max-width: 1400px;
             margin: 0 auto;
+        }
+
+        /* Keyboard Shortcuts Hint */
+        .shortcuts-hint {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+            z-index: 9999;
+            max-width: 300px;
+        }
+
+        .shortcuts-hint.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .shortcuts-hint h4 {
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .shortcut-key {
+            background: var(--surface-hover);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            border: 1px solid var(--border);
         }
 
         /* Responsive */
@@ -705,6 +446,10 @@
             .user-info {
                 display: none;
             }
+
+            .nav-shortcut {
+                display: none;
+            }
         }
 
         @media (max-width: 640px) {
@@ -714,11 +459,6 @@
 
             .header {
                 padding: 1rem;
-            }
-
-            .profile-dropdown {
-                right: 1rem !important;
-                width: calc(100vw - 2rem) !important;
             }
         }
 
@@ -736,27 +476,14 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Glassmorphism effect for dark mode */
+        /* Dark mode enhancements */
         [data-theme="dark"] .sidebar {
-            background: linear-gradient(135deg,
-                rgba(30, 41, 59, 0.95) 0%,
-                rgba(15, 23, 42, 0.95) 50%,
-                rgba(30, 41, 59, 0.95) 100%);
-            backdrop-filter: blur(20px);
-        }
-
-        [data-theme="dark"] .user-menu {
-            background: rgba(26, 31, 46, 0.8);
-            backdrop-filter: blur(20px);
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         }
 
         [data-theme="dark"] .header {
-            background: rgba(26, 31, 46, 0.8);
+            background: rgba(26, 31, 46, 0.95);
             backdrop-filter: blur(20px);
-        }
-
-        [data-theme="dark"] .profile-dropdown {
-            background: rgba(26, 31, 46, 0.95) !important;
         }
     </style>
 </head>
@@ -764,10 +491,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-header">
-                <div class="sidebar-logo">
-                    SteadyManager
-                    <div class="pro-badge">PRO</div>
-                </div>
+                <div class="sidebar-logo">SteadyManager</div>
             </div>
 
             <nav>
@@ -776,39 +500,50 @@
                         <a href="#" class="nav-link active" data-page="dashboard">
                             <span class="nav-emoji">📊</span>
                             <span>Dashboard</span>
+                            <span class="nav-shortcut">1</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="leads">
                             <span class="nav-emoji">👥</span>
                             <span>Add Leads</span>
+                            <span class="nav-shortcut">2</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="pipeline">
                             <span class="nav-emoji">🌿</span>
                             <span>Pipeline</span>
+                            <span class="nav-shortcut">3</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="tasks">
                             <span class="nav-emoji">📋</span>
                             <span>Tasks</span>
+                            <span class="nav-shortcut">4</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="settings">
                             <span class="nav-emoji">⚙️</span>
                             <span>Settings</span>
+                            <span class="nav-shortcut">5</span>
                         </a>
                     </li>
                 </ul>
             </nav>
 
-            <div class="upgrade-nav-item">
-                <a href="#" class="upgrade-nav-link" data-page="upgrade">
-                    <span>🚀 Upgrade Plan</span>
-                </a>
+            <div class="sidebar-footer">
+                <div class="theme-toggle-container" id="sidebarThemeToggle">
+                    <div class="theme-label">
+                        <span>🌙</span>
+                        <span>Dark Mode</span>
+                    </div>
+                    <div class="theme-switch" id="sidebarThemeSwitch">
+                        <div class="theme-slider"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -817,60 +552,13 @@
         <header class="header">
             <h1 class="header-title" id="pageTitle">Dashboard</h1>
 
-            <div class="user-menu-container">
-                <div class="user-menu" id="userMenu">
-                    <div class="user-avatar" id="userAvatar">
-                        <div class="loading-spinner"></div>
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name" id="userName">Loading...</div>
-                        <div class="user-tier" id="userTier">Professional</div>
-                    </div>
+            <div class="user-menu" id="userMenu">
+                <div class="user-avatar" id="userAvatar">
+                    <div class="loading-spinner"></div>
                 </div>
-
-                <div class="profile-dropdown" id="profileDropdown">
-                    <div class="dropdown-header">
-                        <div class="dropdown-avatar" id="dropdownAvatar">JD</div>
-                        <div class="dropdown-name" id="dropdownName">Loading...</div>
-                        <div class="dropdown-tier" id="dropdownTier">Professional Plan</div>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <div class="dropdown-section">
-                        <div class="theme-toggle" id="darkModeToggle">
-                            <div class="theme-toggle-label">
-                                <span class="dropdown-item-icon">🌙</span>
-                                <span>Dark Mode</span>
-                            </div>
-                            <div class="theme-toggle-switch" id="themeSwitch">
-                                <div class="theme-toggle-slider"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <div class="dropdown-section">
-                        <div class="dropdown-section-title">Account</div>
-                        <div class="dropdown-item" data-page="settings">
-                            <span class="dropdown-item-icon">⚙️</span>
-                            <span>Settings</span>
-                        </div>
-                        <div class="dropdown-item" data-page="upgrade">
-                            <span class="dropdown-item-icon">🚀</span>
-                            <span>Upgrade Plan</span>
-                        </div>
-                    </div>
-
-                    <div class="dropdown-divider"></div>
-
-                    <div class="dropdown-section">
-                        <div class="dropdown-item logout-item" id="logoutBtn">
-                            <span class="dropdown-item-icon">🚪</span>
-                            <span>Logout</span>
-                        </div>
-                    </div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-tier" id="userTier">Professional</div>
                 </div>
             </div>
         </header>
@@ -882,9 +570,41 @@
                 <div id="pipeline-content" class="page-content"></div>
                 <div id="tasks-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
-                <div id="upgrade-content" class="page-content"></div>
             </div>
         </main>
+    </div>
+
+    <!-- Keyboard Shortcuts Hint -->
+    <div class="shortcuts-hint" id="shortcutsHint">
+        <h4>⌨️ Keyboard Shortcuts</h4>
+        <div class="shortcut-item">
+            <span>Dashboard</span>
+            <span class="shortcut-key">1</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Add Leads</span>
+            <span class="shortcut-key">2</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Pipeline</span>
+            <span class="shortcut-key">3</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Tasks</span>
+            <span class="shortcut-key">4</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Settings</span>
+            <span class="shortcut-key">5</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Show/Hide Sidebar</span>
+            <span class="shortcut-key">\\</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Show Shortcuts</span>
+            <span class="shortcut-key">?</span>
+        </div>
     </div>
 
     <script type="module">
@@ -898,7 +618,8 @@
         const appState = {
             currentPage: null,
             loadedModules: new Set(),
-            profile: null
+            profile: null,
+            preferences: null
         };
 
         // Security
@@ -915,6 +636,8 @@
 
             setupNavigation();
             setupUserMenu();
+            setupThemeToggle();
+            setupKeyboardShortcuts();
             setupMobileTitleClick();
 
             await initializeShell();
@@ -956,6 +679,7 @@
         async function loadUserPreferences() {
             try {
                 const prefs = await API.getPreferences();
+                appState.preferences = prefs;
 
                 // Apply theme
                 const theme = prefs.theme || 'light';
@@ -963,29 +687,28 @@
                 localStorage.setItem('dashboard-theme', theme);
 
                 // Update theme toggle UI
-                const themeSwitch = document.getElementById('themeSwitch');
+                const themeSwitch = document.getElementById('sidebarThemeSwitch');
                 if (themeSwitch && theme === 'dark') {
                     themeSwitch.classList.add('active');
                 }
 
-                // Store windowing preference globally
+                // Store preferences globally
                 window.windowingEnabled = prefs.windowing_enabled || false;
+                window.keyboardShortcutsEnabled = prefs.keyboard_shortcuts_enabled !== false;
 
                 // Load default view
                 const defaultView = prefs.default_view || 'dashboard';
                 await loadPage(defaultView);
 
-                console.log(`✅ Preferences loaded - Theme: ${theme}, Default: ${defaultView}, Windowing: ${window.windowingEnabled}`);
+                console.log(`✅ Preferences loaded - Theme: ${theme}, Default: ${defaultView}`);
 
             } catch (error) {
                 console.error('Failed to load preferences:', error);
-                // Fallback to defaults
                 await loadPage('dashboard');
             }
         }
 
         async function loadPage(pageName) {
-            // Skip if already on this page
             if (appState.currentPage === pageName) {
                 console.log(`Already on ${pageName}`);
                 return;
@@ -997,27 +720,19 @@
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${pageName}-content`)?.classList.add('active');
 
-            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(l => l.classList.remove('active'));
-            if (pageName === 'upgrade') {
-                document.querySelector('.upgrade-nav-link')?.classList.add('active');
-            } else {
-                document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-            }
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
 
             const titles = {
                 dashboard: 'Dashboard',
                 leads: 'Add Leads',
                 pipeline: 'Pipeline',
                 tasks: 'Tasks',
-                settings: 'Settings',
-                upgrade: 'Upgrade Plan'
+                settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
 
-            // Update state
             appState.currentPage = pageName;
-
-            // Load module
             await loadModule(pageName);
         }
 
@@ -1034,7 +749,6 @@
                 const module = modules[pageName];
                 if (!module?.init) return;
 
-                // Always reload to get fresh data
                 await module.init(`${pageName}-content`);
                 appState.loadedModules.add(pageName);
                 console.log(`📦 ${pageName} loaded`);
@@ -1065,11 +779,6 @@
             const avatar = document.getElementById('userAvatar');
             avatar.innerHTML = '';
             avatar.textContent = initials;
-
-            // Update dropdown
-            document.getElementById('dropdownName').textContent = email;
-            document.getElementById('dropdownTier').textContent = tierName;
-            document.getElementById('dropdownAvatar').textContent = initials;
         }
 
         function generateInitials(email) {
@@ -1085,12 +794,12 @@
                 const current = document.documentElement.getAttribute('data-theme');
                 const newTheme = current === 'dark' ? 'light' : 'dark';
 
-                // Apply theme immediately (optimistic update)
+                // Apply theme immediately
                 document.documentElement.setAttribute('data-theme', newTheme);
                 localStorage.setItem('dashboard-theme', newTheme);
 
                 // Update toggle UI
-                const themeSwitch = document.getElementById('themeSwitch');
+                const themeSwitch = document.getElementById('sidebarThemeSwitch');
                 if (themeSwitch) {
                     if (newTheme === 'dark') {
                         themeSwitch.classList.add('active');
@@ -1103,6 +812,7 @@
                 const prefs = await API.getPreferences();
                 prefs.theme = newTheme;
                 await API.updatePreferences(prefs);
+                appState.preferences = prefs;
 
                 if (window.SteadyUtils?.showToast) {
                     SteadyUtils.showToast(`Switched to ${newTheme} mode`, 'success');
@@ -1112,14 +822,11 @@
 
             } catch (error) {
                 console.error('Failed to update theme:', error);
-                if (window.SteadyUtils?.showToast) {
-                    SteadyUtils.showToast('Failed to save theme preference', 'error');
-                }
             }
         }
 
         function setupNavigation() {
-            document.querySelectorAll('.nav-link, .upgrade-nav-link').forEach(link => {
+            document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = link.getAttribute('data-page');
@@ -1137,44 +844,62 @@
 
         function setupUserMenu() {
             const menu = document.getElementById('userMenu');
-            const dropdown = document.getElementById('profileDropdown');
 
-            menu.onclick = (e) => {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
+            // Click profile -> go to Settings
+            menu.onclick = () => {
+                loadPage('settings');
             };
+        }
 
-            document.addEventListener('click', (e) => {
-                if (!dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
+        function setupThemeToggle() {
+            const toggle = document.getElementById('sidebarThemeToggle');
+            if (toggle) {
+                toggle.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleTheme();
+                };
+            }
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Check if keyboard shortcuts are enabled
+                if (!window.keyboardShortcutsEnabled) return;
+
+                // Don't trigger if user is typing in an input
+                if (e.target.matches('input, textarea, [contenteditable]')) return;
+
+                // Number keys 1-5 for navigation
+                if (e.key >= '1' && e.key <= '5') {
+                    e.preventDefault();
+                    const pages = ['dashboard', 'leads', 'pipeline', 'tasks', 'settings'];
+                    const page = pages[parseInt(e.key) - 1];
+                    if (page) loadPage(page);
+                }
+
+                // Backslash to toggle sidebar
+                if (e.key === '\\') {
+                    e.preventDefault();
+                    const sidebar = document.getElementById('sidebar');
+                    const main = document.querySelector('.main-content');
+                    sidebar.classList.toggle('desktop-hidden');
+                    main.classList.toggle('sidebar-hidden');
+                }
+
+                // ? to show shortcuts
+                if (e.key === '?' && e.shiftKey) {
+                    e.preventDefault();
+                    const hint = document.getElementById('shortcutsHint');
+                    hint.classList.toggle('show');
+
+                    // Auto-hide after 5 seconds
+                    if (hint.classList.contains('show')) {
+                        setTimeout(() => {
+                            hint.classList.remove('show');
+                        }, 5000);
+                    }
                 }
             });
-
-            // Dark mode toggle
-            document.getElementById('darkModeToggle').onclick = (e) => {
-                e.stopPropagation();
-                toggleTheme();
-            };
-
-            // Settings link in dropdown
-            dropdown.querySelectorAll('.dropdown-item[data-page]').forEach(item => {
-                item.addEventListener('click', () => {
-                    const page = item.getAttribute('data-page');
-                    loadPage(page);
-                    dropdown.classList.remove('show');
-                });
-            });
-
-            // Logout
-            document.getElementById('logoutBtn').onclick = async () => {
-                if (!confirm('Logout?')) return;
-                try {
-                    await API.logout();
-                } catch (e) {
-                    console.error('Logout error:', e);
-                }
-                window.location.href = '/auth/login.html';
-            };
         }
 
         function setupMobileTitleClick() {
