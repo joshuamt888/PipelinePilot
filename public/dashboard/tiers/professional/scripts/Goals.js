@@ -935,6 +935,23 @@ window.GoalsModule = {
 
         document.body.appendChild(modal);
         this.goals_setupModalEvents(modal);
+
+        // Setup button event handlers for modal actions
+        modal.querySelector('[data-action="edit-goal"]')?.addEventListener('click', async (e) => {
+            const id = e.target.closest('button').dataset.id;
+            modal.remove(); // Close detail modal
+            await this.goals_showEditModal(id);
+        });
+
+        modal.querySelector('[data-action="update-progress"]')?.addEventListener('click', (e) => {
+            const id = e.target.closest('button').dataset.id;
+            this.goals_showUpdateProgressModal(id);
+        });
+
+        modal.querySelector('[data-action="delete-goal"]')?.addEventListener('click', (e) => {
+            const id = e.target.closest('button').dataset.id;
+            this.goals_showDeleteModal(id);
+        });
     },
 
     // MODALS - UPDATE PROGRESS
@@ -1079,6 +1096,36 @@ window.GoalsModule = {
 
         document.body.appendChild(modal);
         this.goals_setupModalEvents(modal);
+
+        // Setup delete confirmation handler
+        modal.querySelector('[data-action="confirm-delete"]')?.addEventListener('click', async (e) => {
+            const id = e.target.closest('button').dataset.id;
+            const btn = e.target.closest('button');
+
+            // Disable button to prevent double-click
+            if (btn.disabled) return;
+            btn.disabled = true;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `
+                <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Deleting...
+            `;
+            btn.style.opacity = '0.6';
+
+            try {
+                await this.goals_deleteGoal(id);
+                modal.remove();
+                // Also close detail modal if it's open
+                document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
+            } catch (error) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                btn.style.opacity = '1';
+            }
+        });
     },
 
     // MODAL EVENTS
