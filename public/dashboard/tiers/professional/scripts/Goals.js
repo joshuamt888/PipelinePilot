@@ -2246,7 +2246,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: #fff;
+    background: #e8eaf0;
 }
 
 .goals-form-textarea-v2 {
@@ -2267,7 +2267,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: #fff;
+    background: #e8eaf0;
 }
 
 .goals-form-textarea-v2::placeholder {
@@ -2792,7 +2792,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    background: #fff;
+    background: #e8eaf0;
 }
 
 .goals-form-hint {
