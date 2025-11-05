@@ -2267,7 +2267,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: #f8f9fa;
+    background: #e0e2e5;
     color: var(--text-primary);
     transition: all 0.2s ease;
     font-weight: 500;
@@ -2285,7 +2285,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: #f8f9fa;
+    background: #e0e2e5;
     color: var(--text-primary);
     font-family: inherit;
     resize: vertical;
@@ -2355,7 +2355,7 @@ window.GoalsModule = {
 
 .goals-tracking-card {
     padding: 1.5rem;
-    background: #f8f9fa;
+    background: #e0e2e5;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     display: flex;
