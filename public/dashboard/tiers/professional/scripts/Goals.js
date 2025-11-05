@@ -2236,7 +2236,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     color: var(--text-primary);
     transition: all 0.2s ease;
     font-weight: 500;
@@ -2246,7 +2246,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--surface);
+    background: #fff;
 }
 
 .goals-form-textarea-v2 {
@@ -2255,7 +2255,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     color: var(--text-primary);
     font-family: inherit;
     resize: vertical;
@@ -2267,7 +2267,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--surface);
+    background: #fff;
 }
 
 .goals-form-textarea-v2::placeholder {
@@ -2282,7 +2282,7 @@ window.GoalsModule = {
 .goals-period-pill {
     flex: 1;
     padding: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-weight: 800;
@@ -2326,7 +2326,7 @@ window.GoalsModule = {
 
 .goals-tracking-card {
     padding: 1.5rem;
-    background: var(--background);
+    background: #f8f9fa;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     display: flex;
@@ -2783,7 +2783,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius);
     font-size: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     color: var(--text-primary);
     transition: all 0.2s ease;
 }
@@ -2792,6 +2792,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: #fff;
 }
 
 .goals-form-hint {
