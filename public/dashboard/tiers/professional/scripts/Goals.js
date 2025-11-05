@@ -92,48 +92,68 @@ window.GoalsModule = {
 
     // CLICKABLE BANNERS
     goals_renderBanners() {
-        const stats = this.state.stats;
-        
-        return `
-            <div class="goals-banners">
-                <button class="goals-banner ${this.state.currentFilter === 'active' ? 'active' : ''}" data-action="filter-active">
-                    <div class="goals-banner-icon-wrapper">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                            <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                    <div class="goals-banner-content">
-                        <div class="goals-banner-value">${stats.totalActive}</div>
-                        <div class="goals-banner-label">Active Goals</div>
-                    </div>
-                    <div class="goals-banner-arrow">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                </button>
+    const stats = this.state.stats;
+    
+    return `
+        <div class="goals-banners">
+            <!-- Active Goals -->
+            <button class="goals-banner ${this.state.currentFilter === 'active' ? 'active' : ''}" data-action="filter-active">
+                <div class="goals-banner-icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="goals-banner-content">
+                    <div class="goals-banner-value">${stats.totalActive}</div>
+                    <div class="goals-banner-label">Active Goals</div>
+                </div>
+                <div class="goals-banner-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </button>
 
-                <button class="goals-banner ${this.state.currentFilter === 'completed' ? 'active' : ''}" data-action="filter-completed">
-                    <div class="goals-banner-icon-wrapper goals-banner-icon-completed">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
-                            <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <div class="goals-banner-content">
-                        <div class="goals-banner-value">${stats.totalCompleted}</div>
-                        <div class="goals-banner-label">Completed Goals</div>
-                    </div>
-                    <div class="goals-banner-arrow">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                </button>
-            </div>
-        `;
-    },
+            <!-- NEW: Goal Ladders -->
+            <button class="goals-banner goals-banner-ladder" data-action="open-goal-ladder">
+                <div class="goals-banner-icon-wrapper goals-banner-icon-ladder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 4v16M18 4v16M6 9h12M6 15h12" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="goals-banner-content">
+                    <div class="goals-banner-value">🪜</div>
+                    <div class="goals-banner-label">Goal Ladders</div>
+                </div>
+                <div class="goals-banner-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </button>
+
+            <!-- Completed Goals -->
+            <button class="goals-banner ${this.state.currentFilter === 'completed' ? 'active' : ''}" data-action="filter-completed">
+                <div class="goals-banner-icon-wrapper goals-banner-icon-completed">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
+                        <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="goals-banner-content">
+                    <div class="goals-banner-value">${stats.totalCompleted}</div>
+                    <div class="goals-banner-label">Completed Goals</div>
+                </div>
+                <div class="goals-banner-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </button>
+        </div>
+    `;
+},
 
     // GOALS GRID
     goals_renderGoalsGrid() {
@@ -1274,50 +1294,58 @@ window.GoalsModule = {
     },
 
     // EVENT HANDLING
-    goals_attachEvents() {
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
+goals_attachEvents() {
+    const container = document.getElementById(this.state.container);
+    if (!container) return;
 
-        container.onclick = async (e) => {
-            const target = e.target.closest('[data-action]');
-            if (!target) return;
+    container.onclick = async (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
 
-            const action = target.dataset.action;
-            const id = target.dataset.id;
+        const action = target.dataset.action;
+        const id = target.dataset.id;
 
-            switch (action) {
-                case 'create-goal':
-                    this.goals_showCreateModal();
-                    break;
-                case 'edit-goal':
-                    // Close detail modal if open
-                    document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
-                    await this.goals_showEditModal(id);
-                    break;
-                case 'view-goal':
-                    this.goals_showGoalDetailModal(id);
-                    break;
-                case 'update-progress':
-                    this.goals_showUpdateProgressModal(id);
-                    break;
-                case 'delete-goal':
-                    this.goals_showDeleteModal(id);
-                    break;
-                case 'confirm-delete':
-                    await this.goals_deleteGoal(id);
-                    document.querySelector('.goals-modal-overlay')?.remove();
-                    break;
-                case 'filter-active':
-                    this.state.currentFilter = this.state.currentFilter === 'active' ? 'all' : 'active';
-                    this.goals_render();
-                    break;
-                case 'filter-completed':
-                    this.state.currentFilter = this.state.currentFilter === 'completed' ? 'all' : 'completed';
-                    this.goals_render();
-                    break;
-            }
-        };
-    },
+        switch (action) {
+            case 'create-goal':
+                this.goals_showCreateModal();
+                break;
+            case 'open-goal-ladder':
+                if (window.GoalLadderModule) {
+                    await window.GoalLadderModule.init();
+                } else {
+                    console.error('GoalLadder module not loaded');
+                    window.SteadyUtils.showToast('Goal Ladder feature not available', 'error');
+                }
+                break;
+            case 'edit-goal':
+                // Close detail modal if open
+                document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
+                await this.goals_showEditModal(id);
+                break;
+            case 'view-goal':
+                this.goals_showGoalDetailModal(id);
+                break;
+            case 'update-progress':
+                this.goals_showUpdateProgressModal(id);
+                break;
+            case 'delete-goal':
+                this.goals_showDeleteModal(id);
+                break;
+            case 'confirm-delete':
+                await this.goals_deleteGoal(id);
+                document.querySelector('.goals-modal-overlay')?.remove();
+                break;
+            case 'filter-active':
+                this.state.currentFilter = this.state.currentFilter === 'active' ? 'all' : 'active';
+                this.goals_render();
+                break;
+            case 'filter-completed':
+                this.state.currentFilter = this.state.currentFilter === 'completed' ? 'all' : 'completed';
+                this.goals_render();
+                break;
+        }
+    };
+},
 
     // API ACTIONS - CREATE
     async goals_createGoal() {
@@ -1821,6 +1849,14 @@ window.GoalsModule = {
 
 .goals-banner-icon-completed {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+}
+
+.goals-banner-icon-ladder {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(139, 92, 246, 0.15));
+}
+
+.goals-banner-icon-ladder svg {
+    stroke: #ec4899;
 }
 
 .goals-banner-icon-wrapper svg {

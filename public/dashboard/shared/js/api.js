@@ -1100,6 +1100,130 @@ class TierScalingAPI {
   }
 
   // =====================================================
+// GOAL LADDER (Task-Goal Linking)
+// =====================================================
+
+/**
+ * Get all tasks for a specific goal
+ */
+static async getTasksByGoal(goalId) {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('goal_id', goalId)
+    .order('created_at', { ascending: true });
+  
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Create task and link to goal in one step
+ */
+static async createTaskForGoal(goalId, taskData) {
+  return await this.createTask({
+    ...taskData,
+    goal_id: goalId
+  });
+}
+
+/**
+ * Link existing task to a goal
+ */
+static async linkTaskToGoal(taskId, goalId) {
+  return await this.updateTask(taskId, { goal_id: goalId });
+}
+
+/**
+ * Unlink task from goal
+ */
+static async unlinkTaskFromGoal(taskId) {
+  return await this.updateTask(taskId, { goal_id: null });
+}
+
+/**
+ * Get full goal ladder (goal + all tasks + stats)
+ */
+static async getGoalLadder(goalId) {
+  const goal = await this.getGoalById(goalId);
+  const tasks = await this.getTasksByGoal(goalId);
+  
+  return {
+    goal,
+    tasks,
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.status === 'completed').length,
+    pendingTasks: tasks.filter(t => t.status === 'pending').length,
+    inProgressTasks: tasks.filter(t => t.status === 'in_progress').length,
+    progress: tasks.length > 0 
+      ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100)
+      : 0
+  };
+}
+
+/**
+ * Get all goal ladders for this user
+ * Returns goals where is_ladder = true with task counts
+ */
+static async getAllGoalLadders() {
+  const { data: ladderGoals, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('is_ladder', true)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  
+  // For each ladder, get task counts
+  const ladders = await Promise.all(
+    ladderGoals.map(async goal => {
+      const tasks = await this.getTasksByGoal(goal.id);
+      return {
+        ...goal,
+        taskCount: tasks.length,
+        completedCount: tasks.filter(t => t.status === 'completed').length,
+        pendingCount: tasks.filter(t => t.status === 'pending').length
+      };
+    })
+  );
+  
+  return ladders;
+}
+
+/**
+ * Check and auto-complete goal if all tasks done
+ * Returns { completed: true/false }
+ */
+static async checkGoalLadderCompletion(goalId) {
+  const ladder = await this.getGoalLadder(goalId);
+  
+  if (ladder.tasks.length > 0 && ladder.completedTasks === ladder.totalTasks) {
+    // All tasks completed! Auto-complete the goal
+    await this.updateGoal(goalId, { 
+      status: 'completed',
+      current_value: ladder.goal.target_value // Set to target
+    });
+    return { completed: true, goal: ladder.goal };
+  }
+  
+  return { completed: false };
+}
+
+/**
+ * Get goal by ID (helper for ladder operations)
+ */
+static async getGoalById(goalId) {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('id', goalId)
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+  // =====================================================
   // PREFERENCES (Pro Tier - UI Customization)
   // =====================================================
 
