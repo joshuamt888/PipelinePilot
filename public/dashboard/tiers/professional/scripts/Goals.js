@@ -2267,7 +2267,11 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
+<<<<<<< HEAD
     background: #f8f9fa;
+=======
+    background: #e8eaf0;
+>>>>>>> 1490985032c4f6acb7515195022cb6940f2c97d1
     color: var(--text-primary);
     transition: all 0.2s ease;
     font-weight: 500;
@@ -2277,6 +2281,10 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+<<<<<<< HEAD
+=======
+    background: #fff;
+>>>>>>> 1490985032c4f6acb7515195022cb6940f2c97d1
 }
 
 .goals-form-textarea-v2 {
@@ -2285,7 +2293,11 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
+<<<<<<< HEAD
     background: #f8f9fa;
+=======
+    background: #e8eaf0;
+>>>>>>> 1490985032c4f6acb7515195022cb6940f2c97d1
     color: var(--text-primary);
     font-family: inherit;
     resize: vertical;
@@ -2297,6 +2309,10 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+<<<<<<< HEAD
+=======
+    background: #fff;
+>>>>>>> 1490985032c4f6acb7515195022cb6940f2c97d1
 }
 
 .goals-form-textarea-v2::placeholder {
@@ -2311,7 +2327,7 @@ window.GoalsModule = {
 .goals-period-pill {
     flex: 1;
     padding: 1rem;
-    background: var(--background);
+    background: #e8eaf0;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-weight: 800;
@@ -2355,7 +2371,11 @@ window.GoalsModule = {
 
 .goals-tracking-card {
     padding: 1.5rem;
+<<<<<<< HEAD
     background: #f8f9fa;
+=======
+    background: #e8eaf0;
+>>>>>>> 1490985032c4f6acb7515195022cb6940f2c97d1
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     display: flex;
@@ -2811,7 +2831,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius);
     font-size: 1rem;
-    background: var(--background);
+    background: #e8eaf0;
     color: var(--text-primary);
     transition: all 0.2s ease;
 }
@@ -2820,6 +2840,7 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: #fff;
 }
 
 .goals-form-hint {
