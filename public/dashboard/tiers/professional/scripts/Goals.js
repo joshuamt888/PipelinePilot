@@ -978,15 +978,15 @@ window.GoalsModule = {
                         <div class="goals-detail-progress-info">
                             <div class="goals-detail-stat">
                                 <div class="goals-detail-stat-label">Current</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValue(goal.current_value, goal.unit)}</div>
+                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.current_value, goal.unit)}</div>
                             </div>
                             <div class="goals-detail-stat">
                                 <div class="goals-detail-stat-label">Target</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValue(goal.target_value, goal.unit)}</div>
+                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.target_value, goal.unit)}</div>
                             </div>
                             <div class="goals-detail-stat">
                                 <div class="goals-detail-stat-label">Remaining</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValue(goal.remaining, goal.unit)}</div>
+                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.remaining, goal.unit)}</div>
                             </div>
                             <div class="goals-detail-stat">
                                 <div class="goals-detail-stat-label">Days Left</div>
@@ -1555,6 +1555,37 @@ window.GoalsModule = {
             default:
                 // Custom unit - display the unit name
                 return unit ? `${formattedNumber} ${unit}` : formattedNumber;
+        }
+    },
+
+    // Format value with abbreviation (for goal detail modal where space is tight)
+    goals_formatValueAbbreviated(value, unit) {
+        if (!value) return '0';
+
+        // Abbreviate numbers >= 1000
+        let abbreviatedNumber;
+        if (value >= 1000000000) {
+            abbreviatedNumber = (value / 1000000000).toFixed(value % 1000000000 === 0 ? 0 : 1) + 'B';
+        } else if (value >= 1000000) {
+            abbreviatedNumber = (value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1) + 'M';
+        } else if (value >= 1000) {
+            abbreviatedNumber = (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'K';
+        } else {
+            abbreviatedNumber = value.toString();
+        }
+
+        switch (unit) {
+            case 'dollars':
+                return `$${abbreviatedNumber}`;
+            case 'hours':
+                return `${abbreviatedNumber}h`;
+            case 'leads':
+            case 'tasks':
+            case 'calls':
+            case 'meetings':
+                return `${abbreviatedNumber} ${unit}`;
+            default:
+                return unit ? `${abbreviatedNumber} ${unit}` : abbreviatedNumber;
         }
     },
 
@@ -2236,7 +2267,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     color: var(--text-primary);
     transition: all 0.2s ease;
     font-weight: 500;
@@ -2246,7 +2277,6 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--surface);
 }
 
 .goals-form-textarea-v2 {
@@ -2255,7 +2285,7 @@ window.GoalsModule = {
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     font-size: 1rem;
-    background: var(--background);
+    background: #f8f9fa;
     color: var(--text-primary);
     font-family: inherit;
     resize: vertical;
@@ -2267,7 +2297,6 @@ window.GoalsModule = {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--surface);
 }
 
 .goals-form-textarea-v2::placeholder {
@@ -2326,7 +2355,7 @@ window.GoalsModule = {
 
 .goals-tracking-card {
     padding: 1.5rem;
-    background: var(--background);
+    background: #f8f9fa;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
     display: flex;
@@ -2361,7 +2390,6 @@ window.GoalsModule = {
 
 .goals-tracking-radio input:checked + .goals-tracking-card {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
 }
 
 .goals-tracking-radio input:checked + .goals-tracking-card svg {
