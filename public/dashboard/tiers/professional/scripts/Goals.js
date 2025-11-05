@@ -115,24 +115,6 @@ window.GoalsModule = {
                 </div>
             </button>
 
-            <!-- NEW: Goal Ladders -->
-            <button class="goals-banner goals-banner-ladder" data-action="open-goal-ladder">
-                <div class="goals-banner-icon-wrapper goals-banner-icon-ladder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M6 4v16M18 4v16M6 9h12M6 15h12" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="goals-banner-content">
-                    <div class="goals-banner-value">🪜</div>
-                    <div class="goals-banner-label">Goal Ladders</div>
-                </div>
-                <div class="goals-banner-arrow">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-            </button>
-
             <!-- Completed Goals -->
             <button class="goals-banner ${this.state.currentFilter === 'completed' ? 'active' : ''}" data-action="filter-completed">
                 <div class="goals-banner-icon-wrapper goals-banner-icon-completed">
@@ -1177,6 +1159,7 @@ window.GoalsModule = {
             try {
                 const newValue = parseFloat(document.getElementById('newProgressValue').value);
                 await this.goals_updateProgress(goalId, newValue);
+                await API.checkGoalCompletion();
                 modal.remove();
                 document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
             } catch (error) {
@@ -1308,14 +1291,6 @@ goals_attachEvents() {
         switch (action) {
             case 'create-goal':
                 this.goals_showCreateModal();
-                break;
-            case 'open-goal-ladder':
-                if (window.GoalLadderModule) {
-                    await window.GoalLadderModule.init();
-                } else {
-                    console.error('GoalLadder module not loaded');
-                    window.SteadyUtils.showToast('Goal Ladder feature not available', 'error');
-                }
                 break;
             case 'edit-goal':
                 // Close detail modal if open
@@ -1851,13 +1826,6 @@ goals_attachEvents() {
     background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
 }
 
-.goals-banner-icon-ladder {
-    background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(139, 92, 246, 0.15));
-}
-
-.goals-banner-icon-ladder svg {
-    stroke: #ec4899;
-}
 
 .goals-banner-icon-wrapper svg {
     width: 2rem;
@@ -2004,6 +1972,9 @@ goals_attachEvents() {
     line-height: 1.3;
     flex: 1;
     padding-right: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .goals-card-meta {
@@ -2369,6 +2340,56 @@ goals_attachEvents() {
     border-color: var(--primary);
     color: white;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+#goalUnit {
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    background: var(--background);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    font-weight: 600;
+    cursor: pointer;
+    
+    /* Custom arrow */
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.25rem;
+    padding-right: 3rem;
+}
+
+#goalUnit:hover {
+    border-color: var(--primary);
+}
+
+#goalUnit:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.goals-card-completions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--success);
+    margin-top: 0.75rem;
+}
+
+.goals-card-completions svg {
+    width: 1rem;
+    height: 1rem;
+    stroke-width: 2;
 }
 
 .goals-date-inputs-hidden {
