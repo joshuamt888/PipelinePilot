@@ -449,6 +449,11 @@ async goals_loadAvailableTasks() {
     
     <!-- Task Checklist Options -->
     <div id="taskChecklistOptions" class="goals-task-checklist-config" style="display: none;">
+        <!-- Combined Task Counter (shows across both tabs) -->
+        <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
+            <span id="taskCombinedCount" style="font-weight: 700; font-size: 0.875rem;">0 / 30 tasks</span>
+        </div>
+
         <div class="goals-task-tabs">
             <button type="button" class="goals-task-tab active" data-tab="existing">
                 Existing Tasks
@@ -457,13 +462,24 @@ async goals_loadAvailableTasks() {
                 Create New
             </button>
         </div>
-        
+
         <!-- Existing Tasks Tab -->
         <div id="existingTasksTab" class="goals-task-tab-content">
-            <div class="goals-task-list">
+            <!-- Search Bar -->
+            <div style="margin-bottom: 1rem;">
+                <div style="position: relative;">
+                    <input type="text" id="taskSearchInput" class="goals-form-input-v2" placeholder="Search tasks..." style="padding-left: 2.5rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; color: var(--text-tertiary); pointer-events: none;">
+                        <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="goals-task-list" id="tasksList">
                 ${this.state.availableTasks.length > 0 ? `
                     ${this.state.availableTasks.map(task => `
-                        <label class="goals-task-checkbox">
+                        <label class="goals-task-checkbox" data-task-title="${API.escapeHtml(task.title).toLowerCase()}">
                             <input type="checkbox" value="${task.id}" data-task-select>
                             <div class="goals-task-item">
                                 <div class="goals-task-item-content">
@@ -494,9 +510,6 @@ async goals_loadAvailableTasks() {
                     </div>
                 `}
             </div>
-            <div class="goals-task-selected-count">
-                <span id="taskSelectedCount">0 / 30 tasks</span>
-            </div>
         </div>
 
         <!-- Create New Tasks Tab -->
@@ -516,9 +529,6 @@ async goals_loadAvailableTasks() {
             </div>
             <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
                 <!-- New tasks will be added here -->
-            </div>
-            <div class="goals-task-selected-count">
-                <span id="newTasksCount">0 new tasks</span>
             </div>
         </div>
     </div>
@@ -1113,6 +1123,47 @@ modal.querySelectorAll('.goals-task-tab').forEach(tab => {
     });
 });
 
+// Task Checklist: Smart search for existing tasks
+const taskSearchInput = modal.querySelector('#taskSearchInput');
+if (taskSearchInput) {
+    taskSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const taskCheckboxes = modal.querySelectorAll('.goals-task-checkbox');
+
+        taskCheckboxes.forEach(checkbox => {
+            const taskTitle = checkbox.getAttribute('data-task-title') || '';
+            if (taskTitle.includes(searchTerm)) {
+                checkbox.style.display = '';
+            } else {
+                checkbox.style.display = 'none';
+            }
+        });
+
+        // Show "no results" message if all hidden
+        const visibleTasks = Array.from(taskCheckboxes).filter(cb => cb.style.display !== 'none');
+        const tasksList = modal.querySelector('#tasksList');
+        let noResultsMsg = modal.querySelector('#noSearchResults');
+
+        if (visibleTasks.length === 0 && searchTerm) {
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.id = 'noSearchResults';
+                noResultsMsg.className = 'goals-task-empty';
+                noResultsMsg.innerHTML = \`
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <p>No tasks found matching "\${API.escapeHtml(searchTerm)}"</p>
+                \`;
+                tasksList.appendChild(noResultsMsg);
+            }
+        } else if (noResultsMsg) {
+            noResultsMsg.remove();
+        }
+    });
+}
+
 // Task Checklist: Character counter for quick task title
 const quickTaskInput = modal.querySelector('#quickTaskTitle');
 const quickTaskCounter = modal.querySelector('#quickTaskCounter');
@@ -1203,23 +1254,17 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
 });
     },
 
-    // Helper: Update all task counters in modal
+    // Helper: Update combined task counter in modal
     goals_updateTaskCounters(modal) {
         const selectedCount = this.state.selectedTaskIds?.length || 0;
         const newTasksCount = this.state.newTasks?.length || 0;
         const totalCount = selectedCount + newTasksCount;
 
-        // Update "Existing Tasks" tab counter
-        const existingCounter = modal.querySelector('#taskSelectedCount');
-        if (existingCounter) {
-            existingCounter.textContent = `${totalCount} / 30 tasks`;
-            existingCounter.style.color = totalCount >= 30 ? 'var(--danger)' : totalCount >= 25 ? 'var(--warning)' : 'var(--text-secondary)';
-        }
-
-        // Update "Create New" tab counter
-        const newCounter = modal.querySelector('#newTasksCount');
-        if (newCounter) {
-            newCounter.textContent = newTasksCount === 1 ? '1 new task' : `${newTasksCount} new tasks`;
+        // Update combined counter (shows across both tabs)
+        const combinedCounter = modal.querySelector('#taskCombinedCount');
+        if (combinedCounter) {
+            combinedCounter.textContent = `${totalCount} / 30 tasks`;
+            combinedCounter.style.color = totalCount >= 30 ? 'var(--danger)' : totalCount >= 25 ? 'var(--warning)' : 'var(--text-primary)';
         }
     },
 
