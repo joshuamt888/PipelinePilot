@@ -495,14 +495,17 @@ async goals_loadAvailableTasks() {
                 `}
             </div>
             <div class="goals-task-selected-count">
-                <span id="taskSelectedCount">0 tasks selected</span>
+                <span id="taskSelectedCount">0 / 30 tasks</span>
             </div>
         </div>
-        
+
         <!-- Create New Tasks Tab -->
         <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
             <div class="goals-quick-task-form">
-                <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="100">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
+                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; right: 0; font-size: 0.75rem;">0 / 50</span>
+                </div>
                 <input type="date" id="quickTaskDate" class="goals-form-input-v2">
                 <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -511,8 +514,11 @@ async goals_loadAvailableTasks() {
                     Add Task
                 </button>
             </div>
-            <div id="newTasksList" class="goals-new-tasks-list">
+            <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
                 <!-- New tasks will be added here -->
+            </div>
+            <div class="goals-task-selected-count">
+                <span id="newTasksCount">0 new tasks</span>
             </div>
         </div>
     </div>
@@ -1066,18 +1072,24 @@ async goals_loadAvailableTasks() {
         // Task Checklist: Track selected tasks
 modal.querySelectorAll('[data-task-select]').forEach(checkbox => {
     checkbox.addEventListener('change', (e) => {
+        const newTasksCount = this.state.newTasks?.length || 0;
+        const selectedCount = this.state.selectedTaskIds.length;
+        const totalCount = selectedCount + newTasksCount;
+
         if (e.target.checked) {
+            // Check 30 task limit before allowing selection
+            if (totalCount >= 30) {
+                e.target.checked = false;
+                window.SteadyUtils.showToast('Maximum 30 tasks allowed', 'error');
+                return;
+            }
             this.state.selectedTaskIds.push(e.target.value);
         } else {
             this.state.selectedTaskIds = this.state.selectedTaskIds.filter(id => id !== e.target.value);
         }
-        
-        // Update counter
-        const counter = modal.querySelector('#taskSelectedCount');
-        if (counter) {
-            const count = this.state.selectedTaskIds.length;
-            counter.textContent = count === 1 ? '1 task selected' : `${count} tasks selected`;
-        }
+
+        // Update counter with combined total
+        this.goals_updateTaskCounters(modal);
     });
 });
 
@@ -1101,21 +1113,42 @@ modal.querySelectorAll('.goals-task-tab').forEach(tab => {
     });
 });
 
+// Task Checklist: Character counter for quick task title
+const quickTaskInput = modal.querySelector('#quickTaskTitle');
+const quickTaskCounter = modal.querySelector('#quickTaskCounter');
+if (quickTaskInput && quickTaskCounter) {
+    quickTaskInput.addEventListener('input', (e) => {
+        const length = e.target.value.length;
+        quickTaskCounter.textContent = `${length} / 50`;
+        quickTaskCounter.style.color = length >= 45 ? 'var(--warning)' : 'var(--text-tertiary)';
+    });
+}
+
 // Task Checklist: Add quick task
 modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click', () => {
     const titleInput = modal.querySelector('#quickTaskTitle');
     const dateInput = modal.querySelector('#quickTaskDate');
     const title = titleInput.value.trim();
-    
+
     if (!title) {
         window.SteadyUtils.showToast('Enter a task title', 'error');
         return;
     }
-    
+
+    // Check 30 task limit
+    const newTasksCount = this.state.newTasks?.length || 0;
+    const selectedCount = this.state.selectedTaskIds?.length || 0;
+    const totalCount = selectedCount + newTasksCount;
+
+    if (totalCount >= 30) {
+        window.SteadyUtils.showToast('Maximum 30 tasks allowed', 'error');
+        return;
+    }
+
     // Add to new tasks list
     const newTasksList = modal.querySelector('#newTasksList');
     const taskId = 'new_' + Date.now(); // Temporary ID
-    
+
     const taskHTML = `
         <div class="goals-new-task-item" data-temp-id="${taskId}">
             <div class="goals-new-task-content">
@@ -1140,9 +1173,9 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
             </button>
         </div>
     `;
-    
+
     newTasksList.insertAdjacentHTML('beforeend', taskHTML);
-    
+
     // Store task data
     if (!this.state.newTasks) this.state.newTasks = [];
     this.state.newTasks.push({
@@ -1150,20 +1183,46 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
         title: title,
         due_date: dateInput.value || null
     });
-    
+
     // Clear inputs
     titleInput.value = '';
     dateInput.value = '';
-    
+    quickTaskCounter.textContent = '0 / 50';
+    quickTaskCounter.style.color = 'var(--text-tertiary)';
+
+    // Update counters
+    this.goals_updateTaskCounters(modal);
+
     // Setup remove button
     modal.querySelector(`[data-temp-id="${taskId}"] [data-action="remove-new-task"]`).addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.tempId;
         modal.querySelector(`[data-temp-id="${id}"]`).remove();
         this.state.newTasks = this.state.newTasks.filter(t => t.tempId !== id);
+        this.goals_updateTaskCounters(modal);
     });
 });
     },
-    
+
+    // Helper: Update all task counters in modal
+    goals_updateTaskCounters(modal) {
+        const selectedCount = this.state.selectedTaskIds?.length || 0;
+        const newTasksCount = this.state.newTasks?.length || 0;
+        const totalCount = selectedCount + newTasksCount;
+
+        // Update "Existing Tasks" tab counter
+        const existingCounter = modal.querySelector('#taskSelectedCount');
+        if (existingCounter) {
+            existingCounter.textContent = `${totalCount} / 30 tasks`;
+            existingCounter.style.color = totalCount >= 30 ? 'var(--danger)' : totalCount >= 25 ? 'var(--warning)' : 'var(--text-secondary)';
+        }
+
+        // Update "Create New" tab counter
+        const newCounter = modal.querySelector('#newTasksCount');
+        if (newCounter) {
+            newCounter.textContent = newTasksCount === 1 ? '1 new task' : `${newTasksCount} new tasks`;
+        }
+    },
+
     // MODALS - VIEW GOAL DETAIL
 goals_showGoalDetailModal(goalId) {
     const goal = this.state.goals.find(g => g.id === goalId);
