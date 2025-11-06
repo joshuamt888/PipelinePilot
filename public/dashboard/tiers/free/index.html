@@ -600,7 +600,14 @@
 
                 const profile = await API.getProfile();
                 if (!profile?.id) throw new Error('Invalid profile');
-                
+
+                // SECURITY: Verify user should be on free tier
+                if (profile.user_type !== 'free') {
+                    console.warn(`Unauthorized tier access attempt: ${profile.user_type} tried to access free tier`);
+                    window.location.href = '/dashboard/';
+                    return;
+                }
+
                 appState.profile = profile;
                 loadUserProfile(profile);
                 

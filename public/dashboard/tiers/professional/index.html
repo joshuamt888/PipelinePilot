@@ -496,6 +496,14 @@
                 const profile = await API.getProfile();
                 if (!profile?.id) throw new Error('Invalid profile');
 
+                // SECURITY: Verify user has access to professional tier
+                const allowedTiers = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'];
+                if (!allowedTiers.includes(profile.user_type)) {
+                    console.warn(`Unauthorized tier access attempt: ${profile.user_type} tried to access professional tier`);
+                    window.location.href = '/dashboard/';
+                    return;
+                }
+
                 appState.profile = profile;
                 loadUserProfile(profile);
 
