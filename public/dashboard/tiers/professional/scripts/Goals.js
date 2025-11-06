@@ -8,7 +8,10 @@ window.GoalsModule = {
         stats: null,
         container: 'goals-content',
         currentFilter: 'all', // 'all', 'active', 'completed'
-        editingGoalId: null
+        editingGoalId: null,
+        availableTasks: [],
+        selectedTaskIds: [],
+        taskLinkTab: 'existing'
     },
 
     // INIT
@@ -20,6 +23,7 @@ window.GoalsModule = {
         
         try {
             await this.goals_loadData();
+            await this.goals_loadAvailableTasks();
             this.goals_render();
             console.log('✅ Goals module ready');
         } catch (error) {
@@ -43,6 +47,16 @@ window.GoalsModule = {
             totalCompleted: this.state.completedGoals.length
         };
     },
+
+    // LOAD AVAILABLE TASKS
+async goals_loadAvailableTasks() {
+    try {
+        this.state.availableTasks = await API.getTasks({ status: 'pending' });
+    } catch (error) {
+        console.error('Failed to load tasks:', error);
+        this.state.availableTasks = [];
+    }
+},
 
     // RENDER
     goals_render() {
@@ -182,7 +196,7 @@ window.GoalsModule = {
 
     // GOAL CARD
     goals_renderGoalCard(goal) {
-        const progress = Math.min(goal.progress || 0, 100);
+        const progress = goal.status === 'completed' ? 100 : Math.min(Math.floor(goal.progress || 0), 99);
         const isCompleted = goal.status === 'completed';
         const isAtRisk = goal.period !== 'none' && goal.daysRemaining < 7 && progress < 50 && !isCompleted;
 
@@ -232,11 +246,14 @@ window.GoalsModule = {
                         </div>
                     </div>
                     <div class="goals-progress-label">
-                        <span class="goals-progress-percentage">${progress}%</span>
-                        <span class="goals-progress-value">
-                            ${this.goals_formatValue(goal.current_value, goal.unit)} / ${this.goals_formatValue(goal.target_value, goal.unit)}
-                        </span>
-                    </div>
+    <span class="goals-progress-percentage">${progress}%</span>
+    <span class="goals-progress-value">
+        ${goal.goal_type === 'task_list' 
+            ? `${goal.current_value} of ${goal.target_value} tasks complete`
+            : `${this.goals_formatValue(goal.current_value, goal.unit)} / ${this.goals_formatValue(goal.target_value, goal.unit)}`
+        }
+    </span>
+</div>
                 </div>
 
                 <div class="goals-card-footer">
@@ -388,30 +405,112 @@ window.GoalsModule = {
                         <div class="goals-divider"></div>
                         
                         <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">⚡ Tracking Method</label>
-                            <div class="goals-tracking-options">
-                                <label class="goals-tracking-radio">
-                                    <input type="radio" name="tracking" value="manual" checked>
-                                    <div class="goals-tracking-card">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
-                                        </svg>
-                                        <span class="goals-tracking-title">Manual</span>
-                                        <span class="goals-tracking-desc">Update progress yourself</span>
-                                    </div>
-                                </label>
-                                <label class="goals-tracking-radio">
-                                    <input type="radio" name="tracking" value="auto">
-                                    <div class="goals-tracking-card">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-                                        </svg>
-                                        <span class="goals-tracking-title">Auto-Track</span>
-                                        <span class="goals-tracking-desc">Updates automatically</span>
-                                    </div>
-                                </label>
+    <label class="goals-form-label-v2">⚡ Tracking Method</label>
+    <div class="goals-tracking-options-grid">
+        <label class="goals-tracking-radio">
+            <input type="radio" name="tracking" value="manual" checked>
+            <div class="goals-tracking-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
+                </svg>
+                <span class="goals-tracking-title">Manual</span>
+                <span class="goals-tracking-desc">Update yourself</span>
+            </div>
+        </label>
+        <label class="goals-tracking-radio">
+            <input type="radio" name="tracking" value="auto">
+            <div class="goals-tracking-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
+                </svg>
+                <span class="goals-tracking-title">Auto-Track</span>
+                <span class="goals-tracking-desc">From data</span>
+            </div>
+        </label>
+        <label class="goals-tracking-radio">
+            <input type="radio" name="tracking" value="task_list">
+            <div class="goals-tracking-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="goals-tracking-title">Task Checklist</span>
+                <span class="goals-tracking-desc">Link tasks</span>
+            </div>
+        </label>
+    </div>
+    
+    <!-- Task Checklist Options -->
+    <div id="taskChecklistOptions" class="goals-task-checklist-config" style="display: none;">
+        <div class="goals-task-tabs">
+            <button type="button" class="goals-task-tab active" data-tab="existing">
+                Existing Tasks
+            </button>
+            <button type="button" class="goals-task-tab" data-tab="create">
+                Create New
+            </button>
+        </div>
+        
+        <!-- Existing Tasks Tab -->
+        <div id="existingTasksTab" class="goals-task-tab-content">
+            <div class="goals-task-list">
+                ${this.state.availableTasks.length > 0 ? `
+                    ${this.state.availableTasks.map(task => `
+                        <label class="goals-task-checkbox">
+                            <input type="checkbox" value="${task.id}" data-task-select>
+                            <div class="goals-task-item">
+                                <div class="goals-task-item-content">
+                                    <span class="goals-task-item-title">${API.escapeHtml(task.title)}</span>
+                                    ${task.due_date ? `
+                                        <span class="goals-task-item-date">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                            </svg>
+                                            ${window.SteadyUtils.formatDate(task.due_date, 'short')}
+                                        </span>
+                                    ` : ''}
+                                </div>
                             </div>
+                        </label>
+                    `).join('')}
+                ` : `
+                    <div class="goals-task-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <p>No pending tasks available</p>
+                        <p class="goals-task-empty-hint">Create tasks in the Scheduling module first</p>
+                    </div>
+                `}
+            </div>
+            <div class="goals-task-selected-count">
+                <span id="taskSelectedCount">0 tasks selected</span>
+            </div>
+        </div>
+        
+        <!-- Create New Tasks Tab -->
+        <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
+            <div class="goals-quick-task-form">
+                <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="100">
+                <input type="date" id="quickTaskDate" class="goals-form-input-v2">
+                <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Add Task
+                </button>
+            </div>
+            <div id="newTasksList" class="goals-new-tasks-list">
+                <!-- New tasks will be added here -->
+            </div>
+        </div>
+    </div>
+</div>
                             
                             <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
                                 <select id="goalTrackType" class="goals-form-select-v2">
@@ -917,166 +1016,362 @@ window.GoalsModule = {
         });
 
         modal.querySelectorAll('input[name="tracking"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const autoOptions = document.getElementById('autoTrackOptions');
-                autoOptions.style.display = e.target.value === 'auto' ? 'block' : 'none';
-            });
-        });
+    radio.addEventListener('change', (e) => {
+        const autoOptions = document.getElementById('autoTrackOptions');
+        const taskOptions = document.getElementById('taskChecklistOptions');
+        const targetFields = modal.querySelector('.goals-form-row-v2'); // Target + Unit fields
+        
+        // Hide all tracking-specific options first
+        autoOptions.style.display = 'none';
+        if (taskOptions) taskOptions.style.display = 'none';
+        
+        // Show/hide based on selection
+        if (e.target.value === 'auto') {
+            autoOptions.style.display = 'block';
+            if (targetFields) targetFields.style.display = 'grid';
+        } else if (e.target.value === 'task_list') {
+            if (taskOptions) taskOptions.style.display = 'block';
+            if (targetFields) targetFields.style.display = 'none'; // Hide target/unit for task_list
+        } else {
+            // Manual - show target/unit fields
+            if (targetFields) targetFields.style.display = 'grid';
+        }
+    });
+});
+
+        // Task Checklist: Track selected tasks
+modal.querySelectorAll('[data-task-select]').forEach(checkbox => {
+    checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            this.state.selectedTaskIds.push(e.target.value);
+        } else {
+            this.state.selectedTaskIds = this.state.selectedTaskIds.filter(id => id !== e.target.value);
+        }
+        
+        // Update counter
+        const counter = modal.querySelector('#taskSelectedCount');
+        if (counter) {
+            const count = this.state.selectedTaskIds.length;
+            counter.textContent = count === 1 ? '1 task selected' : `${count} tasks selected`;
+        }
+    });
+});
+
+// Task Checklist: Tab switching
+modal.querySelectorAll('.goals-task-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+        const targetTab = e.currentTarget.dataset.tab;
+        
+        // Update active tab
+        modal.querySelectorAll('.goals-task-tab').forEach(t => t.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        
+        // Show/hide tab content
+        if (targetTab === 'existing') {
+            modal.querySelector('#existingTasksTab').style.display = 'block';
+            modal.querySelector('#createTasksTab').style.display = 'none';
+        } else {
+            modal.querySelector('#existingTasksTab').style.display = 'none';
+            modal.querySelector('#createTasksTab').style.display = 'block';
+        }
+    });
+});
+
+// Task Checklist: Add quick task
+modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click', () => {
+    const titleInput = modal.querySelector('#quickTaskTitle');
+    const dateInput = modal.querySelector('#quickTaskDate');
+    const title = titleInput.value.trim();
+    
+    if (!title) {
+        window.SteadyUtils.showToast('Enter a task title', 'error');
+        return;
+    }
+    
+    // Add to new tasks list
+    const newTasksList = modal.querySelector('#newTasksList');
+    const taskId = 'new_' + Date.now(); // Temporary ID
+    
+    const taskHTML = `
+        <div class="goals-new-task-item" data-temp-id="${taskId}">
+            <div class="goals-new-task-content">
+                <span class="goals-new-task-title">${API.escapeHtml(title)}</span>
+                ${dateInput.value ? `
+                    <span class="goals-new-task-date">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                        </svg>
+                        ${window.SteadyUtils.formatDate(dateInput.value, 'short')}
+                    </span>
+                ` : ''}
+            </div>
+            <button type="button" class="goals-new-task-remove" data-action="remove-new-task" data-temp-id="${taskId}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    `;
+    
+    newTasksList.insertAdjacentHTML('beforeend', taskHTML);
+    
+    // Store task data
+    if (!this.state.newTasks) this.state.newTasks = [];
+    this.state.newTasks.push({
+        tempId: taskId,
+        title: title,
+        due_date: dateInput.value || null
+    });
+    
+    // Clear inputs
+    titleInput.value = '';
+    dateInput.value = '';
+    
+    // Setup remove button
+    modal.querySelector(`[data-temp-id="${taskId}"] [data-action="remove-new-task"]`).addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.tempId;
+        modal.querySelector(`[data-temp-id="${id}"]`).remove();
+        this.state.newTasks = this.state.newTasks.filter(t => t.tempId !== id);
+    });
+});
     },
+    
     // MODALS - VIEW GOAL DETAIL
-    goals_showGoalDetailModal(goalId) {
-        const goal = this.state.goals.find(g => g.id === goalId);
-        if (!goal) return;
+goals_showGoalDetailModal(goalId) {
+    const goal = this.state.goals.find(g => g.id === goalId);
+    if (!goal) return;
 
-        const progress = Math.min(goal.progress || 0, 100);
-        const isCompleted = goal.status === 'completed';
-        const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
+    const progress = goal.status === 'completed' ? 100 : Math.min(Math.floor(goal.progress || 0), 99);
+    const isCompleted = goal.status === 'completed';
+    const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
 
-        const modal = document.createElement('div');
-        modal.className = 'goals-modal-overlay show';
-        modal.innerHTML = `
-            <div class="goals-modal goals-modal-detail">
-                <div class="goals-modal-header">
-                    <div class="goals-modal-header-content">
-                        ${cardColor ? `<div class="goals-modal-color-accent" style="background: ${cardColor}"></div>` : ''}
-                        <div>
-                            <h2 class="goals-modal-title">${API.escapeHtml(goal.title)}</h2>
-                            <div class="goals-modal-subtitle">
-                                ${this.goals_formatPeriod(goal.period)} • ${window.SteadyUtils.formatDate(goal.start_date, 'short')} - ${window.SteadyUtils.formatDate(goal.end_date, 'short')}
-                            </div>
+    const modal = document.createElement('div');
+    modal.className = 'goals-modal-overlay show';
+    modal.innerHTML = `
+        <div class="goals-modal goals-modal-detail">
+            <div class="goals-modal-header">
+                <div class="goals-modal-header-content">
+                    ${cardColor ? `<div class="goals-modal-color-accent" style="background: ${cardColor}"></div>` : ''}
+                    <div>
+                        <h2 class="goals-modal-title">${API.escapeHtml(goal.title)}</h2>
+                        <div class="goals-modal-subtitle">
+                            ${this.goals_formatPeriod(goal.period)} • ${window.SteadyUtils.formatDate(goal.start_date, 'short')} - ${window.SteadyUtils.formatDate(goal.end_date, 'short')}
                         </div>
                     </div>
-                    <button class="goals-modal-close">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                </div>
+                <button class="goals-modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="goals-modal-body">
+                <div class="goals-detail-progress">
+                    <div class="goals-detail-progress-ring">
+                        <svg viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="8"/>
+                            ${cardColor ? `
+                                <circle cx="60" cy="60" r="54" fill="none" stroke="${cardColor}" stroke-width="8" 
+                                        stroke-dasharray="${339.292 * progress / 100} 339.292" 
+                                        transform="rotate(-90 60 60)"
+                                        stroke-linecap="round"/>
+                            ` : `
+                                <circle cx="60" cy="60" r="54" fill="none" stroke="#94a3b8" stroke-width="8" 
+                                        stroke-dasharray="${339.292 * progress / 100} 339.292" 
+                                        transform="rotate(-90 60 60)"
+                                        stroke-linecap="round"/>
+                            `}
                         </svg>
-                    </button>
+                        <div class="goals-detail-progress-text">
+                            <div class="goals-detail-progress-percentage">${progress}%</div>
+                            <div class="goals-detail-progress-label">Complete</div>
+                        </div>
+                    </div>
+
+                    <div class="goals-detail-progress-info">
+                        <div class="goals-detail-stat">
+                            <div class="goals-detail-stat-label">Current</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.current_value, goal.unit)}</div>
+                        </div>
+                        <div class="goals-detail-stat">
+                            <div class="goals-detail-stat-label">Target</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.target_value, goal.unit)}</div>
+                        </div>
+                        <div class="goals-detail-stat">
+                            <div class="goals-detail-stat-label">Remaining</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.remaining, goal.unit)}</div>
+                        </div>
+                        <div class="goals-detail-stat">
+                            <div class="goals-detail-stat-label">Days Left</div>
+                            <div class="goals-detail-stat-value">${goal.period === 'none' ? 'Ongoing' : (goal.daysRemaining < 0 ? 'Overdue' : goal.daysRemaining)}</div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="goals-modal-body">
-                    <div class="goals-detail-progress">
-                        <div class="goals-detail-progress-ring">
-                            <svg viewBox="0 0 120 120">
-                                <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="8"/>
-                                ${cardColor ? `
-                                    <circle cx="60" cy="60" r="54" fill="none" stroke="${cardColor}" stroke-width="8" 
-                                            stroke-dasharray="${339.292 * progress / 100} 339.292" 
-                                            transform="rotate(-90 60 60)"
-                                            stroke-linecap="round"/>
-                                ` : `
-                                    <circle cx="60" cy="60" r="54" fill="none" stroke="#94a3b8" stroke-width="8" 
-                                            stroke-dasharray="${339.292 * progress / 100} 339.292" 
-                                            transform="rotate(-90 60 60)"
-                                            stroke-linecap="round"/>
-                                `}
-                            </svg>
-                            <div class="goals-detail-progress-text">
-                                <div class="goals-detail-progress-percentage">${progress}%</div>
-                                <div class="goals-detail-progress-label">Complete</div>
-                            </div>
-                        </div>
-
-                        <div class="goals-detail-progress-info">
-                            <div class="goals-detail-stat">
-                                <div class="goals-detail-stat-label">Current</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.current_value, goal.unit)}</div>
-                            </div>
-                            <div class="goals-detail-stat">
-                                <div class="goals-detail-stat-label">Target</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.target_value, goal.unit)}</div>
-                            </div>
-                            <div class="goals-detail-stat">
-                                <div class="goals-detail-stat-label">Remaining</div>
-                                <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.remaining, goal.unit)}</div>
-                            </div>
-                            <div class="goals-detail-stat">
-                                <div class="goals-detail-stat-label">Days Left</div>
-                                <div class="goals-detail-stat-value">${goal.period === 'none' ? 'Ongoing' : (goal.daysRemaining < 0 ? 'Overdue' : goal.daysRemaining)}</div>
-                            </div>
-                        </div>
+                <div class="goals-detail-info">
+                    <div class="goals-detail-info-row">
+                        <span class="goals-detail-info-label">Tracking</span>
+                        <span class="goals-detail-info-value">
+                            ${goal.auto_track ? 
+                                '<span class="goals-badge-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg> Auto-tracking enabled</span>' : 
+                                '<span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> Manual entry</span>'
+                            }
+                        </span>
                     </div>
-
-                    <div class="goals-detail-info">
+                    ${goal.is_recurring ? `
                         <div class="goals-detail-info-row">
-                            <span class="goals-detail-info-label">Tracking</span>
+                            <span class="goals-detail-info-label">Recurring</span>
                             <span class="goals-detail-info-value">
-                                ${goal.auto_track ? 
-                                    '<span class="goals-badge-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg> Auto-tracking enabled</span>' : 
-                                    '<span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> Manual entry</span>'
-                                }
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="23 4 23 10 17 10" stroke-width="2"/>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2"/>
+                                </svg>
+                                Resets after ${this.goals_formatPeriod(goal.period).toLowerCase()}
                             </span>
                         </div>
-                        ${goal.is_recurring ? `
-                            <div class="goals-detail-info-row">
-                                <span class="goals-detail-info-label">Recurring</span>
-                                <span class="goals-detail-info-value">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <polyline points="23 4 23 10 17 10" stroke-width="2"/>
-                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2"/>
-                                    </svg>
-                                    Resets after ${this.goals_formatPeriod(goal.period).toLowerCase()}
-                                </span>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${goal.description ? `
-                        <div class="goals-detail-description">
-                            <h3 class="goals-detail-section-title">Description</h3>
-                            <p>${API.escapeHtml(goal.description)}</p>
-                        </div>
                     ` : ''}
+                </div>
 
-                    <div class="goals-modal-actions">
-                        <button class="goals-btn-secondary" data-action="edit-goal" data-id="${goal.id}">
+                ${goal.description ? `
+                    <div class="goals-detail-description">
+                        <h3 class="goals-detail-section-title">Description</h3>
+                        <p>${API.escapeHtml(goal.description)}</p>
+                    </div>
+                ` : ''}
+
+                ${goal.goal_type === 'task_list' ? `
+                    <div class="goals-detail-tasks">
+                        <h3 class="goals-detail-section-title">Linked Tasks</h3>
+                        <div class="goals-detail-tasks-list" id="goalDetailTasksList">
+                            <div class="goals-loading-tasks">Loading tasks...</div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div class="goals-modal-actions">
+                    <button class="goals-btn-secondary" data-action="edit-goal" data-id="${goal.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
+                        </svg>
+                        Edit Goal
+                    </button>
+                    ${!isCompleted && !goal.auto_track ? `
+                        <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
                             </svg>
-                            Edit Goal
+                            Update Progress
                         </button>
-                        ${!isCompleted && !goal.auto_track ? `
-                            <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
-                                </svg>
-                                Update Progress
-                            </button>
-                        ` : ''}
-                        <button class="goals-btn-danger" data-action="delete-goal" data-id="${goal.id}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Delete
-                        </button>
-                    </div>
+                    ` : ''}
+                    <button class="goals-btn-danger" data-action="delete-goal" data-id="${goal.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete
+                    </button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
-        document.body.appendChild(modal);
-        this.goals_setupModalEvents(modal);
+    document.body.appendChild(modal);
+    this.goals_setupModalEvents(modal);
 
-        // Setup button event handlers for modal actions
-        modal.querySelector('[data-action="edit-goal"]')?.addEventListener('click', async (e) => {
-            const id = e.target.closest('button').dataset.id;
-            modal.remove(); // Close detail modal
-            await this.goals_showEditModal(id);
-        });
+    // Setup button event handlers for modal actions
+    modal.querySelector('[data-action="edit-goal"]')?.addEventListener('click', async (e) => {
+        const id = e.target.closest('button').dataset.id;
+        modal.remove(); // Close detail modal
+        await this.goals_showEditModal(id);
+    });
 
-        modal.querySelector('[data-action="update-progress"]')?.addEventListener('click', (e) => {
-            const id = e.target.closest('button').dataset.id;
-            this.goals_showUpdateProgressModal(id);
-        });
+    modal.querySelector('[data-action="update-progress"]')?.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        this.goals_showUpdateProgressModal(id);
+    });
 
-        modal.querySelector('[data-action="delete-goal"]')?.addEventListener('click', (e) => {
-            const id = e.target.closest('button').dataset.id;
-            this.goals_showDeleteModal(id);
-        });
-    },
+    modal.querySelector('[data-action="delete-goal"]')?.addEventListener('click', (e) => {
+        const id = e.target.closest('button').dataset.id;
+        this.goals_showDeleteModal(id);
+    });
+
+    // Load linked tasks if it's a task-list goal
+    if (goal.goal_type === 'task_list') {
+        this.goals_loadLinkedTasks(goalId, modal);
+    }
+},
+
+    async goals_loadLinkedTasks(goalId, modal) {
+    try {
+        const tasks = await API.getGoalTasks(goalId);
+        const tasksList = modal.querySelector('#goalDetailTasksList');
+        
+        if (!tasksList) return;
+        
+        if (tasks.length === 0) {
+            tasksList.innerHTML = `
+                <div class="goals-task-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <p>No tasks linked to this goal</p>
+                </div>
+            `;
+            return;
+        }
+        
+        tasksList.innerHTML = tasks.map(task => `
+            <div class="goals-detail-task-item ${task.status === 'completed' ? 'completed' : ''}">
+                <div class="goals-detail-task-check">
+                    ${task.status === 'completed' ? `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
+                            <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    ` : `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        </svg>
+                    `}
+                </div>
+                <div class="goals-detail-task-content">
+                    <span class="goals-detail-task-title">${API.escapeHtml(task.title)}</span>
+                    ${task.due_date ? `
+                        <span class="goals-detail-task-date">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                            </svg>
+                            ${window.SteadyUtils.formatDate(task.due_date, 'short')}
+                        </span>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Failed to load linked tasks:', error);
+        const tasksList = modal.querySelector('#goalDetailTasksList');
+        if (tasksList) {
+            tasksList.innerHTML = `
+                <div class="goals-task-empty">
+                    <p>Failed to load tasks</p>
+                </div>
+            `;
+        }
+    }
+},
 
     // MODALS - UPDATE PROGRESS
     goals_showUpdateProgressModal(goalId) {
@@ -1322,53 +1617,68 @@ goals_attachEvents() {
     };
 },
 
-    // API ACTIONS - CREATE
     async goals_createGoal() {
-        try {
-            const form = document.getElementById('goalForm');
-            const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
-            const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
+    try {
+        const form = document.getElementById('goalForm');
+        const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
+        const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
+        
+        const title = document.getElementById('goalTitle').value.trim();
+        const description = document.getElementById('goalDescription').value.trim();
+        const startDate = document.getElementById('goalStartDate').value;
+        const endDate = document.getElementById('goalEndDate').value;
+        const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+        const isRecurring = document.getElementById('goalRecurring').checked || false;
+        
+        // Validation
+        if (!title || title.length > 35) {
+            window.SteadyUtils.showToast('Invalid title', 'error');
+            return;
+        }
+        
+        if (!activePeriod || !startDate || !endDate) {
+            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+            return;
+        }
+        
+        // Build goal data based on tracking method
+        let goalData = {
+            title: title,
+            description: description || null,
+            period: activePeriod,
+            start_date: startDate,
+            end_date: endDate,
+            status: 'active',
+            is_recurring: isRecurring,
+            color: selectedColor || null
+        };
+        
+        if (trackingMethod === 'task_list') {
+            // Task Checklist Goal
+            const totalTasks = this.state.selectedTaskIds.length + (this.state.newTasks?.length || 0);
             
-            const title = document.getElementById('goalTitle').value.trim();
+            if (totalTasks === 0) {
+                window.SteadyUtils.showToast('Please select or create at least one task', 'error');
+                return;
+            }
+            
+            goalData.goal_type = 'task_list';
+            goalData.target_value = totalTasks;
+            goalData.current_value = 0;
+            goalData.unit = 'tasks';
+            goalData.auto_track = true; // Task-list goals auto-update via trigger
+            
+        } else if (trackingMethod === 'auto') {
+            // Auto-Track Goal
+            const trackType = document.getElementById('goalTrackType').value;
             const targetValueStr = document.getElementById('goalTarget').value.trim();
             const targetValue = parseFloat(targetValueStr);
-            const startDate = document.getElementById('goalStartDate').value;
-            const endDate = document.getElementById('goalEndDate').value;
             
-            if (!title) {
-                window.SteadyUtils.showToast('Please enter a goal title', 'error');
+            if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                window.SteadyUtils.showToast('Invalid target value', 'error');
                 return;
             }
             
-            if (title.length > 35) {
-                window.SteadyUtils.showToast('Goal title must be 35 characters or less', 'error');
-                return;
-            }
-            
-            if (!targetValueStr) {
-                window.SteadyUtils.showToast('Please enter a target value', 'error');
-                return;
-            }
-            
-            if (isNaN(targetValue) || targetValue <= 0) {
-                window.SteadyUtils.showToast('Please enter a valid number', 'error');
-                return;
-            }
-            
-            if (targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Target value cannot exceed 99,999,999.99', 'error');
-                return;
-            }
-            
-            if (!activePeriod || !startDate || !endDate) {
-                window.SteadyUtils.showToast('Please fill in all required fields', 'error');
-                return;
-            }
-
-            const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-            const description = document.getElementById('goalDescription').value.trim();
-
-            // Get unit value - use custom input if 'custom' is selected
             const unitSelect = document.getElementById('goalUnit').value;
             let unitValue = unitSelect;
             if (unitSelect === 'custom') {
@@ -1379,46 +1689,86 @@ goals_attachEvents() {
                 }
                 unitValue = customUnit;
             }
-
-            const goalData = {
-                title: title,
-                description: description || null,
-                goal_type: trackingMethod === 'auto' ?
-                    document.getElementById('goalTrackType').value : 'custom',
-                target_value: targetValue,
-                current_value: 0,
-                unit: unitValue,
-                period: activePeriod,
-                start_date: startDate,
-                end_date: endDate,
-                status: 'active',
-                auto_track: trackingMethod === 'auto' || false,
-                is_recurring: document.getElementById('goalRecurring').checked || false,
-                color: selectedColor || null
-            };
             
-            console.log('Creating goal with data:', goalData);
-
-            await API.createGoal(goalData);
-            window.SteadyUtils.showToast('Goal created successfully!', 'success');
-            await this.goals_loadData();
-            this.goals_render();
-
-        } catch (error) {
-            console.error('Create goal error:', error);
+            goalData.goal_type = trackType;
+            goalData.target_value = targetValue;
+            goalData.current_value = 0;
+            goalData.unit = unitValue;
+            goalData.auto_track = true;
             
-            let errorMsg = 'Failed to create goal';
-            if (error.message?.includes('numeric field overflow')) {
-                errorMsg = 'Target value is too large. Please use a smaller number.';
-            } else if (error.message?.includes('violates check constraint')) {
-                errorMsg = 'Invalid data. Please check your inputs.';
-            } else if (error.message) {
-                errorMsg = error.message;
+        } else {
+            // Manual Goal
+            const targetValueStr = document.getElementById('goalTarget').value.trim();
+            const targetValue = parseFloat(targetValueStr);
+            
+            if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return;
             }
             
-            window.SteadyUtils.showToast(errorMsg, 'error');
+            const unitSelect = document.getElementById('goalUnit').value;
+            let unitValue = unitSelect;
+            if (unitSelect === 'custom') {
+                const customUnit = document.getElementById('goalCustomUnit').value.trim();
+                if (!customUnit) {
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
+                }
+                unitValue = customUnit;
+            }
+            
+            goalData.goal_type = 'custom';
+            goalData.target_value = targetValue;
+            goalData.current_value = 0;
+            goalData.unit = unitValue;
+            goalData.auto_track = false;
         }
-    },
+        
+        console.log('Creating goal with data:', goalData);
+        
+        // Create the goal
+        const newGoal = await API.createGoal(goalData);
+        
+        // If task_list goal, link the tasks
+        if (trackingMethod === 'task_list') {
+            // Link existing tasks
+            if (this.state.selectedTaskIds.length > 0) {
+                await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
+            }
+            
+            // Create and link new tasks
+            if (this.state.newTasks && this.state.newTasks.length > 0) {
+                for (const taskData of this.state.newTasks) {
+                    await API.createTaskForGoal(newGoal.id, {
+                        title: taskData.title,
+                        due_date: taskData.due_date,
+                        status: 'pending'
+                    });
+                }
+            }
+        }
+        
+        // Reset state
+        this.state.selectedTaskIds = [];
+        this.state.newTasks = [];
+        
+        window.SteadyUtils.showToast('Goal created successfully!', 'success');
+        await this.goals_loadData();
+        this.goals_render();
+        
+    } catch (error) {
+        console.error('Create goal error:', error);
+        
+        let errorMsg = 'Failed to create goal';
+        if (error.message?.includes('numeric field overflow')) {
+            errorMsg = 'Target value is too large. Please use a smaller number.';
+        } else if (error.message) {
+            errorMsg = error.message;
+        }
+        
+        window.SteadyUtils.showToast(errorMsg, 'error');
+    }
+},
 
     // API ACTIONS - UPDATE
     async goals_updateGoal() {
@@ -1541,56 +1891,46 @@ goals_attachEvents() {
     },
 
     goals_formatValue(value, unit) {
-        if (!value) return '0';
+    if (!value) return '0';
+    
+    // Round to 2 decimals max, strip trailing zeros
+    const rounded = Math.round(value * 100) / 100;
+    
+    // Format number with commas, keep decimals if they exist
+    const formatted = rounded.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    });
+    
+    // Return with unit
+    if (unit === 'dollars') return `$${formatted}`;
+    if (unit === 'hours') return `${formatted}h`;
+    return unit ? `${formatted} ${unit}` : formatted;
+},
 
-        const formattedNumber = window.SteadyUtils.formatNumber(value);
-
-        switch (unit) {
-            case 'dollars':
-                return window.SteadyUtils.formatCurrency(value);
-            case 'hours':
-                return `${formattedNumber}h`;
-            case 'leads':
-            case 'tasks':
-            case 'calls':
-            case 'meetings':
-                return `${formattedNumber} ${unit}`;
-            default:
-                // Custom unit - display the unit name
-                return unit ? `${formattedNumber} ${unit}` : formattedNumber;
-        }
-    },
-
-    // Format value with abbreviation (for goal detail modal where space is tight)
-    goals_formatValueAbbreviated(value, unit) {
-        if (!value) return '0';
-
-        // Abbreviate numbers >= 1000
-        let abbreviatedNumber;
-        if (value >= 1000000000) {
-            abbreviatedNumber = (value / 1000000000).toFixed(value % 1000000000 === 0 ? 0 : 1) + 'B';
-        } else if (value >= 1000000) {
-            abbreviatedNumber = (value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1) + 'M';
-        } else if (value >= 1000) {
-            abbreviatedNumber = (value / 1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'K';
-        } else {
-            abbreviatedNumber = value.toString();
-        }
-
-        switch (unit) {
-            case 'dollars':
-                return `$${abbreviatedNumber}`;
-            case 'hours':
-                return `${abbreviatedNumber}h`;
-            case 'leads':
-            case 'tasks':
-            case 'calls':
-            case 'meetings':
-                return `${abbreviatedNumber} ${unit}`;
-            default:
-                return unit ? `${abbreviatedNumber} ${unit}` : abbreviatedNumber;
-        }
-    },
+goals_formatValueAbbreviated(value, unit) {
+    if (!value) return '0';
+    
+    // Round to 2 decimals first
+    value = Math.round(value * 100) / 100;
+    
+    // Abbreviate based on size
+    let abbrev;
+    if (value >= 1000000000) {
+        abbrev = (value / 1000000000).toFixed(2).replace(/\.?0+$/, '') + 'B';
+    } else if (value >= 1000000) {
+        abbrev = (value / 1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    } else if (value >= 1000) {
+        abbrev = (value / 1000).toFixed(2).replace(/\.?0+$/, '') + 'K';
+    } else {
+        abbrev = value % 1 === 0 ? value.toString() : value.toFixed(2).replace(/\.?0+$/, '');
+    }
+    
+    // Return with unit
+    if (unit === 'dollars') return `$${abbrev}`;
+    if (unit === 'hours') return `${abbrev}h`;
+    return unit ? `${abbrev} ${unit}` : abbrev;
+},
 
     // COUNTDOWN TIMER
     goals_getCountdownText(endDate) {
@@ -1952,8 +2292,316 @@ goals_attachEvents() {
     background: linear-gradient(90deg, var(--warning), var(--danger));
 }
 
-/* Glow effect removed - using only border outline on hover */
-/* Edit button removed from cards - now in view modal */
+/* TASK CHECKLIST STYLES */
+
+.goals-tracking-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.goals-task-checklist-config {
+    margin-top: 1rem;
+    animation: goalsSlideDown 0.3s ease;
+}
+
+.goals-task-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.goals-task-tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.goals-task-tab:hover {
+    color: var(--text-primary);
+}
+
+.goals-task-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.goals-task-tab-content {
+    animation: goalsSlideDown 0.3s ease;
+}
+
+.goals-task-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem;
+}
+
+.goals-task-checkbox {
+    display: block;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+}
+
+.goals-task-checkbox input {
+    display: none;
+}
+
+.goals-task-item {
+    padding: 1rem;
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+}
+
+.goals-task-checkbox:hover .goals-task-item {
+    border-color: var(--primary);
+}
+
+.goals-task-checkbox input:checked + .goals-task-item {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.goals-task-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.goals-task-item-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.goals-task-item-date {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.goals-task-item-date svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    stroke-width: 2;
+}
+
+.goals-task-selected-count {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: var(--radius);
+    text-align: center;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.goals-task-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-secondary);
+}
+
+.goals-task-empty svg {
+    width: 3rem;
+    height: 3rem;
+    stroke: var(--text-tertiary);
+    stroke-width: 2;
+    margin-bottom: 1rem;
+}
+
+.goals-task-empty p {
+    margin: 0.5rem 0;
+}
+
+.goals-task-empty-hint {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.goals-quick-task-form {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.goals-btn-add-task {
+    white-space: nowrap;
+}
+
+.goals-new-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.goals-new-task-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(16, 185, 129, 0.05);
+    border: 2px solid rgba(16, 185, 129, 0.2);
+    border-radius: var(--radius);
+}
+
+.goals-new-task-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.goals-new-task-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.goals-new-task-date {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.goals-new-task-date svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    stroke-width: 2;
+}
+
+.goals-new-task-remove {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.goals-new-task-remove svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke: var(--text-tertiary);
+    stroke-width: 2;
+}
+
+.goals-new-task-remove:hover {
+    background: var(--danger);
+}
+
+.goals-new-task-remove:hover svg {
+    stroke: white;
+}
+
+.goals-detail-tasks {
+    margin-bottom: 2rem;
+}
+
+.goals-detail-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.goals-loading-tasks {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.goals-detail-task-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+}
+
+.goals-detail-task-item.completed {
+    opacity: 0.6;
+    background: rgba(16, 185, 129, 0.05);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.goals-detail-task-check {
+    flex-shrink: 0;
+}
+
+.goals-detail-task-check svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke: var(--text-tertiary);
+    stroke-width: 2;
+}
+
+.goals-detail-task-item.completed .goals-detail-task-check svg {
+    stroke: var(--success);
+}
+
+.goals-detail-task-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.goals-detail-task-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.goals-detail-task-item.completed .goals-detail-task-title {
+    text-decoration: line-through;
+}
+
+.goals-detail-task-date {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+}
+
+.goals-detail-task-date svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    stroke-width: 2;
+}
+
+@media (max-width: 768px) {
+    .goals-tracking-options-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .goals-quick-task-form {
+        grid-template-columns: 1fr;
+    }
+}
 
 .goals-card-header {
     display: flex;
@@ -2479,6 +3127,7 @@ goals_attachEvents() {
     border: 2px solid transparent;
     border-radius: var(--radius-lg);
     transition: border-color 0.2s ease;
+    position: relative;
 }
 
 .goals-checkbox-v2:hover {
@@ -2870,6 +3519,7 @@ goals_attachEvents() {
     border: 2px solid var(--border);
     border-radius: var(--radius);
     font-size: 1rem;
+    background: var(--background);
     color: var(--text-primary);
     transition: all 0.2s ease;
 }

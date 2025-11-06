@@ -975,84 +975,103 @@ class TierScalingAPI {
     return data;
   }
 
-  // =====================================================
-  // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
-  // =====================================================
+// =====================================================
+// GOALS (Pro Tier - Apple Watch Style Goal Tracking)
+// =====================================================
 
-  static async getGoals(status = 'active') {
+static async getGoals(status = 'active') {
     let query = supabase
-      .from('goals')
-      .select('*')
-      .order('created_at', { ascending: false });
-
+        .from('goals')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
     if (status) query = query.eq('status', status);
-
+    
     const { data, error } = await query;
     if (error) throw error;
     return data;
-  }
+}
 
-  static async createGoal(goalData) {
+static async createGoal(goalData) {
     const { data: { user } } = await supabase.auth.getUser();
-
     const { data, error } = await supabase
-      .from('goals')
-      .insert([{ ...goalData, user_id: user.id }])
-      .select();
-
+        .from('goals')
+        .insert([{ ...goalData, user_id: user.id }])
+        .select();
+    
     if (error) throw error;
     return data[0];
-  }
+}
 
-  static async updateGoal(goalId, updates) {
+static async updateGoal(goalId, updates) {
     const { data, error } = await supabase
-      .from('goals')
-      .update(updates)
-      .eq('id', goalId)
-      .select();
-
+        .from('goals')
+        .update(updates)
+        .eq('id', goalId)
+        .select();
+    
     if (error) throw error;
     return data[0];
-  }
+}
 
-  static async deleteGoal(goalId) {
+static async deleteGoal(goalId) {
     const { error } = await supabase
-      .from('goals')
-      .delete()
-      .eq('id', goalId);
-
+        .from('goals')
+        .delete()
+        .eq('id', goalId);
+    
     if (error) throw error;
     return { success: true };
-  }
+}
 
-  /**
-   * Manual goal progress update
-   * Only use this if auto_track is disabled
-   */
-  static async updateGoalProgress(goalId, value) {
+/**
+ * Manual goal progress update
+ * Only use this if auto_track is disabled
+ */
+static async updateGoalProgress(goalId, value) {
     return await this.updateGoal(goalId, { current_value: value });
-  }
+}
 
-  /**
-   * Check if any goals have hit their targets
-   * Auto-completes goals that reached target_value
-   */
-  static async checkGoalCompletion() {
+/**
+ * Check if any goals have hit their targets
+ * Auto-completes goals that reached target_value
+ * Handles both value-based and task-based goals
+ */
+static async checkGoalCompletion() {
     const goals = await this.getGoals('active');
     
     for (const goal of goals) {
-        const progress = (goal.current_value / goal.target_value) * 100;
+        let progress = 0;
+        
+        // Calculate progress based on goal type
+        if (goal.goal_type === 'task_list') {
+            // Task-based goal - check linked tasks
+            const taskProgress = await this.getTaskGoalProgress(goal.id);
+            progress = taskProgress.progress;
+        } else {
+            // Value-based goal - check current vs target
+            progress = (goal.current_value / goal.target_value) * 100;
+        }
         
         if (progress >= 100) {
-            // Goal is complete!
-            
             if (goal.is_recurring) {
                 // Recurring goal - increment count and reset
                 await this.updateGoal(goal.id, {
                     completion_count: (goal.completion_count || 0) + 1,
                     current_value: 0,
-                    status: 'active' // keep it active
+                    status: 'active'
                 });
+                
+                // If task-list goal, reset all linked tasks
+                if (goal.goal_type === 'task_list') {
+                    const tasks = await this.getGoalTasks(goal.id);
+                    for (const task of tasks) {
+                        await this.updateTask(task.id, { 
+                            status: 'pending',
+                            completed_at: null
+                        });
+                    }
+                }
             } else {
                 // Normal goal - mark as completed
                 await this.updateGoal(goal.id, {
@@ -1063,57 +1082,180 @@ class TierScalingAPI {
     }
 }
 
-  /**
-   * Get progress for all goals with calculated percentages
-   */
-  static async getGoalProgress() {
+/**
+ * Get progress for all goals with calculated percentages
+ * Handles both value-based and task-based goals
+ */
+static async getGoalProgress() {
     const goals = await this.getGoals();
-
-    return goals.map(goal => ({
-      ...goal,
-      progress: goal.target_value > 0
-        ? Math.round((goal.current_value / goal.target_value) * 100)
-        : 0,
-      remaining: Math.max(0, goal.target_value - goal.current_value),
-      daysRemaining: this.calculateDaysUntil(goal.end_date)
+    
+    const goalsWithProgress = await Promise.all(goals.map(async goal => {
+        let progress = 0;
+        let remaining = 0;
+        
+        if (goal.goal_type === 'task_list') {
+            // Task-based goal
+            const taskProgress = await this.getTaskGoalProgress(goal.id);
+            progress = taskProgress.progress;
+            remaining = taskProgress.remaining;
+        } else {
+            // Value-based goal
+            progress = goal.target_value > 0
+                ? Math.round((goal.current_value / goal.target_value) * 100)
+                : 0;
+            remaining = Math.max(0, goal.target_value - goal.current_value);
+        }
+        
+        return {
+            ...goal,
+            progress,
+            remaining,
+            daysRemaining: this.calculateDaysUntil(goal.end_date)
+        };
     }));
-  }
+    
+    return goalsWithProgress;
+}
 
-  // NEW v4.0: Full schema field coverage
-  static async updateGoalReminder(goalId, remindAt) {
+// Goal appearance/settings
+static async updateGoalReminder(goalId, remindAt) {
     return await this.updateGoal(goalId, { remind_at: remindAt });
-  }
+}
 
-  static async updateGoalAppearance(goalId, color, icon) {
+static async updateGoalAppearance(goalId, color, icon) {
     return await this.updateGoal(goalId, { color, icon });
-  }
+}
 
-  static async toggleGoalRecurring(goalId, isRecurring) {
+static async toggleGoalRecurring(goalId, isRecurring) {
     return await this.updateGoal(goalId, { is_recurring: isRecurring });
-  }
+}
 
-  static async getRecurringGoals() {
+static async getRecurringGoals() {
     const { data, error } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('is_recurring', true)
-      .eq('status', 'active');
-
+        .from('goals')
+        .select('*')
+        .eq('is_recurring', true)
+        .eq('status', 'active');
+    
     if (error) throw error;
     return data;
-  }
+}
 
-
-  /**
-   * Refresh auto-tracked goals
-   * Call this after creating leads/jobs to update goal progress
-   * NOTE: If you have database triggers set up, this is automatic
-   */
-  static async refreshGoalProgress() {
+/**
+ * Refresh auto-tracked goals
+ * Call this after creating leads/jobs to update goal progress
+ * NOTE: If you have database triggers set up, this is automatic
+ */
+static async refreshGoalProgress() {
     const { data, error } = await supabase.rpc('refresh_goal_progress');
     if (error) throw error;
     return data;
-  }
+}
+
+// =====================================================
+// GOAL TASKS (Task-Based Goals)
+// =====================================================
+
+/**
+ * Link existing tasks to a goal
+ * @param {string} goalId - Goal UUID
+ * @param {string[]} taskIds - Array of task UUIDs
+ */
+static async linkTasksToGoal(goalId, taskIds) {
+    const links = taskIds.map(taskId => ({
+        goal_id: goalId,
+        task_id: taskId
+    }));
+    
+    const { data, error } = await supabase
+        .from('goal_tasks')
+        .insert(links)
+        .select();
+    
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * Remove task link from goal
+ * @param {string} goalId - Goal UUID
+ * @param {string} taskId - Task UUID to unlink
+ */
+static async unlinkTaskFromGoal(goalId, taskId) {
+    const { error } = await supabase
+        .from('goal_tasks')
+        .delete()
+        .eq('goal_id', goalId)
+        .eq('task_id', taskId);
+    
+    if (error) throw error;
+    return { success: true };
+}
+
+/**
+ * Get all tasks linked to a goal
+ * @param {string} goalId - Goal UUID
+ */
+static async getGoalTasks(goalId) {
+    const { data, error } = await supabase
+        .from('goal_tasks')
+        .select(`
+            id,
+            task_id,
+            tasks (
+                id,
+                title,
+                description,
+                status,
+                due_date,
+                priority,
+                completed_at
+            )
+        `)
+        .eq('goal_id', goalId);
+    
+    if (error) throw error;
+    
+    // Flatten the nested structure
+    return data.map(link => ({
+        link_id: link.id,
+        ...link.tasks
+    }));
+}
+
+/**
+ * Create a new task and link it to a goal
+ * @param {string} goalId - Goal UUID
+ * @param {object} taskData - Task data (title, description, etc)
+ */
+static async createTaskForGoal(goalId, taskData) {
+    // Create the task first
+    const task = await this.createTask(taskData);
+    
+    // Link it to the goal
+    await this.linkTasksToGoal(goalId, [task.id]);
+    
+    return task;
+}
+
+/**
+ * Get task-based goal progress with linked task details
+ * @param {string} goalId - Goal UUID
+ */
+static async getTaskGoalProgress(goalId) {
+    const tasks = await this.getGoalTasks(goalId);
+    const completedTasks = tasks.filter(t => t.status === 'completed');
+    
+    return {
+        total: tasks.length,
+        completed: completedTasks.length,
+        remaining: tasks.length - completedTasks.length,
+        progress: tasks.length > 0 
+            ? Math.round((completedTasks.length / tasks.length) * 100)
+            : 0,
+        tasks: tasks
+    };
+}
 
   // =====================================================
   // PREFERENCES (Pro Tier - UI Customization)
