@@ -199,6 +199,52 @@ class TierScalingAPI {
     };
   }
 
+  /**
+   * NEW: Verify user has access to a specific tier
+   * @param {string} requiredTier - 'free' or 'professional' or 'business' or 'enterprise' or 'admin'
+   * @returns {Object} { authorized: boolean, userTier: string, message: string }
+   */
+  static async verifyTierAccess(requiredTier) {
+    try {
+      const profile = await this.getProfile();
+      const userTier = profile.user_type;
+
+      // Define tier hierarchies
+      const tierHierarchy = {
+        'free': ['free'],
+        'professional': ['professional', 'professional_trial', 'business', 'enterprise', 'admin'],
+        'business': ['business', 'enterprise', 'admin'],
+        'enterprise': ['enterprise', 'admin'],
+        'admin': ['admin']
+      };
+
+      const allowedTiers = tierHierarchy[requiredTier] || [];
+      const authorized = allowedTiers.includes(userTier);
+
+      if (!authorized) {
+        console.warn(`🚫 Unauthorized tier access attempt: ${userTier} tried to access ${requiredTier} tier`);
+      }
+
+      return {
+        authorized,
+        userTier,
+        requiredTier,
+        message: authorized
+          ? `Access granted to ${requiredTier} tier`
+          : `Access denied: ${userTier} tier cannot access ${requiredTier} features`
+      };
+
+    } catch (error) {
+      console.error('Tier verification error:', error);
+      return {
+        authorized: false,
+        userTier: 'unknown',
+        requiredTier,
+        message: 'Tier verification failed'
+      };
+    }
+  }
+
   // =====================================================
   // LEADS MANAGEMENT
   // =====================================================
