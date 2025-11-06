@@ -405,7 +405,13 @@ async goals_loadAvailableTasks() {
                         <div class="goals-divider"></div>
                         
                         <div class="goals-form-group-v2">
-    <label class="goals-form-label-v2">⚡ Tracking Method</label>
+    <label class="goals-form-label-v2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+            <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Tracking Method
+    </label>
     <div class="goals-tracking-options-grid">
         <label class="goals-tracking-radio">
             <input type="radio" name="tracking" value="manual" checked>
@@ -510,20 +516,26 @@ async goals_loadAvailableTasks() {
             </div>
         </div>
     </div>
+
+    <!-- Auto-Track Options -->
+    <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
+        <select id="goalTrackType" class="goals-form-select-v2">
+            <option value="revenue">Track from Jobs (Revenue)</option>
+            <option value="leads">Track from Leads Created</option>
+            <option value="tasks">Track from Tasks Completed</option>
+        </select>
+    </div>
 </div>
-                            
-                            <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
-                                <select id="goalTrackType" class="goals-form-select-v2">
-                                    <option value="revenue">Track from Jobs (Revenue)</option>
-                                    <option value="leads">Track from Leads Created</option>
-                                    <option value="tasks">Track from Tasks Completed</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <label class="goals-checkbox-v2">
                             <input type="checkbox" id="goalRecurring">
-                            <span class="goals-checkbox-label">🔄 Recurring goal (resets after period ends)</span>
+                            <span class="goals-checkbox-label">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                                    <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Recurring goal (resets after period ends)
+                            </span>
                         </label>
 
                         <div class="goals-divider"></div>
@@ -720,9 +732,15 @@ async goals_loadAvailableTasks() {
                         </div>
 
                         <div class="goals-divider"></div>
-                        
+
                         <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">⚡ Tracking Method</label>
+                            <label class="goals-form-label-v2">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                    <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Tracking Method
+                            </label>
                             <div class="goals-tracking-options">
                                 <label class="goals-tracking-radio">
                                     <input type="radio" name="tracking" value="manual" ${!goal.auto_track ? 'checked' : ''}>
@@ -758,7 +776,13 @@ async goals_loadAvailableTasks() {
 
                         <label class="goals-checkbox-v2">
                             <input type="checkbox" id="goalRecurring" ${goal.is_recurring ? 'checked' : ''}>
-                            <span class="goals-checkbox-label">🔄 Recurring goal (resets after period ends)</span>
+                            <span class="goals-checkbox-label">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                                    <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Recurring goal (resets after period ends)
+                            </span>
                         </label>
 
                         <div class="goals-divider"></div>
