@@ -516,16 +516,16 @@ async goals_loadAvailableTasks() {
             </div>
         </div>
     </div>
+
+    <!-- Auto-Track Options -->
+    <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
+        <select id="goalTrackType" class="goals-form-select-v2">
+            <option value="revenue">Track from Jobs (Revenue)</option>
+            <option value="leads">Track from Leads Created</option>
+            <option value="tasks">Track from Tasks Completed</option>
+        </select>
+    </div>
 </div>
-                            
-                            <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
-                                <select id="goalTrackType" class="goals-form-select-v2">
-                                    <option value="revenue">Track from Jobs (Revenue)</option>
-                                    <option value="leads">Track from Leads Created</option>
-                                    <option value="tasks">Track from Tasks Completed</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <label class="goals-checkbox-v2">
                             <input type="checkbox" id="goalRecurring">
