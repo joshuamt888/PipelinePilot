@@ -272,6 +272,26 @@ created_at        TIMESTAMPTZ
 updated_at        TIMESTAMPTZ
 ```
 
+### `goal_tasks` Table (Junction)
+**Status:** ✅ PRODUCTION
+**Purpose:** Links tasks to goals for task-based goal tracking
+```sql
+id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
+goal_id     UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE
+task_id     UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE
+created_at  TIMESTAMPTZ DEFAULT NOW()
+
+-- Constraints
+UNIQUE(goal_id, task_id)  -- Prevents duplicate links
+
+-- Indexes
+idx_goal_tasks_goal_id ON goal_tasks(goal_id)
+idx_goal_tasks_task_id ON goal_tasks(task_id)
+
+-- RLS Policies
+- Users can only see/create/delete links for their own goals
+```
+
 ### `jobs` Table
 **Status:** ✅ PRODUCTION (No UI yet)
 ```sql
@@ -350,6 +370,13 @@ API.updateGoalProgress(id, value) // Manually update progress
 API.getGoalProgress()            // Get all goals with calculated progress
 API.checkGoalCompletion()        // Check and auto-complete goals
 API.getGoalById(goalId)          // Get single goal by ID
+
+// Task-based goal tracking (NEW)
+API.linkTasksToGoal(goalId, taskIds)    // Link existing tasks to goal
+API.createTaskForGoal(goalId, taskData) // Create and link new task
+API.getGoalTasks(goalId)                // Get all tasks for a goal
+API.getTaskGoalProgress(goalId)         // Get completion stats
+API.unlinkTaskFromGoal(goalId, taskId)  // Remove task-goal link
 ```
 
 ### Jobs
