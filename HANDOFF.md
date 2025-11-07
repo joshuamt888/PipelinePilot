@@ -290,6 +290,12 @@ idx_goal_tasks_task_id ON goal_tasks(task_id)
 
 -- RLS Policies
 - Users can only see/create/delete links for their own goals
+
+-- Triggers
+- update_goal_task_progress(): Auto-updates goal.current_value when task status changes
+- update_goal_on_task_link(): Auto-updates goal.current_value when task is linked
+- update_goal_on_task_unlink(): Auto-updates goal.current_value when task is unlinked
+- See: database/migrations/goal_task_progress_trigger.sql
 ```
 
 ### `jobs` Table
