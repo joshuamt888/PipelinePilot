@@ -76,6 +76,24 @@ async goals_loadAvailableTasks() {
         }, 50);
     },
 
+    // SMOOTH FILTER CHANGE (with fade transition)
+    async goals_smoothFilterChange(newFilter) {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        // Fade out
+        container.style.opacity = '0';
+
+        // Wait for fade out
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Change filter
+        this.state.currentFilter = newFilter;
+
+        // Re-render (will fade back in)
+        this.goals_render();
+    },
+
     // HEADER
     goals_renderHeader() {
         return `
@@ -269,6 +287,16 @@ async goals_loadAvailableTasks() {
                         </div>
                     ` : ''}
                 </div>
+
+                ${goal.is_recurring && goal.completion_count > 0 ? `
+                    <div class="goals-card-completions">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
+                            <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Completed ${goal.completion_count}x
+                    </div>
+                ` : ''}
             </div>
         `;
     },
@@ -1758,12 +1786,10 @@ goals_attachEvents() {
                 document.querySelector('.goals-modal-overlay')?.remove();
                 break;
             case 'filter-active':
-                this.state.currentFilter = this.state.currentFilter === 'active' ? 'all' : 'active';
-                this.goals_render();
+                await this.goals_smoothFilterChange(this.state.currentFilter === 'active' ? 'all' : 'active');
                 break;
             case 'filter-completed':
-                this.state.currentFilter = this.state.currentFilter === 'completed' ? 'all' : 'completed';
-                this.goals_render();
+                await this.goals_smoothFilterChange(this.state.currentFilter === 'completed' ? 'all' : 'completed');
                 break;
         }
     };
