@@ -594,6 +594,9 @@ async goals_loadAvailableTasks() {
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
+
+                // Show error message to user
+                window.SteadyUtils.showToast(error.message || 'Failed to create goal', 'error');
             }
         });
 
@@ -834,6 +837,9 @@ async goals_loadAvailableTasks() {
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
+
+                // Show error message to user
+                window.SteadyUtils.showToast(error.message || 'Failed to update goal', 'error');
             }
         });
 
@@ -1568,43 +1574,22 @@ goals_showGoalDetailModal(goalId) {
 
     // MODAL EVENTS
     goals_setupModalEvents(modal) {
-        const isFormModal = modal.querySelector('#goalForm') !== null;
-
-        const attemptClose = () => {
-            // For create/edit modals, check if there's unsaved data
-            if (isFormModal) {
-                const titleInput = modal.querySelector('#goalTitle');
-                const targetInput = modal.querySelector('#goalTarget');
-
-                const hasTitle = titleInput && titleInput.value.trim().length > 0;
-                const hasTarget = targetInput && targetInput.value.trim().length > 0;
-
-                // If user has entered title or target, ask for confirmation
-                if (hasTitle || hasTarget) {
-                    if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
-                        return;
-                    }
-                }
-            }
-            modal.remove();
-        };
-
         const closeBtn = modal.querySelector('.goals-modal-close');
         if (closeBtn) {
-            closeBtn.onclick = attemptClose;
+            closeBtn.onclick = () => modal.remove();
         }
 
         modal.onclick = (e) => {
-            if (e.target === modal) attemptClose();
+            if (e.target === modal) modal.remove();
         };
 
         modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
-            btn.onclick = attemptClose;
+            btn.onclick = () => modal.remove();
         });
 
         document.addEventListener('keydown', function escHandler(e) {
             if (e.key === 'Escape') {
-                attemptClose();
+                modal.remove();
                 document.removeEventListener('keydown', escHandler);
             }
         });
@@ -1671,13 +1656,11 @@ goals_attachEvents() {
         
         // Validation
         if (!title || title.length > 35) {
-            window.SteadyUtils.showToast('Invalid title', 'error');
-            return;
+            throw new Error('Please enter a valid goal title (max 35 characters)');
         }
-        
+
         if (!activePeriod || !startDate || !endDate) {
-            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
-            return;
+            throw new Error('Please select a time period and dates');
         }
         
         // Build goal data based on tracking method
@@ -1697,8 +1680,7 @@ goals_attachEvents() {
             const totalTasks = this.state.selectedTaskIds.length + (this.state.newTasks?.length || 0);
             
             if (totalTasks === 0) {
-                window.SteadyUtils.showToast('Please select or create at least one task', 'error');
-                return;
+                throw new Error('Please select or create at least one task');
             }
             
             goalData.goal_type = 'task_list';
@@ -1714,17 +1696,15 @@ goals_attachEvents() {
             const targetValue = parseFloat(targetValueStr);
             
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
             }
-            
+
             const unitSelect = document.getElementById('goalUnit').value;
             let unitValue = unitSelect;
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    throw new Error('Please enter a custom unit name');
                 }
                 unitValue = customUnit;
             }
@@ -1741,17 +1721,15 @@ goals_attachEvents() {
             const targetValue = parseFloat(targetValueStr);
             
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
             }
-            
+
             const unitSelect = document.getElementById('goalUnit').value;
             let unitValue = unitSelect;
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    throw new Error('Please enter a custom unit name');
                 }
                 unitValue = customUnit;
             }
@@ -1797,15 +1775,13 @@ goals_attachEvents() {
         
     } catch (error) {
         console.error('Create goal error:', error);
-        
-        let errorMsg = 'Failed to create goal';
+
+        // Re-throw with a better error message if needed
         if (error.message?.includes('numeric field overflow')) {
-            errorMsg = 'Target value is too large. Please use a smaller number.';
-        } else if (error.message) {
-            errorMsg = error.message;
+            throw new Error('Target value is too large. Please use a smaller number.');
         }
-        
-        window.SteadyUtils.showToast(errorMsg, 'error');
+
+        throw error; // Re-throw so the form submit handler can catch it
     }
 },
 
@@ -1825,18 +1801,15 @@ goals_attachEvents() {
             const endDate = document.getElementById('goalEndDate').value;
             
             if (!title || title.length > 35) {
-                window.SteadyUtils.showToast('Invalid title', 'error');
-                return;
+                throw new Error('Please enter a valid goal title (max 35 characters)');
             }
-            
+
             if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
             }
-            
+
             if (!activePeriod || !startDate || !endDate) {
-                window.SteadyUtils.showToast('Please fill in all required fields', 'error');
-                return;
+                throw new Error('Please select a time period and dates');
             }
 
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
@@ -1848,8 +1821,7 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    throw new Error('Please enter a custom unit name');
                 }
                 unitValue = customUnit;
             }
@@ -1880,7 +1852,7 @@ goals_attachEvents() {
 
         } catch (error) {
             console.error('Update goal error:', error);
-            window.SteadyUtils.showToast('Failed to update goal', 'error');
+            throw error; // Re-throw so the form submit handler can catch it
         }
     },
 
