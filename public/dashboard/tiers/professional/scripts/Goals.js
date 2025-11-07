@@ -296,8 +296,8 @@ async goals_loadAvailableTasks() {
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
                         <div class="goals-form-group-v2">
-                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large" 
-                                   placeholder="Q4 Revenue Target" required autocomplete="off">
+                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
+                                   placeholder="Q4 Revenue Target" autocomplete="off">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
@@ -359,8 +359,8 @@ async goals_loadAvailableTasks() {
                         <div class="goals-form-row-v2">
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
-                                <input type="text" id="goalTarget" class="goals-form-input-v2" 
-                                       placeholder="10000" required>
+                                <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                       placeholder="10000">
                                 <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
                             </div>
                             <div class="goals-form-group-v2">
@@ -640,8 +640,8 @@ async goals_loadAvailableTasks() {
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
                         <div class="goals-form-group-v2">
-                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large" 
-                                   placeholder="Q4 Revenue Target" required autocomplete="off" value="${API.escapeHtml(goal.title)}">
+                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
+                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
@@ -704,7 +704,7 @@ async goals_loadAvailableTasks() {
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
                                 <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                       placeholder="10000" required value="${goal.target_value}">
+                                       placeholder="10000" value="${goal.target_value}">
                                 <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
                             </div>
                             <div class="goals-form-group-v2">
@@ -1060,7 +1060,6 @@ async goals_loadAvailableTasks() {
         const autoOptions = document.getElementById('autoTrackOptions');
         const taskOptions = document.getElementById('taskChecklistOptions');
         const targetFields = modal.querySelector('.goals-form-row-v2'); // Target + Unit fields
-        const targetInput = document.getElementById('goalTarget');
 
         // Hide all tracking-specific options first
         autoOptions.style.display = 'none';
@@ -1070,15 +1069,12 @@ async goals_loadAvailableTasks() {
         if (e.target.value === 'auto') {
             autoOptions.style.display = 'block';
             if (targetFields) targetFields.style.display = 'grid';
-            if (targetInput) targetInput.setAttribute('required', '');
         } else if (e.target.value === 'task_list') {
             if (taskOptions) taskOptions.style.display = 'block';
             if (targetFields) targetFields.style.display = 'none'; // Hide target/unit for task_list
-            if (targetInput) targetInput.removeAttribute('required'); // Remove required when hidden
         } else {
             // Manual - show target/unit fields
             if (targetFields) targetFields.style.display = 'grid';
-            if (targetInput) targetInput.setAttribute('required', '');
         }
     });
 });
