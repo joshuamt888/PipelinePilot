@@ -1060,21 +1060,25 @@ async goals_loadAvailableTasks() {
         const autoOptions = document.getElementById('autoTrackOptions');
         const taskOptions = document.getElementById('taskChecklistOptions');
         const targetFields = modal.querySelector('.goals-form-row-v2'); // Target + Unit fields
-        
+        const targetInput = document.getElementById('goalTarget');
+
         // Hide all tracking-specific options first
         autoOptions.style.display = 'none';
         if (taskOptions) taskOptions.style.display = 'none';
-        
+
         // Show/hide based on selection
         if (e.target.value === 'auto') {
             autoOptions.style.display = 'block';
             if (targetFields) targetFields.style.display = 'grid';
+            if (targetInput) targetInput.setAttribute('required', '');
         } else if (e.target.value === 'task_list') {
             if (taskOptions) taskOptions.style.display = 'block';
             if (targetFields) targetFields.style.display = 'none'; // Hide target/unit for task_list
+            if (targetInput) targetInput.removeAttribute('required'); // Remove required when hidden
         } else {
             // Manual - show target/unit fields
             if (targetFields) targetFields.style.display = 'grid';
+            if (targetInput) targetInput.setAttribute('required', '');
         }
     });
 });
