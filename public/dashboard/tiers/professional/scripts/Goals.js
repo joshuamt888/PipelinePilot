@@ -853,12 +853,10 @@ async goals_loadAvailableTasks() {
             }
             
             const remaining = 35 - value.length;
-            titleCounter.textContent = remaining === 1 
-                ? '1 character remaining' 
-                : `${remaining} characters remaining`;
-            
+            titleCounter.textContent = `${value.length}/35 characters remaining`;
+
             if (remaining === 0) {
-                titleCounter.textContent = 'Max reached';
+                titleCounter.textContent = '35/35 characters remaining (Max reached)';
                 titleCounter.style.color = 'var(--danger)';
                 titleCounter.style.fontWeight = '700';
             } else if (remaining <= 5) {
@@ -936,12 +934,10 @@ async goals_loadAvailableTasks() {
             }
 
             const remaining = 500 - value.length;
-            descriptionCounter.textContent = remaining === 1
-                ? '1 character remaining'
-                : `${remaining} characters remaining`;
+            descriptionCounter.textContent = `${value.length}/500 characters remaining`;
 
             if (remaining === 0) {
-                descriptionCounter.textContent = 'Max reached';
+                descriptionCounter.textContent = '500/500 characters remaining (Max reached)';
                 descriptionCounter.style.color = 'var(--danger)';
                 descriptionCounter.style.fontWeight = '700';
             } else if (remaining <= 50) {
@@ -981,12 +977,10 @@ async goals_loadAvailableTasks() {
             }
 
             const remaining = 25 - value.length;
-            customUnitCounter.textContent = remaining === 1
-                ? '1 character remaining'
-                : `${remaining} characters remaining`;
+            customUnitCounter.textContent = `${value.length}/25 characters remaining`;
 
             if (remaining === 0) {
-                customUnitCounter.textContent = 'Max reached';
+                customUnitCounter.textContent = '25/25 characters remaining (Max reached)';
                 customUnitCounter.style.color = 'var(--danger)';
                 customUnitCounter.style.fontWeight = '700';
             } else if (remaining <= 5) {
@@ -1574,22 +1568,43 @@ goals_showGoalDetailModal(goalId) {
 
     // MODAL EVENTS
     goals_setupModalEvents(modal) {
+        const isFormModal = modal.querySelector('#goalForm') !== null;
+
+        const attemptClose = () => {
+            // For create/edit modals, check if there's unsaved data
+            if (isFormModal) {
+                const titleInput = modal.querySelector('#goalTitle');
+                const targetInput = modal.querySelector('#goalTarget');
+
+                const hasTitle = titleInput && titleInput.value.trim().length > 0;
+                const hasTarget = targetInput && targetInput.value.trim().length > 0;
+
+                // If user has entered title or target, ask for confirmation
+                if (hasTitle || hasTarget) {
+                    if (!confirm('You have unsaved changes. Are you sure you want to close?')) {
+                        return;
+                    }
+                }
+            }
+            modal.remove();
+        };
+
         const closeBtn = modal.querySelector('.goals-modal-close');
         if (closeBtn) {
-            closeBtn.onclick = () => modal.remove();
+            closeBtn.onclick = attemptClose;
         }
 
         modal.onclick = (e) => {
-            if (e.target === modal) modal.remove();
+            if (e.target === modal) attemptClose();
         };
 
         modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
-            btn.onclick = () => modal.remove();
+            btn.onclick = attemptClose;
         });
 
         document.addEventListener('keydown', function escHandler(e) {
             if (e.key === 'Escape') {
-                modal.remove();
+                attemptClose();
                 document.removeEventListener('keydown', escHandler);
             }
         });
@@ -2384,16 +2399,19 @@ goals_formatValueAbbreviated(value, unit) {
     background: var(--background);
     border: 2px solid var(--border);
     border-radius: var(--radius);
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .goals-task-checkbox:hover .goals-task-item {
     border-color: var(--primary);
+    transform: scale(1.02);
 }
 
 .goals-task-checkbox input:checked + .goals-task-item {
-    border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
+    border: 3px solid var(--primary);
+    background: rgba(102, 126, 234, 0.08);
+    transform: scale(1.03);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .goals-task-item-content {
