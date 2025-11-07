@@ -13,6 +13,7 @@
 - **Stack:** Supabase PostgreSQL + RLS | Node.js on Railway | Supabase Auth
 - **Cron:** Daily 2AM trial expiration check
 - **Uptime:** 100%
+- **Optimization:** See "Supabase Performance Checklist" section below
 
 ### Database
 - **Status:** ✅ PRODUCTION READY
@@ -34,15 +35,81 @@
 - **Bugs:** None
 
 ### Frontend - Professional Tier
-- **Status:** 🔨 90% COMPLETE
+- **Status:** 🔨 85% COMPLETE
 - **Lead Limit:** 5000
-- **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals, Settings
-- **Modules In Progress:** Jobs (0%)
+- **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals ✅, Settings
+- **Modules In Progress:** Notes (0%), Analytics (0%), Jobs (0%)
 - **Icon System:** 95% complete (Lucide SVG - only Settings needs update)
+- **Build Order:** Goals ✅ → Notes → Analytics → Jobs → Settings Preferences
 
 ---
 
-## 🎯 GOALS MODULE - 100% COMPLETE
+## 🗂️ SUPABASE PERFORMANCE CHECKLIST
+
+Run this checklist periodically to optimize database performance, security, and reduce API calls:
+
+### 🔍 Slow Query Analysis
+- [ ] Check Supabase Dashboard → Database → Query Performance
+- [ ] Look for queries taking >500ms
+- [ ] Add indexes on frequently filtered columns (user_id, status, created_at)
+- [ ] Review RLS policies - are they causing sequential scans?
+- [ ] Use `EXPLAIN ANALYZE` on slow queries to identify bottlenecks
+
+### ⚡ Performance Optimization
+- [ ] Review API calls - can we batch operations?
+- [ ] Check for N+1 queries (loading tasks then their leads individually)
+- [ ] Use `.select()` with specific columns instead of `*` where possible
+- [ ] Implement pagination for large data sets (>100 records)
+- [ ] Cache frequently accessed data (user preferences, lead counts)
+- [ ] Review connection pooling settings in Supabase
+
+### 🔒 Security Audit
+- [ ] Verify all tables have RLS policies enabled
+- [ ] Test RLS policies - can users access other users' data?
+- [ ] Check for SQL injection vulnerabilities in search queries
+- [ ] Review API key exposure (use anon key in frontend only)
+- [ ] Audit CORS settings - only allow your domain
+- [ ] Check for sensitive data in logs/error messages
+
+### 📦 Batch Data Opportunities
+- [ ] Task creation - batch insert instead of individual
+- [ ] Goal progress updates - batch update when multiple tasks complete
+- [ ] Lead imports - use batch insert for CSV uploads
+- [ ] Task completion - batch update for "mark all complete"
+- [ ] Analytics queries - aggregate data server-side instead of client-side
+- [ ] Dashboard stats - fetch all in one query with joins
+
+### 🎯 Query Optimization Examples
+```sql
+-- BAD: Multiple queries for dashboard stats
+SELECT COUNT(*) FROM leads WHERE status = 'active';
+SELECT COUNT(*) FROM tasks WHERE status = 'pending';
+SELECT COUNT(*) FROM goals WHERE status = 'active';
+
+-- GOOD: Single query with CTEs
+WITH lead_stats AS (
+  SELECT COUNT(*) as active_leads FROM leads WHERE status = 'active'
+),
+task_stats AS (
+  SELECT COUNT(*) as pending_tasks FROM tasks WHERE status = 'pending'
+),
+goal_stats AS (
+  SELECT COUNT(*) as active_goals FROM goals WHERE status = 'active'
+)
+SELECT * FROM lead_stats, task_stats, goal_stats;
+```
+
+### 📊 Monitoring Metrics
+- [ ] Average response time per endpoint (<200ms target)
+- [ ] Database connection pool usage (<70% target)
+- [ ] API error rate (<1% target)
+- [ ] RLS policy execution time (<50ms target)
+- [ ] Storage usage and growth rate
+- [ ] Active connections count
+
+---
+
+## 🎯 GOALS MODULE - 100% COMPLETE ✅
 
 ### Status: ✅ PRODUCTION READY
 
@@ -1089,6 +1156,143 @@ Run this checklist AFTER completing Jobs, Settings, and Mobile:
 **User Experience Gain:** Professional-grade performance
 
 **Priority Level:** Do this BEFORE launching to 100+ users, or you'll be refactoring under pressure.
+
+---
+
+## 🏗️ TIER DEVELOPMENT STRATEGY
+
+### Current Phase: Building Pro Tier Foundation
+
+**Philosophy:** Build feature-complete Pro tier first, then adapt for other tiers.
+
+### Phase 1: Pro Tier Development (CURRENT)
+**Goal:** Create the most feature-rich, powerful version with ALL functionality
+
+**Modules to Build:**
+1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals
+2. 🔨 **Notes** - Quick note-taking with tagging, search, and lead linking
+3. 🔨 **Analytics** - Revenue tracking, pipeline analytics, goal insights
+4. 🔨 **Jobs** - Job management with profit tracking and lead linking
+5. 🔨 **Settings Preferences** - Theme, windowing, customization options
+
+**Why Pro First:**
+- Establishes the feature ceiling
+- Sets the UX standard
+- All advanced functionality gets built once
+- Easier to remove features than add them later
+
+### Phase 2: Admin Tier Development (NEXT)
+**Goal:** Super admin tier with team management, analytics, and oversight
+
+**Additional Features:**
+- Team member management (add/remove users)
+- Permission levels (admin, manager, user)
+- Company-wide analytics dashboard
+- Audit logs (who did what, when)
+- Bulk operations on behalf of team members
+- White-label branding options
+- Advanced reporting and exports
+
+**Database Additions:**
+```sql
+-- New tables for admin tier
+companies (id, name, plan, created_at)
+company_members (company_id, user_id, role, permissions)
+audit_logs (id, user_id, action, resource_type, resource_id, timestamp)
+team_analytics (company_id, metrics, date)
+```
+
+**Why Admin After Pro:**
+- Pro tier establishes single-user workflows
+- Admin builds on top of proven features
+- Team features require solid foundation
+- Easier to test multi-user scenarios with complete app
+
+### Phase 3: Free Tier Refinement (FINAL)
+**Goal:** Strip Pro tier down to essentials + add upgrade prompts
+
+**Features to KEEP in Free:**
+- Dashboard (basic stats only)
+- AddLead (50 lead limit)
+- Pipeline (basic view, no advanced filters)
+- Scheduling (basic task management)
+- Settings (account only, no preferences)
+
+**Features to REMOVE from Free:**
+- ❌ Goals module entirely
+- ❌ Notes module entirely
+- ❌ Analytics module entirely
+- ❌ Jobs module entirely
+- ❌ Advanced pipeline filters
+- ❌ Bulk operations
+- ❌ Custom fields
+
+**Upgrade Prompts to ADD:**
+```javascript
+// Example upgrade prompt in Goals spot
+<div class="upgrade-prompt-card">
+  <div class="upgrade-icon">🎯</div>
+  <h3>Goals Module</h3>
+  <p>Track progress toward your business objectives with manual, auto-tracked, and task-based goals.</p>
+  <ul class="upgrade-features">
+    <li>✓ Unlimited goals</li>
+    <li>✓ Auto-tracking from pipeline data</li>
+    <li>✓ Recurring goals with completion tracking</li>
+    <li>✓ Task-based goal linking</li>
+  </ul>
+  <button class="upgrade-cta">Upgrade to Pro - $29/mo</button>
+  <span class="upgrade-hint">Join 500+ users crushing their goals</span>
+</div>
+```
+
+**Visual Upgrade Prompts:**
+- Blurred/locked module cards in navigation
+- "Upgrade to unlock" overlays on disabled features
+- Feature comparison table in Settings
+- Success stories from Pro users
+- Limited-time upgrade offers
+
+**Implementation Strategy:**
+1. Copy Pro tier codebase
+2. Remove Pro-only modules entirely
+3. Add upgrade prompt components
+4. Replace module content with upgrade cards
+5. Add "Upgrade" button to navigation
+6. Link upgrade prompts to Stripe checkout
+
+**Why Free Last:**
+- Pro tier is already battle-tested
+- Know exactly what features to restrict
+- Upgrade prompts reference real Pro features
+- Can A/B test different upgrade messaging
+- Free users see polished, complete Pro tier as upgrade target
+
+---
+
+### Summary: Build Order
+
+```
+┌─────────────────────────────────────────────┐
+│  Phase 1: PRO TIER (Current)               │
+│  Build ALL features, unlimited power       │
+│  Timeline: 3-4 weeks                       │
+└─────────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────┐
+│  Phase 2: ADMIN TIER                       │
+│  Add team management on top of Pro         │
+│  Timeline: 2-3 weeks                       │
+└─────────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────┐
+│  Phase 3: FREE TIER REFINEMENT             │
+│  Strip features, add upgrade prompts       │
+│  Timeline: 1 week                          │
+└─────────────────────────────────────────────┘
+```
+
+**Current Status:** Phase 1 (Pro Tier) - 85% complete
+**Next Milestones:** Notes → Analytics → Jobs → Phase 2
 
 ---
 
