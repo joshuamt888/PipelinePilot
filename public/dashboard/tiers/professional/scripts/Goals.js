@@ -76,24 +76,6 @@ async goals_loadAvailableTasks() {
         }, 50);
     },
 
-    // SMOOTH FILTER CHANGE (with fade transition)
-    async goals_smoothFilterChange(newFilter) {
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
-
-        // Fade out
-        container.style.opacity = '0';
-
-        // Wait for fade out
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // Change filter
-        this.state.currentFilter = newFilter;
-
-        // Re-render (will fade back in)
-        this.goals_render();
-    },
-
     // HEADER
     goals_renderHeader() {
         return `
@@ -1321,12 +1303,12 @@ goals_showGoalDetailModal(goalId) {
     const modal = document.createElement('div');
     modal.className = 'goals-modal-overlay show';
     modal.innerHTML = `
-        <div class="goals-modal goals-modal-detail">
-            <div class="goals-modal-header">
+        <div class="goals-modal goals-modal-detail-v2">
+            <div class="goals-modal-header-v2">
                 <div class="goals-modal-header-content">
                     ${cardColor ? `<div class="goals-modal-color-accent" style="background: ${cardColor}"></div>` : ''}
                     <div>
-                        <h2 class="goals-modal-title">${API.escapeHtml(goal.title)}</h2>
+                        <h2 class="goals-modal-title-v2">${API.escapeHtml(goal.title)}</h2>
                         <div class="goals-modal-subtitle">
                             ${this.goals_formatPeriod(goal.period)} • ${window.SteadyUtils.formatDate(goal.start_date, 'short')} - ${window.SteadyUtils.formatDate(goal.end_date, 'short')}
                         </div>
@@ -1340,7 +1322,7 @@ goals_showGoalDetailModal(goalId) {
                 </button>
             </div>
 
-            <div class="goals-modal-body">
+            <div class="goals-modal-body-v2">
                 <div class="goals-detail-progress">
                     <div class="goals-detail-progress-ring">
                         <svg viewBox="0 0 120 120">
@@ -1423,7 +1405,7 @@ goals_showGoalDetailModal(goalId) {
                     </div>
                 ` : ''}
 
-                <div class="goals-modal-actions">
+                <div class="goals-modal-actions-v2">
                     <button class="goals-btn-secondary" data-action="edit-goal" data-id="${goal.id}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
@@ -1432,7 +1414,7 @@ goals_showGoalDetailModal(goalId) {
                         Edit Goal
                     </button>
                     ${!isCompleted && !goal.auto_track ? `
-                        <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
+                        <button class="goals-btn-primary" data-action="update-progress" data-id="${goal.id}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
@@ -1786,10 +1768,12 @@ goals_attachEvents() {
                 document.querySelector('.goals-modal-overlay')?.remove();
                 break;
             case 'filter-active':
-                await this.goals_smoothFilterChange(this.state.currentFilter === 'active' ? 'all' : 'active');
+                this.state.currentFilter = this.state.currentFilter === 'active' ? 'all' : 'active';
+                this.goals_render();
                 break;
             case 'filter-completed':
-                await this.goals_smoothFilterChange(this.state.currentFilter === 'completed' ? 'all' : 'completed');
+                this.state.currentFilter = this.state.currentFilter === 'completed' ? 'all' : 'completed';
+                this.goals_render();
                 break;
         }
     };
