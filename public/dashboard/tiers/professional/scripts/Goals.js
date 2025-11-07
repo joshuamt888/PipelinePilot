@@ -622,9 +622,6 @@ async goals_loadAvailableTasks() {
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
-
-                // Show error message to user
-                window.SteadyUtils.showToast(error.message || 'Failed to create goal', 'error');
             }
         });
 
@@ -865,9 +862,6 @@ async goals_loadAvailableTasks() {
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
-
-                // Show error message to user
-                window.SteadyUtils.showToast(error.message || 'Failed to update goal', 'error');
             }
         });
 
@@ -887,10 +881,12 @@ async goals_loadAvailableTasks() {
             }
             
             const remaining = 35 - value.length;
-            titleCounter.textContent = `${value.length}/35 characters remaining`;
-
+            titleCounter.textContent = remaining === 1 
+                ? '1 character remaining' 
+                : `${remaining} characters remaining`;
+            
             if (remaining === 0) {
-                titleCounter.textContent = '35/35 characters remaining (Max reached)';
+                titleCounter.textContent = 'Max reached';
                 titleCounter.style.color = 'var(--danger)';
                 titleCounter.style.fontWeight = '700';
             } else if (remaining <= 5) {
@@ -968,10 +964,12 @@ async goals_loadAvailableTasks() {
             }
 
             const remaining = 500 - value.length;
-            descriptionCounter.textContent = `${value.length}/500 characters remaining`;
+            descriptionCounter.textContent = remaining === 1
+                ? '1 character remaining'
+                : `${remaining} characters remaining`;
 
             if (remaining === 0) {
-                descriptionCounter.textContent = '500/500 characters remaining (Max reached)';
+                descriptionCounter.textContent = 'Max reached';
                 descriptionCounter.style.color = 'var(--danger)';
                 descriptionCounter.style.fontWeight = '700';
             } else if (remaining <= 50) {
@@ -1011,10 +1009,12 @@ async goals_loadAvailableTasks() {
             }
 
             const remaining = 25 - value.length;
-            customUnitCounter.textContent = `${value.length}/25 characters remaining`;
+            customUnitCounter.textContent = remaining === 1
+                ? '1 character remaining'
+                : `${remaining} characters remaining`;
 
             if (remaining === 0) {
-                customUnitCounter.textContent = '25/25 characters remaining (Max reached)';
+                customUnitCounter.textContent = 'Max reached';
                 customUnitCounter.style.color = 'var(--danger)';
                 customUnitCounter.style.fontWeight = '700';
             } else if (remaining <= 5) {
@@ -1803,13 +1803,68 @@ goals_attachEvents() {
 
         // Validation
         if (!title || title.length > 35) {
-            window.SteadyUtils.showToast('Invalid title', 'error');
-            return;
-        }
+            console.warn('⚠️ [Goal Creation] Validation failed: Invalid title');
+            const titleInput = document.getElementById('goalTitle');
+            const titleCounter = document.querySelector('#titleCounter');
 
+            // Add error styling
+            titleInput.style.borderColor = 'var(--danger)';
+            titleInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+            // Update hint text to show error
+            if (titleCounter) {
+                titleCounter.textContent = !title ? 'Title is required' : 'Title must be 35 characters or less';
+                titleCounter.style.color = 'var(--danger)';
+                titleCounter.style.fontWeight = '600';
+            }
+
+            // Focus the input
+            titleInput.focus();
+
+            // Remove error styling when user types
+            titleInput.addEventListener('input', function clearError() {
+                titleInput.style.borderColor = '';
+                titleInput.style.boxShadow = '';
+                if (titleCounter) {
+                    const remaining = 35 - titleInput.value.length;
+                    titleCounter.textContent = `${remaining} characters remaining`;
+                    titleCounter.style.color = remaining <= 5 ? 'var(--warning)' : 'var(--text-tertiary)';
+                    titleCounter.style.fontWeight = '500';
+                }
+                titleInput.removeEventListener('input', clearError);
+            }, { once: true });
+
+            return false;
+        }
+        
         if (!activePeriod || !startDate || !endDate) {
-            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
-            return;
+            console.warn('⚠️ [Goal Creation] Validation failed: Missing required fields', {
+                activePeriod,
+                startDate,
+                endDate
+            });
+
+            // Highlight period pills if no period selected
+            if (!activePeriod) {
+                const periodPills = document.querySelector('.goals-period-pills');
+                if (periodPills) {
+                    periodPills.style.border = '2px solid var(--danger)';
+                    periodPills.style.borderRadius = 'var(--radius-lg)';
+                    periodPills.style.padding = '0.5rem';
+
+                    // Remove error styling when a period is selected
+                    document.querySelectorAll('.goals-period-pill').forEach(pill => {
+                        pill.addEventListener('click', function clearPeriodError() {
+                            periodPills.style.border = '';
+                            periodPills.style.borderRadius = '';
+                            periodPills.style.padding = '';
+                        }, { once: true });
+                    });
+                }
+            }
+
+            window.SteadyUtils.showToast('Please select a time period', 'error');
+            return false;
         }
 
         console.log('✅ [Goal Creation] Validation passed, building goal data...');
@@ -1831,8 +1886,34 @@ goals_attachEvents() {
             const totalTasks = this.state.selectedTaskIds.length + (this.state.newTasks?.length || 0);
             
             if (totalTasks === 0) {
+                // Highlight the task checklist section
+                const taskOptions = document.getElementById('taskChecklistOptions');
+                if (taskOptions) {
+                    taskOptions.style.border = '2px solid var(--danger)';
+                    taskOptions.style.borderRadius = 'var(--radius-lg)';
+
+                    // Switch to existing tasks tab if not already there
+                    const existingTab = document.querySelector('[data-tab="existing"]');
+                    if (existingTab) existingTab.click();
+
+                    // Remove error styling when a task is selected or created
+                    const clearTaskError = () => {
+                        taskOptions.style.border = '';
+                        taskOptions.style.borderRadius = '';
+                    };
+
+                    document.querySelectorAll('[data-task-select]').forEach(checkbox => {
+                        checkbox.addEventListener('change', clearTaskError, { once: true });
+                    });
+
+                    const addTaskBtn = document.querySelector('[data-action="add-quick-task"]');
+                    if (addTaskBtn) {
+                        addTaskBtn.addEventListener('click', clearTaskError, { once: true });
+                    }
+                }
+
                 window.SteadyUtils.showToast('Please select or create at least one task', 'error');
-                return;
+                return false;
             }
             
             goalData.goal_type = 'task_list';
@@ -1848,17 +1929,73 @@ goals_attachEvents() {
             const targetValue = parseFloat(targetValueStr);
 
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
-            }
+                const targetInput = document.getElementById('goalTarget');
+                const targetCounter = document.querySelector('#targetCounter');
 
+                // Add error styling
+                targetInput.style.borderColor = 'var(--danger)';
+                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                // Update hint text
+                if (targetCounter) {
+                    targetCounter.textContent = !targetValueStr ? 'Target value is required' : targetValue > 99999999.99 ? 'Value too large' : 'Must be greater than 0';
+                    targetCounter.style.color = 'var(--danger)';
+                    targetCounter.style.fontWeight = '600';
+                }
+
+                targetInput.focus();
+
+                // Remove error styling when user types
+                targetInput.addEventListener('input', function clearError() {
+                    targetInput.style.borderColor = '';
+                    targetInput.style.boxShadow = '';
+                    if (targetCounter) {
+                        const length = targetInput.value.length;
+                        targetCounter.textContent = `${8 - length} digits remaining`;
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }, { once: true });
+
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return false;
+            }
+            
             const unitSelect = document.getElementById('goalUnit').value;
             let unitValue = unitSelect;
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -1875,17 +2012,73 @@ goals_attachEvents() {
             const targetValue = parseFloat(targetValueStr);
 
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
-            }
+                const targetInput = document.getElementById('goalTarget');
+                const targetCounter = document.querySelector('#targetCounter');
 
+                // Add error styling
+                targetInput.style.borderColor = 'var(--danger)';
+                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                // Update hint text
+                if (targetCounter) {
+                    targetCounter.textContent = !targetValueStr ? 'Target value is required' : targetValue > 99999999.99 ? 'Value too large' : 'Must be greater than 0';
+                    targetCounter.style.color = 'var(--danger)';
+                    targetCounter.style.fontWeight = '600';
+                }
+
+                targetInput.focus();
+
+                // Remove error styling when user types
+                targetInput.addEventListener('input', function clearError() {
+                    targetInput.style.borderColor = '';
+                    targetInput.style.boxShadow = '';
+                    if (targetCounter) {
+                        const length = targetInput.value.length;
+                        targetCounter.textContent = `${8 - length} digits remaining`;
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }, { once: true });
+
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return false;
+            }
+            
             const unitSelect = document.getElementById('goalUnit').value;
             let unitValue = unitSelect;
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -1945,13 +2138,21 @@ goals_attachEvents() {
         console.log('✅ [Goal Creation] Data reloaded and UI updated');
 
     } catch (error) {
-        console.error('Create goal error:', error);
-        
+        console.error('❌ [Goal Creation] Error occurred:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+
         let errorMsg = 'Failed to create goal';
         if (error.message?.includes('numeric field overflow')) {
-            throw new Error('Target value is too large. Please use a smaller number.');
+            errorMsg = 'Target value is too large. Please use a smaller number.';
+        } else if (error.message) {
+            errorMsg = error.message;
         }
-        
+
+        console.error('❌ [Goal Creation] Showing error to user:', errorMsg);
         window.SteadyUtils.showToast(errorMsg, 'error');
     }
 },
@@ -1972,16 +2173,18 @@ goals_attachEvents() {
             const endDate = document.getElementById('goalEndDate').value;
             
             if (!title || title.length > 35) {
-                throw new Error('Please enter a valid goal title (max 35 characters)');
-            }
-
-            if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
+                window.SteadyUtils.showToast('Invalid title', 'error');
                 return;
             }
-
+            
+            if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return false;
+            }
+            
             if (!activePeriod || !startDate || !endDate) {
-                throw new Error('Please select a time period and dates');
+                window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+                return;
             }
 
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
@@ -1993,8 +2196,36 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -2025,7 +2256,7 @@ goals_attachEvents() {
 
         } catch (error) {
             console.error('Update goal error:', error);
-            throw error; // Re-throw so the form submit handler can catch it
+            window.SteadyUtils.showToast('Failed to update goal', 'error');
         }
     },
 
@@ -2544,17 +2775,19 @@ goals_formatValueAbbreviated(value, unit) {
     background: var(--background);
     border: 2px solid var(--border);
     border-radius: var(--radius);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s ease;
 }
 
 .goals-task-checkbox:hover .goals-task-item {
     border-color: var(--primary);
-    transform: scale(1.02);
 }
 
 .goals-task-checkbox input:checked + .goals-task-item {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
+    border-width: 3px;
+    background: var(--background);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .goals-task-item-content {
