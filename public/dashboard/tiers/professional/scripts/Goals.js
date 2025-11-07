@@ -1863,7 +1863,6 @@ goals_attachEvents() {
                 }
             }
 
-            window.SteadyUtils.showToast('Please select a time period', 'error');
             return false;
         }
 
@@ -1912,7 +1911,6 @@ goals_attachEvents() {
                     }
                 }
 
-                window.SteadyUtils.showToast('Please select or create at least one task', 'error');
                 return false;
             }
             
@@ -1957,7 +1955,6 @@ goals_attachEvents() {
                     }
                 }, { once: true });
 
-                window.SteadyUtils.showToast('Invalid target value', 'error');
                 return false;
             }
             
@@ -1994,12 +1991,11 @@ goals_attachEvents() {
                         }
                     }, { once: true });
 
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return false;
                 }
                 unitValue = customUnit;
             }
-            
+
             goalData.goal_type = trackType;
             goalData.target_value = targetValue;
             goalData.current_value = 0;
@@ -2040,7 +2036,6 @@ goals_attachEvents() {
                     }
                 }, { once: true });
 
-                window.SteadyUtils.showToast('Invalid target value', 'error');
                 return false;
             }
             
@@ -2077,12 +2072,11 @@ goals_attachEvents() {
                         }
                     }, { once: true });
 
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return false;
                 }
                 unitValue = customUnit;
             }
-            
+
             goalData.goal_type = 'custom';
             goalData.target_value = targetValue;
             goalData.current_value = 0;
