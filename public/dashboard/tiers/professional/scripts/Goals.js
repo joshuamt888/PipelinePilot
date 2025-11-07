@@ -1747,27 +1747,54 @@ goals_attachEvents() {
 
     async goals_createGoal() {
     try {
+        console.log('🎯 [Goal Creation] Starting goal creation process...');
+
         const form = document.getElementById('goalForm');
         const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
         const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
-        
+
+        console.log('📋 [Goal Creation] Form state:', {
+            formExists: !!form,
+            activePeriod,
+            trackingMethod,
+            selectedTaskIds: this.state.selectedTaskIds,
+            newTasks: this.state.newTasks
+        });
+
         const title = document.getElementById('goalTitle').value.trim();
         const description = document.getElementById('goalDescription').value.trim();
         const startDate = document.getElementById('goalStartDate').value;
         const endDate = document.getElementById('goalEndDate').value;
         const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
         const isRecurring = document.getElementById('goalRecurring').checked || false;
-        
+
+        console.log('📝 [Goal Creation] Collected form values:', {
+            title,
+            description: description || '(empty)',
+            startDate,
+            endDate,
+            selectedColor,
+            isRecurring
+        });
+
         // Validation
         if (!title || title.length > 35) {
+            console.warn('⚠️ [Goal Creation] Validation failed: Invalid title');
             window.SteadyUtils.showToast('Invalid title', 'error');
             return;
         }
         
         if (!activePeriod || !startDate || !endDate) {
+            console.warn('⚠️ [Goal Creation] Validation failed: Missing required fields', {
+                activePeriod,
+                startDate,
+                endDate
+            });
             window.SteadyUtils.showToast('Please fill in all required fields', 'error');
             return;
         }
+
+        console.log('✅ [Goal Creation] Validation passed, building goal data...');
         
         // Build goal data based on tracking method
         let goalData = {
@@ -1852,48 +1879,69 @@ goals_attachEvents() {
             goalData.auto_track = false;
         }
         
-        console.log('Creating goal with data:', goalData);
-        
+        console.log('🚀 [Goal Creation] Creating goal with data:', goalData);
+
         // Create the goal
         const newGoal = await API.createGoal(goalData);
-        
+
+        console.log('✅ [Goal Creation] Goal created successfully! Response:', newGoal);
+
         // If task_list goal, link the tasks
         if (trackingMethod === 'task_list') {
+            console.log('🔗 [Goal Creation] Linking tasks to goal...');
+
             // Link existing tasks
             if (this.state.selectedTaskIds.length > 0) {
-                await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
+                console.log(`📌 [Goal Creation] Linking ${this.state.selectedTaskIds.length} existing tasks:`, this.state.selectedTaskIds);
+                const linkResult = await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
+                console.log('✅ [Goal Creation] Existing tasks linked:', linkResult);
             }
-            
+
             // Create and link new tasks
             if (this.state.newTasks && this.state.newTasks.length > 0) {
+                console.log(`➕ [Goal Creation] Creating ${this.state.newTasks.length} new tasks...`);
                 for (const taskData of this.state.newTasks) {
-                    await API.createTaskForGoal(newGoal.id, {
+                    console.log('  Creating task:', taskData);
+                    const newTaskResult = await API.createTaskForGoal(newGoal.id, {
                         title: taskData.title,
                         due_date: taskData.due_date,
                         status: 'pending'
                     });
+                    console.log('  ✅ Task created:', newTaskResult);
                 }
             }
+
+            console.log('✅ [Goal Creation] All tasks processed successfully');
         }
         
         // Reset state
         this.state.selectedTaskIds = [];
         this.state.newTasks = [];
-        
+
+        console.log('🎉 [Goal Creation] Goal creation complete! Reloading data...');
+
         window.SteadyUtils.showToast('Goal created successfully!', 'success');
         await this.goals_loadData();
         this.goals_render();
-        
+
+        console.log('✅ [Goal Creation] Data reloaded and UI updated');
+
     } catch (error) {
-        console.error('Create goal error:', error);
-        
+        console.error('❌ [Goal Creation] Error occurred:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+
         let errorMsg = 'Failed to create goal';
         if (error.message?.includes('numeric field overflow')) {
             errorMsg = 'Target value is too large. Please use a smaller number.';
         } else if (error.message) {
             errorMsg = error.message;
         }
-        
+
+        console.error('❌ [Goal Creation] Showing error to user:', errorMsg);
         window.SteadyUtils.showToast(errorMsg, 'error');
     }
 },
@@ -3060,7 +3108,16 @@ goals_formatValueAbbreviated(value, unit) {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--background);
+    background: var(--background) !important;
+}
+
+/* Ensure autocomplete doesn't change background */
+.goals-form-input-v2:-webkit-autofill,
+.goals-form-input-v2:-webkit-autofill:hover,
+.goals-form-input-v2:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--background) inset !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 .goals-form-textarea-v2 {
