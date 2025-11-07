@@ -1088,10 +1088,10 @@ static async updateGoalProgress(goalId, value) {
  */
 static async checkGoalCompletion() {
     const goals = await this.getGoals('active');
-    
+
     for (const goal of goals) {
         let progress = 0;
-        
+
         // Calculate progress based on goal type
         if (goal.goal_type === 'task_list') {
             // Task-based goal - check linked tasks
@@ -1101,7 +1101,7 @@ static async checkGoalCompletion() {
             // Value-based goal - check current vs target
             progress = (goal.current_value / goal.target_value) * 100;
         }
-        
+
         if (progress >= 100) {
             if (goal.is_recurring) {
                 // Recurring goal - increment count and reset
@@ -1110,12 +1110,12 @@ static async checkGoalCompletion() {
                     current_value: 0,
                     status: 'active'
                 });
-                
+
                 // If task-list goal, reset all linked tasks
                 if (goal.goal_type === 'task_list') {
                     const tasks = await this.getGoalTasks(goal.id);
                     for (const task of tasks) {
-                        await this.updateTask(task.id, { 
+                        await this.updateTask(task.id, {
                             status: 'pending',
                             completed_at: null
                         });
@@ -1125,6 +1125,30 @@ static async checkGoalCompletion() {
                 // Normal goal - mark as completed
                 await this.updateGoal(goal.id, {
                     status: 'completed'
+                });
+            }
+        }
+    }
+}
+
+/**
+ * Check if any completed goals should be moved back to active
+ * This handles the case when tasks are uncompleted/undone
+ * Specifically for task_list goals
+ */
+static async checkGoalUncompletion() {
+    const completedGoals = await this.getGoals('completed');
+
+    for (const goal of completedGoals) {
+        // Only check task_list goals (non-recurring)
+        if (goal.goal_type === 'task_list' && !goal.is_recurring) {
+            const taskProgress = await this.getTaskGoalProgress(goal.id);
+            const progress = taskProgress.progress;
+
+            // If progress dropped below 100%, move back to active
+            if (progress < 100) {
+                await this.updateGoal(goal.id, {
+                    status: 'active'
                 });
             }
         }

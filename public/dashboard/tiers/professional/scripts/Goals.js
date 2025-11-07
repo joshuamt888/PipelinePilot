@@ -3555,6 +3555,17 @@ goals_formatValueAbbreviated(value, unit) {
     gap: 0.75rem;
 }
 
+/* Add extra vertical spacing for auto/manual goal fields */
+.goals-conditional-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+.goals-conditional-fields .goals-form-group-v2 {
+    margin-bottom: 0.5rem;
+}
+
 .goals-form-row-v2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

@@ -876,11 +876,15 @@ modal.addEventListener('mouseup', (e) => {
         try {
             if (isCompleted) {
                 await API.completeTask(taskId, 'Completed from scheduling module');
+                // Check if any active goals should be completed
+                await API.checkGoalCompletion();
             } else {
-                await API.updateTask(taskId, { 
+                await API.updateTask(taskId, {
                     status: 'pending',
                     completed_at: null
                 });
+                // Check if any completed goals should be moved back to active
+                await API.checkGoalUncompletion();
             }
         } catch (error) {
             this.scheduling_revertTaskVisually(taskId, !isCompleted);
