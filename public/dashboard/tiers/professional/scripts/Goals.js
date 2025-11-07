@@ -2374,15 +2374,7 @@ goals_attachEvents() {
 
             // Handle task_list goals differently
             if (trackingMethod === 'task_list') {
-                // For task_list, only update title and color
-                const updates = {
-                    title: title,
-                    color: selectedColor || null
-                };
-
-                await API.updateGoal(goalId, updates);
-
-                // Update task links - unlink unchecked tasks and link newly checked ones
+                // Update task links first - unlink unchecked tasks and link newly checked ones
                 const goal = this.state.goals.find(g => g.id === goalId);
                 const currentLinkedTasks = await API.getGoalTasks(goalId);
                 const currentLinkedTaskIds = currentLinkedTasks.map(t => t.id);
@@ -2406,10 +2398,24 @@ goals_attachEvents() {
                 // Create and link new tasks
                 if (this.state.newTasks && this.state.newTasks.length > 0) {
                     for (const newTask of this.state.newTasks) {
-                        await API.createTaskForGoal(goalId, newTask);
+                        // Remove tempId before sending to API (it's only for UI tracking)
+                        const { tempId, ...taskData } = newTask;
+                        await API.createTaskForGoal(goalId, taskData);
                     }
                 }
 
+                // After all task operations, get the updated task count and update target_value
+                const updatedTasks = await API.getGoalTasks(goalId);
+                const totalTasks = updatedTasks.length;
+
+                // Update goal with new title, color, and target_value (total task count)
+                const updates = {
+                    title: title,
+                    color: selectedColor || null,
+                    target_value: totalTasks  // Update target to reflect current total tasks
+                };
+
+                await API.updateGoal(goalId, updates);
                 window.SteadyUtils.showToast('Goal updated successfully', 'success');
 
             } else {
@@ -2942,7 +2948,6 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-card.goals-card-completed .goals-card-title {
-    text-decoration: line-through;
     color: var(--text-secondary);
 }
 
