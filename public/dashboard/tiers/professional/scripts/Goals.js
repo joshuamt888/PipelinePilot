@@ -31,12 +31,29 @@ window.GoalsModule = {
     // LOAD DATA
     async goals_loadData() {
         const goalsWithProgress = await API.getGoalProgress();
-        
+
         this.state.goals = goalsWithProgress;
-        this.state.activeGoals = goalsWithProgress.filter(g => g.status === 'active');
-        this.state.completedGoals = goalsWithProgress.filter(g => g.status === 'completed');
+
+        // For task_list goals: use progress to determine if "completed" (dynamic)
+        // For value-based goals: use actual status field
+        this.state.activeGoals = goalsWithProgress.filter(g => {
+            if (g.goal_type === 'task_list' && !g.is_recurring) {
+                // Task list goals: active if progress < 100%
+                return g.progress < 100;
+            }
+            return g.status === 'active';
+        });
+
+        this.state.completedGoals = goalsWithProgress.filter(g => {
+            if (g.goal_type === 'task_list' && !g.is_recurring) {
+                // Task list goals: completed if progress >= 100%
+                return g.progress >= 100;
+            }
+            return g.status === 'completed';
+        });
+
         this.state.failedGoals = goalsWithProgress.filter(g => g.status === 'failed');
-        
+
         // Calculate stats
         this.state.stats = {
             totalActive: this.state.activeGoals.length,

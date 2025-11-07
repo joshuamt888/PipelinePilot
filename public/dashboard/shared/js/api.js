@@ -1084,7 +1084,11 @@ static async updateGoalProgress(goalId, value) {
 /**
  * Check if any goals have hit their targets
  * Auto-completes goals that reached target_value
- * Handles both value-based and task-based goals
+ *
+ * IMPORTANT: task_list goals don't get marked "completed" - their status is always
+ * calculated dynamically based on linked tasks (DB trigger handles current_value updates)
+ *
+ * Only value-based goals (auto/manual) get marked as completed
  */
 static async checkGoalCompletion() {
     const goals = await this.getGoals('active');
@@ -1094,62 +1098,46 @@ static async checkGoalCompletion() {
 
         // Calculate progress based on goal type
         if (goal.goal_type === 'task_list') {
-            // Task-based goal - check linked tasks
+            // Task-based goal - DB trigger handles current_value updates
+            // Status is always dynamic - only handle recurring reset
             const taskProgress = await this.getTaskGoalProgress(goal.id);
             progress = taskProgress.progress;
-        } else {
-            // Value-based goal - check current vs target
-            progress = (goal.current_value / goal.target_value) * 100;
-        }
 
-        if (progress >= 100) {
-            if (goal.is_recurring) {
-                // Recurring goal - increment count and reset
+            if (progress >= 100 && goal.is_recurring) {
+                // Recurring task_list goal - increment count and reset all tasks
                 await this.updateGoal(goal.id, {
                     completion_count: (goal.completion_count || 0) + 1,
-                    current_value: 0,
-                    status: 'active'
+                    current_value: 0
                 });
 
-                // If task-list goal, reset all linked tasks
-                if (goal.goal_type === 'task_list') {
-                    const tasks = await this.getGoalTasks(goal.id);
-                    for (const task of tasks) {
-                        await this.updateTask(task.id, {
-                            status: 'pending',
-                            completed_at: null
-                        });
-                    }
+                const tasks = await this.getGoalTasks(goal.id);
+                for (const task of tasks) {
+                    await this.updateTask(task.id, {
+                        status: 'pending',
+                        completed_at: null
+                    });
                 }
-            } else {
-                // Normal goal - mark as completed
-                await this.updateGoal(goal.id, {
-                    status: 'completed'
-                });
             }
-        }
-    }
-}
+            // Non-recurring task_list goals: NO status change - always stay dynamic
 
-/**
- * Check if any completed goals should be moved back to active
- * This handles the case when tasks are uncompleted/undone
- * Specifically for task_list goals
- */
-static async checkGoalUncompletion() {
-    const completedGoals = await this.getGoals('completed');
+        } else {
+            // Value-based goal (auto/manual) - check current vs target
+            progress = (goal.current_value / goal.target_value) * 100;
 
-    for (const goal of completedGoals) {
-        // Only check task_list goals (non-recurring)
-        if (goal.goal_type === 'task_list' && !goal.is_recurring) {
-            const taskProgress = await this.getTaskGoalProgress(goal.id);
-            const progress = taskProgress.progress;
-
-            // If progress dropped below 100%, move back to active
-            if (progress < 100) {
-                await this.updateGoal(goal.id, {
-                    status: 'active'
-                });
+            if (progress >= 100) {
+                if (goal.is_recurring) {
+                    // Recurring value goal - increment count and reset
+                    await this.updateGoal(goal.id, {
+                        completion_count: (goal.completion_count || 0) + 1,
+                        current_value: 0,
+                        status: 'active'
+                    });
+                } else {
+                    // Normal value goal - mark as completed
+                    await this.updateGoal(goal.id, {
+                        status: 'completed'
+                    });
+                }
             }
         }
     }

@@ -883,8 +883,8 @@ modal.addEventListener('mouseup', (e) => {
                     status: 'pending',
                     completed_at: null
                 });
-                // Check if any completed goals should be moved back to active
-                await API.checkGoalUncompletion();
+                // DB trigger automatically handles updating task_list goals when tasks change status
+                // No need to manually check - goal status is always calculated dynamically
             }
         } catch (error) {
             this.scheduling_revertTaskVisually(taskId, !isCompleted);
