@@ -23,9 +23,27 @@ window.GoalsModule = {
             await this.goals_loadData();
             await this.goals_loadAvailableTasks();
             this.goals_render();
+
+            // Listen for task status changes to refresh goal percentages
+            this.goals_setupTaskChangeListener();
         } catch (error) {
             this.goals_showError('Failed to load goals');
         }
+    },
+
+    // Listen for task status changes and refresh goals
+    goals_setupTaskChangeListener() {
+        // Remove any existing listener to avoid duplicates
+        document.removeEventListener('taskStatusChanged', this.goals_handleTaskChange);
+
+        // Bind the handler so we can reference it for removal
+        this.goals_handleTaskChange = async () => {
+            // Reload goals data to get fresh percentages
+            await this.goals_loadData();
+            this.goals_render();
+        };
+
+        document.addEventListener('taskStatusChanged', this.goals_handleTaskChange);
     },
 
     // LOAD DATA

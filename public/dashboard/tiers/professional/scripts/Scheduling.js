@@ -886,6 +886,9 @@ modal.addEventListener('mouseup', (e) => {
                 // DB trigger automatically handles updating task_list goals when tasks change status
                 // No need to manually check - goal status is always calculated dynamically
             }
+
+            // Notify Goals module that task status changed so it can refresh percentages
+            document.dispatchEvent(new CustomEvent('taskStatusChanged', { detail: { taskId } }));
         } catch (error) {
             this.scheduling_revertTaskVisually(taskId, !isCompleted);
             console.error('Task toggle failed:', error);
