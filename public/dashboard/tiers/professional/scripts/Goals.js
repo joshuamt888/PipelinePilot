@@ -901,51 +901,54 @@ async goals_loadAvailableTasks() {
 
         const targetInput = document.getElementById('goalTarget');
         const targetCounter = document.getElementById('targetCounter');
-        
-        const updateTargetCounter = () => {
-            let value = targetInput.value;
-            
-            value = value.replace(/[^0-9.]/g, '');
-            const parts = value.split('.');
-            if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
-            }
-            if (parts.length === 2 && parts[1].length > 2) {
-                value = parts[0] + '.' + parts[1].substring(0, 2);
-            }
-            if (parts[0].length > 8) {
-                value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
-            }
-            
-            targetInput.value = value;
-            
-            const digitCount = parts[0].length;
-            const remaining = 8 - digitCount;
-            
-            if (remaining <= 0) {
-                targetCounter.textContent = 'Max reached';
-                targetCounter.style.color = 'var(--danger)';
-                targetCounter.style.fontWeight = '700';
-            } else {
-                targetCounter.textContent = remaining === 1 
-                    ? '1 digit remaining' 
-                    : `${remaining} digits remaining`;
-                
-                if (remaining <= 2) {
+
+        // Only setup if elements exist (may not be present for certain goal types)
+        if (targetInput && targetCounter) {
+            const updateTargetCounter = () => {
+                let value = targetInput.value;
+
+                value = value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                if (parts.length === 2 && parts[1].length > 2) {
+                    value = parts[0] + '.' + parts[1].substring(0, 2);
+                }
+                if (parts[0].length > 8) {
+                    value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
+                }
+
+                targetInput.value = value;
+
+                const digitCount = parts[0].length;
+                const remaining = 8 - digitCount;
+
+                if (remaining <= 0) {
+                    targetCounter.textContent = 'Max reached';
                     targetCounter.style.color = 'var(--danger)';
                     targetCounter.style.fontWeight = '700';
-                } else if (remaining <= 4) {
-                    targetCounter.style.color = 'var(--warning)';
-                    targetCounter.style.fontWeight = '600';
                 } else {
-                    targetCounter.style.color = 'var(--text-tertiary)';
-                    targetCounter.style.fontWeight = '500';
-                }
-            }
-        };
+                    targetCounter.textContent = remaining === 1
+                        ? '1 digit remaining'
+                        : `${remaining} digits remaining`;
 
-        targetInput.addEventListener('input', updateTargetCounter);
-        if (mode === 'edit') updateTargetCounter();
+                    if (remaining <= 2) {
+                        targetCounter.style.color = 'var(--danger)';
+                        targetCounter.style.fontWeight = '700';
+                    } else if (remaining <= 4) {
+                        targetCounter.style.color = 'var(--warning)';
+                        targetCounter.style.fontWeight = '600';
+                    } else {
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }
+            };
+
+            targetInput.addEventListener('input', updateTargetCounter);
+            if (mode === 'edit') updateTargetCounter();
+        }
 
         // Description counter
         const descriptionInput = document.getElementById('goalDescription');
@@ -988,44 +991,47 @@ async goals_loadAvailableTasks() {
         const customUnitInput = document.getElementById('goalCustomUnit');
         const customUnitCounter = document.getElementById('customUnitCounter');
 
-        unitSelect.addEventListener('change', () => {
-            if (unitSelect.value === 'custom') {
-                customUnitContainer.style.display = 'block';
-            } else {
-                customUnitContainer.style.display = 'none';
-            }
-        });
+        // Only setup if elements exist (may not be present for certain goal types)
+        if (unitSelect && customUnitInput && customUnitCounter) {
+            unitSelect.addEventListener('change', () => {
+                if (unitSelect.value === 'custom') {
+                    customUnitContainer.style.display = 'block';
+                } else {
+                    customUnitContainer.style.display = 'none';
+                }
+            });
 
-        const updateCustomUnitCounter = () => {
-            let value = customUnitInput.value;
-            if (value.length > 25) {
-                value = value.substring(0, 25);
-                customUnitInput.value = value;
-            }
+            const updateCustomUnitCounter = () => {
+                let value = customUnitInput.value;
+                if (value.length > 25) {
+                    value = value.substring(0, 25);
+                    customUnitInput.value = value;
+                }
 
-            const remaining = 25 - value.length;
-            customUnitCounter.textContent = remaining === 1
-                ? '1 character remaining'
-                : `${remaining} characters remaining`;
+                const remaining = 25 - value.length;
+                customUnitCounter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
 
-            if (remaining === 0) {
-                customUnitCounter.textContent = 'Max reached';
-                customUnitCounter.style.color = 'var(--danger)';
-                customUnitCounter.style.fontWeight = '700';
-            } else if (remaining <= 5) {
-                customUnitCounter.style.color = 'var(--danger)';
-                customUnitCounter.style.fontWeight = '700';
-            } else if (remaining <= 10) {
-                customUnitCounter.style.color = 'var(--warning)';
-                customUnitCounter.style.fontWeight = '600';
-            } else {
-                customUnitCounter.style.color = 'var(--text-tertiary)';
-                customUnitCounter.style.fontWeight = '500';
-            }
-        };
+                if (remaining === 0) {
+                    customUnitCounter.textContent = 'Max reached';
+                    customUnitCounter.style.color = 'var(--danger)';
+                    customUnitCounter.style.fontWeight = '700';
+                } else if (remaining <= 5) {
+                    customUnitCounter.style.color = 'var(--danger)';
+                    customUnitCounter.style.fontWeight = '700';
+                } else if (remaining <= 10) {
+                    customUnitCounter.style.color = 'var(--warning)';
+                    customUnitCounter.style.fontWeight = '600';
+                } else {
+                    customUnitCounter.style.color = 'var(--text-tertiary)';
+                    customUnitCounter.style.fontWeight = '500';
+                }
+            };
 
-        customUnitInput.addEventListener('input', updateCustomUnitCounter);
-        if (mode === 'edit') updateCustomUnitCounter();
+            customUnitInput.addEventListener('input', updateCustomUnitCounter);
+            if (mode === 'edit') updateCustomUnitCounter();
+        }
 
         // PERIOD PILL EVENTS WITH FIXED DATE CALCULATION
         modal.querySelectorAll('.goals-period-pill').forEach(btn => {
