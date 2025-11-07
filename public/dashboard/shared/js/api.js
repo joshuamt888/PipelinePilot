@@ -1154,20 +1154,14 @@ static async getGoalProgress() {
     const goalsWithProgress = await Promise.all(goals.map(async goal => {
         let progress = 0;
         let remaining = 0;
-        
-        if (goal.goal_type === 'task_list') {
-            // Task-based goal
-            const taskProgress = await this.getTaskGoalProgress(goal.id);
-            progress = taskProgress.progress;
-            remaining = taskProgress.remaining;
-        } else {
-            // Value-based goal
-            progress = goal.target_value > 0
-                ? Math.round((goal.current_value / goal.target_value) * 100)
-                : 0;
-            remaining = Math.max(0, goal.target_value - goal.current_value);
-        }
-        
+
+        // For ALL goal types (task_list, auto, manual), calculate progress from current_value / target_value
+        // The DB trigger keeps current_value accurate for task_list goals
+        progress = goal.target_value > 0
+            ? Math.round((goal.current_value / goal.target_value) * 100)
+            : 0;
+        remaining = Math.max(0, goal.target_value - goal.current_value);
+
         return {
             ...goal,
             progress,
