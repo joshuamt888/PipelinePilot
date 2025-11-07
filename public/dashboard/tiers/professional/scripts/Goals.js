@@ -1149,13 +1149,13 @@ if (taskSearchInput) {
                 noResultsMsg = document.createElement('div');
                 noResultsMsg.id = 'noSearchResults';
                 noResultsMsg.className = 'goals-task-empty';
-                noResultsMsg.innerHTML = \`
+                noResultsMsg.innerHTML = `
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <circle cx="11" cy="11" r="8" stroke-width="2"/>
                         <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                    <p>No tasks found matching "\${API.escapeHtml(searchTerm)}"</p>
-                \`;
+                    <p>No tasks found matching "${API.escapeHtml(searchTerm)}"</p>
+                `;
                 tasksList.appendChild(noResultsMsg);
             }
         } else if (noResultsMsg) {
@@ -1780,7 +1780,36 @@ goals_attachEvents() {
         // Validation
         if (!title || title.length > 35) {
             console.warn('⚠️ [Goal Creation] Validation failed: Invalid title');
-            window.SteadyUtils.showToast('Invalid title', 'error');
+            const titleInput = document.getElementById('goalTitle');
+            const titleCounter = document.querySelector('#titleCounter');
+
+            // Add error styling
+            titleInput.style.borderColor = 'var(--danger)';
+            titleInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+            // Update hint text to show error
+            if (titleCounter) {
+                titleCounter.textContent = !title ? 'Title is required' : 'Title must be 35 characters or less';
+                titleCounter.style.color = 'var(--danger)';
+                titleCounter.style.fontWeight = '600';
+            }
+
+            // Focus the input
+            titleInput.focus();
+
+            // Remove error styling when user types
+            titleInput.addEventListener('input', function clearError() {
+                titleInput.style.borderColor = '';
+                titleInput.style.boxShadow = '';
+                if (titleCounter) {
+                    const remaining = 35 - titleInput.value.length;
+                    titleCounter.textContent = `${remaining} characters remaining`;
+                    titleCounter.style.color = remaining <= 5 ? 'var(--warning)' : 'var(--text-tertiary)';
+                    titleCounter.style.fontWeight = '500';
+                }
+                titleInput.removeEventListener('input', clearError);
+            }, { once: true });
+
             return;
         }
         
@@ -1790,7 +1819,27 @@ goals_attachEvents() {
                 startDate,
                 endDate
             });
-            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+
+            // Highlight period pills if no period selected
+            if (!activePeriod) {
+                const periodPills = document.querySelector('.goals-period-pills');
+                if (periodPills) {
+                    periodPills.style.border = '2px solid var(--danger)';
+                    periodPills.style.borderRadius = 'var(--radius-lg)';
+                    periodPills.style.padding = '0.5rem';
+
+                    // Remove error styling when a period is selected
+                    document.querySelectorAll('.goals-period-pill').forEach(pill => {
+                        pill.addEventListener('click', function clearPeriodError() {
+                            periodPills.style.border = '';
+                            periodPills.style.borderRadius = '';
+                            periodPills.style.padding = '';
+                        }, { once: true });
+                    });
+                }
+            }
+
+            window.SteadyUtils.showToast('Please select a time period', 'error');
             return;
         }
 
@@ -1813,6 +1862,32 @@ goals_attachEvents() {
             const totalTasks = this.state.selectedTaskIds.length + (this.state.newTasks?.length || 0);
             
             if (totalTasks === 0) {
+                // Highlight the task checklist section
+                const taskOptions = document.getElementById('taskChecklistOptions');
+                if (taskOptions) {
+                    taskOptions.style.border = '2px solid var(--danger)';
+                    taskOptions.style.borderRadius = 'var(--radius-lg)';
+
+                    // Switch to existing tasks tab if not already there
+                    const existingTab = document.querySelector('[data-tab="existing"]');
+                    if (existingTab) existingTab.click();
+
+                    // Remove error styling when a task is selected or created
+                    const clearTaskError = () => {
+                        taskOptions.style.border = '';
+                        taskOptions.style.borderRadius = '';
+                    };
+
+                    document.querySelectorAll('[data-task-select]').forEach(checkbox => {
+                        checkbox.addEventListener('change', clearTaskError, { once: true });
+                    });
+
+                    const addTaskBtn = document.querySelector('[data-action="add-quick-task"]');
+                    if (addTaskBtn) {
+                        addTaskBtn.addEventListener('click', clearTaskError, { once: true });
+                    }
+                }
+
                 window.SteadyUtils.showToast('Please select or create at least one task', 'error');
                 return;
             }
@@ -1828,8 +1903,36 @@ goals_attachEvents() {
             const trackType = document.getElementById('goalTrackType').value;
             const targetValueStr = document.getElementById('goalTarget').value.trim();
             const targetValue = parseFloat(targetValueStr);
-            
+
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                const targetInput = document.getElementById('goalTarget');
+                const targetCounter = document.querySelector('#targetCounter');
+
+                // Add error styling
+                targetInput.style.borderColor = 'var(--danger)';
+                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                // Update hint text
+                if (targetCounter) {
+                    targetCounter.textContent = !targetValueStr ? 'Target value is required' : targetValue > 99999999.99 ? 'Value too large' : 'Must be greater than 0';
+                    targetCounter.style.color = 'var(--danger)';
+                    targetCounter.style.fontWeight = '600';
+                }
+
+                targetInput.focus();
+
+                // Remove error styling when user types
+                targetInput.addEventListener('input', function clearError() {
+                    targetInput.style.borderColor = '';
+                    targetInput.style.boxShadow = '';
+                    if (targetCounter) {
+                        const length = targetInput.value.length;
+                        targetCounter.textContent = `${8 - length} digits remaining`;
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }, { once: true });
+
                 window.SteadyUtils.showToast('Invalid target value', 'error');
                 return;
             }
@@ -1839,6 +1942,34 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return;
                 }
@@ -1855,8 +1986,36 @@ goals_attachEvents() {
             // Manual Goal
             const targetValueStr = document.getElementById('goalTarget').value.trim();
             const targetValue = parseFloat(targetValueStr);
-            
+
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                const targetInput = document.getElementById('goalTarget');
+                const targetCounter = document.querySelector('#targetCounter');
+
+                // Add error styling
+                targetInput.style.borderColor = 'var(--danger)';
+                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                // Update hint text
+                if (targetCounter) {
+                    targetCounter.textContent = !targetValueStr ? 'Target value is required' : targetValue > 99999999.99 ? 'Value too large' : 'Must be greater than 0';
+                    targetCounter.style.color = 'var(--danger)';
+                    targetCounter.style.fontWeight = '600';
+                }
+
+                targetInput.focus();
+
+                // Remove error styling when user types
+                targetInput.addEventListener('input', function clearError() {
+                    targetInput.style.borderColor = '';
+                    targetInput.style.boxShadow = '';
+                    if (targetCounter) {
+                        const length = targetInput.value.length;
+                        targetCounter.textContent = `${8 - length} digits remaining`;
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }, { once: true });
+
                 window.SteadyUtils.showToast('Invalid target value', 'error');
                 return;
             }
@@ -1866,6 +2025,34 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return;
                 }
@@ -1985,6 +2172,34 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
+                    const customUnitInput = document.getElementById('goalCustomUnit');
+                    const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                    // Add error styling
+                    customUnitInput.style.borderColor = 'var(--danger)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    // Update hint text
+                    if (customUnitCounter) {
+                        customUnitCounter.textContent = 'Custom unit name is required';
+                        customUnitCounter.style.color = 'var(--danger)';
+                        customUnitCounter.style.fontWeight = '600';
+                    }
+
+                    customUnitInput.focus();
+
+                    // Remove error styling when user types
+                    customUnitInput.addEventListener('input', function clearError() {
+                        customUnitInput.style.borderColor = '';
+                        customUnitInput.style.boxShadow = '';
+                        if (customUnitCounter) {
+                            const length = customUnitInput.value.length;
+                            customUnitCounter.textContent = `${25 - length} characters remaining`;
+                            customUnitCounter.style.color = 'var(--text-tertiary)';
+                            customUnitCounter.style.fontWeight = '500';
+                        }
+                    }, { once: true });
+
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return;
                 }
