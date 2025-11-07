@@ -279,6 +279,10 @@ async goals_loadAvailableTasks() {
     },
     // MODALS - CREATE GOAL
     goals_showCreateModal() {
+        // Reset task selection state
+        this.state.selectedTaskIds = [];
+        this.state.newTasks = [];
+
         const modal = document.createElement('div');
         modal.className = 'goals-modal-overlay show';
         modal.innerHTML = `
@@ -517,7 +521,7 @@ async goals_loadAvailableTasks() {
             <div class="goals-quick-task-form">
                 <div style="position: relative; flex: 1;">
                     <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
-                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; right: 0; font-size: 0.75rem;">0 / 50</span>
+                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0 / 50</span>
                 </div>
                 <input type="date" id="quickTaskDate" class="goals-form-input-v2">
                 <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
@@ -1487,6 +1491,18 @@ goals_showGoalDetailModal(goalId) {
                 </div>
             </div>
         `).join('');
+
+        // Add info message about auto-updates
+        const infoMessage = document.createElement('div');
+        infoMessage.className = 'goals-task-info-message';
+        infoMessage.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Tasks completed in the Tasks module will automatically update this goal's progress</span>
+        `;
+        tasksList.appendChild(infoMessage);
         
     } catch (error) {
         console.error('Failed to load linked tasks:', error);
@@ -2760,7 +2776,7 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-task-checkbox input:checked + .goals-task-item {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--background);
 }
 
 .goals-task-item-content {
@@ -2920,6 +2936,26 @@ goals_formatValueAbbreviated(value, unit) {
     text-align: center;
     padding: 2rem;
     color: var(--text-secondary);
+}
+
+.goals-task-info-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.goals-task-info-message svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    stroke: var(--primary);
 }
 
 .goals-detail-task-item {
