@@ -1030,9 +1030,12 @@ static async getGoals(status = 'active') {
         .from('goals')
         .select('*')
         .order('created_at', { ascending: false });
-    
-    if (status) query = query.eq('status', status);
-    
+
+    // Only filter by status if explicitly provided (not null/undefined)
+    if (status !== null && status !== undefined) {
+        query = query.eq('status', status);
+    }
+
     const { data, error } = await query;
     if (error) throw error;
     return data;
@@ -1133,7 +1136,8 @@ static async checkGoalCompletion() {
  * Handles both value-based and task-based goals
  */
 static async getGoalProgress() {
-    const goals = await this.getGoals();
+    // Pass null to get ALL goals (active, completed, failed)
+    const goals = await this.getGoals(null);
     
     const goalsWithProgress = await Promise.all(goals.map(async goal => {
         let progress = 0;
