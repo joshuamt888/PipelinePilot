@@ -2628,11 +2628,16 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-card.goals-card-completed {
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .goals-card.goals-card-completed::before {
     background: linear-gradient(90deg, var(--success), #059669);
+}
+
+.goals-card.goals-card-completed .goals-card-title {
+    text-decoration: line-through;
+    color: var(--text-secondary);
 }
 
 .goals-card.goals-card-at-risk::before {
