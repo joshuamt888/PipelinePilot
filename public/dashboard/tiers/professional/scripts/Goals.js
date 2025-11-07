@@ -2785,7 +2785,6 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-task-checkbox input:checked + .goals-task-item {
     border-color: var(--primary);
     border-width: 3px;
-    background: var(--background);
     transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
