@@ -521,7 +521,7 @@ async goals_loadAvailableTasks() {
             <div class="goals-quick-task-form">
                 <div style="position: relative; flex: 1;">
                     <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
-                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0 / 50</span>
+                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0/50 characters remaining</span>
                 </div>
                 <input type="date" id="quickTaskDate" class="goals-form-input-v2">
                 <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
@@ -606,8 +606,16 @@ async goals_loadAvailableTasks() {
             submitBtn.style.cursor = 'not-allowed';
 
             try {
-                await this.goals_createGoal();
-                modal.remove();
+                const success = await this.goals_createGoal();
+                if (success !== false) {
+                    modal.remove();
+                } else {
+                    // Re-enable button on validation failure
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                }
             } catch (error) {
                 // Re-enable button on error
                 submitBtn.disabled = false;
@@ -1174,7 +1182,7 @@ const quickTaskCounter = modal.querySelector('#quickTaskCounter');
 if (quickTaskInput && quickTaskCounter) {
     quickTaskInput.addEventListener('input', (e) => {
         const length = e.target.value.length;
-        quickTaskCounter.textContent = `${length} / 50`;
+        quickTaskCounter.textContent = `${length}/50 characters remaining`;
         quickTaskCounter.style.color = length >= 45 ? 'var(--warning)' : 'var(--text-tertiary)';
     });
 }
@@ -1242,7 +1250,7 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
     // Clear inputs
     titleInput.value = '';
     dateInput.value = '';
-    quickTaskCounter.textContent = '0 / 50';
+    quickTaskCounter.textContent = '0/50 characters remaining';
     quickTaskCounter.style.color = 'var(--text-tertiary)';
 
     // Update counters
@@ -1826,7 +1834,7 @@ goals_attachEvents() {
                 titleInput.removeEventListener('input', clearError);
             }, { once: true });
 
-            return;
+            return false;
         }
         
         if (!activePeriod || !startDate || !endDate) {
@@ -1856,7 +1864,7 @@ goals_attachEvents() {
             }
 
             window.SteadyUtils.showToast('Please select a time period', 'error');
-            return;
+            return false;
         }
 
         console.log('✅ [Goal Creation] Validation passed, building goal data...');
@@ -1905,7 +1913,7 @@ goals_attachEvents() {
                 }
 
                 window.SteadyUtils.showToast('Please select or create at least one task', 'error');
-                return;
+                return false;
             }
             
             goalData.goal_type = 'task_list';
@@ -1950,7 +1958,7 @@ goals_attachEvents() {
                 }, { once: true });
 
                 window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                return false;
             }
             
             const unitSelect = document.getElementById('goalUnit').value;
@@ -1987,7 +1995,7 @@ goals_attachEvents() {
                     }, { once: true });
 
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -2033,7 +2041,7 @@ goals_attachEvents() {
                 }, { once: true });
 
                 window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                return false;
             }
             
             const unitSelect = document.getElementById('goalUnit').value;
@@ -2070,7 +2078,7 @@ goals_attachEvents() {
                     }, { once: true });
 
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -2171,7 +2179,7 @@ goals_attachEvents() {
             
             if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
                 window.SteadyUtils.showToast('Invalid target value', 'error');
-                return;
+                return false;
             }
             
             if (!activePeriod || !startDate || !endDate) {
@@ -2217,7 +2225,7 @@ goals_attachEvents() {
                     }, { once: true });
 
                     window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
-                    return;
+                    return false;
                 }
                 unitValue = customUnit;
             }
@@ -2776,7 +2784,10 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-task-checkbox input:checked + .goals-task-item {
     border-color: var(--primary);
+    border-width: 3px;
     background: var(--background);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .goals-task-item-content {
