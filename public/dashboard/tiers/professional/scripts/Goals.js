@@ -279,6 +279,10 @@ async goals_loadAvailableTasks() {
     },
     // MODALS - CREATE GOAL
     goals_showCreateModal() {
+        // Reset task selection state
+        this.state.selectedTaskIds = [];
+        this.state.newTasks = [];
+
         const modal = document.createElement('div');
         modal.className = 'goals-modal-overlay show';
         modal.innerHTML = `
@@ -296,8 +300,8 @@ async goals_loadAvailableTasks() {
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
                         <div class="goals-form-group-v2">
-                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large" 
-                                   placeholder="Q4 Revenue Target" required autocomplete="off">
+                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
+                                   placeholder="Q4 Revenue Target" autocomplete="off">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
@@ -359,8 +363,8 @@ async goals_loadAvailableTasks() {
                         <div class="goals-form-row-v2">
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
-                                <input type="text" id="goalTarget" class="goals-form-input-v2" 
-                                       placeholder="10000" required>
+                                <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                       placeholder="10000">
                                 <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
                             </div>
                             <div class="goals-form-group-v2">
@@ -398,8 +402,8 @@ async goals_loadAvailableTasks() {
                         </div>
 
                         <div class="goals-date-inputs-hidden">
-                            <input type="date" id="goalStartDate" required>
-                            <input type="date" id="goalEndDate" required>
+                            <input type="date" id="goalStartDate">
+                            <input type="date" id="goalEndDate">
                         </div>
 
                         <div class="goals-divider"></div>
@@ -449,6 +453,11 @@ async goals_loadAvailableTasks() {
     
     <!-- Task Checklist Options -->
     <div id="taskChecklistOptions" class="goals-task-checklist-config" style="display: none;">
+        <!-- Combined Task Counter (shows across both tabs) -->
+        <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
+            <span id="taskCombinedCount" style="font-weight: 700; font-size: 0.875rem;">0 / 30 tasks</span>
+        </div>
+
         <div class="goals-task-tabs">
             <button type="button" class="goals-task-tab active" data-tab="existing">
                 Existing Tasks
@@ -457,13 +466,24 @@ async goals_loadAvailableTasks() {
                 Create New
             </button>
         </div>
-        
+
         <!-- Existing Tasks Tab -->
         <div id="existingTasksTab" class="goals-task-tab-content">
-            <div class="goals-task-list">
+            <!-- Search Bar -->
+            <div style="margin-bottom: 1rem;">
+                <div style="position: relative;">
+                    <input type="text" id="taskSearchInput" class="goals-form-input-v2" placeholder="Search tasks..." style="padding-left: 2.5rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; color: var(--text-tertiary); pointer-events: none;">
+                        <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="goals-task-list" id="tasksList">
                 ${this.state.availableTasks.length > 0 ? `
                     ${this.state.availableTasks.map(task => `
-                        <label class="goals-task-checkbox">
+                        <label class="goals-task-checkbox" data-task-title="${API.escapeHtml(task.title).toLowerCase()}">
                             <input type="checkbox" value="${task.id}" data-task-select>
                             <div class="goals-task-item">
                                 <div class="goals-task-item-content">
@@ -494,15 +514,15 @@ async goals_loadAvailableTasks() {
                     </div>
                 `}
             </div>
-            <div class="goals-task-selected-count">
-                <span id="taskSelectedCount">0 tasks selected</span>
-            </div>
         </div>
-        
+
         <!-- Create New Tasks Tab -->
         <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
             <div class="goals-quick-task-form">
-                <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="100">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
+                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0/50 characters remaining</span>
+                </div>
                 <input type="date" id="quickTaskDate" class="goals-form-input-v2">
                 <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -511,7 +531,7 @@ async goals_loadAvailableTasks() {
                     Add Task
                 </button>
             </div>
-            <div id="newTasksList" class="goals-new-tasks-list">
+            <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
                 <!-- New tasks will be added here -->
             </div>
         </div>
@@ -586,8 +606,16 @@ async goals_loadAvailableTasks() {
             submitBtn.style.cursor = 'not-allowed';
 
             try {
-                await this.goals_createGoal();
-                modal.remove();
+                const success = await this.goals_createGoal();
+                if (success !== false) {
+                    modal.remove();
+                } else {
+                    // Re-enable button on validation failure
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                }
             } catch (error) {
                 // Re-enable button on error
                 submitBtn.disabled = false;
@@ -627,8 +655,8 @@ async goals_loadAvailableTasks() {
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
                         <div class="goals-form-group-v2">
-                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large" 
-                                   placeholder="Q4 Revenue Target" required autocomplete="off" value="${API.escapeHtml(goal.title)}">
+                            <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
+                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
@@ -691,7 +719,7 @@ async goals_loadAvailableTasks() {
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">Target Value</label>
                                 <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                       placeholder="10000" required value="${goal.target_value}">
+                                       placeholder="10000" value="${goal.target_value}">
                                 <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
                             </div>
                             <div class="goals-form-group-v2">
@@ -730,8 +758,8 @@ async goals_loadAvailableTasks() {
                         </div>
 
                         <div class="goals-date-inputs-hidden">
-                            <input type="date" id="goalStartDate" required value="${goal.start_date}">
-                            <input type="date" id="goalEndDate" required value="${goal.end_date}">
+                            <input type="date" id="goalStartDate" value="${goal.start_date}">
+                            <input type="date" id="goalEndDate" value="${goal.end_date}">
                         </div>
 
                         <div class="goals-divider"></div>
@@ -1044,11 +1072,11 @@ async goals_loadAvailableTasks() {
         const autoOptions = document.getElementById('autoTrackOptions');
         const taskOptions = document.getElementById('taskChecklistOptions');
         const targetFields = modal.querySelector('.goals-form-row-v2'); // Target + Unit fields
-        
+
         // Hide all tracking-specific options first
         autoOptions.style.display = 'none';
         if (taskOptions) taskOptions.style.display = 'none';
-        
+
         // Show/hide based on selection
         if (e.target.value === 'auto') {
             autoOptions.style.display = 'block';
@@ -1066,18 +1094,24 @@ async goals_loadAvailableTasks() {
         // Task Checklist: Track selected tasks
 modal.querySelectorAll('[data-task-select]').forEach(checkbox => {
     checkbox.addEventListener('change', (e) => {
+        const newTasksCount = this.state.newTasks?.length || 0;
+        const selectedCount = this.state.selectedTaskIds.length;
+        const totalCount = selectedCount + newTasksCount;
+
         if (e.target.checked) {
+            // Check 30 task limit before allowing selection
+            if (totalCount >= 30) {
+                e.target.checked = false;
+                window.SteadyUtils.showToast('Maximum 30 tasks allowed', 'error');
+                return;
+            }
             this.state.selectedTaskIds.push(e.target.value);
         } else {
             this.state.selectedTaskIds = this.state.selectedTaskIds.filter(id => id !== e.target.value);
         }
-        
-        // Update counter
-        const counter = modal.querySelector('#taskSelectedCount');
-        if (counter) {
-            const count = this.state.selectedTaskIds.length;
-            counter.textContent = count === 1 ? '1 task selected' : `${count} tasks selected`;
-        }
+
+        // Update counter with combined total
+        this.goals_updateTaskCounters(modal);
     });
 });
 
@@ -1101,21 +1135,83 @@ modal.querySelectorAll('.goals-task-tab').forEach(tab => {
     });
 });
 
+// Task Checklist: Smart search for existing tasks
+const taskSearchInput = modal.querySelector('#taskSearchInput');
+if (taskSearchInput) {
+    taskSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const taskCheckboxes = modal.querySelectorAll('.goals-task-checkbox');
+
+        taskCheckboxes.forEach(checkbox => {
+            const taskTitle = checkbox.getAttribute('data-task-title') || '';
+            if (taskTitle.includes(searchTerm)) {
+                checkbox.style.display = '';
+            } else {
+                checkbox.style.display = 'none';
+            }
+        });
+
+        // Show "no results" message if all hidden
+        const visibleTasks = Array.from(taskCheckboxes).filter(cb => cb.style.display !== 'none');
+        const tasksList = modal.querySelector('#tasksList');
+        let noResultsMsg = modal.querySelector('#noSearchResults');
+
+        if (visibleTasks.length === 0 && searchTerm) {
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.id = 'noSearchResults';
+                noResultsMsg.className = 'goals-task-empty';
+                noResultsMsg.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                        <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <p>No tasks found matching "${API.escapeHtml(searchTerm)}"</p>
+                `;
+                tasksList.appendChild(noResultsMsg);
+            }
+        } else if (noResultsMsg) {
+            noResultsMsg.remove();
+        }
+    });
+}
+
+// Task Checklist: Character counter for quick task title
+const quickTaskInput = modal.querySelector('#quickTaskTitle');
+const quickTaskCounter = modal.querySelector('#quickTaskCounter');
+if (quickTaskInput && quickTaskCounter) {
+    quickTaskInput.addEventListener('input', (e) => {
+        const length = e.target.value.length;
+        quickTaskCounter.textContent = `${length}/50 characters remaining`;
+        quickTaskCounter.style.color = length >= 45 ? 'var(--warning)' : 'var(--text-tertiary)';
+    });
+}
+
 // Task Checklist: Add quick task
 modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click', () => {
     const titleInput = modal.querySelector('#quickTaskTitle');
     const dateInput = modal.querySelector('#quickTaskDate');
     const title = titleInput.value.trim();
-    
+
     if (!title) {
         window.SteadyUtils.showToast('Enter a task title', 'error');
         return;
     }
-    
+
+    // Check 30 task limit
+    const newTasksCount = this.state.newTasks?.length || 0;
+    const selectedCount = this.state.selectedTaskIds?.length || 0;
+    const totalCount = selectedCount + newTasksCount;
+
+    if (totalCount >= 30) {
+        window.SteadyUtils.showToast('Maximum 30 tasks allowed', 'error');
+        return;
+    }
+
     // Add to new tasks list
     const newTasksList = modal.querySelector('#newTasksList');
     const taskId = 'new_' + Date.now(); // Temporary ID
-    
+
     const taskHTML = `
         <div class="goals-new-task-item" data-temp-id="${taskId}">
             <div class="goals-new-task-content">
@@ -1140,9 +1236,9 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
             </button>
         </div>
     `;
-    
+
     newTasksList.insertAdjacentHTML('beforeend', taskHTML);
-    
+
     // Store task data
     if (!this.state.newTasks) this.state.newTasks = [];
     this.state.newTasks.push({
@@ -1150,20 +1246,40 @@ modal.querySelector('[data-action="add-quick-task"]')?.addEventListener('click',
         title: title,
         due_date: dateInput.value || null
     });
-    
+
     // Clear inputs
     titleInput.value = '';
     dateInput.value = '';
-    
+    quickTaskCounter.textContent = '0/50 characters remaining';
+    quickTaskCounter.style.color = 'var(--text-tertiary)';
+
+    // Update counters
+    this.goals_updateTaskCounters(modal);
+
     // Setup remove button
     modal.querySelector(`[data-temp-id="${taskId}"] [data-action="remove-new-task"]`).addEventListener('click', (e) => {
         const id = e.currentTarget.dataset.tempId;
         modal.querySelector(`[data-temp-id="${id}"]`).remove();
         this.state.newTasks = this.state.newTasks.filter(t => t.tempId !== id);
+        this.goals_updateTaskCounters(modal);
     });
 });
     },
-    
+
+    // Helper: Update combined task counter in modal
+    goals_updateTaskCounters(modal) {
+        const selectedCount = this.state.selectedTaskIds?.length || 0;
+        const newTasksCount = this.state.newTasks?.length || 0;
+        const totalCount = selectedCount + newTasksCount;
+
+        // Update combined counter (shows across both tabs)
+        const combinedCounter = modal.querySelector('#taskCombinedCount');
+        if (combinedCounter) {
+            combinedCounter.textContent = `${totalCount} / 30 tasks`;
+            combinedCounter.style.color = totalCount >= 30 ? 'var(--danger)' : totalCount >= 25 ? 'var(--warning)' : 'var(--text-primary)';
+        }
+    },
+
     // MODALS - VIEW GOAL DETAIL
 goals_showGoalDetailModal(goalId) {
     const goal = this.state.goals.find(g => g.id === goalId);
@@ -1383,6 +1499,18 @@ goals_showGoalDetailModal(goalId) {
                 </div>
             </div>
         `).join('');
+
+        // Add info message about auto-updates
+        const infoMessage = document.createElement('div');
+        infoMessage.className = 'goals-task-info-message';
+        infoMessage.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span>Tasks completed in the Tasks module will automatically update this goal's progress</span>
+        `;
+        tasksList.appendChild(infoMessage);
         
     } catch (error) {
         console.error('Failed to load linked tasks:', error);
@@ -1643,25 +1771,48 @@ goals_attachEvents() {
 
     async goals_createGoal() {
     try {
+        console.log('🎯 [Goal Creation] Starting goal creation process...');
+
         const form = document.getElementById('goalForm');
         const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
         const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
-        
+
+        console.log('📋 [Goal Creation] Form state:', {
+            formExists: !!form,
+            activePeriod,
+            trackingMethod,
+            selectedTaskIds: this.state.selectedTaskIds,
+            newTasks: this.state.newTasks
+        });
+
         const title = document.getElementById('goalTitle').value.trim();
         const description = document.getElementById('goalDescription').value.trim();
         const startDate = document.getElementById('goalStartDate').value;
         const endDate = document.getElementById('goalEndDate').value;
         const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
         const isRecurring = document.getElementById('goalRecurring').checked || false;
-        
+
+        console.log('📝 [Goal Creation] Collected form values:', {
+            title,
+            description: description || '(empty)',
+            startDate,
+            endDate,
+            selectedColor,
+            isRecurring
+        });
+
         // Validation
         if (!title || title.length > 35) {
-            throw new Error('Please enter a valid goal title (max 35 characters)');
+            window.SteadyUtils.showToast('Invalid title', 'error');
+            return;
         }
 
         if (!activePeriod || !startDate || !endDate) {
-            throw new Error('Please select a time period and dates');
+            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+            return;
         }
+
+        console.log('✅ [Goal Creation] Validation passed, building goal data...');
         
         // Build goal data based on tracking method
         let goalData = {
@@ -1680,7 +1831,8 @@ goals_attachEvents() {
             const totalTasks = this.state.selectedTaskIds.length + (this.state.newTasks?.length || 0);
             
             if (totalTasks === 0) {
-                throw new Error('Please select or create at least one task');
+                window.SteadyUtils.showToast('Please select or create at least one task', 'error');
+                return;
             }
             
             goalData.goal_type = 'task_list';
@@ -1694,9 +1846,10 @@ goals_attachEvents() {
             const trackType = document.getElementById('goalTrackType').value;
             const targetValueStr = document.getElementById('goalTarget').value.trim();
             const targetValue = parseFloat(targetValueStr);
-            
+
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return;
             }
 
             const unitSelect = document.getElementById('goalUnit').value;
@@ -1704,7 +1857,8 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    throw new Error('Please enter a custom unit name');
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
                 }
                 unitValue = customUnit;
             }
@@ -1719,9 +1873,10 @@ goals_attachEvents() {
             // Manual Goal
             const targetValueStr = document.getElementById('goalTarget').value.trim();
             const targetValue = parseFloat(targetValueStr);
-            
+
             if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return;
             }
 
             const unitSelect = document.getElementById('goalUnit').value;
@@ -1729,7 +1884,8 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    throw new Error('Please enter a custom unit name');
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
                 }
                 unitValue = customUnit;
             }
@@ -1741,47 +1897,62 @@ goals_attachEvents() {
             goalData.auto_track = false;
         }
         
-        console.log('Creating goal with data:', goalData);
-        
+        console.log('🚀 [Goal Creation] Creating goal with data:', goalData);
+
         // Create the goal
         const newGoal = await API.createGoal(goalData);
-        
+
+        console.log('✅ [Goal Creation] Goal created successfully! Response:', newGoal);
+
         // If task_list goal, link the tasks
         if (trackingMethod === 'task_list') {
+            console.log('🔗 [Goal Creation] Linking tasks to goal...');
+
             // Link existing tasks
             if (this.state.selectedTaskIds.length > 0) {
-                await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
+                console.log(`📌 [Goal Creation] Linking ${this.state.selectedTaskIds.length} existing tasks:`, this.state.selectedTaskIds);
+                const linkResult = await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
+                console.log('✅ [Goal Creation] Existing tasks linked:', linkResult);
             }
-            
+
             // Create and link new tasks
             if (this.state.newTasks && this.state.newTasks.length > 0) {
+                console.log(`➕ [Goal Creation] Creating ${this.state.newTasks.length} new tasks...`);
                 for (const taskData of this.state.newTasks) {
-                    await API.createTaskForGoal(newGoal.id, {
+                    console.log('  Creating task:', taskData);
+                    const newTaskResult = await API.createTaskForGoal(newGoal.id, {
                         title: taskData.title,
                         due_date: taskData.due_date,
                         status: 'pending'
                     });
+                    console.log('  ✅ Task created:', newTaskResult);
                 }
             }
+
+            console.log('✅ [Goal Creation] All tasks processed successfully');
         }
         
         // Reset state
         this.state.selectedTaskIds = [];
         this.state.newTasks = [];
-        
+
+        console.log('🎉 [Goal Creation] Goal creation complete! Reloading data...');
+
         window.SteadyUtils.showToast('Goal created successfully!', 'success');
         await this.goals_loadData();
         this.goals_render();
-        
+
+        console.log('✅ [Goal Creation] Data reloaded and UI updated');
+
     } catch (error) {
         console.error('Create goal error:', error);
-
-        // Re-throw with a better error message if needed
+        
+        let errorMsg = 'Failed to create goal';
         if (error.message?.includes('numeric field overflow')) {
             throw new Error('Target value is too large. Please use a smaller number.');
         }
-
-        throw error; // Re-throw so the form submit handler can catch it
+        
+        window.SteadyUtils.showToast(errorMsg, 'error');
     }
 },
 
@@ -1805,7 +1976,8 @@ goals_attachEvents() {
             }
 
             if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                throw new Error('Please enter a valid target value (1 - 99,999,999.99)');
+                window.SteadyUtils.showToast('Invalid target value', 'error');
+                return;
             }
 
             if (!activePeriod || !startDate || !endDate) {
@@ -1821,7 +1993,8 @@ goals_attachEvents() {
             if (unitSelect === 'custom') {
                 const customUnit = document.getElementById('goalCustomUnit').value.trim();
                 if (!customUnit) {
-                    throw new Error('Please enter a custom unit name');
+                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                    return;
                 }
                 unitValue = customUnit;
             }
@@ -2380,10 +2553,8 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-task-checkbox input:checked + .goals-task-item {
-    border: 3px solid var(--primary);
-    background: rgba(102, 126, 234, 0.08);
-    transform: scale(1.03);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
 }
 
 .goals-task-item-content {
@@ -2543,6 +2714,26 @@ goals_formatValueAbbreviated(value, unit) {
     text-align: center;
     padding: 2rem;
     color: var(--text-secondary);
+}
+
+.goals-task-info-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.goals-task-info-message svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    stroke: var(--primary);
 }
 
 .goals-detail-task-item {
@@ -2946,7 +3137,16 @@ goals_formatValueAbbreviated(value, unit) {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: var(--background);
+    background: var(--background) !important;
+}
+
+/* Ensure autocomplete doesn't change background */
+.goals-form-input-v2:-webkit-autofill,
+.goals-form-input-v2:-webkit-autofill:hover,
+.goals-form-input-v2:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--background) inset !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 .goals-form-textarea-v2 {
