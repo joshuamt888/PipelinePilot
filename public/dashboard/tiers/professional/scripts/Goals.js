@@ -398,8 +398,8 @@ async goals_loadAvailableTasks() {
                         </div>
 
                         <div class="goals-date-inputs-hidden">
-                            <input type="date" id="goalStartDate" required>
-                            <input type="date" id="goalEndDate" required>
+                            <input type="date" id="goalStartDate">
+                            <input type="date" id="goalEndDate">
                         </div>
 
                         <div class="goals-divider"></div>
@@ -743,8 +743,8 @@ async goals_loadAvailableTasks() {
                         </div>
 
                         <div class="goals-date-inputs-hidden">
-                            <input type="date" id="goalStartDate" required value="${goal.start_date}">
-                            <input type="date" id="goalEndDate" required value="${goal.end_date}">
+                            <input type="date" id="goalStartDate" value="${goal.start_date}">
+                            <input type="date" id="goalEndDate" value="${goal.end_date}">
                         </div>
 
                         <div class="goals-divider"></div>
