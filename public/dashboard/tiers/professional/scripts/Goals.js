@@ -16,18 +16,14 @@ window.GoalsModule = {
 
     // INIT
     async goals_init(targetContainer = 'goals-content') {
-        console.log('🎯 Goals module loading...');
-        
         this.state.container = targetContainer;
         this.goals_showLoading();
-        
+
         try {
             await this.goals_loadData();
             await this.goals_loadAvailableTasks();
             this.goals_render();
-            console.log('✅ Goals module ready');
         } catch (error) {
-            console.error('❌ Goals init failed:', error);
             this.goals_showError('Failed to load goals');
         }
     },
@@ -53,7 +49,6 @@ async goals_loadAvailableTasks() {
     try {
         this.state.availableTasks = await API.getTasks({ status: 'pending' });
     } catch (error) {
-        console.error('Failed to load tasks:', error);
         this.state.availableTasks = [];
     }
 },
@@ -906,51 +901,54 @@ async goals_loadAvailableTasks() {
 
         const targetInput = document.getElementById('goalTarget');
         const targetCounter = document.getElementById('targetCounter');
-        
-        const updateTargetCounter = () => {
-            let value = targetInput.value;
-            
-            value = value.replace(/[^0-9.]/g, '');
-            const parts = value.split('.');
-            if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
-            }
-            if (parts.length === 2 && parts[1].length > 2) {
-                value = parts[0] + '.' + parts[1].substring(0, 2);
-            }
-            if (parts[0].length > 8) {
-                value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
-            }
-            
-            targetInput.value = value;
-            
-            const digitCount = parts[0].length;
-            const remaining = 8 - digitCount;
-            
-            if (remaining <= 0) {
-                targetCounter.textContent = 'Max reached';
-                targetCounter.style.color = 'var(--danger)';
-                targetCounter.style.fontWeight = '700';
-            } else {
-                targetCounter.textContent = remaining === 1 
-                    ? '1 digit remaining' 
-                    : `${remaining} digits remaining`;
-                
-                if (remaining <= 2) {
+
+        // Only setup if elements exist (may not be present for certain goal types)
+        if (targetInput && targetCounter) {
+            const updateTargetCounter = () => {
+                let value = targetInput.value;
+
+                value = value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                if (parts.length === 2 && parts[1].length > 2) {
+                    value = parts[0] + '.' + parts[1].substring(0, 2);
+                }
+                if (parts[0].length > 8) {
+                    value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
+                }
+
+                targetInput.value = value;
+
+                const digitCount = parts[0].length;
+                const remaining = 8 - digitCount;
+
+                if (remaining <= 0) {
+                    targetCounter.textContent = 'Max reached';
                     targetCounter.style.color = 'var(--danger)';
                     targetCounter.style.fontWeight = '700';
-                } else if (remaining <= 4) {
-                    targetCounter.style.color = 'var(--warning)';
-                    targetCounter.style.fontWeight = '600';
                 } else {
-                    targetCounter.style.color = 'var(--text-tertiary)';
-                    targetCounter.style.fontWeight = '500';
-                }
-            }
-        };
+                    targetCounter.textContent = remaining === 1
+                        ? '1 digit remaining'
+                        : `${remaining} digits remaining`;
 
-        targetInput.addEventListener('input', updateTargetCounter);
-        if (mode === 'edit') updateTargetCounter();
+                    if (remaining <= 2) {
+                        targetCounter.style.color = 'var(--danger)';
+                        targetCounter.style.fontWeight = '700';
+                    } else if (remaining <= 4) {
+                        targetCounter.style.color = 'var(--warning)';
+                        targetCounter.style.fontWeight = '600';
+                    } else {
+                        targetCounter.style.color = 'var(--text-tertiary)';
+                        targetCounter.style.fontWeight = '500';
+                    }
+                }
+            };
+
+            targetInput.addEventListener('input', updateTargetCounter);
+            if (mode === 'edit') updateTargetCounter();
+        }
 
         // Description counter
         const descriptionInput = document.getElementById('goalDescription');
@@ -993,44 +991,47 @@ async goals_loadAvailableTasks() {
         const customUnitInput = document.getElementById('goalCustomUnit');
         const customUnitCounter = document.getElementById('customUnitCounter');
 
-        unitSelect.addEventListener('change', () => {
-            if (unitSelect.value === 'custom') {
-                customUnitContainer.style.display = 'block';
-            } else {
-                customUnitContainer.style.display = 'none';
-            }
-        });
+        // Only setup if elements exist (may not be present for certain goal types)
+        if (unitSelect && customUnitInput && customUnitCounter) {
+            unitSelect.addEventListener('change', () => {
+                if (unitSelect.value === 'custom') {
+                    customUnitContainer.style.display = 'block';
+                } else {
+                    customUnitContainer.style.display = 'none';
+                }
+            });
 
-        const updateCustomUnitCounter = () => {
-            let value = customUnitInput.value;
-            if (value.length > 25) {
-                value = value.substring(0, 25);
-                customUnitInput.value = value;
-            }
+            const updateCustomUnitCounter = () => {
+                let value = customUnitInput.value;
+                if (value.length > 25) {
+                    value = value.substring(0, 25);
+                    customUnitInput.value = value;
+                }
 
-            const remaining = 25 - value.length;
-            customUnitCounter.textContent = remaining === 1
-                ? '1 character remaining'
-                : `${remaining} characters remaining`;
+                const remaining = 25 - value.length;
+                customUnitCounter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
 
-            if (remaining === 0) {
-                customUnitCounter.textContent = 'Max reached';
-                customUnitCounter.style.color = 'var(--danger)';
-                customUnitCounter.style.fontWeight = '700';
-            } else if (remaining <= 5) {
-                customUnitCounter.style.color = 'var(--danger)';
-                customUnitCounter.style.fontWeight = '700';
-            } else if (remaining <= 10) {
-                customUnitCounter.style.color = 'var(--warning)';
-                customUnitCounter.style.fontWeight = '600';
-            } else {
-                customUnitCounter.style.color = 'var(--text-tertiary)';
-                customUnitCounter.style.fontWeight = '500';
-            }
-        };
+                if (remaining === 0) {
+                    customUnitCounter.textContent = 'Max reached';
+                    customUnitCounter.style.color = 'var(--danger)';
+                    customUnitCounter.style.fontWeight = '700';
+                } else if (remaining <= 5) {
+                    customUnitCounter.style.color = 'var(--danger)';
+                    customUnitCounter.style.fontWeight = '700';
+                } else if (remaining <= 10) {
+                    customUnitCounter.style.color = 'var(--warning)';
+                    customUnitCounter.style.fontWeight = '600';
+                } else {
+                    customUnitCounter.style.color = 'var(--text-tertiary)';
+                    customUnitCounter.style.fontWeight = '500';
+                }
+            };
 
-        customUnitInput.addEventListener('input', updateCustomUnitCounter);
-        if (mode === 'edit') updateCustomUnitCounter();
+            customUnitInput.addEventListener('input', updateCustomUnitCounter);
+            if (mode === 'edit') updateCustomUnitCounter();
+        }
 
         // PERIOD PILL EVENTS WITH FIXED DATE CALCULATION
         modal.querySelectorAll('.goals-period-pill').forEach(btn => {
@@ -1511,9 +1512,8 @@ goals_showGoalDetailModal(goalId) {
             <span>Tasks completed in the Tasks module will automatically update this goal's progress</span>
         `;
         tasksList.appendChild(infoMessage);
-        
+
     } catch (error) {
-        console.error('Failed to load linked tasks:', error);
         const tasksList = modal.querySelector('#goalDetailTasksList');
         if (tasksList) {
             tasksList.innerHTML = `
@@ -1771,19 +1771,9 @@ goals_attachEvents() {
 
     async goals_createGoal() {
     try {
-        console.log('🎯 [Goal Creation] Starting goal creation process...');
-
         const form = document.getElementById('goalForm');
         const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
         const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
-
-        console.log('📋 [Goal Creation] Form state:', {
-            formExists: !!form,
-            activePeriod,
-            trackingMethod,
-            selectedTaskIds: this.state.selectedTaskIds,
-            newTasks: this.state.newTasks
-        });
 
         const title = document.getElementById('goalTitle').value.trim();
         const description = document.getElementById('goalDescription').value.trim();
@@ -1792,18 +1782,8 @@ goals_attachEvents() {
         const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
         const isRecurring = document.getElementById('goalRecurring').checked || false;
 
-        console.log('📝 [Goal Creation] Collected form values:', {
-            title,
-            description: description || '(empty)',
-            startDate,
-            endDate,
-            selectedColor,
-            isRecurring
-        });
-
         // Validation
         if (!title || title.length > 35) {
-            console.warn('⚠️ [Goal Creation] Validation failed: Invalid title');
             const titleInput = document.getElementById('goalTitle');
             const titleCounter = document.querySelector('#titleCounter');
 
@@ -1836,14 +1816,8 @@ goals_attachEvents() {
 
             return false;
         }
-        
-        if (!activePeriod || !startDate || !endDate) {
-            console.warn('⚠️ [Goal Creation] Validation failed: Missing required fields', {
-                activePeriod,
-                startDate,
-                endDate
-            });
 
+        if (!activePeriod || !startDate || !endDate) {
             // Highlight period pills if no period selected
             if (!activePeriod) {
                 const periodPills = document.querySelector('.goals-period-pills');
@@ -1863,12 +1837,9 @@ goals_attachEvents() {
                 }
             }
 
-            window.SteadyUtils.showToast('Please select a time period', 'error');
             return false;
         }
 
-        console.log('✅ [Goal Creation] Validation passed, building goal data...');
-        
         // Build goal data based on tracking method
         let goalData = {
             title: title,
@@ -1912,7 +1883,6 @@ goals_attachEvents() {
                     }
                 }
 
-                window.SteadyUtils.showToast('Please select or create at least one task', 'error');
                 return false;
             }
             
@@ -1957,7 +1927,6 @@ goals_attachEvents() {
                     }
                 }, { once: true });
 
-                window.SteadyUtils.showToast('Invalid target value', 'error');
                 return false;
             }
             
@@ -1994,12 +1963,11 @@ goals_attachEvents() {
                         }
                     }, { once: true });
 
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return false;
                 }
                 unitValue = customUnit;
             }
-            
+
             goalData.goal_type = trackType;
             goalData.target_value = targetValue;
             goalData.current_value = 0;
@@ -2040,7 +2008,6 @@ goals_attachEvents() {
                     }
                 }, { once: true });
 
-                window.SteadyUtils.showToast('Invalid target value', 'error');
                 return false;
             }
             
@@ -2077,74 +2044,49 @@ goals_attachEvents() {
                         }
                     }, { once: true });
 
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
                     return false;
                 }
                 unitValue = customUnit;
             }
-            
+
             goalData.goal_type = 'custom';
             goalData.target_value = targetValue;
             goalData.current_value = 0;
             goalData.unit = unitValue;
             goalData.auto_track = false;
         }
-        
-        console.log('🚀 [Goal Creation] Creating goal with data:', goalData);
 
         // Create the goal
         const newGoal = await API.createGoal(goalData);
 
-        console.log('✅ [Goal Creation] Goal created successfully! Response:', newGoal);
-
         // If task_list goal, link the tasks
         if (trackingMethod === 'task_list') {
-            console.log('🔗 [Goal Creation] Linking tasks to goal...');
-
             // Link existing tasks
             if (this.state.selectedTaskIds.length > 0) {
-                console.log(`📌 [Goal Creation] Linking ${this.state.selectedTaskIds.length} existing tasks:`, this.state.selectedTaskIds);
-                const linkResult = await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
-                console.log('✅ [Goal Creation] Existing tasks linked:', linkResult);
+                await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
             }
 
             // Create and link new tasks
             if (this.state.newTasks && this.state.newTasks.length > 0) {
-                console.log(`➕ [Goal Creation] Creating ${this.state.newTasks.length} new tasks...`);
                 for (const taskData of this.state.newTasks) {
-                    console.log('  Creating task:', taskData);
-                    const newTaskResult = await API.createTaskForGoal(newGoal.id, {
+                    await API.createTaskForGoal(newGoal.id, {
                         title: taskData.title,
                         due_date: taskData.due_date,
                         status: 'pending'
                     });
-                    console.log('  ✅ Task created:', newTaskResult);
                 }
             }
-
-            console.log('✅ [Goal Creation] All tasks processed successfully');
         }
-        
+
         // Reset state
         this.state.selectedTaskIds = [];
         this.state.newTasks = [];
-
-        console.log('🎉 [Goal Creation] Goal creation complete! Reloading data...');
 
         window.SteadyUtils.showToast('Goal created successfully!', 'success');
         await this.goals_loadData();
         this.goals_render();
 
-        console.log('✅ [Goal Creation] Data reloaded and UI updated');
-
     } catch (error) {
-        console.error('❌ [Goal Creation] Error occurred:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        });
-
         let errorMsg = 'Failed to create goal';
         if (error.message?.includes('numeric field overflow')) {
             errorMsg = 'Target value is too large. Please use a smaller number.';
@@ -2152,7 +2094,6 @@ goals_attachEvents() {
             errorMsg = error.message;
         }
 
-        console.error('❌ [Goal Creation] Showing error to user:', errorMsg);
         window.SteadyUtils.showToast(errorMsg, 'error');
     }
 },
@@ -2244,18 +2185,14 @@ goals_attachEvents() {
                 is_recurring: document.getElementById('goalRecurring').checked || false,
                 color: selectedColor || null
             };
-            
-            console.log('Updating goal with data:', updates);
 
             await API.updateGoal(goalId, updates);
-            window.SteadyUtils.showToast('Goal updated successfully!', 'success');
-            
+
             this.state.editingGoalId = null;
             await this.goals_loadData();
             this.goals_render();
 
         } catch (error) {
-            console.error('Update goal error:', error);
             window.SteadyUtils.showToast('Failed to update goal', 'error');
         }
     },
@@ -2265,14 +2202,11 @@ goals_attachEvents() {
         try {
             await API.updateGoalProgress(goalId, newValue);
             await API.checkGoalCompletion();
-            
-            window.SteadyUtils.showToast('Progress updated!', 'success');
-            
+
             await this.goals_loadData();
             this.goals_render();
 
         } catch (error) {
-            console.error('Update progress error:', error);
             window.SteadyUtils.showToast('Failed to update progress', 'error');
         }
     },
@@ -2281,13 +2215,11 @@ goals_attachEvents() {
     async goals_deleteGoal(goalId) {
         try {
             await API.deleteGoal(goalId);
-            window.SteadyUtils.showToast('Goal deleted', 'info');
-            
+
             await this.goals_loadData();
             this.goals_render();
 
         } catch (error) {
-            console.error('Delete goal error:', error);
             window.SteadyUtils.showToast('Failed to delete goal', 'error');
         }
     },
@@ -2696,11 +2628,16 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-card.goals-card-completed {
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .goals-card.goals-card-completed::before {
     background: linear-gradient(90deg, var(--success), #059669);
+}
+
+.goals-card.goals-card-completed .goals-card-title {
+    text-decoration: line-through;
+    color: var(--text-secondary);
 }
 
 .goals-card.goals-card-at-risk::before {
@@ -2785,7 +2722,6 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-task-checkbox input:checked + .goals-task-item {
     border-color: var(--primary);
     border-width: 3px;
-    background: var(--background);
     transform: scale(1.02);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
@@ -4069,5 +4005,4 @@ if (typeof window !== 'undefined') {
     GoalsModule.init = function(targetContainer) {
         return this.goals_init(targetContainer);
     };
-    console.log('✅ Goals module v3.0 loaded - COMPLETE REWRITE 🔥');
 }
