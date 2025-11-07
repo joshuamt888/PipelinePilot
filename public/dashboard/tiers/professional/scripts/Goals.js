@@ -322,264 +322,320 @@ async goals_loadAvailableTasks() {
 
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
+                        <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
                                    placeholder="Q4 Revenue Target" autocomplete="off">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
+                        <div class="goals-divider"></div>
+
+                        <!-- TRACKING METHOD (MOVED TO TOP) -->
                         <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Color Accent (Optional)</label>
-                            <div class="goals-color-picker">
-                                <label class="goals-color-option goals-color-none">
-                                    <input type="radio" name="color" value="" checked>
-                                    <span>
+                            <label class="goals-form-label-v2">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                    <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Goal Type
+                            </label>
+                            <div class="goals-tracking-options-grid">
+                                <label class="goals-tracking-radio">
+                                    <input type="radio" name="tracking" value="manual" checked>
+                                    <div class="goals-tracking-card">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
                                         </svg>
-                                    </span>
+                                        <span class="goals-tracking-title">Manual</span>
+                                        <span class="goals-tracking-desc">Update yourself</span>
+                                    </div>
                                 </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#ef4444">
-                                    <span style="background: #ef4444"></span>
+                                <label class="goals-tracking-radio">
+                                    <input type="radio" name="tracking" value="auto">
+                                    <div class="goals-tracking-card">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
+                                        </svg>
+                                        <span class="goals-tracking-title">Auto-Track</span>
+                                        <span class="goals-tracking-desc">From data</span>
+                                    </div>
                                 </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#f97316">
-                                    <span style="background: #f97316"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#f59e0b">
-                                    <span style="background: #f59e0b"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#10b981">
-                                    <span style="background: #10b981"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#06b6d4">
-                                    <span style="background: #06b6d4"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#667eea">
-                                    <span style="background: #667eea"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#8b5cf6">
-                                    <span style="background: #8b5cf6"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#ec4899">
-                                    <span style="background: #ec4899"></span>
+                                <label class="goals-tracking-radio">
+                                    <input type="radio" name="tracking" value="task_list">
+                                    <div class="goals-tracking-card">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span class="goals-tracking-title">Task Checklist</span>
+                                        <span class="goals-tracking-desc">Complete tasks</span>
+                                    </div>
                                 </label>
                             </div>
                         </div>
 
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Description (Optional)</label>
-                            <textarea id="goalDescription" class="goals-form-textarea-v2"
-                                      placeholder="Add notes about this goal..."
-                                      maxlength="500"
-                                      rows="3"></textarea>
-                            <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
-                        </div>
-
-                        <div class="goals-form-row-v2">
+                        <!-- TASK CHECKLIST SPECIFIC FIELDS -->
+                        <div id="taskChecklistFields" class="goals-conditional-fields" style="display: none;">
                             <div class="goals-form-group-v2">
-                                <label class="goals-form-label-v2">Target Value</label>
-                                <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                       placeholder="10000">
-                                <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
+                                <label class="goals-form-label-v2">Color Accent (Optional)</label>
+                                <div class="goals-color-picker">
+                                    <label class="goals-color-option goals-color-none">
+                                        <input type="radio" name="color" value="" checked>
+                                        <span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#ef4444">
+                                        <span style="background: #ef4444"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#f97316">
+                                        <span style="background: #f97316"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#f59e0b">
+                                        <span style="background: #f59e0b"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#10b981">
+                                        <span style="background: #10b981"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#06b6d4">
+                                        <span style="background: #06b6d4"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#667eea">
+                                        <span style="background: #667eea"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#8b5cf6">
+                                        <span style="background: #8b5cf6"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#ec4899">
+                                        <span style="background: #ec4899"></span>
+                                    </label>
+                                </div>
                             </div>
+
+                            <!-- Task Selection -->
+                            <div class="goals-task-checklist-config">
+                                <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
+                                    <span id="taskCombinedCount" style="font-weight: 700; font-size: 0.875rem;">0 / 30 tasks</span>
+                                </div>
+
+                                <div class="goals-task-tabs">
+                                    <button type="button" class="goals-task-tab active" data-tab="existing">
+                                        Existing Tasks
+                                    </button>
+                                    <button type="button" class="goals-task-tab" data-tab="create">
+                                        Create New
+                                    </button>
+                                </div>
+
+                                <!-- Existing Tasks Tab -->
+                                <div id="existingTasksTab" class="goals-task-tab-content">
+                                    <div style="margin-bottom: 1rem;">
+                                        <div style="position: relative;">
+                                            <input type="text" id="taskSearchInput" class="goals-form-input-v2" placeholder="Search tasks..." style="padding-left: 2.5rem;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; color: var(--text-tertiary); pointer-events: none;">
+                                                <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                                                <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div class="goals-task-list" id="tasksList">
+                                        ${this.state.availableTasks.length > 0 ? `
+                                            ${this.state.availableTasks.map(task => `
+                                                <label class="goals-task-checkbox" data-task-title="${API.escapeHtml(task.title).toLowerCase()}">
+                                                    <input type="checkbox" value="${task.id}" data-task-select>
+                                                    <div class="goals-task-item">
+                                                        <div class="goals-task-item-content">
+                                                            <span class="goals-task-item-title">${API.escapeHtml(task.title)}</span>
+                                                            ${task.due_date ? `
+                                                                <span class="goals-task-item-date">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                                                                        <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                                        <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                                        <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                                                    </svg>
+                                                                    ${window.SteadyUtils.formatDate(task.due_date, 'short')}
+                                                                </span>
+                                                            ` : ''}
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            `).join('')}
+                                        ` : `
+                                            <div class="goals-task-empty">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                                    <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+                                                </svg>
+                                                <p>No pending tasks available</p>
+                                                <p class="goals-task-empty-hint">Create tasks in the Scheduling module first</p>
+                                            </div>
+                                        `}
+                                    </div>
+                                </div>
+
+                                <!-- Create New Tasks Tab -->
+                                <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
+                                    <div class="goals-quick-task-form">
+                                        <div style="position: relative; flex: 1;">
+                                            <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
+                                            <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0/50 characters remaining</span>
+                                        </div>
+                                        <input type="date" id="quickTaskDate" class="goals-form-input-v2">
+                                        <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                            Add Task
+                                        </button>
+                                    </div>
+                                    <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
+                                        <!-- New tasks will be added here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AUTO & MANUAL GOAL SHARED FIELDS -->
+                        <div id="autoManualFields" class="goals-conditional-fields">
+                            <div class="goals-form-row-v2">
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Target Value</label>
+                                    <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                           placeholder="10000">
+                                    <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
+                                </div>
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Unit</label>
+                                    <select id="goalUnit" class="goals-form-select-v2">
+                                        <option value="dollars">Dollars ($)</option>
+                                        <option value="leads">Leads</option>
+                                        <option value="tasks">Tasks</option>
+                                        <option value="calls">Calls</option>
+                                        <option value="meetings">Meetings</option>
+                                        <option value="hours">Hours</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="goals-form-group-v2" id="customUnitInput" style="display: none;">
+                                <label class="goals-form-label-v2">Custom Unit Name</label>
+                                <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
+                                       placeholder="e.g., Appointments, Deals, Projects..."
+                                       maxlength="25">
+                                <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
+                            </div>
+
+                            <!-- Auto-Track Specific -->
+                            <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Auto-Track Source</label>
+                                    <select id="goalTrackType" class="goals-form-select-v2">
+                                        <option value="revenue">Track from Jobs (Revenue)</option>
+                                        <option value="leads">Track from Leads Created</option>
+                                        <option value="tasks">Track from Tasks Completed</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="goals-form-group-v2">
-                                <label class="goals-form-label-v2">Unit</label>
-                                <select id="goalUnit" class="goals-form-select-v2">
-                                    <option value="dollars">Dollars ($)</option>
-                                    <option value="leads">Leads</option>
-                                    <option value="tasks">Tasks</option>
-                                    <option value="calls">Calls</option>
-                                    <option value="meetings">Meetings</option>
-                                    <option value="hours">Hours</option>
-                                    <option value="custom">Custom</option>
-                                </select>
+                                <label class="goals-form-label-v2">⏱ Time Period</label>
+                                <div class="goals-period-pills">
+                                    <button type="button" class="goals-period-pill" data-period="daily">D</button>
+                                    <button type="button" class="goals-period-pill" data-period="weekly">W</button>
+                                    <button type="button" class="goals-period-pill active" data-period="monthly">M</button>
+                                    <button type="button" class="goals-period-pill" data-period="quarterly">Q</button>
+                                    <button type="button" class="goals-period-pill" data-period="yearly">Y</button>
+                                    <button type="button" class="goals-period-pill" data-period="none">∞</button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="goals-form-group-v2" id="customUnitInput" style="display: none;">
-                            <label class="goals-form-label-v2">Custom Unit Name</label>
-                            <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
-                                   placeholder="e.g., Appointments, Deals, Projects..."
-                                   maxlength="25">
-                            <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
-                        </div>
-
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">⏱ Time Period</label>
-                            <div class="goals-period-pills">
-                                <button type="button" class="goals-period-pill" data-period="daily">D</button>
-                                <button type="button" class="goals-period-pill" data-period="weekly">W</button>
-                                <button type="button" class="goals-period-pill active" data-period="monthly">M</button>
-                                <button type="button" class="goals-period-pill" data-period="quarterly">Q</button>
-                                <button type="button" class="goals-period-pill" data-period="yearly">Y</button>
-                                <button type="button" class="goals-period-pill" data-period="none">∞</button>
+                            <div class="goals-form-group-v2">
+                                <label class="goals-form-label-v2">Color Accent (Optional)</label>
+                                <div class="goals-color-picker">
+                                    <label class="goals-color-option goals-color-none">
+                                        <input type="radio" name="color" value="" checked>
+                                        <span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#ef4444">
+                                        <span style="background: #ef4444"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#f97316">
+                                        <span style="background: #f97316"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#f59e0b">
+                                        <span style="background: #f59e0b"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#10b981">
+                                        <span style="background: #10b981"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#06b6d4">
+                                        <span style="background: #06b6d4"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#667eea">
+                                        <span style="background: #667eea"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#8b5cf6">
+                                        <span style="background: #8b5cf6"></span>
+                                    </label>
+                                    <label class="goals-color-option">
+                                        <input type="radio" name="color" value="#ec4899">
+                                        <span style="background: #ec4899"></span>
+                                    </label>
+                                </div>
                             </div>
+
+                            <div class="goals-form-group-v2">
+                                <label class="goals-form-label-v2">Description (Optional)</label>
+                                <textarea id="goalDescription" class="goals-form-textarea-v2"
+                                          placeholder="Add notes about this goal..."
+                                          maxlength="500"
+                                          rows="3"></textarea>
+                                <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
+                            </div>
+
+                            <label class="goals-checkbox-v2">
+                                <input type="checkbox" id="goalRecurring">
+                                <span class="goals-checkbox-label">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                                        <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Recurring goal (resets after period ends)
+                                </span>
+                            </label>
                         </div>
 
+                        <!-- Hidden date inputs -->
                         <div class="goals-date-inputs-hidden">
                             <input type="date" id="goalStartDate">
                             <input type="date" id="goalEndDate">
                         </div>
-
-                        <div class="goals-divider"></div>
-                        
-                        <div class="goals-form-group-v2">
-    <label class="goals-form-label-v2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
-            <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Tracking Method
-    </label>
-    <div class="goals-tracking-options-grid">
-        <label class="goals-tracking-radio">
-            <input type="radio" name="tracking" value="manual" checked>
-            <div class="goals-tracking-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
-                </svg>
-                <span class="goals-tracking-title">Manual</span>
-                <span class="goals-tracking-desc">Update yourself</span>
-            </div>
-        </label>
-        <label class="goals-tracking-radio">
-            <input type="radio" name="tracking" value="auto">
-            <div class="goals-tracking-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-                </svg>
-                <span class="goals-tracking-title">Auto-Track</span>
-                <span class="goals-tracking-desc">From data</span>
-            </div>
-        </label>
-        <label class="goals-tracking-radio">
-            <input type="radio" name="tracking" value="task_list">
-            <div class="goals-tracking-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="goals-tracking-title">Task Checklist</span>
-                <span class="goals-tracking-desc">Link tasks</span>
-            </div>
-        </label>
-    </div>
-    
-    <!-- Task Checklist Options -->
-    <div id="taskChecklistOptions" class="goals-task-checklist-config" style="display: none;">
-        <!-- Combined Task Counter (shows across both tabs) -->
-        <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
-            <span id="taskCombinedCount" style="font-weight: 700; font-size: 0.875rem;">0 / 30 tasks</span>
-        </div>
-
-        <div class="goals-task-tabs">
-            <button type="button" class="goals-task-tab active" data-tab="existing">
-                Existing Tasks
-            </button>
-            <button type="button" class="goals-task-tab" data-tab="create">
-                Create New
-            </button>
-        </div>
-
-        <!-- Existing Tasks Tab -->
-        <div id="existingTasksTab" class="goals-task-tab-content">
-            <!-- Search Bar -->
-            <div style="margin-bottom: 1rem;">
-                <div style="position: relative;">
-                    <input type="text" id="taskSearchInput" class="goals-form-input-v2" placeholder="Search tasks..." style="padding-left: 2.5rem;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; color: var(--text-tertiary); pointer-events: none;">
-                        <circle cx="11" cy="11" r="8" stroke-width="2"/>
-                        <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </div>
-            </div>
-
-            <div class="goals-task-list" id="tasksList">
-                ${this.state.availableTasks.length > 0 ? `
-                    ${this.state.availableTasks.map(task => `
-                        <label class="goals-task-checkbox" data-task-title="${API.escapeHtml(task.title).toLowerCase()}">
-                            <input type="checkbox" value="${task.id}" data-task-select>
-                            <div class="goals-task-item">
-                                <div class="goals-task-item-content">
-                                    <span class="goals-task-item-title">${API.escapeHtml(task.title)}</span>
-                                    ${task.due_date ? `
-                                        <span class="goals-task-item-date">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-                                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
-                                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
-                                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
-                                            </svg>
-                                            ${window.SteadyUtils.formatDate(task.due_date, 'short')}
-                                        </span>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </label>
-                    `).join('')}
-                ` : `
-                    <div class="goals-task-empty">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                            <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        <p>No pending tasks available</p>
-                        <p class="goals-task-empty-hint">Create tasks in the Scheduling module first</p>
-                    </div>
-                `}
-            </div>
-        </div>
-
-        <!-- Create New Tasks Tab -->
-        <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
-            <div class="goals-quick-task-form">
-                <div style="position: relative; flex: 1;">
-                    <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
-                    <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0/50 characters remaining</span>
-                </div>
-                <input type="date" id="quickTaskDate" class="goals-form-input-v2">
-                <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    Add Task
-                </button>
-            </div>
-            <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
-                <!-- New tasks will be added here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Auto-Track Options -->
-    <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
-        <select id="goalTrackType" class="goals-form-select-v2">
-            <option value="revenue">Track from Jobs (Revenue)</option>
-            <option value="leads">Track from Leads Created</option>
-            <option value="tasks">Track from Tasks Completed</option>
-        </select>
-    </div>
-</div>
-
-                        <label class="goals-checkbox-v2">
-                            <input type="checkbox" id="goalRecurring">
-                            <span class="goals-checkbox-label">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
-                                    <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Recurring goal (resets after period ends)
-                            </span>
-                        </label>
 
                         <div class="goals-divider"></div>
 
@@ -658,6 +714,17 @@ async goals_loadAvailableTasks() {
 
         this.state.editingGoalId = goalId;
 
+        // Determine goal type
+        const isTaskList = goal.goal_type === 'task_list';
+        const isAuto = goal.auto_track && !isTaskList;
+        const isManual = !goal.auto_track && !isTaskList;
+
+        // For task list goals, load linked tasks
+        if (isTaskList) {
+            const linkedTasks = await API.getGoalTasks(goalId);
+            this.state.selectedTaskIds = linkedTasks.map(t => t.id);
+        }
+
         const modal = document.createElement('div');
         modal.className = 'goals-modal-overlay show';
         modal.innerHTML = `
@@ -674,167 +741,311 @@ async goals_loadAvailableTasks() {
 
                 <div class="goals-modal-body-v2">
                     <form id="goalForm" class="goals-form-v2">
+                        <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
                                    placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}">
                             <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Color Accent (Optional)</label>
-                            <div class="goals-color-picker">
-                                <label class="goals-color-option goals-color-none">
-                                    <input type="radio" name="color" value="" ${!goal.color ? 'checked' : ''}>
-                                    <span>
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
-                                        </svg>
-                                    </span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#ef4444" ${goal.color === '#ef4444' ? 'checked' : ''}>
-                                    <span style="background: #ef4444"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#f97316" ${goal.color === '#f97316' ? 'checked' : ''}>
-                                    <span style="background: #f97316"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#f59e0b" ${goal.color === '#f59e0b' ? 'checked' : ''}>
-                                    <span style="background: #f59e0b"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#10b981" ${goal.color === '#10b981' ? 'checked' : ''}>
-                                    <span style="background: #10b981"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#06b6d4" ${goal.color === '#06b6d4' ? 'checked' : ''}>
-                                    <span style="background: #06b6d4"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#667eea" ${goal.color === '#667eea' ? 'checked' : ''}>
-                                    <span style="background: #667eea"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#8b5cf6" ${goal.color === '#8b5cf6' ? 'checked' : ''}>
-                                    <span style="background: #8b5cf6"></span>
-                                </label>
-                                <label class="goals-color-option">
-                                    <input type="radio" name="color" value="#ec4899" ${goal.color === '#ec4899' ? 'checked' : ''}>
-                                    <span style="background: #ec4899"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Description (Optional)</label>
-                            <textarea id="goalDescription" class="goals-form-textarea-v2"
-                                      placeholder="Add notes about this goal..."
-                                      maxlength="500"
-                                      rows="3">${goal.description ? API.escapeHtml(goal.description) : ''}</textarea>
-                            <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
-                        </div>
-
-                        <div class="goals-form-row-v2">
-                            <div class="goals-form-group-v2">
-                                <label class="goals-form-label-v2">Target Value</label>
-                                <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                       placeholder="10000" value="${goal.target_value}">
-                                <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
-                            </div>
-                            <div class="goals-form-group-v2">
-                                <label class="goals-form-label-v2">Unit</label>
-                                <select id="goalUnit" class="goals-form-select-v2">
-                                    <option value="dollars" ${goal.unit === 'dollars' ? 'selected' : ''}>Dollars ($)</option>
-                                    <option value="leads" ${goal.unit === 'leads' ? 'selected' : ''}>Leads</option>
-                                    <option value="tasks" ${goal.unit === 'tasks' ? 'selected' : ''}>Tasks</option>
-                                    <option value="calls" ${goal.unit === 'calls' ? 'selected' : ''}>Calls</option>
-                                    <option value="meetings" ${goal.unit === 'meetings' ? 'selected' : ''}>Meetings</option>
-                                    <option value="hours" ${goal.unit === 'hours' ? 'selected' : ''}>Hours</option>
-                                    <option value="custom" ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'selected' : ''}>Custom</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="goals-form-group-v2" id="customUnitInput" style="display: ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'block' : 'none'};">
-                            <label class="goals-form-label-v2">Custom Unit Name</label>
-                            <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
-                                   placeholder="e.g., Appointments, Deals, Projects..."
-                                   maxlength="25"
-                                   value="${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? API.escapeHtml(goal.unit) : ''}">
-                            <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
-                        </div>
-
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">⏱ Time Period</label>
-                            <div class="goals-period-pills">
-                                <button type="button" class="goals-period-pill ${goal.period === 'daily' ? 'active' : ''}" data-period="daily">D</button>
-                                <button type="button" class="goals-period-pill ${goal.period === 'weekly' ? 'active' : ''}" data-period="weekly">W</button>
-                                <button type="button" class="goals-period-pill ${goal.period === 'monthly' ? 'active' : ''}" data-period="monthly">M</button>
-                                <button type="button" class="goals-period-pill ${goal.period === 'quarterly' ? 'active' : ''}" data-period="quarterly">Q</button>
-                                <button type="button" class="goals-period-pill ${goal.period === 'yearly' ? 'active' : ''}" data-period="yearly">Y</button>
-                                <button type="button" class="goals-period-pill ${goal.period === 'none' ? 'active' : ''}" data-period="none">∞</button>
-                            </div>
-                        </div>
-
-                        <div class="goals-date-inputs-hidden">
-                            <input type="date" id="goalStartDate" value="${goal.start_date}">
-                            <input type="date" id="goalEndDate" value="${goal.end_date}">
-                        </div>
-
                         <div class="goals-divider"></div>
 
+                        <!-- LOCKED GOAL TYPE INDICATOR -->
                         <div class="goals-form-group-v2">
                             <label class="goals-form-label-v2">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
                                     <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
-                                Tracking Method
+                                Goal Type (Cannot be changed)
                             </label>
-                            <div class="goals-tracking-options">
-                                <label class="goals-tracking-radio">
-                                    <input type="radio" name="tracking" value="manual" ${!goal.auto_track ? 'checked' : ''}>
-                                    <div class="goals-tracking-card">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
-                                        </svg>
-                                        <span class="goals-tracking-title">Manual</span>
-                                        <span class="goals-tracking-desc">Update progress yourself</span>
+                            <div style="padding: 0.75rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; gap: 0.75rem;">
+                                ${isTaskList ? `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
+                                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-primary);">Task Checklist</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Complete tasks to track progress</div>
                                     </div>
-                                </label>
-                                <label class="goals-tracking-radio">
-                                    <input type="radio" name="tracking" value="auto" ${goal.auto_track ? 'checked' : ''}>
-                                    <div class="goals-tracking-card">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-                                        </svg>
-                                        <span class="goals-tracking-title">Auto-Track</span>
-                                        <span class="goals-tracking-desc">Updates automatically</span>
+                                ` : isAuto ? `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
+                                    </svg>
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-primary);">Auto-Track</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Automatically tracked from ${goal.goal_type === 'revenue' ? 'Jobs (Revenue)' : goal.goal_type === 'leads' ? 'Leads Created' : 'Tasks Completed'}</div>
                                     </div>
-                                </label>
+                                ` : `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/>
+                                    </svg>
+                                    <div>
+                                        <div style="font-weight: 600; color: var(--text-primary);">Manual</div>
+                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Update progress yourself</div>
+                                    </div>
+                                `}
                             </div>
-                            
-                            <div id="autoTrackOptions" class="goals-auto-track-config" style="display: ${goal.auto_track ? 'block' : 'none'};">
-                                <select id="goalTrackType" class="goals-form-select-v2">
-                                    <option value="revenue" ${goal.goal_type === 'revenue' ? 'selected' : ''}>Track from Jobs (Revenue)</option>
-                                    <option value="leads" ${goal.goal_type === 'leads' ? 'selected' : ''}>Track from Leads Created</option>
-                                    <option value="tasks" ${goal.goal_type === 'tasks' ? 'selected' : ''}>Track from Tasks Completed</option>
-                                </select>
-                            </div>
+                            <input type="hidden" name="tracking" value="${isTaskList ? 'task_list' : isAuto ? 'auto' : 'manual'}">
+                            ${isAuto ? `<input type="hidden" id="goalTrackType" value="${goal.goal_type}">` : ''}
                         </div>
 
-                        <label class="goals-checkbox-v2">
-                            <input type="checkbox" id="goalRecurring" ${goal.is_recurring ? 'checked' : ''}>
-                            <span class="goals-checkbox-label">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
-                                    <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Recurring goal (resets after period ends)
-                            </span>
-                        </label>
+                        ${isTaskList ? `
+                            <!-- TASK CHECKLIST EDIT FIELDS -->
+                            <div id="taskChecklistFields">
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Color Accent (Optional)</label>
+                                    <div class="goals-color-picker">
+                                        <label class="goals-color-option goals-color-none">
+                                            <input type="radio" name="color" value="" ${!goal.color ? 'checked' : ''}>
+                                            <span>
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
+                                                </svg>
+                                            </span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#ef4444" ${goal.color === '#ef4444' ? 'checked' : ''}>
+                                            <span style="background: #ef4444"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#f97316" ${goal.color === '#f97316' ? 'checked' : ''}>
+                                            <span style="background: #f97316"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#f59e0b" ${goal.color === '#f59e0b' ? 'checked' : ''}>
+                                            <span style="background: #f59e0b"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#10b981" ${goal.color === '#10b981' ? 'checked' : ''}>
+                                            <span style="background: #10b981"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#06b6d4" ${goal.color === '#06b6d4' ? 'checked' : ''}>
+                                            <span style="background: #06b6d4"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#667eea" ${goal.color === '#667eea' ? 'checked' : ''}>
+                                            <span style="background: #667eea"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#8b5cf6" ${goal.color === '#8b5cf6' ? 'checked' : ''}>
+                                            <span style="background: #8b5cf6"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#ec4899" ${goal.color === '#ec4899' ? 'checked' : ''}>
+                                            <span style="background: #ec4899"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Task Management -->
+                                <div class="goals-task-checklist-config">
+                                    <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
+                                        <span id="taskCombinedCount" style="font-weight: 700; font-size: 0.875rem;">${this.state.selectedTaskIds.length} / 30 tasks</span>
+                                    </div>
+
+                                    <div class="goals-task-tabs">
+                                        <button type="button" class="goals-task-tab active" data-tab="existing">
+                                            Add More Tasks
+                                        </button>
+                                        <button type="button" class="goals-task-tab" data-tab="create">
+                                            Create New
+                                        </button>
+                                    </div>
+
+                                    <!-- Existing Tasks Tab -->
+                                    <div id="existingTasksTab" class="goals-task-tab-content">
+                                        <div style="margin-bottom: 1rem;">
+                                            <div style="position: relative;">
+                                                <input type="text" id="taskSearchInput" class="goals-form-input-v2" placeholder="Search tasks..." style="padding-left: 2.5rem;">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 1.125rem; height: 1.125rem; color: var(--text-tertiary); pointer-events: none;">
+                                                    <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                                                    <path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+
+                                        <div class="goals-task-list" id="tasksList">
+                                            ${this.state.availableTasks.length > 0 ? `
+                                                ${this.state.availableTasks.map(task => {
+                                                    const isLinked = this.state.selectedTaskIds.includes(task.id);
+                                                    return `
+                                                        <label class="goals-task-checkbox" data-task-title="${API.escapeHtml(task.title).toLowerCase()}">
+                                                            <input type="checkbox" value="${task.id}" data-task-select ${isLinked ? 'checked' : ''}>
+                                                            <div class="goals-task-item">
+                                                                <div class="goals-task-item-content">
+                                                                    <span class="goals-task-item-title">${API.escapeHtml(task.title)}</span>
+                                                                    ${task.due_date ? `
+                                                                        <span class="goals-task-item-date">
+                                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                                                                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" stroke-linecap="round"/>
+                                                                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                                                                            </svg>
+                                                                            ${window.SteadyUtils.formatDate(task.due_date, 'short')}
+                                                                        </span>
+                                                                    ` : ''}
+                                                                </div>
+                                                            </div>
+                                                        </label>
+                                                    `;
+                                                }).join('')}
+                                            ` : `
+                                                <div class="goals-task-empty">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                                        <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+                                                    </svg>
+                                                    <p>No pending tasks available</p>
+                                                    <p class="goals-task-empty-hint">Create tasks in the Scheduling module first</p>
+                                                </div>
+                                            `}
+                                        </div>
+                                    </div>
+
+                                    <!-- Create New Tasks Tab -->
+                                    <div id="createTasksTab" class="goals-task-tab-content" style="display: none;">
+                                        <div class="goals-quick-task-form">
+                                            <div style="position: relative; flex: 1;">
+                                                <input type="text" id="quickTaskTitle" class="goals-form-input-v2" placeholder="Task title..." maxlength="50">
+                                                <span class="goals-input-hint" id="quickTaskCounter" style="position: absolute; bottom: -1.5rem; left: 0; font-size: 0.75rem;">0/50 characters remaining</span>
+                                            </div>
+                                            <input type="date" id="quickTaskDate" class="goals-form-input-v2">
+                                            <button type="button" class="goals-btn-secondary goals-btn-add-task" data-action="add-quick-task">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                                                </svg>
+                                                Add Task
+                                            </button>
+                                        </div>
+                                        <div id="newTasksList" class="goals-new-tasks-list" style="margin-top: 1.5rem;">
+                                            <!-- New tasks will be added here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : `
+                            <!-- AUTO & MANUAL GOAL EDIT FIELDS -->
+                            <div id="autoManualFields">
+                                <div class="goals-form-row-v2">
+                                    <div class="goals-form-group-v2">
+                                        <label class="goals-form-label-v2">Target Value</label>
+                                        <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                               placeholder="10000" value="${goal.target_value}">
+                                        <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
+                                    </div>
+                                    <div class="goals-form-group-v2">
+                                        <label class="goals-form-label-v2">Unit</label>
+                                        <select id="goalUnit" class="goals-form-select-v2">
+                                            <option value="dollars" ${goal.unit === 'dollars' ? 'selected' : ''}>Dollars ($)</option>
+                                            <option value="leads" ${goal.unit === 'leads' ? 'selected' : ''}>Leads</option>
+                                            <option value="tasks" ${goal.unit === 'tasks' ? 'selected' : ''}>Tasks</option>
+                                            <option value="calls" ${goal.unit === 'calls' ? 'selected' : ''}>Calls</option>
+                                            <option value="meetings" ${goal.unit === 'meetings' ? 'selected' : ''}>Meetings</option>
+                                            <option value="hours" ${goal.unit === 'hours' ? 'selected' : ''}>Hours</option>
+                                            <option value="custom" ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'selected' : ''}>Custom</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="goals-form-group-v2" id="customUnitInput" style="display: ${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? 'block' : 'none'};">
+                                    <label class="goals-form-label-v2">Custom Unit Name</label>
+                                    <input type="text" id="goalCustomUnit" class="goals-form-input-v2"
+                                           placeholder="e.g., Appointments, Deals, Projects..."
+                                           maxlength="25"
+                                           value="${!['dollars', 'leads', 'tasks', 'calls', 'meetings', 'hours'].includes(goal.unit) ? API.escapeHtml(goal.unit) : ''}">
+                                    <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
+                                </div>
+
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">⏱ Time Period</label>
+                                    <div class="goals-period-pills">
+                                        <button type="button" class="goals-period-pill ${goal.period === 'daily' ? 'active' : ''}" data-period="daily">D</button>
+                                        <button type="button" class="goals-period-pill ${goal.period === 'weekly' ? 'active' : ''}" data-period="weekly">W</button>
+                                        <button type="button" class="goals-period-pill ${goal.period === 'monthly' ? 'active' : ''}" data-period="monthly">M</button>
+                                        <button type="button" class="goals-period-pill ${goal.period === 'quarterly' ? 'active' : ''}" data-period="quarterly">Q</button>
+                                        <button type="button" class="goals-period-pill ${goal.period === 'yearly' ? 'active' : ''}" data-period="yearly">Y</button>
+                                        <button type="button" class="goals-period-pill ${goal.period === 'none' ? 'active' : ''}" data-period="none">∞</button>
+                                    </div>
+                                </div>
+
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Color Accent (Optional)</label>
+                                    <div class="goals-color-picker">
+                                        <label class="goals-color-option goals-color-none">
+                                            <input type="radio" name="color" value="" ${!goal.color ? 'checked' : ''}>
+                                            <span>
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                    <line x1="2" y1="2" x2="22" y2="22" stroke-width="2" stroke-linecap="round"/>
+                                                </svg>
+                                            </span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#ef4444" ${goal.color === '#ef4444' ? 'checked' : ''}>
+                                            <span style="background: #ef4444"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#f97316" ${goal.color === '#f97316' ? 'checked' : ''}>
+                                            <span style="background: #f97316"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#f59e0b" ${goal.color === '#f59e0b' ? 'checked' : ''}>
+                                            <span style="background: #f59e0b"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#10b981" ${goal.color === '#10b981' ? 'checked' : ''}>
+                                            <span style="background: #10b981"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#06b6d4" ${goal.color === '#06b6d4' ? 'checked' : ''}>
+                                            <span style="background: #06b6d4"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#667eea" ${goal.color === '#667eea' ? 'checked' : ''}>
+                                            <span style="background: #667eea"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#8b5cf6" ${goal.color === '#8b5cf6' ? 'checked' : ''}>
+                                            <span style="background: #8b5cf6"></span>
+                                        </label>
+                                        <label class="goals-color-option">
+                                            <input type="radio" name="color" value="#ec4899" ${goal.color === '#ec4899' ? 'checked' : ''}>
+                                            <span style="background: #ec4899"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="goals-form-group-v2">
+                                    <label class="goals-form-label-v2">Description (Optional)</label>
+                                    <textarea id="goalDescription" class="goals-form-textarea-v2"
+                                              placeholder="Add notes about this goal..."
+                                              maxlength="500"
+                                              rows="3">${goal.description ? API.escapeHtml(goal.description) : ''}</textarea>
+                                    <span class="goals-input-hint" id="descriptionCounter">500 characters remaining</span>
+                                </div>
+
+                                <label class="goals-checkbox-v2">
+                                    <input type="checkbox" id="goalRecurring" ${goal.is_recurring ? 'checked' : ''}>
+                                    <span class="goals-checkbox-label">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                                            <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Recurring goal (resets after period ends)
+                                    </span>
+                                </label>
+                            </div>
+                        `}
+
+                        <!-- Hidden date inputs -->
+                        <div class="goals-date-inputs-hidden">
+                            <input type="date" id="goalStartDate" value="${goal.start_date}">
+                            <input type="date" id="goalEndDate" value="${goal.end_date}">
+                        </div>
 
                         <div class="goals-divider"></div>
 
@@ -978,40 +1189,42 @@ async goals_loadAvailableTasks() {
             if (mode === 'edit') updateTargetCounter();
         }
 
-        // Description counter
+        // Description counter - only setup if elements exist (may not be present for task_list goals)
         const descriptionInput = document.getElementById('goalDescription');
         const descriptionCounter = document.getElementById('descriptionCounter');
 
-        const updateDescriptionCounter = () => {
-            let value = descriptionInput.value;
-            if (value.length > 500) {
-                value = value.substring(0, 500);
-                descriptionInput.value = value;
-            }
+        if (descriptionInput && descriptionCounter) {
+            const updateDescriptionCounter = () => {
+                let value = descriptionInput.value;
+                if (value.length > 500) {
+                    value = value.substring(0, 500);
+                    descriptionInput.value = value;
+                }
 
-            const remaining = 500 - value.length;
-            descriptionCounter.textContent = remaining === 1
-                ? '1 character remaining'
-                : `${remaining} characters remaining`;
+                const remaining = 500 - value.length;
+                descriptionCounter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
 
-            if (remaining === 0) {
-                descriptionCounter.textContent = 'Max reached';
-                descriptionCounter.style.color = 'var(--danger)';
-                descriptionCounter.style.fontWeight = '700';
-            } else if (remaining <= 50) {
-                descriptionCounter.style.color = 'var(--danger)';
-                descriptionCounter.style.fontWeight = '700';
-            } else if (remaining <= 100) {
-                descriptionCounter.style.color = 'var(--warning)';
-                descriptionCounter.style.fontWeight = '600';
-            } else {
-                descriptionCounter.style.color = 'var(--text-tertiary)';
-                descriptionCounter.style.fontWeight = '500';
-            }
-        };
+                if (remaining === 0) {
+                    descriptionCounter.textContent = 'Max reached';
+                    descriptionCounter.style.color = 'var(--danger)';
+                    descriptionCounter.style.fontWeight = '700';
+                } else if (remaining <= 50) {
+                    descriptionCounter.style.color = 'var(--danger)';
+                    descriptionCounter.style.fontWeight = '700';
+                } else if (remaining <= 100) {
+                    descriptionCounter.style.color = 'var(--warning)';
+                    descriptionCounter.style.fontWeight = '600';
+                } else {
+                    descriptionCounter.style.color = 'var(--text-tertiary)';
+                    descriptionCounter.style.fontWeight = '500';
+                }
+            };
 
-        descriptionInput.addEventListener('input', updateDescriptionCounter);
-        if (mode === 'edit') updateDescriptionCounter();
+            descriptionInput.addEventListener('input', updateDescriptionCounter);
+            if (mode === 'edit') updateDescriptionCounter();
+        }
 
         // Custom unit input toggle and counter
         const unitSelect = document.getElementById('goalUnit');
@@ -1098,24 +1311,25 @@ async goals_loadAvailableTasks() {
 
         modal.querySelectorAll('input[name="tracking"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
+        const taskChecklistFields = document.getElementById('taskChecklistFields');
+        const autoManualFields = document.getElementById('autoManualFields');
         const autoOptions = document.getElementById('autoTrackOptions');
-        const taskOptions = document.getElementById('taskChecklistOptions');
-        const targetFields = modal.querySelector('.goals-form-row-v2'); // Target + Unit fields
-
-        // Hide all tracking-specific options first
-        autoOptions.style.display = 'none';
-        if (taskOptions) taskOptions.style.display = 'none';
 
         // Show/hide based on selection
-        if (e.target.value === 'auto') {
-            autoOptions.style.display = 'block';
-            if (targetFields) targetFields.style.display = 'grid';
-        } else if (e.target.value === 'task_list') {
-            if (taskOptions) taskOptions.style.display = 'block';
-            if (targetFields) targetFields.style.display = 'none'; // Hide target/unit for task_list
+        if (e.target.value === 'task_list') {
+            // Show task checklist fields, hide auto/manual fields
+            if (taskChecklistFields) taskChecklistFields.style.display = 'block';
+            if (autoManualFields) autoManualFields.style.display = 'none';
+        } else if (e.target.value === 'auto') {
+            // Show auto/manual fields, hide task checklist fields
+            if (taskChecklistFields) taskChecklistFields.style.display = 'none';
+            if (autoManualFields) autoManualFields.style.display = 'block';
+            if (autoOptions) autoOptions.style.display = 'block';
         } else {
-            // Manual - show target/unit fields
-            if (targetFields) targetFields.style.display = 'grid';
+            // Manual - show auto/manual fields, hide auto options and task checklist
+            if (taskChecklistFields) taskChecklistFields.style.display = 'none';
+            if (autoManualFields) autoManualFields.style.display = 'block';
+            if (autoOptions) autoOptions.style.display = 'none';
         }
     });
 });
@@ -2130,95 +2344,144 @@ goals_attachEvents() {
             const goalId = this.state.editingGoalId;
             if (!goalId) throw new Error('No goal selected for editing');
 
-            const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
-            const trackingMethod = document.querySelector('input[name="tracking"]:checked')?.value;
-            
+            // Get tracking method from hidden input (locked in edit mode)
+            const trackingMethod = document.querySelector('input[name="tracking"]')?.value;
+
             const title = document.getElementById('goalTitle').value.trim();
-            const targetValueStr = document.getElementById('goalTarget').value.trim();
-            const targetValue = parseFloat(targetValueStr);
-            const startDate = document.getElementById('goalStartDate').value;
-            const endDate = document.getElementById('goalEndDate').value;
-            
+            const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
+
             if (!title || title.length > 35) {
-                window.SteadyUtils.showToast('Invalid title', 'error');
-                return;
-            }
-            
-            if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                window.SteadyUtils.showToast('Invalid target value', 'error');
+                window.SteadyUtils.showToast('Invalid title (max 35 characters)', 'error');
                 return false;
             }
-            
-            if (!activePeriod || !startDate || !endDate) {
-                window.SteadyUtils.showToast('Please fill in all required fields', 'error');
-                return;
-            }
 
-            const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
-            const description = document.getElementById('goalDescription').value.trim();
+            // Handle task_list goals differently
+            if (trackingMethod === 'task_list') {
+                // For task_list, only update title and color
+                const updates = {
+                    title: title,
+                    color: selectedColor || null
+                };
 
-            // Get unit value - use custom input if 'custom' is selected
-            const unitSelect = document.getElementById('goalUnit').value;
-            let unitValue = unitSelect;
-            if (unitSelect === 'custom') {
-                const customUnit = document.getElementById('goalCustomUnit').value.trim();
-                if (!customUnit) {
-                    const customUnitInput = document.getElementById('goalCustomUnit');
-                    const customUnitCounter = document.querySelector('#customUnitCounter');
+                await API.updateGoal(goalId, updates);
 
-                    // Add error styling
-                    customUnitInput.style.borderColor = 'var(--danger)';
-                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                // Update task links - unlink unchecked tasks and link newly checked ones
+                const goal = this.state.goals.find(g => g.id === goalId);
+                const currentLinkedTasks = await API.getGoalTasks(goalId);
+                const currentLinkedTaskIds = currentLinkedTasks.map(t => t.id);
 
-                    // Update hint text
-                    if (customUnitCounter) {
-                        customUnitCounter.textContent = 'Custom unit name is required';
-                        customUnitCounter.style.color = 'var(--danger)';
-                        customUnitCounter.style.fontWeight = '600';
+                // Tasks to unlink (were linked before, but not selected now)
+                const tasksToUnlink = currentLinkedTaskIds.filter(id => !this.state.selectedTaskIds.includes(id));
+
+                // Tasks to link (newly selected)
+                const tasksToLink = this.state.selectedTaskIds.filter(id => !currentLinkedTaskIds.includes(id));
+
+                // Unlink tasks
+                for (const taskId of tasksToUnlink) {
+                    await API.unlinkTaskFromGoal(goalId, taskId);
+                }
+
+                // Link new tasks
+                if (tasksToLink.length > 0) {
+                    await API.linkTasksToGoal(goalId, tasksToLink);
+                }
+
+                // Create and link new tasks
+                if (this.state.newTasks && this.state.newTasks.length > 0) {
+                    for (const newTask of this.state.newTasks) {
+                        await API.createTaskForGoal(goalId, newTask);
                     }
+                }
 
-                    customUnitInput.focus();
+                window.SteadyUtils.showToast('Goal updated successfully', 'success');
 
-                    // Remove error styling when user types
-                    customUnitInput.addEventListener('input', function clearError() {
-                        customUnitInput.style.borderColor = '';
-                        customUnitInput.style.boxShadow = '';
-                        if (customUnitCounter) {
-                            const length = customUnitInput.value.length;
-                            customUnitCounter.textContent = `${25 - length} characters remaining`;
-                            customUnitCounter.style.color = 'var(--text-tertiary)';
-                            customUnitCounter.style.fontWeight = '500';
-                        }
-                    }, { once: true });
+            } else {
+                // For auto and manual goals
+                const targetValueStr = document.getElementById('goalTarget').value.trim();
+                const targetValue = parseFloat(targetValueStr);
+                const startDate = document.getElementById('goalStartDate').value;
+                const endDate = document.getElementById('goalEndDate').value;
+                const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
+                const description = document.getElementById('goalDescription').value.trim();
 
-                    window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                if (isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
+                    window.SteadyUtils.showToast('Invalid target value (1-99,999,999.99)', 'error');
                     return false;
                 }
-                unitValue = customUnit;
+
+                if (!activePeriod || !startDate || !endDate) {
+                    window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+                    return false;
+                }
+
+                // Get unit value - use custom input if 'custom' is selected
+                const unitSelect = document.getElementById('goalUnit').value;
+                let unitValue = unitSelect;
+                if (unitSelect === 'custom') {
+                    const customUnit = document.getElementById('goalCustomUnit').value.trim();
+                    if (!customUnit) {
+                        const customUnitInput = document.getElementById('goalCustomUnit');
+                        const customUnitCounter = document.querySelector('#customUnitCounter');
+
+                        // Add error styling
+                        customUnitInput.style.borderColor = 'var(--danger)';
+                        customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                        // Update hint text
+                        if (customUnitCounter) {
+                            customUnitCounter.textContent = 'Custom unit name is required';
+                            customUnitCounter.style.color = 'var(--danger)';
+                            customUnitCounter.style.fontWeight = '600';
+                        }
+
+                        customUnitInput.focus();
+
+                        // Remove error styling when user types
+                        customUnitInput.addEventListener('input', function clearError() {
+                            customUnitInput.style.borderColor = '';
+                            customUnitInput.style.boxShadow = '';
+                            if (customUnitCounter) {
+                                const length = customUnitInput.value.length;
+                                customUnitCounter.textContent = `${25 - length} characters remaining`;
+                                customUnitCounter.style.color = 'var(--text-tertiary)';
+                                customUnitCounter.style.fontWeight = '500';
+                            }
+                        }, { once: true });
+
+                        window.SteadyUtils.showToast('Please enter a custom unit name', 'error');
+                        return false;
+                    }
+                    unitValue = customUnit;
+                }
+
+                // Get goal_type for auto goals from hidden input
+                const goalType = trackingMethod === 'auto' ?
+                    document.getElementById('goalTrackType')?.value : 'custom';
+
+                const updates = {
+                    title: title,
+                    description: description || null,
+                    goal_type: goalType,
+                    target_value: targetValue,
+                    unit: unitValue,
+                    period: activePeriod,
+                    start_date: startDate,
+                    end_date: endDate,
+                    auto_track: trackingMethod === 'auto',
+                    is_recurring: document.getElementById('goalRecurring')?.checked || false,
+                    color: selectedColor || null
+                };
+
+                await API.updateGoal(goalId, updates);
+                window.SteadyUtils.showToast('Goal updated successfully', 'success');
             }
-
-            const updates = {
-                title: title,
-                description: description || null,
-                goal_type: trackingMethod === 'auto' ?
-                    document.getElementById('goalTrackType').value : 'custom',
-                target_value: targetValue,
-                unit: unitValue,
-                period: activePeriod,
-                start_date: startDate,
-                end_date: endDate,
-                auto_track: trackingMethod === 'auto' || false,
-                is_recurring: document.getElementById('goalRecurring').checked || false,
-                color: selectedColor || null
-            };
-
-            await API.updateGoal(goalId, updates);
 
             this.state.editingGoalId = null;
             await this.goals_loadData();
             this.goals_render();
 
         } catch (error) {
+            console.error('Update goal error:', error);
             window.SteadyUtils.showToast('Failed to update goal', 'error');
         }
     },
