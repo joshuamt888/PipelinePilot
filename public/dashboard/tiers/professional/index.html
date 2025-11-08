@@ -416,9 +416,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="proposals">
+                        <a href="#" class="nav-link" data-page="estimates">
                             <i data-lucide="file-text" class="nav-icon"></i>
-                            <span>Proposals</span>
+                            <span>Estimates</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -459,7 +459,7 @@
                 <div id="goals-content" class="page-content"></div>
                 <div id="notes-content" class="page-content"></div>
                 <div id="analytics-content" class="page-content"></div>
-                <div id="proposals-content" class="page-content"></div>
+                <div id="estimates-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
             </div>
         </main>
@@ -589,7 +589,7 @@
                 goals: 'Goals',
                 notes: 'Notes',
                 analytics: 'Analytics',
-                proposals: 'Proposals',
+                estimates: 'Estimates',
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
@@ -612,7 +612,7 @@
                     goals: window.GoalsModule,
                     notes: window.NotesModule,
                     analytics: window.AnalyticsModule,
-                    proposals: window.ProposalsModule,
+                    estimates: window.EstimatesModule,
                     settings: window.SettingsModule
                 };
                 
@@ -808,7 +808,7 @@
     <script src="/dashboard/tiers/professional/scripts/Goals.js"></script>
     <script src="/dashboard/tiers/professional/scripts/Notes.js"></script>
     <script src="/dashboard/tiers/professional/scripts/Analytics.js"></script>
-    <script src="/dashboard/tiers/professional/scripts/Proposals.js"></script>
+    <script src="/dashboard/tiers/professional/scripts/Estimates.js"></script>
     <script src="/dashboard/tiers/professional/scripts/Settings.js"></script>
 </body>
 </html>

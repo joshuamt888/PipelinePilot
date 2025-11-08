@@ -431,7 +431,7 @@ modal.addEventListener('mouseup', (e) => {
                             <option value="meeting">Meeting</option>
                             <option value="demo">Demo</option>
                             <option value="research">Research</option>
-                            <option value="proposal">Proposal</option>
+                            <option value="estimate">Proposal</option>
                             <option value="contract">Contract</option>
                             <option value="task">Task</option>
                         </select>
@@ -580,7 +580,7 @@ modal.addEventListener('mouseup', (e) => {
                             <option value="meeting" ${task.task_type === 'meeting' ? 'selected' : ''}>Meeting</option>
                             <option value="demo" ${task.task_type === 'demo' ? 'selected' : ''}>Demo</option>
                             <option value="research" ${task.task_type === 'research' ? 'selected' : ''}>Research</option>
-                            <option value="proposal" ${task.task_type === 'proposal' ? 'selected' : ''}>Proposal</option>
+                            <option value="estimate" ${task.task_type === 'estimate' ? 'selected' : ''}>Proposal</option>
                             <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>Contract</option>
                             <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>Task</option>
                         </select>
@@ -1528,7 +1528,7 @@ modal.addEventListener('mouseup', (e) => {
             { value: 'follow_up', label: 'Follow-up' },
             { value: 'demo', label: 'Demo' },
             { value: 'research', label: 'Research' },
-            { value: 'proposal', label: 'Proposal' },
+            { value: 'estimate', label: 'Estimate' },
             { value: 'contract', label: 'Contract' },
             { value: 'task', label: 'Task' }
         ]);
@@ -2118,7 +2118,7 @@ modal.addEventListener('mouseup', (e) => {
             'demo': 'Demo',
             'follow_up': 'Follow-up',
             'research': 'Research',
-            'proposal': 'Proposal',
+            'estimate': 'Estimate',
             'contract': 'Contract',
             'task': 'Task'
         };

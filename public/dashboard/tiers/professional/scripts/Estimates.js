@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * PROPOSALS MODULE - CONCEPT & DESIGN DOCUMENT
+ * ESTIMATES MODULE - CONCEPT & DESIGN DOCUMENT
  * ═══════════════════════════════════════════════════════════════════
  *
  * PURPOSE: Quote/proposal builder with client acceptance and auto-job creation
@@ -23,7 +23,7 @@ CREATE TABLE proposals (
     lead_id             UUID REFERENCES leads(id) ON DELETE SET NULL,
 
     -- Identification
-    proposal_number     TEXT UNIQUE,                    -- "PROP-2024-001" (auto-generated)
+    estimate_number     TEXT UNIQUE,                    -- "PROP-2024-001" (auto-generated)
     title               TEXT NOT NULL,                  -- "Website Redesign Proposal"
 
     -- Line Items (JSONB array)
@@ -87,7 +87,7 @@ CREATE TABLE proposals (
 CREATE INDEX idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX idx_proposals_lead_id ON proposals(lead_id);
 CREATE INDEX idx_proposals_status ON proposals(status);
-CREATE INDEX idx_proposals_number ON proposals(proposal_number);
+CREATE INDEX idx_proposals_number ON proposals(estimate_number);
 CREATE INDEX idx_proposals_created_at ON proposals(created_at DESC);
 
 -- RLS Policies
@@ -116,7 +116,7 @@ CREATE TRIGGER update_proposals_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to generate proposal number
-CREATE OR REPLACE FUNCTION generate_proposal_number()
+CREATE OR REPLACE FUNCTION generate_estimate_number()
 RETURNS TEXT AS $$
 DECLARE
     new_number TEXT;
@@ -128,13 +128,13 @@ BEGIN
     -- Get the highest counter for this year
     SELECT COALESCE(MAX(
         CAST(
-            SUBSTRING(proposal_number FROM 'PROP-' || year || '-([0-9]+)')
+            SUBSTRING(estimate_number FROM 'PROP-' || year || '-([0-9]+)')
             AS INTEGER
         )
     ), 0) + 1
     INTO counter
     FROM proposals
-    WHERE proposal_number LIKE 'PROP-' || year || '-%';
+    WHERE estimate_number LIKE 'PROP-' || year || '-%';
 
     -- Format as PROP-2024-001
     new_number := 'PROP-' || year || '-' || LPAD(counter::TEXT, 3, '0');
@@ -144,25 +144,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-generate proposal number on insert
-CREATE OR REPLACE FUNCTION set_proposal_number()
+CREATE OR REPLACE FUNCTION set_estimate_number()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.proposal_number IS NULL THEN
-        NEW.proposal_number := generate_proposal_number();
+    IF NEW.estimate_number IS NULL THEN
+        NEW.estimate_number := generate_estimate_number();
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_set_proposal_number
+CREATE TRIGGER trigger_set_estimate_number
     BEFORE INSERT ON proposals
     FOR EACH ROW
-    EXECUTE FUNCTION set_proposal_number();
+    EXECUTE FUNCTION set_estimate_number();
 */
 
 /*
--- `proposal_templates` table (Optional - for saving custom templates)
-CREATE TABLE proposal_templates (
+-- `estimate_templates` table (Optional - for saving custom templates)
+CREATE TABLE estimate_templates (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
 
@@ -179,10 +179,10 @@ CREATE TABLE proposal_templates (
 );
 
 -- RLS for templates
-ALTER TABLE proposal_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE estimate_templates ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage own templates"
-    ON proposal_templates
+    ON estimate_templates
     USING (auth.uid() = user_id);
 */
 
@@ -333,8 +333,8 @@ static async sendProposal(proposalId, recipientEmail) {
 
 static async trackProposalView(proposalId) {
     // Increment view count and update timestamps
-    const { data, error } = await supabase.rpc('track_proposal_view', {
-        p_proposal_id: proposalId
+    const { data, error } = await supabase.rpc('track_estimate_view', {
+        p_estimate_id: proposalId
     });
 
     if (error) throw error;
@@ -405,7 +405,7 @@ static async createJobFromProposal(proposalId) {
     const jobData = {
         lead_id: proposal.lead_id,
         title: proposal.title,
-        description: `Created from proposal ${proposal.proposal_number}`,
+        description: `Created from proposal ${proposal.estimate_number}`,
         quoted_price: proposal.total,
         status: 'pending',
         payment_status: 'pending',
@@ -430,7 +430,7 @@ static async duplicateProposal(proposalId) {
     // Remove unique fields and reset status
     const {
         id,
-        proposal_number,
+        estimate_number,
         created_at,
         updated_at,
         sent_at,
@@ -449,7 +449,7 @@ static async duplicateProposal(proposalId) {
 
 // Database function for tracking views (add to migration)
 /*
-CREATE OR REPLACE FUNCTION track_proposal_view(p_proposal_id UUID)
+CREATE OR REPLACE FUNCTION track_estimate_view(p_estimate_id UUID)
 RETURNS VOID AS $$
 BEGIN
     UPDATE proposals
@@ -461,7 +461,7 @@ BEGIN
             WHEN status = 'sent' THEN 'viewed'
             ELSE status
         END
-    WHERE id = p_proposal_id;
+    WHERE id = p_estimate_id;
 END;
 $$ LANGUAGE plpgsql;
 */
@@ -474,7 +474,7 @@ $$ LANGUAGE plpgsql;
 
 /*
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                      PROPOSALS MODULE LAYOUT                              ║
+║                      ESTIMATES MODULE LAYOUT                              ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 ║                                                                           ║
 ║  ┌─────────────────────────────────────────────────────────────────────┐ ║
@@ -947,7 +947,7 @@ CLIENT MOBILE VIEW:
 
 /*
 PHASE 1: Foundation (3-4 hours)
-├── Create proposals table
+├── Create estimates table
 ├── Create proposal number generation function
 ├── Add RLS policies
 ├── Create API functions in api.js
@@ -1027,6 +1027,6 @@ EMAIL SECURITY:
 - Bounce handling
 */
 
-console.log('📄 Proposals module design ready for implementation');
+console.log('📄 Estimates module design ready for implementation');
 console.log('Database schema, API functions, and UI mockups defined above');
 console.log('Estimated implementation time: 18-25 hours');

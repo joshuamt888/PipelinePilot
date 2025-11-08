@@ -38,9 +38,9 @@
 - **Status:** 🔨 80% COMPLETE
 - **Lead Limit:** 5000
 - **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals ✅, Settings
-- **Modules In Progress:** Notes (0%), Analytics (0%), Proposals (0%), Jobs (0%)
+- **Modules In Progress:** Notes (0%), Analytics (0%), Estimates (0%), Jobs (0%)
 - **Icon System:** 95% complete (Lucide SVG - only Settings needs update)
-- **Build Order:** Goals ✅ → Notes → Analytics → Proposals → Jobs → Settings Preferences
+- **Build Order (UPDATED):** Goals ✅ → Jobs → Estimates → Notes → Analytics → Settings Preferences
 
 ---
 
@@ -1169,12 +1169,19 @@ Run this checklist AFTER completing Jobs, Settings, and Mobile:
 **Goal:** Create the most feature-rich, powerful version with ALL functionality
 
 **Modules to Build:**
-1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals
-2. 🔨 **Notes** - Quick note-taking with tagging, search, and lead linking
-3. 🔨 **Analytics** - Revenue tracking, pipeline analytics, goal insights
-4. 🔨 **Proposals** - Quote builder with client acceptance and auto-job creation
-5. 🔨 **Jobs** - Job management with profit tracking and lead linking
+1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals (COMPLETE)
+2. 🔨 **Jobs** - Job management with profit tracking, cost calculation, and lead linking
+3. 🔨 **Estimates** - Quote/estimate builder with client acceptance and auto-job creation
+4. 🔨 **Notes** - Quick note-taking with tagging, search, and lead linking
+5. 🔨 **Analytics** - Revenue tracking, pipeline analytics, goal insights (aggregates all modules)
 6. 🔨 **Settings Preferences** - Theme, windowing, customization options
+
+**Build Order Rationale:**
+- **Jobs first** - Core money maker, tracks revenue/costs/profit, sets foundation for Estimates
+- **Estimates second** - Natural workflow (Estimate accepted → Auto-creates Job), builds on Jobs
+- **Notes third** - Supporting feature, quick to build, nice break after heavy modules
+- **Analytics last** - Aggregates data from all modules, most valuable when everything feeds it
+- **Settings** - Polish piece, implement throughout as needed
 
 **Why Pro First:**
 - Establishes the feature ceiling
@@ -1293,7 +1300,187 @@ team_analytics (company_id, metrics, date)
 ```
 
 **Current Status:** Phase 1 (Pro Tier) - 80% complete
-**Next Milestones:** Notes → Analytics → Proposals → Jobs → Phase 2
+**Next Milestones:** Jobs → Estimates → Notes → Analytics → Phase 2
+
+---
+
+## 💼 JOBS MODULE - DETAILED ANALYSIS & RECOMMENDATIONS
+
+### Current Schema Review (From Line 368)
+
+The existing `jobs` table schema is **solid** and covers the core needs:
+
+**✅ What's Good:**
+- Clean financial tracking (material_cost, labor_hours, labor_rate, other_expenses)
+- Auto-calculated fields (total_cost, profit, profit_margin) - smart!
+- Links to leads (estimate → job workflow)
+- Payment tracking (invoice_number, payment_status)
+- Materials stored as JSONB (flexible)
+- Time tracking (scheduled_date, scheduled_time, duration_hours)
+
+**💡 Recommended Additions:**
+
+1. **estimate_id** - Link back to estimate that created this job
+   ```sql
+   estimate_id  UUID REFERENCES estimates(id) ON DELETE SET NULL
+   ```
+
+2. **deposit_amount & deposit_status** - Track deposits separately
+   ```sql
+   deposit_amount    NUMERIC DEFAULT 0
+   deposit_paid      BOOLEAN DEFAULT FALSE
+   deposit_paid_at   TIMESTAMPTZ
+   ```
+
+3. **actual_labor_hours** - Track estimated vs actual
+   ```sql
+   estimated_labor_hours  NUMERIC  -- renamed from labor_hours
+   actual_labor_hours     NUMERIC  -- what it actually took
+   ```
+
+4. **photos** - Before/after job photos (critical for contractors)
+   ```sql
+   photos  JSONB DEFAULT '[]'::JSONB
+   -- [{"url": "...", "type": "before|during|after", "caption": "..."}]
+   ```
+
+5. **crew_members** - Track who worked on the job
+   ```sql
+   crew_members  JSONB DEFAULT '[]'::JSONB
+   -- [{"name": "John", "hours": 8, "rate": 25}]
+   ```
+
+6. **materials tracking improvements** - Better structure
+   ```sql
+   materials  JSONB DEFAULT '[]'::JSONB
+   -- [{"name": "2x4 lumber", "quantity": 50, "unit": "pcs", "cost_per_unit": 5.99, "supplier": "Home Depot", "total": 299.50}]
+   ```
+
+### Recommended Status Flow
+
+```
+draft → scheduled → in_progress → completed → invoiced → paid
+                 ↓
+              cancelled
+```
+
+### Recommended Job Types (Contractor-Focused)
+
+```javascript
+const JOB_TYPES = [
+  'installation',
+  'repair',
+  'maintenance',
+  'inspection',
+  'consultation',
+  'emergency',
+  'custom'
+];
+```
+
+### Financial Calculations (Auto-computed)
+
+```javascript
+// Total Cost = materials + labor + other
+total_cost = material_cost + (actual_labor_hours * labor_rate) + other_expenses
+
+// Profit = what customer paid - what it cost
+profit = final_price - total_cost
+
+// Profit Margin = profit as percentage
+profit_margin = (profit / final_price) * 100
+```
+
+### UI Features to Build
+
+**Jobs List View:**
+- Filter by status, date range, payment status
+- Sort by scheduled date, profit, completion
+- Quick stats: Total revenue, total profit, avg profit margin
+- Color-coded status badges
+
+**Job Detail Modal:**
+- Top section: Job info (title, lead, dates, status)
+- Financial section: Costs breakdown, quoted vs final price, profit
+- Materials list: Editable table
+- Crew section: Who worked + hours
+- Photos: Before/during/after grid
+- Timeline: Status changes, payments received
+
+**Add/Edit Job:**
+- Link to lead (dropdown)
+- Link to estimate (optional)
+- Financial inputs with live profit calculation
+- Materials table (add/remove rows)
+- Photo upload (drag & drop)
+- Crew assignment
+
+### Database Indexes to Add
+
+```sql
+CREATE INDEX idx_jobs_user_id ON jobs(user_id);
+CREATE INDEX idx_jobs_lead_id ON jobs(lead_id);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_scheduled_date ON jobs(scheduled_date);
+CREATE INDEX idx_jobs_payment_status ON jobs(payment_status);
+CREATE INDEX idx_jobs_created_at ON jobs(created_at DESC);
+```
+
+### RLS Policies Needed
+
+```sql
+-- Users can only see their own jobs
+CREATE POLICY jobs_select_own ON jobs FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY jobs_insert_own ON jobs FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY jobs_update_own ON jobs FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY jobs_delete_own ON jobs FOR DELETE USING (auth.uid() = user_id);
+```
+
+### API Methods to Build
+
+```javascript
+// In api.js
+API.getJobs(filters)           // Get all jobs with optional filters
+API.getJobById(id)             // Get single job with full details
+API.createJob(data)            // Create new job
+API.updateJob(id, updates)     // Update existing job
+API.deleteJob(id)              // Delete job
+API.completeJob(id, finalData) // Mark job complete + set final price/hours
+API.getJobsByLead(leadId)      // Get all jobs for a specific lead
+API.getJobStats()              // Get revenue/profit stats
+```
+
+### Implementation Priority
+
+**Phase 1 (Core - 3-4 hours):**
+- Basic CRUD operations
+- List view with filters
+- Add/Edit modal with financial calculations
+- Link to leads
+
+**Phase 2 (Financial - 2 hours):**
+- Materials table (add/remove rows)
+- Live profit calculations
+- Payment status tracking
+- Invoice number generation
+
+**Phase 3 (Polish - 2-3 hours):**
+- Photo upload/display
+- Crew tracking
+- Before/after photo comparison
+- Job status timeline
+
+**Total:** 7-9 hours (more realistic than 5-6)
+
+### Integration with Estimates Module
+
+When an estimate is accepted:
+1. Auto-create job from estimate
+2. Copy line items → materials
+3. Copy total → quoted_price
+4. Link estimate_id → job
+5. Set status to 'scheduled'
+6. Notify user "Job created from estimate!"
 
 ---
 
