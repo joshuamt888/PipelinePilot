@@ -410,12 +410,445 @@ const JobsModule = {
     },
 
     /**
-     * Open add/edit modal (placeholder - will build in Session 2)
+     * Open add/edit modal
      */
     jobs_openModal(jobId = null) {
         this.state.editingJobId = jobId;
-        // TODO: Build modal in Session 2
-        showNotification('Modal coming in Session 2!', 'info');
+        const job = jobId ? this.state.jobs.find(j => j.id === jobId) : null;
+
+        const modalHTML = this.jobs_renderModal(job);
+        showModal(modalHTML, 'job-modal-large');
+
+        // Attach modal event listeners
+        this.jobs_attachModalListeners();
+
+        // Initialize profit calculation
+        this.jobs_updateProfitDisplay();
+    },
+
+    /**
+     * Render add/edit job modal
+     */
+    jobs_renderModal(job) {
+        const isEdit = !!job;
+
+        return `
+            <div class="modal-header">
+                <h2>${isEdit ? 'Edit Job' : 'New Job'}</h2>
+                <button class="modal-close" data-action="close-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form id="jobForm" class="job-form">
+                    <!-- BASIC INFO -->
+                    <div class="form-section">
+                        <h3>Basic Info</h3>
+
+                        <div class="form-row">
+                            <div class="form-group form-group-full">
+                                <label>Job Title <span class="required">*</span></label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value="${job?.title || ''}"
+                                    placeholder="e.g., Kitchen Remodel"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Lead</label>
+                                ${this.jobs_renderLeadDropdown(job?.lead_id)}
+                            </div>
+                            <div class="form-group">
+                                <label>Status <span class="required">*</span></label>
+                                <select name="status" required>
+                                    ${this.JOB_STATUSES.map(status => `
+                                        <option value="${status}" ${job?.status === status ? 'selected' : ''}>
+                                            ${this.jobs_formatStatus(status)}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Job Type</label>
+                                <select name="job_type">
+                                    <option value="">Select Type</option>
+                                    ${this.JOB_TYPES.map(type => `
+                                        <option value="${type}" ${job?.job_type === type ? 'selected' : ''}>
+                                            ${this.jobs_formatStatus(type)}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Priority</label>
+                                <select name="priority">
+                                    ${this.PRIORITIES.map(p => `
+                                        <option value="${p}" ${job?.priority === p ? 'selected' : ''}>
+                                            ${p.charAt(0).toUpperCase() + p.slice(1)}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Scheduled Date</label>
+                                <input
+                                    type="date"
+                                    name="scheduled_date"
+                                    value="${job?.scheduled_date || ''}"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>Scheduled Time</label>
+                                <input
+                                    type="time"
+                                    name="scheduled_time"
+                                    value="${job?.scheduled_time || ''}"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>Duration (hours)</label>
+                                <input
+                                    type="number"
+                                    name="duration_hours"
+                                    value="${job?.duration_hours || ''}"
+                                    step="0.5"
+                                    min="0"
+                                    placeholder="8"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group-full">
+                                <label>Description</label>
+                                <textarea
+                                    name="description"
+                                    rows="3"
+                                    placeholder="Describe the job details..."
+                                >${job?.description || ''}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group-full">
+                                <label>Location</label>
+                                <input
+                                    type="text"
+                                    name="location"
+                                    value="${job?.location || ''}"
+                                    placeholder="Job site address"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FINANCIAL -->
+                    <div class="form-section">
+                        <h3>Financial</h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Material Cost ($)</label>
+                                <input
+                                    type="number"
+                                    name="material_cost"
+                                    value="${job?.material_cost || ''}"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    data-calc-trigger
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>Labor Rate ($/hr)</label>
+                                <input
+                                    type="number"
+                                    name="labor_rate"
+                                    value="${job?.labor_rate || ''}"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="50.00"
+                                    data-calc-trigger
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Estimated Hours</label>
+                                <input
+                                    type="number"
+                                    name="estimated_labor_hours"
+                                    value="${job?.estimated_labor_hours || ''}"
+                                    step="0.5"
+                                    min="0"
+                                    placeholder="8"
+                                    data-calc-trigger
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label>Other Expenses ($)</label>
+                                <input
+                                    type="number"
+                                    name="other_expenses"
+                                    value="${job?.other_expenses || ''}"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    data-calc-trigger
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group-full">
+                                <label>Quoted Price ($) <span class="required">*</span></label>
+                                <input
+                                    type="number"
+                                    name="quoted_price"
+                                    value="${job?.quoted_price || ''}"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="1000.00"
+                                    required
+                                    data-calc-trigger
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Deposit Amount ($)</label>
+                                <input
+                                    type="number"
+                                    name="deposit_amount"
+                                    value="${job?.deposit_amount || ''}"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        name="deposit_paid"
+                                        ${job?.deposit_paid ? 'checked' : ''}
+                                    />
+                                    Deposit Paid
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- LIVE PROFIT CALCULATION -->
+                        <div class="profit-display" id="profitDisplay">
+                            <!-- Filled by jobs_updateProfitDisplay() -->
+                        </div>
+                    </div>
+
+                    <!-- NOTES -->
+                    <div class="form-section">
+                        <div class="form-row">
+                            <div class="form-group form-group-full">
+                                <label>Notes</label>
+                                <textarea
+                                    name="notes"
+                                    rows="3"
+                                    placeholder="Internal notes about this job..."
+                                >${job?.notes || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" data-action="close-modal">Cancel</button>
+                <button class="btn-primary" data-action="save-job">
+                    ${isEdit ? 'Update Job' : 'Create Job'}
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Render lead dropdown with search
+     */
+    jobs_renderLeadDropdown(selectedLeadId = null) {
+        return `
+            <select name="lead_id">
+                <option value="">No lead selected</option>
+                ${this.state.leads.map(lead => `
+                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    },
+
+    /**
+     * Attach modal event listeners
+     */
+    jobs_attachModalListeners() {
+        const modal = document.querySelector('.modal-content');
+        if (!modal) return;
+
+        // Refresh icons
+        if (window.lucide) lucide.createIcons();
+
+        // Live profit calculation
+        modal.querySelectorAll('[data-calc-trigger]').forEach(input => {
+            input.addEventListener('input', () => this.jobs_updateProfitDisplay());
+        });
+
+        // Close modal
+        modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
+            btn.addEventListener('click', () => closeModal());
+        });
+
+        // Save job
+        modal.querySelector('[data-action="save-job"]')?.addEventListener('click', () => {
+            this.jobs_handleSave();
+        });
+    },
+
+    /**
+     * Update profit display with live calculation
+     */
+    jobs_updateProfitDisplay() {
+        const form = document.getElementById('jobForm');
+        if (!form) return;
+
+        const materialCost = parseFloat(form.material_cost.value) || 0;
+        const laborRate = parseFloat(form.labor_rate.value) || 0;
+        const estimatedHours = parseFloat(form.estimated_labor_hours.value) || 0;
+        const otherExpenses = parseFloat(form.other_expenses.value) || 0;
+        const quotedPrice = parseFloat(form.quoted_price.value) || 0;
+
+        const laborCost = laborRate * estimatedHours;
+        const totalCost = materialCost + laborCost + otherExpenses;
+        const profit = quotedPrice - totalCost;
+        const profitMargin = quotedPrice > 0 ? (profit / quotedPrice) * 100 : 0;
+
+        const profitDisplay = document.getElementById('profitDisplay');
+        if (!profitDisplay) return;
+
+        const profitClass = profit >= 0 ? 'profit-positive' : 'profit-negative';
+
+        profitDisplay.innerHTML = `
+            <div class="profit-card ${profitClass}">
+                <div class="profit-icon">
+                    <i data-lucide="${profit >= 0 ? 'trending-up' : 'trending-down'}"></i>
+                </div>
+                <div class="profit-details">
+                    <div class="profit-breakdown">
+                        <span>Revenue:</span>
+                        <strong>${formatCurrency(quotedPrice)}</strong>
+                    </div>
+                    <div class="profit-breakdown">
+                        <span>Cost:</span>
+                        <strong>${formatCurrency(totalCost)}</strong>
+                    </div>
+                    <div class="profit-breakdown text-muted">
+                        <span style="padding-left: 20px;">Materials:</span>
+                        <span>${formatCurrency(materialCost)}</span>
+                    </div>
+                    <div class="profit-breakdown text-muted">
+                        <span style="padding-left: 20px;">Labor:</span>
+                        <span>${formatCurrency(laborCost)}</span>
+                    </div>
+                    <div class="profit-breakdown text-muted">
+                        <span style="padding-left: 20px;">Other:</span>
+                        <span>${formatCurrency(otherExpenses)}</span>
+                    </div>
+                    <hr style="margin: 10px 0;">
+                    <div class="profit-total">
+                        <span>Estimated Profit:</span>
+                        <strong class="${profit >= 0 ? 'text-success' : 'text-danger'}">
+                            ${formatCurrency(profit)} (${profitMargin.toFixed(1)}%)
+                        </strong>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Refresh icons
+        if (window.lucide) lucide.createIcons();
+    },
+
+    /**
+     * Handle save job
+     */
+    async jobs_handleSave() {
+        const form = document.getElementById('jobForm');
+        if (!form) return;
+
+        // Validate form
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        // Gather form data
+        const formData = new FormData(form);
+        const jobData = {
+            title: formData.get('title'),
+            lead_id: formData.get('lead_id') || null,
+            status: formData.get('status'),
+            job_type: formData.get('job_type') || null,
+            priority: formData.get('priority'),
+            scheduled_date: formData.get('scheduled_date') || null,
+            scheduled_time: formData.get('scheduled_time') || null,
+            duration_hours: parseFloat(formData.get('duration_hours')) || null,
+            description: formData.get('description'),
+            location: formData.get('location'),
+            material_cost: parseFloat(formData.get('material_cost')) || 0,
+            labor_rate: parseFloat(formData.get('labor_rate')) || 0,
+            estimated_labor_hours: parseFloat(formData.get('estimated_labor_hours')) || 0,
+            other_expenses: parseFloat(formData.get('other_expenses')) || 0,
+            quoted_price: parseFloat(formData.get('quoted_price')) || 0,
+            deposit_amount: parseFloat(formData.get('deposit_amount')) || 0,
+            deposit_paid: formData.get('deposit_paid') === 'on',
+            notes: formData.get('notes')
+        };
+
+        try {
+            let result;
+            if (this.state.editingJobId) {
+                // Update existing job
+                result = await API.updateJob(this.state.editingJobId, jobData);
+                const index = this.state.jobs.findIndex(j => j.id === this.state.editingJobId);
+                if (index !== -1) {
+                    this.state.jobs[index] = result;
+                }
+                showNotification('Job updated successfully', 'success');
+            } else {
+                // Create new job
+                result = await API.createJob(jobData);
+                this.state.jobs.unshift(result);
+                showNotification('Job created successfully', 'success');
+            }
+
+            this.jobs_calculateStats();
+            this.jobs_render();
+            closeModal();
+        } catch (error) {
+            console.error('Error saving job:', error);
+            showNotification('Failed to save job', 'error');
+        }
     },
 
     /**
