@@ -366,36 +366,82 @@ idx_goal_tasks_task_id ON goal_tasks(task_id)
 ```
 
 ### `jobs` Table
-**Status:** ✅ PRODUCTION (No UI yet)
+**Status:** ✅ PRODUCTION (Schema complete, UI pending)
 ```sql
-id                UUID PRIMARY KEY
-user_id           UUID REFERENCES users(id) ON DELETE CASCADE
-lead_id           UUID REFERENCES leads(id) ON DELETE SET NULL
-title             TEXT NOT NULL
-description       TEXT
-job_type          TEXT
-status            TEXT
-priority          TEXT
-scheduled_date    DATE
-scheduled_time    TIME
-duration_hours    NUMERIC
-completed_at      TIMESTAMPTZ
-material_cost     NUMERIC
-labor_hours       NUMERIC
-labor_rate        NUMERIC
-other_expenses    NUMERIC
-total_cost        NUMERIC (generated)
-quoted_price      NUMERIC
-final_price       NUMERIC
-profit            NUMERIC (generated)
-profit_margin     NUMERIC (generated)
-materials         JSONB
-notes             TEXT
-location          TEXT
-invoice_number    TEXT
-payment_status    TEXT
-created_at        TIMESTAMPTZ
-updated_at        TIMESTAMPTZ
+-- Core
+id                      UUID PRIMARY KEY
+user_id                 UUID REFERENCES users(id) ON DELETE CASCADE
+lead_id                 UUID REFERENCES leads(id) ON DELETE SET NULL
+estimate_id             UUID REFERENCES estimates(id) ON DELETE SET NULL  -- NEW
+
+-- Job Info
+title                   TEXT NOT NULL
+description             TEXT
+job_type                TEXT  -- installation, repair, maintenance, inspection, consultation, emergency, custom
+status                  TEXT DEFAULT 'draft'  -- draft, scheduled, in_progress, completed, invoiced, paid, cancelled
+priority                TEXT
+
+-- Scheduling
+scheduled_date          DATE
+scheduled_time          TIME
+duration_hours          NUMERIC
+completed_at            TIMESTAMPTZ
+
+-- Financial - Labor
+estimated_labor_hours   NUMERIC  -- NEW (renamed from labor_hours)
+actual_labor_hours      NUMERIC  -- NEW
+labor_rate              NUMERIC
+
+-- Financial - Costs
+material_cost           NUMERIC DEFAULT 0
+other_expenses          NUMERIC DEFAULT 0
+total_cost              NUMERIC GENERATED ALWAYS AS (
+    COALESCE(material_cost, 0) +
+    COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
+    COALESCE(other_expenses, 0)
+) STORED
+
+-- Financial - Revenue
+quoted_price            NUMERIC
+final_price             NUMERIC
+profit                  NUMERIC GENERATED ALWAYS AS (
+    COALESCE(final_price, 0) - total_cost
+) STORED
+profit_margin           NUMERIC GENERATED ALWAYS AS (
+    CASE WHEN COALESCE(final_price, 0) > 0
+    THEN ((COALESCE(final_price, 0) - total_cost) / COALESCE(final_price, 1)) * 100
+    ELSE 0 END
+) STORED
+
+-- Deposits  -- NEW
+deposit_amount          NUMERIC DEFAULT 0
+deposit_paid            BOOLEAN DEFAULT FALSE
+deposit_paid_at         TIMESTAMPTZ
+
+-- Payment
+invoice_number          TEXT
+payment_status          TEXT  -- pending, partial, paid, overdue
+
+-- Additional
+location                TEXT
+notes                   TEXT
+
+-- JSONB Fields
+materials               JSONB DEFAULT '[]'
+-- [{"name": "2x4 lumber", "quantity": 50, "unit": "pcs", "cost_per_unit": 5.99, "supplier": "Home Depot", "total": 299.50}]
+
+crew_members            JSONB DEFAULT '[]'  -- NEW
+-- [{"name": "John Doe", "hours": 8, "rate": 25, "total": 200}]
+
+photos                  JSONB DEFAULT '[]'  -- NEW (Supabase Storage URLs)
+-- [{"url": "https://...", "type": "before|during|after", "caption": "...", "uploaded_at": "..."}]
+
+-- Timestamps
+created_at              TIMESTAMPTZ DEFAULT NOW()
+updated_at              TIMESTAMPTZ DEFAULT NOW()
+
+-- Indexes: user_id, lead_id, estimate_id, status, scheduled_date, payment_status, created_at
+-- RLS: Users can only see/edit their own jobs
 ```
 
 ---
@@ -454,10 +500,44 @@ API.unlinkTaskFromGoal(goalId, taskId)  // Remove task-goal link
 
 ### Jobs
 ```javascript
-API.getJobs(filters)
-API.createJob(data)
-API.updateJob(id, updates)
-API.completeJob(id, finalPrice, hours, materials)
+// Core CRUD
+API.getJobs(filters)                // Get all jobs with optional filters
+API.getJobById(id)                  // Get single job with full details
+API.createJob(data)                 // Create new job
+API.updateJob(id, updates)          // Update existing job
+API.deleteJob(id)                   // Delete job
+API.completeJob(id, finalData)      // Mark job complete + set final price/hours
+API.getJobsByLead(leadId)           // Get all jobs for a specific lead
+API.getJobStats()                   // Get revenue/profit stats
+API.getJobProfitability()           // Get jobs sorted by profit
+API.getJobsByPaymentStatus(status)  // Filter by payment status
+API.getScheduledJobs(start, end)    // Get jobs in date range
+
+// Deposits
+API.markDepositPaid(jobId, amount)  // Mark deposit as paid
+API.updateDeposit(jobId, amount)    // Update deposit amount
+
+// Materials
+API.addJobMaterial(jobId, material) // Add material to job
+API.updateJobMaterials(jobId, arr)  // Update all materials
+API.removeJobMaterial(jobId, matId) // Remove material from job
+
+// Crew
+API.addJobCrewMember(jobId, crew)   // Add crew member to job
+API.updateJobCrew(jobId, arr)       // Update all crew members
+API.removeJobCrewMember(jobId, id)  // Remove crew member from job
+
+// Photos (Supabase Storage)
+API.uploadJobPhoto(file, jobId, type)     // Upload photo to storage
+API.addJobPhoto(jobId, photo)             // Add photo URL to job
+API.updateJobPhotos(jobId, arr)           // Update all photos
+API.removeJobPhoto(jobId, photoId)        // Remove photo from job
+API.deleteJobPhotoFile(photoUrl)          // Delete file from storage
+
+// Invoice & Payment
+API.updateJobInvoice(jobId, num, status)  // Update invoice details
+API.markJobPaid(jobId)                    // Mark job as fully paid
+API.generateInvoiceNumber()               // Generate unique invoice# (INV-2025-001)
 ```
 
 ### Preferences

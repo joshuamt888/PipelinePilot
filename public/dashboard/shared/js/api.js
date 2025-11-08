@@ -892,36 +892,77 @@ class TierScalingAPI {
   }
 
   // =====================================================
-  // JOBS (Pro Tier - Better Google Sheets for Financials)
+  // JOBS (Pro Tier - Financial Management & Job Tracking)
   // =====================================================
 
+  /**
+   * Get all jobs with optional filters
+   * @param {Object} filters - Optional filters (status, job_type, lead_id, payment_status)
+   * @returns {Promise<Array>} Array of job objects
+   */
   static async getJobs(filters = {}) {
     let query = supabase
       .from('jobs')
-      .select('*')
-      .order('scheduled_date', { ascending: false });
+      .select('*, leads(name, email, phone)')
+      .order('scheduled_date', { ascending: false, nullsFirst: false });
 
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.job_type) query = query.eq('job_type', filters.job_type);
     if (filters.lead_id) query = query.eq('lead_id', filters.lead_id);
+    if (filters.payment_status) query = query.eq('payment_status', filters.payment_status);
+    if (filters.estimate_id) query = query.eq('estimate_id', filters.estimate_id);
 
     const { data, error } = await query;
     if (error) throw error;
     return data;
   }
 
+  /**
+   * Get single job by ID with full details
+   * @param {string} jobId - Job UUID
+   * @returns {Promise<Object>} Job object with lead details
+   */
+  static async getJobById(jobId) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*, leads(name, email, phone, company)')
+      .eq('id', jobId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Create a new job
+   * @param {Object} jobData - Job data
+   * @returns {Promise<Object>} Created job object
+   */
   static async createJob(jobData) {
     const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
       .from('jobs')
-      .insert([{ ...jobData, user_id: user.id }])
+      .insert([{
+        ...jobData,
+        user_id: user.id,
+        status: jobData.status || 'draft',
+        materials: jobData.materials || [],
+        crew_members: jobData.crew_members || [],
+        photos: jobData.photos || []
+      }])
       .select();
 
     if (error) throw error;
     return data[0];
   }
 
+  /**
+   * Update an existing job
+   * @param {string} jobId - Job UUID
+   * @param {Object} updates - Fields to update
+   * @returns {Promise<Object>} Updated job object
+   */
   static async updateJob(jobId, updates) {
     const { data, error } = await supabase
       .from('jobs')
@@ -933,6 +974,11 @@ class TierScalingAPI {
     return data[0];
   }
 
+  /**
+   * Delete a job
+   * @param {string} jobId - Job UUID
+   * @returns {Promise<Object>} Success response
+   */
   static async deleteJob(jobId) {
     const { error } = await supabase
       .from('jobs')
@@ -943,18 +989,66 @@ class TierScalingAPI {
     return { success: true };
   }
 
-  static async completeJob(jobId, finalPrice, laborHours, materials = []) {
+  /**
+   * Mark job as completed with final details
+   * @param {string} jobId - Job UUID
+   * @param {Object} finalData - Final price, actual hours, etc.
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async completeJob(jobId, finalData) {
     const updates = {
       status: 'completed',
       completed_at: new Date().toISOString(),
-      final_price: finalPrice,
-      labor_hours: laborHours,
-      materials: materials
+      final_price: finalData.finalPrice,
+      actual_labor_hours: finalData.actualLaborHours,
+      materials: finalData.materials || [],
+      crew_members: finalData.crewMembers || [],
+      notes: finalData.notes || null
     };
 
     return await this.updateJob(jobId, updates);
   }
 
+  /**
+   * Get jobs by lead ID
+   * @param {string} leadId - Lead UUID
+   * @returns {Promise<Array>} Array of jobs for this lead
+   */
+  static async getJobsByLead(leadId) {
+    return await this.getJobs({ lead_id: leadId });
+  }
+
+  /**
+   * Get jobs by payment status
+   * @param {string} status - Payment status (pending, partial, paid, overdue)
+   * @returns {Promise<Array>} Array of jobs with this payment status
+   */
+  static async getJobsByPaymentStatus(status) {
+    return await this.getJobs({ payment_status: status });
+  }
+
+  /**
+   * Get scheduled jobs within date range
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)
+   * @returns {Promise<Array>} Array of scheduled jobs
+   */
+  static async getScheduledJobs(startDate, endDate) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*, leads(name, email, phone)')
+      .gte('scheduled_date', startDate)
+      .lte('scheduled_date', endDate)
+      .order('scheduled_date', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get job statistics (revenue, profit, etc.)
+   * @returns {Promise<Object>} Stats object
+   */
   static async getJobStats() {
     const jobs = await this.getJobs({ status: 'completed' });
 
@@ -974,10 +1068,10 @@ class TierScalingAPI {
     };
   }
 
-  static async getJobsByLead(leadId) {
-    return await this.getJobs({ lead_id: leadId });
-  }
-
+  /**
+   * Get job profitability report (sorted by profit)
+   * @returns {Promise<Array>} Array of jobs with profit metrics
+   */
   static async getJobProfitability() {
     const jobs = await this.getJobs({ status: 'completed' });
 
@@ -993,11 +1087,235 @@ class TierScalingAPI {
     })).sort((a, b) => b.profit - a.profit);
   }
 
-  // NEW v4.0: Full schema field coverage
-  static async updateJobLocation(jobId, location) {
-    return await this.updateJob(jobId, { location });
+  // ─────────────────────────────────────────────────────────────
+  // DEPOSIT TRACKING
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Mark deposit as paid
+   * @param {string} jobId - Job UUID
+   * @param {number} amount - Deposit amount
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async markDepositPaid(jobId, amount) {
+    return await this.updateJob(jobId, {
+      deposit_amount: amount,
+      deposit_paid: true,
+      deposit_paid_at: new Date().toISOString()
+    });
   }
 
+  /**
+   * Update deposit amount
+   * @param {string} jobId - Job UUID
+   * @param {number} amount - New deposit amount
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async updateDeposit(jobId, amount) {
+    return await this.updateJob(jobId, { deposit_amount: amount });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MATERIALS MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Add material to job
+   * @param {string} jobId - Job UUID
+   * @param {Object} material - Material object {name, quantity, unit, cost_per_unit, supplier, total}
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async addJobMaterial(jobId, material) {
+    const job = await this.getJobById(jobId);
+    const materials = job.materials || [];
+
+    materials.push({
+      ...material,
+      id: crypto.randomUUID(),
+      added_at: new Date().toISOString()
+    });
+
+    // Recalculate material_cost
+    const totalMaterialCost = materials.reduce((sum, m) => sum + (parseFloat(m.total) || 0), 0);
+
+    return await this.updateJob(jobId, {
+      materials,
+      material_cost: totalMaterialCost
+    });
+  }
+
+  /**
+   * Update materials list and recalculate cost
+   * @param {string} jobId - Job UUID
+   * @param {Array} materials - New materials array
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async updateJobMaterials(jobId, materials) {
+    const totalMaterialCost = materials.reduce((sum, m) => sum + (parseFloat(m.total) || 0), 0);
+
+    return await this.updateJob(jobId, {
+      materials,
+      material_cost: totalMaterialCost
+    });
+  }
+
+  /**
+   * Remove material from job
+   * @param {string} jobId - Job UUID
+   * @param {string} materialId - Material ID to remove
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async removeJobMaterial(jobId, materialId) {
+    const job = await this.getJobById(jobId);
+    const materials = (job.materials || []).filter(m => m.id !== materialId);
+
+    return await this.updateJobMaterials(jobId, materials);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CREW MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Add crew member to job
+   * @param {string} jobId - Job UUID
+   * @param {Object} crewMember - Crew object {name, hours, rate, total}
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async addJobCrewMember(jobId, crewMember) {
+    const job = await this.getJobById(jobId);
+    const crewMembers = job.crew_members || [];
+
+    crewMembers.push({
+      ...crewMember,
+      id: crypto.randomUUID(),
+      added_at: new Date().toISOString()
+    });
+
+    return await this.updateJob(jobId, { crew_members: crewMembers });
+  }
+
+  /**
+   * Update crew members list
+   * @param {string} jobId - Job UUID
+   * @param {Array} crewMembers - New crew array
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async updateJobCrew(jobId, crewMembers) {
+    return await this.updateJob(jobId, { crew_members: crewMembers });
+  }
+
+  /**
+   * Remove crew member from job
+   * @param {string} jobId - Job UUID
+   * @param {string} crewMemberId - Crew member ID to remove
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async removeJobCrewMember(jobId, crewMemberId) {
+    const job = await this.getJobById(jobId);
+    const crewMembers = (job.crew_members || []).filter(c => c.id !== crewMemberId);
+
+    return await this.updateJobCrew(jobId, crewMembers);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PHOTO MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Add photo to job
+   * @param {string} jobId - Job UUID
+   * @param {Object} photo - Photo object {url, type, caption}
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async addJobPhoto(jobId, photo) {
+    const job = await this.getJobById(jobId);
+    const photos = job.photos || [];
+
+    photos.push({
+      ...photo,
+      id: crypto.randomUUID(),
+      uploaded_at: new Date().toISOString()
+    });
+
+    return await this.updateJob(jobId, { photos });
+  }
+
+  /**
+   * Update photos list
+   * @param {string} jobId - Job UUID
+   * @param {Array} photos - New photos array
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async updateJobPhotos(jobId, photos) {
+    return await this.updateJob(jobId, { photos });
+  }
+
+  /**
+   * Remove photo from job
+   * @param {string} jobId - Job UUID
+   * @param {string} photoId - Photo ID to remove
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async removeJobPhoto(jobId, photoId) {
+    const job = await this.getJobById(jobId);
+    const photos = (job.photos || []).filter(p => p.id !== photoId);
+
+    return await this.updateJobPhotos(jobId, photos);
+  }
+
+  /**
+   * Upload photo to Supabase Storage
+   * @param {File} file - File object from input
+   * @param {string} jobId - Job UUID
+   * @param {string} type - Photo type (before, during, after)
+   * @returns {Promise<string>} Public URL of uploaded photo
+   */
+  static async uploadJobPhoto(file, jobId, type) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${jobId}/${type}-${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('job-photos')
+      .upload(fileName, file);
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('job-photos')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  }
+
+  /**
+   * Delete photo from Supabase Storage
+   * @param {string} photoUrl - Photo URL to delete
+   * @returns {Promise<void>}
+   */
+  static async deleteJobPhotoFile(photoUrl) {
+    // Extract file path from URL
+    const path = photoUrl.split('/job-photos/').pop();
+
+    const { error } = await supabase.storage
+      .from('job-photos')
+      .remove([path]);
+
+    if (error) throw error;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // INVOICE & PAYMENT
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Update job invoice details
+   * @param {string} jobId - Job UUID
+   * @param {string} invoiceNumber - Invoice number
+   * @param {string} paymentStatus - Payment status
+   * @returns {Promise<Object>} Updated job object
+   */
   static async updateJobInvoice(jobId, invoiceNumber, paymentStatus) {
     return await this.updateJob(jobId, {
       invoice_number: invoiceNumber,
@@ -1005,20 +1323,38 @@ class TierScalingAPI {
     });
   }
 
-  static async getJobsByPaymentStatus(status) {
-    return await this.getJobs({ payment_status: status });
+  /**
+   * Mark job as fully paid
+   * @param {string} jobId - Job UUID
+   * @returns {Promise<Object>} Updated job object
+   */
+  static async markJobPaid(jobId) {
+    return await this.updateJob(jobId, {
+      payment_status: 'paid',
+      status: 'paid'
+    });
   }
 
-  static async getScheduledJobs(startDate, endDate) {
-    const { data, error } = await supabase
+  /**
+   * Generate unique invoice number
+   * @returns {Promise<string>} Invoice number (e.g., "INV-2025-001")
+   */
+  static async generateInvoiceNumber() {
+    const year = new Date().getFullYear();
+    const { data: jobs } = await supabase
       .from('jobs')
-      .select('*')
-      .gte('scheduled_date', startDate)
-      .lte('scheduled_date', endDate)
-      .order('scheduled_date', { ascending: true });
+      .select('invoice_number')
+      .like('invoice_number', `INV-${year}-%`)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (error) throw error;
-    return data;
+    let nextNumber = 1;
+    if (jobs && jobs.length > 0 && jobs[0].invoice_number) {
+      const lastNumber = parseInt(jobs[0].invoice_number.split('-').pop());
+      nextNumber = lastNumber + 1;
+    }
+
+    return `INV-${year}-${String(nextNumber).padStart(3, '0')}`;
   }
 
 // =====================================================
