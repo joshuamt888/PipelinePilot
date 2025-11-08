@@ -278,7 +278,7 @@ async goals_loadAvailableTasks() {
         }
 
         const statusClass = isCompleted ? 'completed' : isAtRisk ? 'at-risk' : 'active';
-        const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
+        const cardColor = this.goals_sanitizeColor(goal.color);
 
         // Show badge for task list goals, otherwise just manual
         const goalTypeBadge = goal.goal_type === 'task_list'
@@ -1542,7 +1542,7 @@ goals_showGoalDetailModal(goalId) {
     // Always use the actual progress from current_value / target_value
     const progress = Math.floor(goal.progress || 0);
     const isCompleted = goal.status === 'completed';
-    const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
+    const cardColor = this.goals_sanitizeColor(goal.color);
 
     const modal = document.createElement('div');
     modal.className = 'goals-modal-overlay show';
@@ -1613,7 +1613,7 @@ goals_showGoalDetailModal(goalId) {
                     <div class="goals-detail-info-row">
                         <span class="goals-detail-info-label">Tracking</span>
                         <span class="goals-detail-info-value">
-                            <span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> ${goal.unit ? goal.unit.charAt(0).toUpperCase() + goal.unit.slice(1) : 'Manual entry'}</span>
+                            <span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> ${goal.unit ? API.escapeHtml(goal.unit.charAt(0).toUpperCase() + goal.unit.slice(1)) : 'Manual entry'}</span>
                         </span>
                     </div>
                     ${goal.is_recurring ? `
@@ -1800,7 +1800,7 @@ goals_showGoalDetailModal(goalId) {
                         <h3>${API.escapeHtml(goal.title)}</h3>
                         <div class="goals-update-progress">
                             <div class="goals-progress-bar">
-                                <div class="goals-progress-fill" style="width: ${goal.progress}%; ${goal.color ? `background: ${goal.color};` : 'background: #94a3b8;'}"></div>
+                                <div class="goals-progress-fill" style="width: ${goal.progress}%; ${this.goals_sanitizeColor(goal.color) ? `background: ${this.goals_sanitizeColor(goal.color)};` : 'background: #94a3b8;'}"></div>
                             </div>
                             <span>${this.goals_formatValue(goal.current_value, goal.unit)} / ${this.goals_formatValue(goal.target_value, goal.unit)}</span>
                         </div>
@@ -2525,20 +2525,20 @@ goals_attachEvents() {
 
     goals_formatValue(value, unit) {
     if (!value) return '0';
-    
+
     // Round to 2 decimals max, strip trailing zeros
     const rounded = Math.round(value * 100) / 100;
-    
+
     // Format number with commas, keep decimals if they exist
     const formatted = rounded.toLocaleString('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
     });
-    
-    // Return with unit
+
+    // Return with unit (escape custom units for XSS protection)
     if (unit === 'dollars') return `$${formatted}`;
     if (unit === 'hours') return `${formatted}h`;
-    return unit ? `${formatted} ${unit}` : formatted;
+    return unit ? `${formatted} ${API.escapeHtml(unit)}` : formatted;
 },
 
 goals_formatValueAbbreviated(value, unit) {
@@ -2564,6 +2564,14 @@ goals_formatValueAbbreviated(value, unit) {
     if (unit === 'hours') return `${abbrev}h`;
     return unit ? `${abbrev} ${unit}` : abbrev;
 },
+
+    // SANITIZE COLOR (prevent CSS injection)
+    goals_sanitizeColor(color) {
+        if (!color) return null;
+        // Only allow hex colors (#RRGGBB or #RGB format)
+        const hexPattern = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+        return hexPattern.test(color) ? color : null;
+    },
 
     // COUNTDOWN TIMER
     goals_getCountdownText(endDate) {
