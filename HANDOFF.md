@@ -1495,6 +1495,194 @@ profit_margin = (profit / final_price) * 100
 - Photo upload (drag & drop)
 - Crew assignment
 
+---
+
+## 🏗️ JOBS MODULE - IMPLEMENTATION BATTLE PLAN
+
+### Photo Storage Limits (Pro Tier Only)
+- **Per Job**: 3 photos max (before/during/after)
+- **Total Storage**: 50 MB bucket limit (Supabase free tier)
+- **Total Jobs**: 1,000 jobs limit
+- **Estimated Capacity**: ~16 KB per photo avg = 48KB per job × 1,000 jobs = 48 MB (safe margin)
+- **Tier Restriction**: Photos available **ONLY in Pro tier**
+
+### Implementation Phases
+
+**Phase 1: Core Foundation (3-4 hours) - BUILD THIS FIRST**
+1. Module structure + state management
+2. Jobs list view with cards
+3. Filters (status, payment, date range)
+4. Add/Edit job modal with:
+   - Lead dropdown
+   - Basic info (title, description, type, status, priority)
+   - Scheduling (date, time, duration)
+   - Financial inputs (material cost, labor rate/hours, quoted price, deposit)
+   - **Live profit calculation** (auto-updates as you type)
+5. Delete job with confirmation
+6. Quick stats bar (total revenue, profit, avg margin)
+
+**Phase 2: Advanced Features (2-3 hours)**
+7. Materials section (collapsible)
+   - Add/remove rows dynamically
+   - Name, quantity, unit, cost per unit, total
+   - Auto-sum material costs
+8. Deposit tracking
+   - Checkbox "Deposit Paid" with date
+   - Mark deposit paid from job card
+9. Invoice number generation
+10. Payment status dropdown
+11. Job detail view (read-only mode)
+
+**Phase 3: Premium Features (2-3 hours)**
+12. Crew members section (collapsible)
+    - Add/remove crew members
+    - Name, role, hours worked, hourly rate
+13. Photo upload (collapsible, **Pro tier only**)
+    - Drag & drop or file picker
+    - 3 photo limit with visual counter "2/3 photos used"
+    - Type selector (before/during/after)
+    - Photo preview grid with delete
+14. Complete job workflow
+    - Modal to enter final price and actual hours
+    - Auto-calculate final profit/margin
+    - Mark job as completed
+
+**Total Time: 7-10 hours**
+
+### Visual Mockups
+
+#### Jobs List View
+```
+┌────────────────────────────────────────────────────────────┐
+│ JOBS                                         + New Job     │
+├────────────────────────────────────────────────────────────┤
+│ Quick Stats: Revenue $45K | Profit $12K | Margin 27%      │
+│                                                            │
+│ Filters: [Status ▾] [Payment ▾] [Date ▾]                  │
+│                                                            │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│ │Kitchen Remod │ │Bathroom Rep. │ │Deck Build    │       │
+│ │John Smith    │ │Sarah Johnson │ │Mike Davis    │       │
+│ │              │ │              │ │              │       │
+│ │🟢 In Progress│ │🔵 Scheduled  │ │🟡 Draft      │       │
+│ │Nov 12, 2025  │ │Nov 15, 2025  │ │TBD           │       │
+│ │              │ │              │ │              │       │
+│ │Quote: $12.5K │ │Quote: $3.2K  │ │Est: $8K      │       │
+│ │Profit: $3.2K │ │Deposit: ✓    │ │Draft         │       │
+│ │(26%)         │ │              │ │              │       │
+│ │[View][Edit]  │ │[View][Edit]  │ │[Edit][X]     │       │
+│ └──────────────┘ └──────────────┘ └──────────────┘       │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### Add/Edit Job Modal
+```
+┌────────────────────────────────────────────────────────────┐
+│ ✕ Add New Job                                              │
+├────────────────────────────────────────────────────────────┤
+│ BASIC INFO                                                 │
+│ Title: [Kitchen Remodel___________]                        │
+│ Lead:  [🔍 John Smith ▾]    Status: [Scheduled ▾]         │
+│ Type:  [Installation ▾]     Priority: [High ▾]            │
+│ Date:  [Nov 12, 2025] @ [2:00 PM]  Duration: [8] hrs      │
+│ Description: [____________________________________]         │
+│                                                            │
+│ FINANCIAL                                                  │
+│ Material Cost:    [$2,500] Labor Rate: [$50]/hr           │
+│ Estimated Hours:  [40] hrs Other: [$200]                  │
+│ Quoted Price:     [$12,500]                                │
+│ Deposit:          [$2,500] [☐] Paid                       │
+│                                                            │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │💰 PROFIT: $7,800 (62%) = $12,500 - $4,700 cost       │ │
+│ └────────────────────────────────────────────────────────┘ │
+│                                                            │
+│ ▾ MATERIALS (Optional)                                     │
+│ ▾ CREW (Optional)                                          │
+│ ▾ PHOTOS (Optional - Pro Only) 🔒                         │
+│                                                            │
+│                               [Cancel] [Save Job]          │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### Job Detail View
+```
+┌────────────────────────────────────────────────────────────┐
+│ ← Back   Kitchen Remodel              [Edit][Complete]    │
+├────────────────────────────────────────────────────────────┤
+│ Lead: John Smith (555-1234) | 🟢 In Progress              │
+│ Nov 12, 2025 @ 2:00 PM | 8 hours | Installation           │
+│                                                            │
+│ ┌────────────────────────────────────────────────────────┐ │
+│ │ FINANCIAL                                              │ │
+│ │ Revenue:  $12,500                                      │ │
+│ │ - Materials: -$2,500                                   │ │
+│ │ - Labor: -$2,000 (40 hrs × $50/hr)                    │ │
+│ │ - Other: -$200                                         │ │
+│ │ Profit: $7,800 (62%)                                   │ │
+│ │ Deposit: $2,500 ✓ Paid Nov 1                          │ │
+│ └────────────────────────────────────────────────────────┘ │
+│                                                            │
+│ MATERIALS (3 items)                                        │
+│ • Oak Cabinets × 12 @ $150 = $1,800                       │
+│ • Granite × 1 @ $500 = $500                               │
+│ • Hardware × 1 @ $200 = $200                              │
+│                                                            │
+│ CREW (2 members)                                           │
+│ • Mike J. - Lead Carpenter - 24 hrs @ $50/hr              │
+│ • Tom W. - Assistant - 16 hrs @ $35/hr                    │
+│                                                            │
+│ PHOTOS (3/3) 🔒 Pro Only                                  │
+│ ┌────┐ ┌────┐ ┌────┐                                     │
+│ │📷 │ │📷 │ │📷 │ Before | During | After             │
+│ └────┘ └────┘ └────┘                                     │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Build Checklist
+
+**Files to Create/Modify:**
+- ✅ `Jobs.js` - Main module (create from scratch)
+- ✅ `api.js` - Already has 30+ Jobs methods
+- ✅ Database - Already migrated with all fields
+- ✅ Storage - Already set up with policies
+
+**Step-by-Step Build Order:**
+
+**Session 1: Foundation (1-2 hours)**
+- [ ] Create Jobs.js module structure
+- [ ] Add state management (jobs, leads, filters, editingJob)
+- [ ] Build jobs_init() - load jobs and leads
+- [ ] Build jobs_render() - main render function
+- [ ] Build jobs_renderStatsBar() - quick stats
+- [ ] Build jobs_renderFilters() - status/payment/date filters
+- [ ] Build jobs_renderJobsGrid() - card layout
+
+**Session 2: Add/Edit Modal (2 hours)**
+- [ ] Build jobs_renderAddEditModal() - full form
+- [ ] Build jobs_calculateProfit() - live calculation
+- [ ] Build jobs_handleSave() - create/update logic
+- [ ] Build jobs_renderLeadDropdown() - searchable dropdown
+- [ ] Add form validation
+- [ ] Test create/update/delete flows
+
+**Session 3: Advanced Features (2 hours)**
+- [ ] Build materials section (collapsible)
+- [ ] Add/remove material rows dynamically
+- [ ] Auto-sum material costs
+- [ ] Build deposit tracking UI
+- [ ] Build invoice generation
+- [ ] Build job detail view (read-only)
+
+**Session 4: Premium Features (2-3 hours)**
+- [ ] Build crew section (collapsible)
+- [ ] Add/remove crew members
+- [ ] Build photo upload UI (Pro tier gate)
+- [ ] Integrate with Supabase Storage
+- [ ] Photo counter "2/3 used"
+- [ ] Complete job workflow
+- [ ] Final testing & polish
+
 ### Database Indexes to Add
 
 ```sql
