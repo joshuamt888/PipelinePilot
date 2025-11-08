@@ -7,11 +7,12 @@ window.GoalsModule = {
         failedGoals: [],
         stats: null,
         container: 'goals-content',
-        currentFilter: 'all', // 'all', 'active', 'completed'
+        currentFilter: 'active', // 'active' or 'completed'
         editingGoalId: null,
         availableTasks: [],
         selectedTaskIds: [],
-        taskLinkTab: 'existing'
+        taskLinkTab: 'existing',
+        searchQuery: '' // Search filter
     },
 
     // INIT
@@ -122,8 +123,9 @@ async goals_loadAvailableTasks() {
         // Wait for fade out
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Change filter
+        // Change filter and clear search when switching tabs
         this.state.currentFilter = newFilter;
+        this.state.searchQuery = '';
 
         // Re-render (will fade back in)
         this.goals_render();
@@ -202,7 +204,7 @@ async goals_loadAvailableTasks() {
     // GOALS GRID
     goals_renderGoalsGrid() {
         let goalsToShow = [];
-        let sectionTitle = 'All Goals';
+        let sectionTitle = 'Active Goals';
 
         if (this.state.currentFilter === 'active') {
             goalsToShow = this.state.activeGoals;
@@ -210,15 +212,33 @@ async goals_loadAvailableTasks() {
         } else if (this.state.currentFilter === 'completed') {
             goalsToShow = this.state.completedGoals;
             sectionTitle = 'Completed Goals';
-        } else {
-            goalsToShow = [...this.state.activeGoals, ...this.state.completedGoals];
+        }
+
+        // Apply search filter
+        if (this.state.searchQuery.trim()) {
+            const query = this.state.searchQuery.toLowerCase();
+            goalsToShow = goalsToShow.filter(goal =>
+                goal.title.toLowerCase().includes(query)
+            );
         }
 
         return `
             <div class="goals-section">
                 <div class="goals-section-header">
                     <h2 class="goals-section-title">${sectionTitle}</h2>
-                    ${goalsToShow.length > 0 ? `<span class="goals-section-count">${goalsToShow.length}</span>` : ''}
+                    <div class="goals-search-container">
+                        <svg class="goals-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                            <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <input type="text"
+                               id="goalsSearchInput"
+                               class="goals-search-input"
+                               placeholder="Search goals..."
+                               value="${this.state.searchQuery}"
+                               data-action="search-goals">
+                    </div>
+                    ${goalsToShow.length > 0 || this.state.searchQuery ? `<span class="goals-section-count">${goalsToShow.length}</span>` : ''}
                 </div>
 
                 ${goalsToShow.length > 0 ? `
@@ -269,22 +289,20 @@ async goals_loadAvailableTasks() {
 
         const statusClass = isCompleted ? 'completed' : isAtRisk ? 'at-risk' : 'active';
         const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
-        
-        const autoTrackIcon = goal.auto_track ? 
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' :
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+        // Show badge for task list goals, otherwise just manual
+        const goalTypeBadge = goal.goal_type === 'task_list'
+            ? '<span class="goals-card-badge goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Task List</span>'
+            : '<span class="goals-card-badge goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Manual</span>';
 
         return `
             <div class="goals-card goals-card-${statusClass}" data-action="view-goal" data-id="${goal.id}">
                 ${cardColor ? `<div class="goals-card-accent" style="background: ${cardColor}"></div>` : ''}
-                
+
                 <div class="goals-card-header">
                     <h3 class="goals-card-title">${API.escapeHtml(goal.title)}</h3>
                     <div class="goals-card-meta">
-                        <span class="goals-card-badge ${goal.auto_track ? 'goals-badge-auto' : 'goals-badge-manual'}">
-                            ${autoTrackIcon}
-                            ${goal.auto_track ? 'Auto' : 'Manual'}
-                        </span>
+                        ${goalTypeBadge}
                         <span class="goals-card-period">${this.goals_formatPeriod(goal.period)}</span>
                     </div>
                 </div>
@@ -387,16 +405,6 @@ async goals_loadAvailableTasks() {
                                         </svg>
                                         <span class="goals-tracking-title">Manual</span>
                                         <span class="goals-tracking-desc">Update yourself</span>
-                                    </div>
-                                </label>
-                                <label class="goals-tracking-radio">
-                                    <input type="radio" name="tracking" value="auto">
-                                    <div class="goals-tracking-card">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-                                        </svg>
-                                        <span class="goals-tracking-title">Auto-Track</span>
-                                        <span class="goals-tracking-desc">From data</span>
                                     </div>
                                 </label>
                                 <label class="goals-tracking-radio">
@@ -577,18 +585,6 @@ async goals_loadAvailableTasks() {
                                 <span class="goals-input-hint" id="customUnitCounter">25 characters remaining</span>
                             </div>
 
-                            <!-- Auto-Track Specific -->
-                            <div id="autoTrackOptions" class="goals-auto-track-config" style="display: none;">
-                                <div class="goals-form-group-v2">
-                                    <label class="goals-form-label-v2">Auto-Track Source</label>
-                                    <select id="goalTrackType" class="goals-form-select-v2">
-                                        <option value="revenue">Track from Jobs (Revenue)</option>
-                                        <option value="leads">Track from Leads Created</option>
-                                        <option value="tasks">Track from Tasks Completed</option>
-                                    </select>
-                                </div>
-                            </div>
-
                             <div class="goals-form-group-v2">
                                 <label class="goals-form-label-v2">⏱ Time Period</label>
                                 <div class="goals-period-pills">
@@ -753,8 +749,6 @@ async goals_loadAvailableTasks() {
 
         // Determine goal type
         const isTaskList = goal.goal_type === 'task_list';
-        const isAuto = goal.auto_track && !isTaskList;
-        const isManual = !goal.auto_track && !isTaskList;
 
         // For task list goals, load linked tasks
         if (isTaskList) {
@@ -806,14 +800,6 @@ async goals_loadAvailableTasks() {
                                         <div style="font-weight: 600; color: var(--text-primary);">Task Checklist</div>
                                         <div style="font-size: 0.875rem; color: var(--text-secondary);">Complete tasks to track progress</div>
                                     </div>
-                                ` : isAuto ? `
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
-                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/>
-                                    </svg>
-                                    <div>
-                                        <div style="font-weight: 600; color: var(--text-primary);">Auto-Track</div>
-                                        <div style="font-size: 0.875rem; color: var(--text-secondary);">Automatically tracked from ${goal.goal_type === 'revenue' ? 'Jobs (Revenue)' : goal.goal_type === 'leads' ? 'Leads Created' : 'Tasks Completed'}</div>
-                                    </div>
                                 ` : `
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
@@ -825,8 +811,7 @@ async goals_loadAvailableTasks() {
                                     </div>
                                 `}
                             </div>
-                            <input type="hidden" name="tracking" value="${isTaskList ? 'task_list' : isAuto ? 'auto' : 'manual'}">
-                            ${isAuto ? `<input type="hidden" id="goalTrackType" value="${goal.goal_type}">` : ''}
+                            <input type="hidden" name="tracking" value="${isTaskList ? 'task_list' : 'manual'}">
                         </div>
 
                         ${isTaskList ? `
@@ -1350,23 +1335,16 @@ async goals_loadAvailableTasks() {
     radio.addEventListener('change', (e) => {
         const taskChecklistFields = document.getElementById('taskChecklistFields');
         const autoManualFields = document.getElementById('autoManualFields');
-        const autoOptions = document.getElementById('autoTrackOptions');
 
         // Show/hide based on selection
         if (e.target.value === 'task_list') {
-            // Show task checklist fields, hide auto/manual fields
+            // Show task checklist fields, hide manual fields
             if (taskChecklistFields) taskChecklistFields.style.display = 'block';
             if (autoManualFields) autoManualFields.style.display = 'none';
-        } else if (e.target.value === 'auto') {
-            // Show auto/manual fields, hide task checklist fields
-            if (taskChecklistFields) taskChecklistFields.style.display = 'none';
-            if (autoManualFields) autoManualFields.style.display = 'block';
-            if (autoOptions) autoOptions.style.display = 'block';
         } else {
-            // Manual - show auto/manual fields, hide auto options and task checklist
+            // Manual - show manual fields, hide task checklist
             if (taskChecklistFields) taskChecklistFields.style.display = 'none';
             if (autoManualFields) autoManualFields.style.display = 'block';
-            if (autoOptions) autoOptions.style.display = 'none';
         }
     });
 });
@@ -1639,10 +1617,7 @@ goals_showGoalDetailModal(goalId) {
                     <div class="goals-detail-info-row">
                         <span class="goals-detail-info-label">Tracking</span>
                         <span class="goals-detail-info-value">
-                            ${goal.auto_track ? 
-                                '<span class="goals-badge-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-width="2"/></svg> Auto-tracking enabled</span>' : 
-                                '<span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> Manual entry</span>'
-                            }
+                            <span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> Manual entry</span>
                         </span>
                     </div>
                     ${goal.is_recurring ? `
@@ -1683,7 +1658,7 @@ goals_showGoalDetailModal(goalId) {
                         </svg>
                         Edit Goal
                     </button>
-                    ${!isCompleted && !goal.auto_track ? `
+                    ${!isCompleted && goal.goal_type !== 'task_list' ? `
                         <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
@@ -2038,13 +2013,22 @@ goals_attachEvents() {
                 document.querySelector('.goals-modal-overlay')?.remove();
                 break;
             case 'filter-active':
-                await this.goals_smoothFilterChange(this.state.currentFilter === 'active' ? 'all' : 'active');
+                await this.goals_smoothFilterChange('active');
                 break;
             case 'filter-completed':
-                await this.goals_smoothFilterChange(this.state.currentFilter === 'completed' ? 'all' : 'completed');
+                await this.goals_smoothFilterChange('completed');
                 break;
         }
     };
+
+    // Search input handler
+    const searchInput = container.querySelector('#goalsSearchInput');
+    if (searchInput) {
+        searchInput.oninput = (e) => {
+            this.state.searchQuery = e.target.value;
+            this.goals_render();
+        };
+    }
 },
 
     async goals_createGoal() {
@@ -2168,90 +2152,7 @@ goals_attachEvents() {
             goalData.target_value = totalTasks;
             goalData.current_value = 0;
             goalData.unit = 'tasks';
-            goalData.auto_track = true; // Task-list goals auto-update via trigger
-            
-        } else if (trackingMethod === 'auto') {
-            // Auto-Track Goal
-            const trackType = document.getElementById('goalTrackType').value;
-            const targetValueStr = document.getElementById('goalTarget').value.trim();
-            const targetValue = parseFloat(targetValueStr);
 
-            if (!targetValueStr || isNaN(targetValue) || targetValue <= 0 || targetValue > 99999999.99) {
-                const targetInput = document.getElementById('goalTarget');
-                const targetCounter = document.querySelector('#targetCounter');
-
-                // Add error styling
-                targetInput.style.borderColor = 'var(--danger)';
-                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
-
-                // Update hint text
-                if (targetCounter) {
-                    targetCounter.textContent = !targetValueStr ? 'Target value is required' : targetValue > 99999999.99 ? 'Value too large' : 'Must be greater than 0';
-                    targetCounter.style.color = 'var(--danger)';
-                    targetCounter.style.fontWeight = '600';
-                }
-
-                targetInput.focus();
-
-                // Remove error styling when user types
-                targetInput.addEventListener('input', function clearError() {
-                    targetInput.style.borderColor = '';
-                    targetInput.style.boxShadow = '';
-                    if (targetCounter) {
-                        const length = targetInput.value.length;
-                        targetCounter.textContent = `${8 - length} digits remaining`;
-                        targetCounter.style.color = 'var(--text-tertiary)';
-                        targetCounter.style.fontWeight = '500';
-                    }
-                }, { once: true });
-
-                return false;
-            }
-            
-            const unitSelect = document.getElementById('goalUnit').value;
-            let unitValue = unitSelect;
-            if (unitSelect === 'custom') {
-                const customUnit = document.getElementById('goalCustomUnit').value.trim();
-                if (!customUnit) {
-                    const customUnitInput = document.getElementById('goalCustomUnit');
-                    const customUnitCounter = document.querySelector('#customUnitCounter');
-
-                    // Add error styling
-                    customUnitInput.style.borderColor = 'var(--danger)';
-                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
-
-                    // Update hint text
-                    if (customUnitCounter) {
-                        customUnitCounter.textContent = 'Custom unit name is required';
-                        customUnitCounter.style.color = 'var(--danger)';
-                        customUnitCounter.style.fontWeight = '600';
-                    }
-
-                    customUnitInput.focus();
-
-                    // Remove error styling when user types
-                    customUnitInput.addEventListener('input', function clearError() {
-                        customUnitInput.style.borderColor = '';
-                        customUnitInput.style.boxShadow = '';
-                        if (customUnitCounter) {
-                            const length = customUnitInput.value.length;
-                            customUnitCounter.textContent = `${25 - length} characters remaining`;
-                            customUnitCounter.style.color = 'var(--text-tertiary)';
-                            customUnitCounter.style.fontWeight = '500';
-                        }
-                    }, { once: true });
-
-                    return false;
-                }
-                unitValue = customUnit;
-            }
-
-            goalData.goal_type = trackType;
-            goalData.target_value = targetValue;
-            goalData.current_value = 0;
-            goalData.unit = unitValue;
-            goalData.auto_track = true;
-            
         } else {
             // Manual Goal
             const targetValueStr = document.getElementById('goalTarget').value.trim();
@@ -2331,7 +2232,6 @@ goals_attachEvents() {
             goalData.target_value = targetValue;
             goalData.current_value = 0;
             goalData.unit = unitValue;
-            goalData.auto_track = false;
         }
 
         // Create the goal
@@ -2429,11 +2329,23 @@ goals_attachEvents() {
                 const updatedTasks = await API.getGoalTasks(goalId);
                 const totalTasks = updatedTasks.length;
 
-                // Update goal with new title, color, and target_value (total task count)
+                // Get all form values including period, dates, description, and recurring
+                const activePeriod = document.querySelector('.goals-period-pill.active')?.dataset.period;
+                const startDate = document.getElementById('goalStartDate').value;
+                const endDate = document.getElementById('goalEndDate').value;
+                const description = document.getElementById('goalDescription').value.trim();
+                const isRecurring = document.getElementById('goalRecurring')?.checked || false;
+
+                // Update goal with all fields to preserve period and other settings
                 const updates = {
                     title: title,
                     color: selectedColor || null,
-                    target_value: totalTasks  // Update target to reflect current total tasks
+                    target_value: totalTasks,  // Update target to reflect current total tasks
+                    period: activePeriod,
+                    start_date: startDate,
+                    end_date: endDate,
+                    description: description || null,
+                    is_recurring: isRecurring
                 };
 
                 await API.updateGoal(goalId, updates);
@@ -2498,20 +2410,15 @@ goals_attachEvents() {
                     unitValue = customUnit;
                 }
 
-                // Get goal_type for auto goals from hidden input
-                const goalType = trackingMethod === 'auto' ?
-                    document.getElementById('goalTrackType')?.value : 'custom';
-
                 const updates = {
                     title: title,
                     description: description || null,
-                    goal_type: goalType,
+                    goal_type: 'custom',
                     target_value: targetValue,
                     unit: unitValue,
                     period: activePeriod,
                     start_date: startDate,
                     end_date: endDate,
-                    auto_track: trackingMethod === 'auto',
                     is_recurring: document.getElementById('goalRecurring')?.checked || false,
                     color: selectedColor || null
                 };
@@ -2902,7 +2809,9 @@ goals_formatValueAbbreviated(value, unit) {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
 }
 
 .goals-section-title {
@@ -2910,6 +2819,45 @@ goals_formatValueAbbreviated(value, unit) {
     font-weight: 800;
     color: var(--text-primary);
     margin: 0;
+}
+
+.goals-search-container {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+    min-width: 200px;
+}
+
+.goals-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.125rem;
+    height: 1.125rem;
+    stroke: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.goals-search-input {
+    width: 100%;
+    padding: 0.625rem 1rem 0.625rem 2.75rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+}
+
+.goals-search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.goals-search-input::placeholder {
+    color: var(--text-tertiary);
 }
 
 .goals-section-count {
@@ -3349,11 +3297,6 @@ goals_formatValueAbbreviated(value, unit) {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-.goals-badge-auto {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
-    color: var(--success);
 }
 
 .goals-badge-manual {
@@ -3831,16 +3774,6 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-tracking-radio input:checked + .goals-tracking-card .goals-tracking-title {
     color: var(--primary);
-}
-
-.goals-auto-track-config {
-    margin-top: 1rem;
-    animation: goalsSlideDown 0.3s ease;
-}
-
-@keyframes goalsSlideDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .goals-checkbox-v2 {
