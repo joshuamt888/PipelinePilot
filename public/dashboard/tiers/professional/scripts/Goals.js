@@ -2727,11 +2727,80 @@ goals_formatValueAbbreviated(value, unit) {
     // BATCH OPERATIONS
     goals_toggleBatchEditMode() {
         this.state.batchEditMode = !this.state.batchEditMode;
+
         if (!this.state.batchEditMode) {
             // Clear selections when exiting batch mode
             this.state.selectedGoalIds = [];
         }
-        this.goals_render();
+
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const allCards = container.querySelectorAll('.goals-card');
+        const batchBtn = container.querySelector('[data-action="toggle-batch-edit"]');
+
+        if (this.state.batchEditMode) {
+            // ENTER BATCH MODE - smooth transition
+            allCards.forEach(card => {
+                card.classList.add('batch-mode');
+                card.dataset.action = 'toggle-goal-selection';
+
+                // Add checkbox
+                const goalId = card.dataset.id;
+                const checkbox = document.createElement('div');
+                checkbox.className = 'goals-card-checkbox';
+                checkbox.innerHTML = `
+                    <input type="checkbox"
+                           class="goals-checkbox-input"
+                           data-goal-id="${goalId}">
+                    <div class="goals-checkbox-custom">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                `;
+                card.insertBefore(checkbox, card.firstChild);
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.add('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Cancel (0 selected)
+                `;
+            }
+
+        } else {
+            // EXIT BATCH MODE - smooth transition
+            allCards.forEach(card => {
+                card.classList.remove('batch-mode', 'selected');
+                card.dataset.action = 'view-goal';
+
+                // Remove checkbox
+                const checkbox = card.querySelector('.goals-card-checkbox');
+                if (checkbox) checkbox.remove();
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.remove('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Edit Multiple
+                `;
+            }
+
+            // Remove batch actions bar
+            const batchActions = container.querySelector('.goals-batch-actions');
+            if (batchActions) batchActions.remove();
+        }
     },
 
     goals_toggleGoalSelection(goalId) {
@@ -2743,7 +2812,105 @@ goals_formatValueAbbreviated(value, unit) {
             // Add to selection
             this.state.selectedGoalIds.push(goalId);
         }
-        this.goals_render();
+
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        // Update the specific card
+        const card = container.querySelector(`[data-id="${goalId}"]`);
+        if (card) {
+            if (index > -1) {
+                // Was deselected
+                card.classList.remove('selected');
+                const checkbox = card.querySelector('.goals-checkbox-input');
+                if (checkbox) checkbox.checked = false;
+            } else {
+                // Was selected
+                card.classList.add('selected');
+                const checkbox = card.querySelector('.goals-checkbox-input');
+                if (checkbox) checkbox.checked = true;
+            }
+        }
+
+        // Update button text
+        const selectedCount = this.state.selectedGoalIds.length;
+        const batchBtn = container.querySelector('[data-action="toggle-batch-edit"]');
+        if (batchBtn) {
+            batchBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cancel (${selectedCount} selected)
+            `;
+        }
+
+        // Update or create batch actions bar
+        this.goals_updateBatchActionsBar();
+    },
+
+    goals_updateBatchActionsBar() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const selectedCount = this.state.selectedGoalIds.length;
+        const goalsGrid = container.querySelector('.goals-grid');
+        let batchActions = container.querySelector('.goals-batch-actions');
+
+        if (selectedCount > 0) {
+            // Create or update batch actions bar
+            const actionsHTML = `
+                ${this.state.currentFilter === 'active' ? `
+                    <button class="goals-batch-btn goals-batch-btn-complete" data-action="batch-complete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
+                            <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Complete Selected (${selectedCount})
+                    </button>
+                ` : ''}
+                ${this.state.currentFilter === 'completed' ? `
+                    <button class="goals-batch-btn goals-batch-btn-reset" data-action="batch-reset">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Reset Selected (${selectedCount})
+                    </button>
+                ` : ''}
+                <button class="goals-batch-btn goals-batch-btn-delete" data-action="batch-delete">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Delete Selected (${selectedCount})
+                </button>
+            `;
+
+            if (!batchActions) {
+                // Create new bar
+                batchActions = document.createElement('div');
+                batchActions.className = 'goals-batch-actions';
+                batchActions.style.opacity = '0';
+                batchActions.innerHTML = actionsHTML;
+                goalsGrid.parentNode.appendChild(batchActions);
+
+                // Fade in
+                setTimeout(() => {
+                    batchActions.style.transition = 'opacity 0.3s ease';
+                    batchActions.style.opacity = '1';
+                }, 10);
+            } else {
+                // Update existing bar
+                batchActions.innerHTML = actionsHTML;
+            }
+        } else {
+            // Remove batch actions bar
+            if (batchActions) {
+                batchActions.style.opacity = '0';
+                setTimeout(() => batchActions.remove(), 300);
+            }
+        }
     },
 
     async goals_batchComplete() {
@@ -3065,11 +3232,13 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-card.batch-mode {
     cursor: pointer;
     position: relative;
+    transition: all 0.2s ease;
 }
 
 .goals-card.batch-mode.selected {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
 }
 
 .goals-card-checkbox {
@@ -3077,6 +3246,16 @@ goals_formatValueAbbreviated(value, unit) {
     top: 1rem;
     right: 1rem;
     z-index: 10;
+    opacity: 0;
+    transform: scale(0.8);
+    animation: checkboxFadeIn 0.2s ease forwards;
+}
+
+@keyframes checkboxFadeIn {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .goals-checkbox-input {
