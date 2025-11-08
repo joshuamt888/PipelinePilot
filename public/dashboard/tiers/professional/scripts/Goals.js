@@ -11,8 +11,7 @@ window.GoalsModule = {
         editingGoalId: null,
         availableTasks: [],
         selectedTaskIds: [],
-        taskLinkTab: 'existing',
-        searchQuery: '' // Search filter
+        taskLinkTab: 'existing'
     },
 
     // INIT
@@ -123,9 +122,8 @@ async goals_loadAvailableTasks() {
         // Wait for fade out
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Change filter and clear search when switching tabs
+        // Change filter
         this.state.currentFilter = newFilter;
-        this.state.searchQuery = '';
 
         // Re-render (will fade back in)
         this.goals_render();
@@ -214,14 +212,6 @@ async goals_loadAvailableTasks() {
             sectionTitle = 'Completed Goals';
         }
 
-        // Apply search filter
-        if (this.state.searchQuery.trim()) {
-            const query = this.state.searchQuery.toLowerCase();
-            goalsToShow = goalsToShow.filter(goal =>
-                goal.title.toLowerCase().includes(query)
-            );
-        }
-
         return `
             <div class="goals-section">
                 <div class="goals-section-header">
@@ -235,10 +225,9 @@ async goals_loadAvailableTasks() {
                                id="goalsSearchInput"
                                class="goals-search-input"
                                placeholder="Search goals..."
-                               value="${this.state.searchQuery}"
-                               data-action="search-goals">
+                               autocomplete="off">
                     </div>
-                    ${goalsToShow.length > 0 || this.state.searchQuery ? `<span class="goals-section-count">${goalsToShow.length}</span>` : ''}
+                    <span class="goals-section-count" id="goalsCount">${goalsToShow.length}</span>
                 </div>
 
                 ${goalsToShow.length > 0 ? `
@@ -2034,12 +2023,34 @@ goals_attachEvents() {
         }
     };
 
-    // Search input handler
+    // Search input handler - client-side filtering only
     const searchInput = container.querySelector('#goalsSearchInput');
     if (searchInput) {
         searchInput.oninput = (e) => {
-            this.state.searchQuery = e.target.value;
-            this.goals_render();
+            const query = e.target.value.toLowerCase().trim();
+            const cards = container.querySelectorAll('.goals-card');
+            const countBadge = container.querySelector('#goalsCount');
+
+            if (!query) {
+                // Show all cards
+                cards.forEach(card => card.style.display = '');
+                if (countBadge) countBadge.textContent = cards.length;
+            } else {
+                // Filter cards by title
+                let visibleCount = 0;
+                cards.forEach(card => {
+                    const titleEl = card.querySelector('.goals-card-title');
+                    const title = titleEl ? titleEl.textContent.toLowerCase() : '';
+
+                    if (title.includes(query)) {
+                        card.style.display = '';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                if (countBadge) countBadge.textContent = visibleCount;
+            }
         };
     }
 },
@@ -2453,10 +2464,20 @@ goals_attachEvents() {
     // API ACTIONS - UPDATE PROGRESS
     async goals_updateProgress(goalId, newValue) {
         try {
+            const goal = this.state.goals.find(g => g.id === goalId);
+            const wasCompleted = goal && goal.progress >= 100;
+            const willBeCompleted = goal && (newValue / goal.target_value) * 100 >= 100;
+
             await API.updateGoalProgress(goalId, newValue);
             await API.checkGoalCompletion();
 
             await this.goals_loadData();
+
+            // If we're moving from completed to active, switch to active tab
+            if (wasCompleted && !willBeCompleted && this.state.currentFilter === 'completed') {
+                this.state.currentFilter = 'active';
+            }
+
             this.goals_render();
 
         } catch (error) {
