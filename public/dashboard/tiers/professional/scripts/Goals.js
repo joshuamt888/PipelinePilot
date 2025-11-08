@@ -3347,6 +3347,10 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-badge-manual {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
     color: var(--primary);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .goals-card-badge svg {
@@ -3434,6 +3438,9 @@ goals_formatValueAbbreviated(value, unit) {
     font-size: 0.9rem;
     color: var(--text-secondary);
     font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .goals-card-footer {
@@ -4106,6 +4113,8 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-detail-info-value {
     font-weight: 600;
     color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .goals-detail-info-value svg {
