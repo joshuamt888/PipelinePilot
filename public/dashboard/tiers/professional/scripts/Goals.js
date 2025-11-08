@@ -2469,6 +2469,12 @@ goals_attachEvents() {
             const willBeCompleted = goal && (newValue / goal.target_value) * 100 >= 100;
 
             await API.updateGoalProgress(goalId, newValue);
+
+            // If moving from completed to active, update status in database
+            if (wasCompleted && !willBeCompleted && goal.status === 'completed') {
+                await API.updateGoal(goalId, { status: 'active' });
+            }
+
             await API.checkGoalCompletion();
 
             await this.goals_loadData();
