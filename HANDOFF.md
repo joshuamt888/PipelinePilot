@@ -35,12 +35,12 @@
 - **Bugs:** None
 
 ### Frontend - Professional Tier
-- **Status:** 🔨 85% COMPLETE
+- **Status:** 🔨 80% COMPLETE
 - **Lead Limit:** 5000
 - **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals ✅, Settings
-- **Modules In Progress:** Notes (0%), Analytics (0%), Jobs (0%)
+- **Modules In Progress:** Notes (0%), Analytics (0%), Proposals (0%), Jobs (0%)
 - **Icon System:** 95% complete (Lucide SVG - only Settings needs update)
-- **Build Order:** Goals ✅ → Notes → Analytics → Jobs → Settings Preferences
+- **Build Order:** Goals ✅ → Notes → Analytics → Proposals → Jobs → Settings Preferences
 
 ---
 
@@ -1172,8 +1172,9 @@ Run this checklist AFTER completing Jobs, Settings, and Mobile:
 1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals
 2. 🔨 **Notes** - Quick note-taking with tagging, search, and lead linking
 3. 🔨 **Analytics** - Revenue tracking, pipeline analytics, goal insights
-4. 🔨 **Jobs** - Job management with profit tracking and lead linking
-5. 🔨 **Settings Preferences** - Theme, windowing, customization options
+4. 🔨 **Proposals** - Quote builder with client acceptance and auto-job creation
+5. 🔨 **Jobs** - Job management with profit tracking and lead linking
+6. 🔨 **Settings Preferences** - Theme, windowing, customization options
 
 **Why Pro First:**
 - Establishes the feature ceiling
@@ -1291,8 +1292,8 @@ team_analytics (company_id, metrics, date)
 └─────────────────────────────────────────────┘
 ```
 
-**Current Status:** Phase 1 (Pro Tier) - 85% complete
-**Next Milestones:** Notes → Analytics → Jobs → Phase 2
+**Current Status:** Phase 1 (Pro Tier) - 80% complete
+**Next Milestones:** Notes → Analytics → Proposals → Jobs → Phase 2
 
 ---
 
