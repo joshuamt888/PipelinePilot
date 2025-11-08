@@ -1596,15 +1596,15 @@ goals_showGoalDetailModal(goalId) {
                     <div class="goals-detail-progress-info">
                         <div class="goals-detail-stat">
                             <div class="goals-detail-stat-label">Current</div>
-                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.current_value, goal.unit)}</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.current_value)}</div>
                         </div>
                         <div class="goals-detail-stat">
                             <div class="goals-detail-stat-label">Target</div>
-                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.target_value, goal.unit)}</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.target_value)}</div>
                         </div>
                         <div class="goals-detail-stat">
                             <div class="goals-detail-stat-label">Remaining</div>
-                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.remaining, goal.unit)}</div>
+                            <div class="goals-detail-stat-value">${this.goals_formatValueAbbreviated(goal.remaining)}</div>
                         </div>
                         <div class="goals-detail-stat">
                             <div class="goals-detail-stat-label">Days Left</div>
@@ -1617,7 +1617,7 @@ goals_showGoalDetailModal(goalId) {
                     <div class="goals-detail-info-row">
                         <span class="goals-detail-info-label">Tracking</span>
                         <span class="goals-detail-info-value">
-                            <span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> Manual entry</span>
+                            <span class="goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2"/></svg> ${goal.unit ? goal.unit.charAt(0).toUpperCase() + goal.unit.slice(1) : 'Manual entry'}</span>
                         </span>
                     </div>
                     ${goal.is_recurring ? `
