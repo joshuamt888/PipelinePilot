@@ -11,7 +11,10 @@ window.GoalsModule = {
         editingGoalId: null,
         availableTasks: [],
         selectedTaskIds: [],
-        taskLinkTab: 'existing'
+        taskLinkTab: 'existing',
+        batchEditMode: false,
+        selectedGoalIds: [],
+        goalLimit: 1000
     },
 
     // INIT
@@ -212,8 +215,29 @@ async goals_loadAvailableTasks() {
             sectionTitle = 'Completed Goals';
         }
 
+        const totalGoals = this.state.goals.length;
+        const selectedCount = this.state.selectedGoalIds.length;
+
         return `
             <div class="goals-section">
+                ${goalsToShow.length > 0 ? `
+                    <div class="goals-limit-bar">
+                        <div class="goals-limit-counter">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem;">
+                                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>${totalGoals} / ${this.state.goalLimit} goals</span>
+                        </div>
+                        <button class="goals-btn-batch-edit ${this.state.batchEditMode ? 'active' : ''}" data-action="toggle-batch-edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            ${this.state.batchEditMode ? `Cancel (${selectedCount} selected)` : 'Edit Multiple'}
+                        </button>
+                    </div>
+                ` : ''}
+
                 <div class="goals-section-header">
                     <h2 class="goals-section-title">${sectionTitle}</h2>
                     <div class="goals-search-container">
@@ -234,6 +258,35 @@ async goals_loadAvailableTasks() {
                     <div class="goals-grid">
                         ${goalsToShow.map(goal => this.goals_renderGoalCard(goal)).join('')}
                     </div>
+                    ${this.state.batchEditMode && selectedCount > 0 ? `
+                        <div class="goals-batch-actions">
+                            ${this.state.currentFilter === 'active' ? `
+                                <button class="goals-batch-btn goals-batch-btn-complete" data-action="batch-complete">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-width="2" stroke-linecap="round"/>
+                                        <polyline points="22 4 12 14.01 9 11.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Complete Selected (${selectedCount})
+                                </button>
+                            ` : ''}
+                            ${this.state.currentFilter === 'completed' ? `
+                                <button class="goals-batch-btn goals-batch-btn-reset" data-action="batch-reset">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <polyline points="23 4 23 10 17 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Reset Selected (${selectedCount})
+                                </button>
+                            ` : ''}
+                            <button class="goals-batch-btn goals-batch-btn-delete" data-action="batch-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Delete Selected (${selectedCount})
+                            </button>
+                        </div>
+                    ` : ''}
                 ` : `
                     <div class="goals-empty">
                         <svg class="goals-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -279,6 +332,7 @@ async goals_loadAvailableTasks() {
 
         const statusClass = isCompleted ? 'completed' : isAtRisk ? 'at-risk' : 'active';
         const cardColor = this.goals_sanitizeColor(goal.color);
+        const isSelected = this.state.selectedGoalIds.includes(goal.id);
 
         // Show badge for task list goals, otherwise just manual
         const goalTypeBadge = goal.goal_type === 'task_list'
@@ -286,8 +340,24 @@ async goals_loadAvailableTasks() {
             : '<span class="goals-card-badge goals-badge-manual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Manual</span>';
 
         return `
-            <div class="goals-card goals-card-${statusClass}" data-action="view-goal" data-id="${goal.id}">
+            <div class="goals-card goals-card-${statusClass} ${this.state.batchEditMode ? 'batch-mode' : ''} ${isSelected ? 'selected' : ''}"
+                 data-action="${this.state.batchEditMode ? 'toggle-goal-selection' : 'view-goal'}"
+                 data-id="${goal.id}">
                 ${cardColor ? `<div class="goals-card-accent" style="background: ${cardColor}"></div>` : ''}
+
+                ${this.state.batchEditMode ? `
+                    <div class="goals-card-checkbox">
+                        <input type="checkbox"
+                               class="goals-checkbox-input"
+                               ${isSelected ? 'checked' : ''}
+                               data-goal-id="${goal.id}">
+                        <div class="goals-checkbox-custom">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                ` : ''}
 
                 <div class="goals-card-header">
                     <h3 class="goals-card-title">${API.escapeHtml(goal.title)}</h3>
@@ -306,7 +376,7 @@ async goals_loadAvailableTasks() {
                     <div class="goals-progress-label">
     <span class="goals-progress-percentage">${progress}%</span>
     <span class="goals-progress-value">
-        ${goal.goal_type === 'task_list' 
+        ${goal.goal_type === 'task_list'
             ? `${goal.current_value} of ${goal.target_value} tasks complete`
             : `${this.goals_formatValue(goal.current_value, goal.unit)} / ${this.goals_formatValue(goal.target_value, goal.unit)}`
         }
@@ -2026,6 +2096,21 @@ goals_attachEvents() {
             case 'filter-completed':
                 await this.goals_smoothFilterChange('completed');
                 break;
+            case 'toggle-batch-edit':
+                this.goals_toggleBatchEditMode();
+                break;
+            case 'toggle-goal-selection':
+                this.goals_toggleGoalSelection(id);
+                break;
+            case 'batch-complete':
+                await this.goals_batchComplete();
+                break;
+            case 'batch-reset':
+                await this.goals_batchReset();
+                break;
+            case 'batch-delete':
+                this.goals_showBatchDeleteModal();
+                break;
         }
     };
 
@@ -2639,6 +2724,167 @@ goals_formatValueAbbreviated(value, unit) {
         }
     },
 
+    // BATCH OPERATIONS
+    goals_toggleBatchEditMode() {
+        this.state.batchEditMode = !this.state.batchEditMode;
+        if (!this.state.batchEditMode) {
+            // Clear selections when exiting batch mode
+            this.state.selectedGoalIds = [];
+        }
+        this.goals_render();
+    },
+
+    goals_toggleGoalSelection(goalId) {
+        const index = this.state.selectedGoalIds.indexOf(goalId);
+        if (index > -1) {
+            // Remove from selection
+            this.state.selectedGoalIds.splice(index, 1);
+        } else {
+            // Add to selection
+            this.state.selectedGoalIds.push(goalId);
+        }
+        this.goals_render();
+    },
+
+    async goals_batchComplete() {
+        if (this.state.selectedGoalIds.length === 0) return;
+
+        try {
+            // Complete all selected goals
+            for (const goalId of this.state.selectedGoalIds) {
+                const goal = this.state.goals.find(g => g.id === goalId);
+                if (!goal) continue;
+
+                if (goal.is_recurring) {
+                    // Increment counter and reset for recurring goals
+                    await API.updateGoal(goalId, {
+                        completion_count: (goal.completion_count || 0) + 1,
+                        current_value: 0,
+                        status: 'active'
+                    });
+                } else {
+                    // Mark as completed for normal goals
+                    await API.updateGoal(goalId, {
+                        status: 'completed'
+                    });
+                }
+            }
+
+            window.SteadyUtils.showToast(`Completed ${this.state.selectedGoalIds.length} goal(s)`, 'success');
+
+            // Reload and reset
+            this.state.selectedGoalIds = [];
+            this.state.batchEditMode = false;
+            await this.goals_loadData();
+            this.goals_render();
+
+        } catch (error) {
+            console.error('Batch complete error:', error);
+            window.SteadyUtils.showToast('Failed to complete goals', 'error');
+        }
+    },
+
+    async goals_batchReset() {
+        if (this.state.selectedGoalIds.length === 0) return;
+
+        try {
+            // Reset all selected goals to active
+            for (const goalId of this.state.selectedGoalIds) {
+                await API.updateGoal(goalId, {
+                    status: 'active',
+                    current_value: 0
+                });
+            }
+
+            window.SteadyUtils.showToast(`Reset ${this.state.selectedGoalIds.length} goal(s)`, 'success');
+
+            // Reload and reset
+            this.state.selectedGoalIds = [];
+            this.state.batchEditMode = false;
+            await this.goals_loadData();
+            this.goals_render();
+
+        } catch (error) {
+            console.error('Batch reset error:', error);
+            window.SteadyUtils.showToast('Failed to reset goals', 'error');
+        }
+    },
+
+    goals_showBatchDeleteModal() {
+        const count = this.state.selectedGoalIds.length;
+        if (count === 0) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'goals-modal-overlay show';
+        modal.innerHTML = `
+            <div class="goals-modal goals-modal-delete">
+                <div class="goals-modal-header-v2">
+                    <h2 class="goals-modal-title-v2">Delete ${count} Goal${count > 1 ? 's' : ''}?</h2>
+                    <button class="goals-modal-close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="goals-modal-body-v2">
+                    <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6;">
+                        Are you sure you want to delete ${count} goal${count > 1 ? 's' : ''}? This action cannot be undone.
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button class="goals-btn-secondary" onclick="this.closest('.goals-modal-overlay').remove()">
+                            Cancel
+                        </button>
+                        <button class="goals-btn-danger" data-action="confirm-batch-delete">
+                            Delete ${count} Goal${count > 1 ? 's' : ''}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close on background click
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+
+        // Close button
+        modal.querySelector('.goals-modal-close').onclick = () => modal.remove();
+
+        // Confirm delete button
+        modal.querySelector('[data-action="confirm-batch-delete"]').onclick = async () => {
+            await this.goals_batchDelete();
+            modal.remove();
+        };
+    },
+
+    async goals_batchDelete() {
+        if (this.state.selectedGoalIds.length === 0) return;
+
+        try {
+            const count = this.state.selectedGoalIds.length;
+
+            // Delete all selected goals
+            for (const goalId of this.state.selectedGoalIds) {
+                await API.deleteGoal(goalId);
+            }
+
+            window.SteadyUtils.showToast(`Deleted ${count} goal(s)`, 'success');
+
+            // Reload and reset
+            this.state.selectedGoalIds = [];
+            this.state.batchEditMode = false;
+            await this.goals_loadData();
+            this.goals_render();
+
+        } catch (error) {
+            console.error('Batch delete error:', error);
+            window.SteadyUtils.showToast('Failed to delete goals', 'error');
+        }
+    },
+
     // STYLES - I'LL CONTINUE IN NEXT MESSAGE
     goals_renderStyles() {
         return `<style>
@@ -2756,6 +3002,190 @@ goals_formatValueAbbreviated(value, unit) {
     width: 1.125rem;
     height: 1.125rem;
     stroke-width: 2;
+}
+
+/* BATCH EDIT MODE STYLES */
+.goals-limit-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.5rem;
+}
+
+.goals-limit-counter {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.goals-limit-counter svg {
+    color: var(--primary);
+}
+
+.goals-btn-batch-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--background);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goals-btn-batch-edit svg {
+    width: 1rem;
+    height: 1rem;
+    stroke-width: 2;
+}
+
+.goals-btn-batch-edit:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.goals-btn-batch-edit.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.goals-card.batch-mode {
+    cursor: pointer;
+    position: relative;
+}
+
+.goals-card.batch-mode.selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.goals-card-checkbox {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+}
+
+.goals-checkbox-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.goals-checkbox-custom {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.goals-checkbox-custom svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: white;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.2s ease;
+}
+
+.goals-card.selected .goals-checkbox-custom {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.goals-card.selected .goals-checkbox-custom svg {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.goals-batch-actions {
+    position: sticky;
+    bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-top: 2rem;
+    z-index: 100;
+}
+
+.goals-batch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 1rem 1.75rem;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goals-batch-btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    stroke-width: 2;
+}
+
+.goals-batch-btn-complete {
+    background: var(--success);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.goals-batch-btn-complete:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.goals-batch-btn-reset {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.goals-batch-btn-reset:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.goals-batch-btn-delete {
+    background: var(--danger);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.goals-batch-btn-delete:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
 }
 
 .goals-banners {
