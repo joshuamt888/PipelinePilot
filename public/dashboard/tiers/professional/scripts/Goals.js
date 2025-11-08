@@ -244,7 +244,9 @@ async goals_loadAvailableTasks() {
 
     // GOAL CARD
     goals_renderGoalCard(goal) {
-        const progress = goal.status === 'completed' ? 100 : Math.min(Math.floor(goal.progress || 0), 99);
+        // Always use the actual progress from current_value / target_value
+        // No caps, no status overrides - just the real math
+        const progress = Math.floor(goal.progress || 0);
         const isCompleted = goal.status === 'completed';
         const isAtRisk = goal.period !== 'none' && goal.daysRemaining < 7 && progress < 50 && !isCompleted;
 
@@ -1563,7 +1565,8 @@ goals_showGoalDetailModal(goalId) {
     const goal = this.state.goals.find(g => g.id === goalId);
     if (!goal) return;
 
-    const progress = goal.status === 'completed' ? 100 : Math.min(Math.floor(goal.progress || 0), 99);
+    // Always use the actual progress from current_value / target_value
+    const progress = Math.floor(goal.progress || 0);
     const isCompleted = goal.status === 'completed';
     const cardColor = goal.color && goal.color.trim() !== '' ? goal.color : null;
 
