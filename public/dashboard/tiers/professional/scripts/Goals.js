@@ -267,7 +267,8 @@ async goals_loadAvailableTasks() {
         // Always use the actual progress from current_value / target_value
         // No caps, no status overrides - just the real math
         const progress = Math.floor(goal.progress || 0);
-        const isCompleted = goal.status === 'completed';
+        // Only show as completed if we're in the completed filter
+        const isCompleted = this.state.currentFilter === 'completed';
         const isAtRisk = goal.period !== 'none' && goal.daysRemaining < 7 && progress < 50 && !isCompleted;
 
         // For urgent goals (today only), show live countdown timer
@@ -1658,7 +1659,7 @@ goals_showGoalDetailModal(goalId) {
                         </svg>
                         Edit Goal
                     </button>
-                    ${!isCompleted && goal.goal_type !== 'task_list' ? `
+                    ${goal.goal_type !== 'task_list' ? `
                         <button class="goals-btn-secondary" data-action="update-progress" data-id="${goal.id}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke-width="2"/>
@@ -1860,6 +1861,18 @@ goals_showGoalDetailModal(goalId) {
 
             try {
                 const newValue = parseFloat(document.getElementById('newProgressValue').value);
+
+                // Validate: cannot exceed target value
+                if (newValue > goal.target_value) {
+                    window.SteadyUtils.showToast(`Value cannot exceed target of ${this.goals_formatValue(goal.target_value, goal.unit)}`, 'error');
+                    // Re-enable button
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    return;
+                }
+
                 await this.goals_updateProgress(goalId, newValue);
                 await API.checkGoalCompletion();
                 modal.remove();
@@ -2824,7 +2837,6 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-search-container {
     position: relative;
     flex: 1;
-    max-width: 400px;
     min-width: 200px;
 }
 
