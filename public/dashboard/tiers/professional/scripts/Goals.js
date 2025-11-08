@@ -853,6 +853,8 @@ async goals_loadAvailableTasks() {
                                     </div>
                                 </div>
 
+                                <div class="goals-divider"></div>
+
                                 <!-- Task Management -->
                                 <div class="goals-task-checklist-config">
                                     <div class="goals-task-selected-count" style="margin-bottom: 1rem; text-align: center; padding: 0.75rem; background: var(--background); border-radius: var(--radius); border: 1px solid var(--border);">
@@ -985,6 +987,8 @@ async goals_loadAvailableTasks() {
                                     </div>
                                 </div>
 
+                                <div class="goals-divider"></div>
+
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Color Accent (Optional)</label>
                                     <div class="goals-color-picker">
@@ -1030,6 +1034,8 @@ async goals_loadAvailableTasks() {
                                         </label>
                                     </div>
                                 </div>
+
+                                <div class="goals-divider"></div>
 
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Description (Optional)</label>
@@ -2967,7 +2973,7 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-tracking-options-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
 }
 
