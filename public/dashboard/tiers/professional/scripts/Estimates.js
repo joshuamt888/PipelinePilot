@@ -1829,10 +1829,15 @@ window.EstimatesModule = {
                             <span class="estimate-input-hint" id="titleCounter">100 characters remaining</span>
                         </div>
 
+                        <div class="estimate-form-group">
+                            <label>Lead</label>
+                            ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
+                        </div>
+
                         <div class="estimate-form-row">
                             <div class="estimate-form-group">
-                                <label>Lead</label>
-                                ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
+                                <label>Expires On</label>
+                                <input type="date" id="estimateExpiry" value="${expiryDate}">
                             </div>
 
                             <div class="estimate-form-group">
@@ -1844,13 +1849,6 @@ window.EstimatesModule = {
                                         </option>
                                     `).join('')}
                                 </select>
-                            </div>
-                        </div>
-
-                        <div class="estimate-form-row">
-                            <div class="estimate-form-group">
-                                <label>Expires On</label>
-                                <input type="date" id="estimateExpiry" value="${expiryDate}">
                             </div>
                         </div>
 
@@ -2051,15 +2049,48 @@ window.EstimatesModule = {
             });
         }
 
-        // Line item changes
+        // Line item changes with real-time validation
         overlay.addEventListener('input', (e) => {
             if (e.target.classList.contains('line-item-quantity') ||
                 e.target.classList.contains('line-item-rate')) {
+
+                // Get the current value
+                let value = e.target.value;
+
+                // Remove any non-numeric characters except decimal point
+                value = value.replace(/[^0-9.]/g, '');
+
+                // Ensure only one decimal point
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+
+                // Limit decimal places to 2
+                if (parts.length === 2 && parts[1].length > 2) {
+                    value = parts[0] + '.' + parts[1].substring(0, 2);
+                }
+
+                // Check if value exceeds max
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && numValue > 99999999.99) {
+                    value = '99999999.99';
+                    e.target.style.borderColor = 'var(--danger)';
+                    e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
+                } else {
+                    e.target.style.borderColor = '';
+                    e.target.style.backgroundColor = '';
+                }
+
+                // Update the input value
+                e.target.value = value;
+
+                // Update total
                 this.estimates_updateLineItemsTotal();
             }
         });
 
-        // Line item decimal validation on blur
+        // Line item decimal validation on blur (format to 2 decimals)
         overlay.addEventListener('blur', (e) => {
             if (e.target.classList.contains('line-item-quantity') ||
                 e.target.classList.contains('line-item-rate')) {
@@ -2067,10 +2098,9 @@ window.EstimatesModule = {
                 if (!isNaN(value)) {
                     // Format to 2 decimal places
                     e.target.value = value.toFixed(2);
-                    // Enforce max value
-                    if (value > 99999999.99) {
-                        e.target.value = '99999999.99';
-                    }
+                    // Clear any visual feedback
+                    e.target.style.borderColor = '';
+                    e.target.style.backgroundColor = '';
                     this.estimates_updateLineItemsTotal();
                 }
             }
