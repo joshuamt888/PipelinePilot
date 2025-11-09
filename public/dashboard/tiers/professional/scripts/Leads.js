@@ -262,8 +262,9 @@ window.AddLeadModule = {
         const safeCompany = API.escapeHtml(lead.company || 'No company');
         const safeEmail = API.escapeHtml(lead.email || '');
         const safePhone = API.escapeHtml(lead.phone || '');
+        const sourceIcon = this.addlead_getSourceIcon(lead.source || null);
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
-        
+
         return `
             <tr class="addlead-table-row addlead-clickable-row" onclick="AddLeadModule.addlead_showLeadView('${lead.id}')">
                 <td class="addlead-lead-cell">
@@ -285,7 +286,7 @@ window.AddLeadModule = {
                     <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
                 </td>
                 <td class="addlead-source-cell">
-                    <span class="addlead-source-badge">${safeSource}</span>
+                    <span class="addlead-source-badge"><i data-lucide="${sourceIcon}" style="width: 14px; height: 14px; margin-right: 4px;"></i>${safeSource}</span>
                 </td>
                 <td class="addlead-value-cell">
                     ${lead.potential_value > 0 ? 
@@ -541,6 +542,7 @@ modal.addEventListener('mouseup', (e) => {
         const safeJobTitle = API.escapeHtml(lead.job_title || '');
         const safeWebsite = API.escapeHtml(lead.website || '');
         const safeLinkedIn = API.escapeHtml(lead.linkedin_url || '');
+        const sourceIcon = this.addlead_getSourceIcon(lead.source || null);
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
         const safeNotes = API.escapeHtml(lead.notes || '');
         const typeIcon = lead.type === 'warm' ? 'flame' : 'snowflake';
@@ -611,7 +613,7 @@ modal.addEventListener('mouseup', (e) => {
 
                         <div class="addlead-detail-item">
                             <div class="addlead-detail-label">Source:</div>
-                            <div class="addlead-detail-value">${safeSource}</div>
+                            <div class="addlead-detail-value"><i data-lucide="${sourceIcon}" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>${safeSource}</div>
                         </div>
 
                         <div class="addlead-detail-item">
@@ -2193,23 +2195,25 @@ addlead_showCustomSourceInput(targetInput) {
         const tableContainer = document.querySelector('.addlead-table-container');
         if (tableContainer) {
             const filteredLeads = this.addlead_getFilteredLeads();
-            tableContainer.innerHTML = filteredLeads.length > 0 ? 
-                this.addlead_renderTable(filteredLeads) : 
+            tableContainer.innerHTML = filteredLeads.length > 0 ?
+                this.addlead_renderTable(filteredLeads) :
                 this.addlead_renderEmptyState();
-            
+
             const tableTitle = document.querySelector('.addlead-table-title');
             if (tableTitle) {
                 tableTitle.textContent = `All Leads (${filteredLeads.length})`;
             }
-            
+
             const searchInput = document.getElementById('addlead_searchInput');
             if (searchInput) {
                 const searchHandler = this.addlead_debounce((e) => this.addlead_handleSearch(e), 300);
                 searchInput.addEventListener('input', searchHandler);
             }
-            
+
             this.addlead_updateActiveFiltersPanel();
             this.addlead_updateHeaderIndicators();
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     },
 
@@ -2397,8 +2401,37 @@ addlead_showCustomSourceInput(targetInput) {
         return statusMap[status] || status;
     },
 
+    addlead_getSourceIcon(source) {
+        if (!source || source === null) return 'help-circle';
+
+        const sourceIconMap = {
+            'website': 'globe',
+            'linkedin': 'linkedin',
+            'facebook': 'facebook',
+            'instagram': 'instagram',
+            'twitter': 'twitter',
+            'referral': 'users',
+            'email': 'mail',
+            'phone': 'phone',
+            'event': 'calendar',
+            'advertisement': 'megaphone',
+            'direct': 'target',
+            'google': 'search',
+            'organic': 'leaf',
+            'paid ads': 'dollar-sign',
+            'cold call': 'phone-call',
+            'trade show': 'building',
+            'webinar': 'monitor',
+            'content': 'file-text',
+            'partnership': 'handshake'
+        };
+
+        const normalizedSource = source.toLowerCase().trim();
+        return sourceIconMap[normalizedSource] || 'sparkles';
+    },
+
     addlead_formatSource(source) {
-        if (!source || source === null) return '❓ Unknown';
+        if (!source || source === null) return 'Unknown';
         return source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     },
 
