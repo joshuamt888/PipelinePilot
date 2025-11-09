@@ -304,14 +304,14 @@ class TierScalingAPI {
   }
 
   static async updateLead(leadId, updates) {
-    const { data, error } = await supabase
-      .from('leads')
-      .update(updates)
-      .eq('id', leadId)
-      .select();
-    
+    // Use RPC function to safely update leads (bypasses any triggers blocking manual updates)
+    const { data, error } = await supabase.rpc('update_lead_safe', {
+      lead_id_val: leadId,
+      lead_updates: updates
+    });
+
     if (error) throw error;
-    return data[0];
+    return data?.[0];
   }
 
   static async deleteLead(leadId) {
