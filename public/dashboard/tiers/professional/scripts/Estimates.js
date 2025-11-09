@@ -1955,8 +1955,8 @@ window.EstimatesModule = {
         return `
             <div class="estimate-line-item" data-index="${index}">
                 <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35">
-                <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" max="99999999.99" step="0.01" data-field="quantity">
-                <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" max="99999999.99" step="0.01" data-field="rate">
+                <input type="text" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" data-field="quantity">
+                <input type="text" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate">
                 <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
                         <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
@@ -2049,7 +2049,7 @@ window.EstimatesModule = {
             });
         }
 
-        // Line item changes with real-time validation
+        // Line item changes with real-time validation (matches Goals pattern)
         overlay.addEventListener('input', (e) => {
             if (e.target.classList.contains('line-item-quantity') ||
                 e.target.classList.contains('line-item-rate')) {
@@ -2071,19 +2071,23 @@ window.EstimatesModule = {
                     value = parts[0] + '.' + parts[1].substring(0, 2);
                 }
 
-                // Check if value exceeds max
+                // Limit to 8 digits before decimal (max 99,999,999.99)
+                if (parts[0].length > 8) {
+                    value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
+                }
+
+                // Update the input value
+                e.target.value = value;
+
+                // Visual feedback if at max
                 const numValue = parseFloat(value);
-                if (!isNaN(numValue) && numValue > 99999999.99) {
-                    value = '99999999.99';
+                if (!isNaN(numValue) && numValue >= 99999999.99) {
                     e.target.style.borderColor = 'var(--danger)';
                     e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
                 } else {
                     e.target.style.borderColor = '';
                     e.target.style.backgroundColor = '';
                 }
-
-                // Update the input value
-                e.target.value = value;
 
                 // Update total
                 this.estimates_updateLineItemsTotal();
