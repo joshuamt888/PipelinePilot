@@ -802,12 +802,30 @@ window.EstimatesModule = {
             btn.addEventListener('click', () => this.estimates_openModal());
         });
 
+        // View estimate
+        container.querySelectorAll('[data-action="view-estimate"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.id;
+                this.estimates_openDetailView(id);
+            });
+        });
+
         // Edit estimate
         container.querySelectorAll('[data-action="edit-estimate"]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = e.currentTarget.dataset.id;
                 this.estimates_openModal(id);
+            });
+        });
+
+        // Convert to job
+        container.querySelectorAll('[data-action="convert-to-job"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.id;
+                this.estimates_convertToJob(id);
             });
         });
 
@@ -1771,6 +1789,505 @@ window.EstimatesModule = {
             setTimeout(() => overlay.remove(), 200);
         }
         this.state.editingEstimateId = null;
+    },
+
+    /**
+     * Open detail view (read-only with status actions)
+     */
+    estimates_openDetailView(estimateId) {
+        const estimate = this.state.estimates.find(e => e.id === estimateId);
+        if (!estimate) {
+            showNotification('Estimate not found', 'error');
+            return;
+        }
+
+        const lead = this.state.leads.find(l => l.id === estimate.lead_id);
+        const lineItems = estimate.line_items || [];
+        const photos = estimate.photos || [];
+
+        const overlay = document.createElement('div');
+        overlay.className = 'estimate-modal-overlay';
+        overlay.innerHTML = `
+            <style>
+                .estimate-detail-modal {
+                    background: var(--card-bg);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                }
+
+                .estimate-detail-header {
+                    padding: 24px;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+
+                .estimate-detail-header-left h2 {
+                    margin: 0 0 8px 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .estimate-detail-number {
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .estimate-detail-close {
+                    background: transparent;
+                    border: none;
+                    font-size: 28px;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+
+                .estimate-detail-close:hover {
+                    background: var(--hover-bg);
+                }
+
+                .estimate-detail-body {
+                    padding: 24px;
+                }
+
+                .estimate-detail-section {
+                    margin-bottom: 24px;
+                }
+
+                .estimate-detail-section-title {
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    margin-bottom: 12px;
+                }
+
+                .estimate-detail-field {
+                    margin-bottom: 16px;
+                }
+
+                .estimate-detail-label {
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: var(--text-secondary);
+                    margin-bottom: 4px;
+                }
+
+                .estimate-detail-value {
+                    font-size: 14px;
+                    color: var(--text-primary);
+                }
+
+                .estimate-detail-line-items {
+                    background: var(--bg);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    padding: 16px;
+                }
+
+                .estimate-detail-line-item {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    gap: 12px;
+                    padding: 12px 0;
+                    border-bottom: 1px solid var(--border);
+                }
+
+                .estimate-detail-line-item:last-child {
+                    border-bottom: none;
+                }
+
+                .estimate-detail-line-item-header {
+                    font-weight: 600;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    color: var(--text-secondary);
+                }
+
+                .estimate-detail-total {
+                    margin-top: 12px;
+                    padding-top: 12px;
+                    border-top: 2px solid var(--border);
+                    text-align: right;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: var(--primary);
+                }
+
+                .estimate-detail-photos {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                    gap: 12px;
+                }
+
+                .estimate-detail-photo {
+                    aspect-ratio: 1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 1px solid var(--border);
+                }
+
+                .estimate-detail-photo img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .estimate-detail-actions {
+                    padding: 20px 24px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+
+                .estimate-action-btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .estimate-action-btn svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .estimate-action-btn.sent {
+                    background: rgba(59, 130, 246, 0.1);
+                    border: 1px solid #3b82f6;
+                    color: #3b82f6;
+                }
+
+                .estimate-action-btn.accepted {
+                    background: rgba(34, 197, 94, 0.1);
+                    border: 1px solid #22c55e;
+                    color: #22c55e;
+                }
+
+                .estimate-action-btn.rejected {
+                    background: rgba(239, 68, 68, 0.1);
+                    border: 1px solid #ef4444;
+                    color: #ef4444;
+                }
+
+                .estimate-action-btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+
+                .estimate-action-btn.edit {
+                    background: var(--primary);
+                    border: 1px solid var(--primary);
+                    color: white;
+                }
+
+                .estimate-action-btn.convert {
+                    background: #22c55e;
+                    border: 1px solid #22c55e;
+                    color: white;
+                    margin-left: auto;
+                }
+            </style>
+
+            <div class="estimate-detail-modal">
+                <div class="estimate-detail-header">
+                    <div class="estimate-detail-header-left">
+                        <div class="estimate-detail-number">${estimate.estimate_number || 'EST-???'}</div>
+                        <h2>${estimate.title || 'Untitled'}</h2>
+                        ${this.estimates_renderStatusBadge(estimate.status)}
+                    </div>
+                    <button class="estimate-detail-close" data-action="close-detail">×</button>
+                </div>
+
+                <div class="estimate-detail-body">
+                    <!-- Basic Info -->
+                    <div class="estimate-detail-section">
+                        <div class="estimate-detail-section-title">Basic Information</div>
+                        ${lead ? `
+                            <div class="estimate-detail-field">
+                                <div class="estimate-detail-label">Lead</div>
+                                <div class="estimate-detail-value">${lead.name}${lead.company ? ` (${lead.company})` : ''}</div>
+                            </div>
+                        ` : ''}
+                        ${estimate.description ? `
+                            <div class="estimate-detail-field">
+                                <div class="estimate-detail-label">Description</div>
+                                <div class="estimate-detail-value">${estimate.description}</div>
+                            </div>
+                        ` : ''}
+                        ${estimate.expires_at ? `
+                            <div class="estimate-detail-field">
+                                <div class="estimate-detail-label">Expires On</div>
+                                <div class="estimate-detail-value">${new Date(estimate.expires_at).toLocaleDateString()}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Line Items -->
+                    ${lineItems.length > 0 ? `
+                        <div class="estimate-detail-section">
+                            <div class="estimate-detail-section-title">Line Items</div>
+                            <div class="estimate-detail-line-items">
+                                <div class="estimate-detail-line-item estimate-detail-line-item-header">
+                                    <div>Description</div>
+                                    <div>Quantity</div>
+                                    <div>Rate</div>
+                                    <div>Total</div>
+                                </div>
+                                ${lineItems.map(item => `
+                                    <div class="estimate-detail-line-item">
+                                        <div>${item.description || '—'}</div>
+                                        <div>${item.quantity || 0}</div>
+                                        <div>${formatCurrency(item.rate || 0)}</div>
+                                        <div>${formatCurrency((item.quantity || 0) * (item.rate || 0))}</div>
+                                    </div>
+                                `).join('')}
+                                <div class="estimate-detail-total">
+                                    Total: ${formatCurrency(estimate.total_price || 0)}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Photos -->
+                    ${photos.length > 0 ? `
+                        <div class="estimate-detail-section">
+                            <div class="estimate-detail-section-title">Photos (${photos.length})</div>
+                            <div class="estimate-detail-photos">
+                                ${photos.map(photo => `
+                                    <div class="estimate-detail-photo">
+                                        <img src="${photo.url}" alt="${photo.caption || 'Photo'}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Terms -->
+                    ${estimate.terms ? `
+                        <div class="estimate-detail-section">
+                            <div class="estimate-detail-section-title">Terms & Conditions</div>
+                            <div class="estimate-detail-value" style="white-space: pre-wrap;">${estimate.terms}</div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Notes -->
+                    ${estimate.notes ? `
+                        <div class="estimate-detail-section">
+                            <div class="estimate-detail-section-title">Internal Notes</div>
+                            <div class="estimate-detail-value" style="white-space: pre-wrap;">${estimate.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="estimate-detail-actions">
+                    ${estimate.status !== 'sent' && estimate.status !== 'accepted' && estimate.status !== 'rejected' ? `
+                        <button class="estimate-action-btn sent" data-action="mark-sent" data-id="${estimate.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>
+                            </svg>
+                            Mark as Sent
+                        </button>
+                    ` : ''}
+
+                    ${estimate.status === 'sent' || estimate.status === 'draft' ? `
+                        <button class="estimate-action-btn accepted" data-action="mark-accepted" data-id="${estimate.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
+                            </svg>
+                            Mark as Accepted
+                        </button>
+
+                        <button class="estimate-action-btn rejected" data-action="mark-rejected" data-id="${estimate.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
+                            </svg>
+                            Mark as Rejected
+                        </button>
+                    ` : ''}
+
+                    <button class="estimate-action-btn edit" data-action="edit-from-detail" data-id="${estimate.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2"/>
+                        </svg>
+                        Edit
+                    </button>
+
+                    ${estimate.status === 'accepted' ? `
+                        <button class="estimate-action-btn convert" data-action="convert-from-detail" data-id="${estimate.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Convert to Job
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Attach events
+        setTimeout(() => {
+            overlay.querySelector('[data-action="close-detail"]').addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            });
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 200);
+                }
+            });
+
+            // Status actions
+            const markSentBtn = overlay.querySelector('[data-action="mark-sent"]');
+            if (markSentBtn) {
+                markSentBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    this.estimates_updateStatus(estimate.id, 'sent');
+                });
+            }
+
+            const markAcceptedBtn = overlay.querySelector('[data-action="mark-accepted"]');
+            if (markAcceptedBtn) {
+                markAcceptedBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    this.estimates_updateStatus(estimate.id, 'accepted');
+                });
+            }
+
+            const markRejectedBtn = overlay.querySelector('[data-action="mark-rejected"]');
+            if (markRejectedBtn) {
+                markRejectedBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    this.estimates_updateStatus(estimate.id, 'rejected');
+                });
+            }
+
+            // Edit action
+            const editBtn = overlay.querySelector('[data-action="edit-from-detail"]');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    this.estimates_openModal(estimate.id);
+                });
+            }
+
+            // Convert action
+            const convertBtn = overlay.querySelector('[data-action="convert-from-detail"]');
+            if (convertBtn) {
+                convertBtn.addEventListener('click', () => {
+                    overlay.remove();
+                    this.estimates_convertToJob(estimate.id);
+                });
+            }
+        }, 0);
+    },
+
+    /**
+     * Update estimate status
+     */
+    async estimates_updateStatus(estimateId, newStatus) {
+        try {
+            const estimate = this.state.estimates.find(e => e.id === estimateId);
+            if (!estimate) return;
+
+            const statusLabel = this.estimates_formatStatus(newStatus);
+            const confirmed = confirm(`Mark estimate "${estimate.title}" as ${statusLabel}?`);
+            if (!confirmed) return;
+
+            // Call appropriate API method
+            let updatedEstimate;
+            if (newStatus === 'sent') {
+                updatedEstimate = await API.markEstimateSent(estimateId);
+            } else if (newStatus === 'accepted') {
+                updatedEstimate = await API.markEstimateAccepted(estimateId);
+            } else if (newStatus === 'rejected') {
+                updatedEstimate = await API.markEstimateRejected(estimateId);
+            }
+
+            // Update in state
+            const index = this.state.estimates.findIndex(e => e.id === estimateId);
+            if (index !== -1) {
+                this.state.estimates[index] = updatedEstimate;
+            }
+
+            this.estimates_calculateStats();
+            this.estimates_render();
+            showNotification(`Estimate marked as ${statusLabel}`, 'success');
+        } catch (error) {
+            console.error('Error updating status:', error);
+            showNotification('Failed to update status', 'error');
+        }
+    },
+
+    /**
+     * Convert estimate to job
+     */
+    async estimates_convertToJob(estimateId) {
+        try {
+            const estimate = this.state.estimates.find(e => e.id === estimateId);
+            if (!estimate) {
+                showNotification('Estimate not found', 'error');
+                return;
+            }
+
+            if (estimate.status !== 'accepted') {
+                showNotification('Only accepted estimates can be converted to jobs', 'warning');
+                return;
+            }
+
+            const confirmed = confirm(
+                `Convert estimate "${estimate.title}" to a job?\n\n` +
+                `This will create a new job with:\n` +
+                `- All estimate details\n` +
+                `- Photos as "before" photos\n` +
+                `- Line items as materials\n` +
+                `- Quoted price: ${formatCurrency(estimate.total_price || 0)}`
+            );
+
+            if (!confirmed) return;
+
+            showNotification('Converting to job...', 'info');
+
+            const newJob = await API.convertEstimateToJob(estimateId);
+
+            showNotification('Job created successfully! Redirecting...', 'success');
+
+            // Redirect to Jobs page after short delay
+            setTimeout(() => {
+                window.location.href = '/dashboard/tiers/professional/jobs.html';
+            }, 1500);
+
+        } catch (error) {
+            console.error('Error converting to job:', error);
+            showNotification('Failed to convert to job', 'error');
+        }
     },
 
     /**
