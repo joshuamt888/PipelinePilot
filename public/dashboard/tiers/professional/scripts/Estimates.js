@@ -486,311 +486,976 @@ window.EstimatesModule = {
     };
 },
 
-estimates_showCreateModal() {
+estimates_showCreateModal(estimateId = null) {
+    this.state.editingEstimateId = estimateId;
+
+    // Get estimate data if editing
+    let estimate = null;
+    if (estimateId) {
+        estimate = this.state.estimates.find(e => e.id === estimateId);
+        if (!estimate) {
+            alert('Estimate not found');
+            return;
+        }
+    }
+
     console.log('[Estimates] Opening create modal...');
     console.log('[Estimates] Available leads:', this.state.leads.length);
 
     const modal = document.createElement('div');
-    modal.className = 'goals-modal-overlay'; // Using goals-modal styles
-    modal.innerHTML = `
-        <div class="goals-modal goals-modal-create-v2">
-            <div class="goals-modal-header-v2">
-                <h2 class="goals-modal-title-v2">Create New Estimate</h2>
-                <button class="goals-modal-close">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </button>
+    modal.className = 'estimate-modal-overlay';
+    modal.innerHTML = this.estimates_renderModal(estimate);
+    document.body.appendChild(modal);
+
+    // Initialize modal events after render
+    setTimeout(() => {
+        this.estimates_initModalEvents(modal);
+        this.estimates_updateLineItemsTotal();
+    }, 0);
+},
+
+/**
+ * Render modal styles
+ */
+estimates_renderModalStyles() {
+    return `<style>
+        .estimate-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+            padding: 2rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .estimate-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .estimate-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 2.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .estimate-modal-header h2 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .estimate-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: all 0.2s;
+        }
+
+        .estimate-modal-close:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+        }
+
+        .estimate-modal-body {
+            padding: 2.5rem;
+            max-height: calc(90vh - 200px);
+            overflow-y: auto;
+        }
+
+        .estimate-form-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .estimate-form-section-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .estimate-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .estimate-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .estimate-form-group label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .estimate-form-group input,
+        .estimate-form-group select,
+        .estimate-form-group textarea {
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--background);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .estimate-form-group input:focus,
+        .estimate-form-group select:focus,
+        .estimate-form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .estimate-form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Line Items */
+        .estimate-line-items {
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .estimate-line-item-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .estimate-line-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .estimate-line-item input {
+            padding: 0.625rem 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .estimate-line-item-total {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .estimate-line-item-remove {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: #ef4444;
+            cursor: pointer;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .estimate-line-item-remove:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        .estimate-add-line-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem;
+            background: transparent;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            color: #667eea;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .estimate-add-line-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: #667eea;
+        }
+
+        .estimate-total-box {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(102, 126, 234, 0.05);
+            border: 2px solid #667eea;
+            border-radius: var(--radius);
+            text-align: right;
+        }
+
+        .estimate-total-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .estimate-total-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #667eea;
+        }
+
+        /* Photos */
+        .estimate-photo-counter {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .estimate-photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .estimate-photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 2px solid var(--border);
+        }
+
+        .estimate-photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .estimate-photo-remove {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            color: white;
+            border-radius: var(--radius);
+            padding: 0.25rem 0.625rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .estimate-photo-remove:hover {
+            background: #ef4444;
+        }
+
+        .estimate-photo-upload {
+            aspect-ratio: 1;
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--background);
+        }
+
+        .estimate-photo-upload:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .estimate-photo-upload svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .estimate-photo-upload span {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Modal Footer */
+        .estimate-modal-footer {
+            padding: 1.5rem 2.5rem;
+            border-top: 2px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .estimate-modal-btn {
+            padding: 0.875rem 1.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .estimate-modal-btn-cancel {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .estimate-modal-btn-cancel:hover {
+            background: var(--surface-hover);
+            border-color: var(--text-secondary);
+        }
+
+        .estimate-modal-btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .estimate-modal-btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .estimate-form-row,
+            .estimate-line-item-header,
+            .estimate-line-item {
+                grid-template-columns: 1fr;
+            }
+
+            .estimate-photo-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>`;
+},
+
+/**
+ * Render lead dropdown
+ */
+estimates_renderLeadDropdown(selectedLeadId = null) {
+    return `
+        <select id="estimateLead" required>
+            <option value="">Select lead...</option>
+            <option value="__create__" style="font-weight: bold; color: #667eea;">+ Create New Lead</option>
+            ${this.state.leads.map(lead => `
+                <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                    ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                </option>
+            `).join('')}
+        </select>
+    `;
+},
+
+/**
+ * Render line item row
+ */
+estimates_renderLineItemRow(item, index) {
+    const total = (item.quantity || 0) * (item.rate || 0);
+    return `
+        <div class="estimate-line-item" data-index="${index}">
+            <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description">
+            <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" step="0.01" data-field="quantity">
+            <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" step="0.01" data-field="rate">
+            <div class="estimate-line-item-total">${formatCurrency(total)}</div>
+            <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                    <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+        </div>
+    `;
+},
+
+/**
+ * Render photo item
+ */
+estimates_renderPhotoItem(photo, index) {
+    return `
+        <div class="estimate-photo-item" data-index="${index}">
+            <img src="${photo.url}" alt="Estimate photo ${index + 1}">
+            <button class="estimate-photo-remove" data-action="remove-photo" data-index="${index}" type="button">×</button>
+        </div>
+    `;
+},
+
+/**
+ * Render photo upload button
+ */
+estimates_renderPhotoUploadButton() {
+    return `
+        <div class="estimate-photo-upload" data-action="upload-photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Upload</span>
+            <input type="file" accept="image/*" style="display: none;" id="photoUploadInput">
+        </div>
+    `;
+},
+
+/**
+ * Render comprehensive modal HTML
+ */
+estimates_renderModal(estimate) {
+    const isEdit = !!estimate;
+    const lineItems = estimate?.line_items || [{ description: '', quantity: 1, rate: 0 }];
+    const photos = estimate?.photos || [];
+
+    // Default expiry: 30 days from now
+    const defaultExpiry = new Date();
+    defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+    const expiryDate = estimate?.expires_at || defaultExpiry.toISOString().split('T')[0];
+
+    return `
+        ${this.estimates_renderModalStyles()}
+        <div class="estimate-modal">
+            <div class="estimate-modal-header">
+                <h2>${isEdit ? 'Edit Estimate' : 'New Estimate'}</h2>
+                <button class="estimate-modal-close" data-action="close-modal">×</button>
             </div>
 
-            <div class="goals-modal-body-v2">
-                <form id="estimateForm" class="goals-form-v2">
-                    <!-- TITLE -->
-                    <div class="goals-form-group-v2">
-                        <label class="goals-form-label-v2">Estimate Title</label>
-                        <input type="text"
-                               id="estimateTitle"
-                               class="goals-form-input-v2 goals-form-input-large"
-                               placeholder="Kitchen Remodel - Smith Residence"
-                               autocomplete="off"
-                               maxlength="100"
-                               required>
-                        <span class="goals-input-hint" id="titleCounter">100 characters remaining</span>
+            <div class="estimate-modal-body">
+                <!-- Basic Info -->
+                <div class="estimate-form-section">
+                    <div class="estimate-form-section-title">Basic Information</div>
+
+                    <div class="estimate-form-group">
+                        <label>Title *</label>
+                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" required>
                     </div>
 
-                    <div class="goals-divider"></div>
-
-                    <!-- LEAD SELECTION -->
-                    <div class="goals-form-group-v2">
-                        <label class="goals-form-label-v2">Client / Lead</label>
-                        <select id="estimateLead" class="goals-form-select-v2" required>
-                            <option value="">Select a lead...</option>
-                            ${this.state.leads.map(lead => `
-                                <option value="${lead.id}">${API.escapeHtml(lead.name)}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-
-                    <!-- PRICE & EXPIRY -->
-                    <div class="goals-form-row-v2">
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Total Price</label>
-                            <input type="number"
-                                   id="estimatePrice"
-                                   class="goals-form-input-v2"
-                                   placeholder="5000.00"
-                                   step="0.01"
-                                   min="0"
-                                   required>
-                            <span class="goals-input-hint">Enter amount in dollars</span>
+                    <div class="estimate-form-row">
+                        <div class="estimate-form-group">
+                            <label>Lead *</label>
+                            ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
                         </div>
-                        <div class="goals-form-group-v2">
-                            <label class="goals-form-label-v2">Expires On (Optional)</label>
-                            <input type="date"
-                                   id="estimateExpiry"
-                                   class="goals-form-input-v2">
+
+                        <div class="estimate-form-group">
+                            <label>Status</label>
+                            <select id="estimateStatus">
+                                ${this.STATUSES.map(status => `
+                                    <option value="${status}" ${estimate?.status === status ? 'selected' : ''}>
+                                        ${status.charAt(0).toUpperCase() + status.slice(1)}
+                                    </option>
+                                `).join('')}
+                            </select>
                         </div>
                     </div>
 
-                    <div class="goals-divider"></div>
-
-                    <!-- DESCRIPTION -->
-                    <div class="goals-form-group-v2">
-                        <label class="goals-form-label-v2">Description / Details (Optional)</label>
-                        <textarea id="estimateDescription"
-                                  class="goals-form-textarea-v2"
-                                  placeholder="Add project details, scope of work, materials, etc..."
-                                  maxlength="2000"
-                                  rows="5"></textarea>
-                        <span class="goals-input-hint" id="descriptionCounter">2000 characters remaining</span>
+                    <div class="estimate-form-row">
+                        <div class="estimate-form-group">
+                            <label>Expires On</label>
+                            <input type="date" id="estimateExpiry" value="${expiryDate}">
+                        </div>
                     </div>
 
-                    <div class="goals-divider"></div>
-
-                    <!-- STATUS -->
-                    <div class="goals-form-group-v2">
-                        <label class="goals-form-label-v2">Initial Status</label>
-                        <select id="estimateStatus" class="goals-form-select-v2" required>
-                            <option value="draft">Draft (not sent yet)</option>
-                            <option value="sent">Sent to client</option>
-                        </select>
+                    <div class="estimate-form-group">
+                        <label>Description</label>
+                        <textarea id="estimateDescription" placeholder="Brief description of the work...">${estimate?.description || ''}</textarea>
                     </div>
+                </div>
 
-                    <!-- ACTIONS -->
-                    <div class="goals-modal-actions-v2">
-                        <button type="button" class="goals-btn-secondary" data-action="close-modal">
-                            Cancel
-                        </button>
-                        <button type="submit" class="goals-btn-primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Line Items -->
+                <div class="estimate-form-section">
+                    <div class="estimate-form-section-title">Line Items</div>
+                    <div class="estimate-line-items">
+                        <div class="estimate-line-item-header">
+                            <div>Description</div>
+                            <div>Quantity</div>
+                            <div>Rate</div>
+                            <div>Total</div>
+                            <div></div>
+                        </div>
+                        <div id="lineItemsContainer">
+                            ${lineItems.map((item, i) => this.estimates_renderLineItemRow(item, i)).join('')}
+                        </div>
+                        <button type="button" class="estimate-add-line-item" data-action="add-line-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
                             </svg>
-                            Create Estimate
+                            Add Line Item
                         </button>
+
+                        <div class="estimate-total-box">
+                            <div class="estimate-total-label">Total Estimate</div>
+                            <div class="estimate-total-value" id="estimateTotalDisplay">$0.00</div>
+                        </div>
                     </div>
-                </form>
+                </div>
+
+                <!-- Photos -->
+                <div class="estimate-form-section">
+                    <div class="estimate-form-section-title">Photos</div>
+                    <div class="estimate-photo-counter" id="photoCounter">${photos.length}/3 photos</div>
+                    <div class="estimate-photo-grid" id="photoGrid">
+                        ${photos.map((photo, i) => this.estimates_renderPhotoItem(photo, i)).join('')}
+                        ${photos.length < 3 ? this.estimates_renderPhotoUploadButton() : ''}
+                    </div>
+                </div>
+
+                <!-- Terms -->
+                <div class="estimate-form-section">
+                    <div class="estimate-form-section-title">Terms & Conditions</div>
+                    <div class="estimate-form-group">
+                        <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc...">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="estimate-form-section">
+                    <div class="estimate-form-section-title">Internal Notes</div>
+                    <div class="estimate-form-group">
+                        <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)...">${estimate?.notes || ''}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="estimate-modal-footer">
+                <button class="estimate-modal-btn estimate-modal-btn-cancel" data-action="close-modal">Cancel</button>
+                <button class="estimate-modal-btn estimate-modal-btn-save" data-action="save-estimate">Save Estimate</button>
             </div>
         </div>
     `;
+},
 
-    document.body.appendChild(modal);
+/**
+ * Initialize all modal events
+ */
+estimates_initModalEvents(overlay) {
+    // Close modal
+    overlay.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
+        btn.addEventListener('click', () => this.estimates_closeModal());
+    });
 
-    // Fade in animation
-    setTimeout(() => modal.classList.add('show'), 10);
-
-    // Character counters
-    this.estimates_setupFormCounters(modal);
-
-    // Form submit
-    const form = document.getElementById('estimateForm');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn.disabled) return;
-
-        // Disable button
-        submitBtn.disabled = true;
-        const originalHTML = submitBtn.innerHTML;
-        submitBtn.innerHTML = `
-            <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
-                <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Creating...
-        `;
-        submitBtn.style.opacity = '0.6';
-
-        try {
-            await this.estimates_createEstimate();
-            modal.remove();
-        } catch (error) {
-            // Re-enable button on error
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalHTML;
-            submitBtn.style.opacity = '1';
+    // Click outside to close
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            this.estimates_closeModal();
         }
     });
 
-    // Modal events
-    this.estimates_setupModalEvents(modal);
-},
+    // Lead dropdown quick-create
+    const leadSelect = overlay.querySelector('#estimateLead');
+    if (leadSelect) {
+        leadSelect.addEventListener('change', async (e) => {
+            if (e.target.value === '__create__') {
+                const name = prompt('Lead Name:');
+                if (!name) {
+                    e.target.value = '';
+                    return;
+                }
 
-estimates_setupFormCounters(modal) {
-    const titleInput = modal.querySelector('#estimateTitle');
-    const titleCounter = modal.querySelector('#titleCounter');
-    const descInput = modal.querySelector('#estimateDescription');
-    const descCounter = modal.querySelector('#descriptionCounter');
+                const phone = prompt('Phone (optional):');
+                const email = prompt('Email (optional):');
 
-    if (titleInput && titleCounter) {
-        titleInput.addEventListener('input', () => {
-            const remaining = 100 - titleInput.value.length;
-            titleCounter.textContent = `${remaining} character${remaining !== 1 ? 's' : ''} remaining`;
-            
-            if (remaining === 0) {
-                titleCounter.style.color = 'var(--danger)';
-                titleCounter.style.fontWeight = '700';
-            } else if (remaining <= 10) {
-                titleCounter.style.color = 'var(--warning)';
-                titleCounter.style.fontWeight = '600';
-            } else {
-                titleCounter.style.color = 'var(--text-tertiary)';
-                titleCounter.style.fontWeight = '500';
+                try {
+                    const lead = await API.createLead({ name, phone, email, source: 'manual' });
+                    this.state.leads.unshift(lead);
+
+                    // Add new option
+                    const option = document.createElement('option');
+                    option.value = lead.id;
+                    option.textContent = lead.name;
+                    option.selected = true;
+
+                    // Insert after the "Create New Lead" option
+                    leadSelect.insertBefore(option, leadSelect.children[2]);
+
+                    alert(`Lead "${lead.name}" created!`);
+                } catch (err) {
+                    console.error('Failed to create lead:', err);
+                    alert('Failed to create lead');
+                    e.target.value = '';
+                }
             }
         });
     }
 
-    if (descInput && descCounter) {
-        descInput.addEventListener('input', () => {
-            const remaining = 2000 - descInput.value.length;
-            descCounter.textContent = `${remaining} character${remaining !== 1 ? 's' : ''} remaining`;
-            
-            if (remaining === 0) {
-                descCounter.style.color = 'var(--danger)';
-                descCounter.style.fontWeight = '700';
-            } else if (remaining <= 100) {
-                descCounter.style.color = 'var(--warning)';
-                descCounter.style.fontWeight = '600';
-            } else {
-                descCounter.style.color = 'var(--text-tertiary)';
-                descCounter.style.fontWeight = '500';
+    // Line item changes - auto-calculate totals
+    overlay.addEventListener('input', (e) => {
+        if (e.target.classList.contains('line-item-quantity') ||
+            e.target.classList.contains('line-item-rate')) {
+            this.estimates_updateLineItemsTotal();
+        }
+    });
+
+    // Add line item
+    overlay.querySelectorAll('[data-action="add-line-item"]').forEach(btn => {
+        btn.addEventListener('click', () => this.estimates_addLineItem(overlay));
+    });
+
+    // Remove line item (delegated)
+    overlay.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('[data-action="remove-line-item"]');
+        if (removeBtn) {
+            const index = parseInt(removeBtn.dataset.index);
+            this.estimates_removeLineItem(overlay, index);
+        }
+    });
+
+    // Photo upload
+    const uploadBtn = overlay.querySelector('[data-action="upload-photo"]');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            overlay.querySelector('#photoUploadInput').click();
+        });
+
+        overlay.querySelector('#photoUploadInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.estimates_handlePhotoUpload(overlay, e.target.files[0]);
             }
         });
     }
+
+    // Remove photo (delegated)
+    overlay.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('[data-action="remove-photo"]');
+        if (removeBtn) {
+            const index = parseInt(removeBtn.dataset.index);
+            this.estimates_removePhoto(overlay, index);
+        }
+    });
+
+    // Save estimate
+    overlay.querySelectorAll('[data-action="save-estimate"]').forEach(btn => {
+        btn.addEventListener('click', () => this.estimates_handleSave(overlay));
+    });
 },
 
-// Modal event setup
-estimates_setupModalEvents(modal) {
-    // Close button
-    const closeBtn = modal.querySelector('.goals-modal-close');
-    if (closeBtn) {
-        closeBtn.onclick = () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
-        };
+/**
+ * Close modal
+ */
+estimates_closeModal() {
+    const overlay = document.querySelector('.estimate-modal-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+    }
+    this.state.editingEstimateId = null;
+},
+
+/**
+ * Add line item
+ */
+estimates_addLineItem(overlay) {
+    const container = overlay.querySelector('#lineItemsContainer');
+    const currentItems = container.querySelectorAll('.estimate-line-item').length;
+
+    const newItem = { description: '', quantity: 1, rate: 0 };
+    const html = this.estimates_renderLineItemRow(newItem, currentItems);
+
+    container.insertAdjacentHTML('beforeend', html);
+    this.estimates_updateLineItemsTotal();
+},
+
+/**
+ * Remove line item
+ */
+estimates_removeLineItem(overlay, index) {
+    const container = overlay.querySelector('#lineItemsContainer');
+    const items = container.querySelectorAll('.estimate-line-item');
+
+    if (items.length <= 1) {
+        alert('At least one line item required');
+        return;
     }
 
-    // Cancel button
-    modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
-        btn.onclick = () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
-        };
+    items[index].remove();
+
+    // Re-index remaining items
+    container.querySelectorAll('.estimate-line-item').forEach((item, newIndex) => {
+        item.dataset.index = newIndex;
+        item.querySelector('[data-action="remove-line-item"]').dataset.index = newIndex;
     });
 
-    // Click outside
-    let mouseDownTarget = null;
-
-    modal.addEventListener('mousedown', (e) => {
-        mouseDownTarget = e.target;
-    });
-
-    modal.addEventListener('mouseup', (e) => {
-        if (mouseDownTarget === modal && e.target === modal) {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
-        }
-        mouseDownTarget = null;
-    });
-
-    // ESC key
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            modal.classList.remove('show');
-            setTimeout(() => modal.remove(), 300);
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+    this.estimates_updateLineItemsTotal();
 },
 
-async estimates_createEstimate() {
+/**
+ * Update line items total
+ */
+estimates_updateLineItemsTotal() {
+    const container = document.querySelector('#lineItemsContainer');
+    if (!container) return;
+
+    let total = 0;
+    container.querySelectorAll('.estimate-line-item').forEach(row => {
+        const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
+        const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
+        const lineTotal = qty * rate;
+
+        row.querySelector('.estimate-line-item-total').textContent = formatCurrency(lineTotal);
+        total += lineTotal;
+    });
+
+    const displayEl = document.querySelector('#estimateTotalDisplay');
+    if (displayEl) {
+        displayEl.textContent = formatCurrency(total);
+    }
+},
+
+/**
+ * Handle photo upload
+ */
+async estimates_handlePhotoUpload(overlay, file) {
     try {
-        console.log('[Estimates] Creating estimate...');
+        const photoGrid = overlay.querySelector('#photoGrid');
+        const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
 
-        const title = document.getElementById('estimateTitle')?.value.trim();
-        const leadId = document.getElementById('estimateLead')?.value;
-        const priceInput = document.getElementById('estimatePrice')?.value;
-        const price = parseFloat(priceInput);
-        const expiry = document.getElementById('estimateExpiry')?.value || null;
-        const description = document.getElementById('estimateDescription')?.value.trim() || null;
-        const status = document.getElementById('estimateStatus')?.value || 'draft';
+        if (currentPhotos >= 3) {
+            alert('Maximum 3 photos allowed');
+            return;
+        }
 
-        console.log('[Estimates] Form data:', { title, leadId, price, expiry, status });
+        console.log('Compressing photo...');
+
+        // Compress image if API has compressImage
+        let fileToUse = file;
+        if (typeof API.compressImage === 'function') {
+            fileToUse = await API.compressImage(file);
+        }
+
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const photoData = {
+                url: e.target.result,
+                file: fileToUse,
+                caption: file.name
+            };
+
+            // Add photo to grid
+            const uploadBtn = photoGrid.querySelector('.estimate-photo-upload');
+            const photoHtml = this.estimates_renderPhotoItem(photoData, currentPhotos);
+
+            if (uploadBtn) {
+                uploadBtn.insertAdjacentHTML('beforebegin', photoHtml);
+
+                // Remove upload button if at max
+                if (currentPhotos + 1 >= 3) {
+                    uploadBtn.remove();
+                }
+            } else {
+                photoGrid.insertAdjacentHTML('beforeend', photoHtml);
+            }
+
+            // Update counter
+            this.estimates_updatePhotoCounter(overlay);
+            console.log('Photo added');
+        };
+        reader.readAsDataURL(fileToUse);
+
+    } catch (error) {
+        console.error('Error uploading photo:', error);
+        alert('Failed to upload photo');
+    }
+},
+
+/**
+ * Remove photo
+ */
+estimates_removePhoto(overlay, index) {
+    const photoGrid = overlay.querySelector('#photoGrid');
+    const photos = photoGrid.querySelectorAll('.estimate-photo-item');
+
+    photos[index].remove();
+
+    // Re-index remaining photos
+    photoGrid.querySelectorAll('.estimate-photo-item').forEach((photo, newIndex) => {
+        photo.dataset.index = newIndex;
+        photo.querySelector('[data-action="remove-photo"]').dataset.index = newIndex;
+    });
+
+    // Add upload button if under max
+    const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
+    if (currentPhotos < 3 && !photoGrid.querySelector('.estimate-photo-upload')) {
+        photoGrid.insertAdjacentHTML('beforeend', this.estimates_renderPhotoUploadButton());
+
+        // Re-attach upload event
+        const uploadBtn = photoGrid.querySelector('[data-action="upload-photo"]');
+        uploadBtn.addEventListener('click', () => {
+            photoGrid.querySelector('#photoUploadInput').click();
+        });
+
+        photoGrid.querySelector('#photoUploadInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.estimates_handlePhotoUpload(overlay, e.target.files[0]);
+            }
+        });
+    }
+
+    this.estimates_updatePhotoCounter(overlay);
+    console.log('Photo removed');
+},
+
+/**
+ * Update photo counter
+ */
+estimates_updatePhotoCounter(overlay) {
+    const photoGrid = overlay.querySelector('#photoGrid');
+    const counter = overlay.querySelector('#photoCounter');
+    const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
+
+    if (counter) {
+        counter.textContent = `${currentPhotos}/3 photos`;
+    }
+},
+
+/**
+ * Handle estimate save
+ */
+async estimates_handleSave(overlay) {
+    try {
+        // Gather form data
+        const title = overlay.querySelector('#estimateTitle').value.trim();
+        const leadId = overlay.querySelector('#estimateLead').value;
+        const status = overlay.querySelector('#estimateStatus').value;
+        const expiresAt = overlay.querySelector('#estimateExpiry').value;
+        const description = overlay.querySelector('#estimateDescription').value.trim();
+        const terms = overlay.querySelector('#estimateTerms').value.trim();
+        const notes = overlay.querySelector('#estimateNotes').value.trim();
 
         // Validation
         if (!title) {
-            alert('Please enter an estimate title');
+            alert('Title is required');
             return;
         }
 
-        if (!leadId) {
-            alert('Please select a client/lead');
+        if (!leadId || leadId === '__create__') {
+            alert('Please select a lead');
             return;
         }
 
-        if (!priceInput || isNaN(price) || price <= 0) {
-            alert('Please enter a valid price');
-            return;
-        }
+        // Gather line items
+        const lineItems = [];
+        overlay.querySelectorAll('.estimate-line-item').forEach(row => {
+            const desc = row.querySelector('.line-item-description').value.trim();
+            const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
+            const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
+
+            if (desc || qty > 0 || rate > 0) {
+                lineItems.push({ description: desc, quantity: qty, rate: rate });
+            }
+        });
+
+        // Calculate total
+        const totalPrice = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+
+        // Gather photos
+        const photoElements = overlay.querySelectorAll('.estimate-photo-item img');
+        const photos = Array.from(photoElements).map((img, i) => ({
+            url: img.src,
+            caption: `Photo ${i + 1}`
+        }));
 
         const estimateData = {
-            title: title,
+            title,
             lead_id: leadId,
-            total_price: price,
-            expires_at: expiry,
-            description: description,
-            status: status
+            status,
+            expires_at: expiresAt || null,
+            description,
+            terms,
+            notes,
+            line_items: lineItems,
+            total_price: totalPrice,
+            photos
         };
 
-        console.log('[Estimates] Sending to API:', estimateData);
+        console.log('[Estimates] Saving estimate:', estimateData);
 
-        const result = await API.createEstimate(estimateData);
+        // Create or update
+        let savedEstimate;
+        if (this.state.editingEstimateId) {
+            savedEstimate = await API.updateEstimate(this.state.editingEstimateId, estimateData);
 
-        console.log('[Estimates] API response:', result);
+            // Update in state
+            const index = this.state.estimates.findIndex(e => e.id === this.state.editingEstimateId);
+            if (index !== -1) {
+                this.state.estimates[index] = savedEstimate;
+            }
 
-        if (window.SteadyUtils && window.SteadyUtils.showToast) {
-            window.SteadyUtils.showToast('Estimate created successfully! 🎉', 'success');
+            alert('Estimate updated successfully!');
         } else {
+            savedEstimate = await API.createEstimate(estimateData);
+
+            this.state.estimates.unshift(savedEstimate);
             alert('Estimate created successfully! 🎉');
         }
 
-        // Reload estimates
-        await this.init(this.state.container);
+        this.estimates_closeModal();
+        this.estimates_calculateStats();
+        this.estimates_render();
 
     } catch (error) {
-        console.error('[Estimates] Create error:', error);
-
-        const errorMsg = error.message || 'Failed to create estimate';
-
-        if (window.SteadyUtils && window.SteadyUtils.showToast) {
-            window.SteadyUtils.showToast(errorMsg, 'error');
-        } else {
-            alert('Error: ' + errorMsg);
-        }
-
-        throw error;
+        console.error('[Estimates] Save error:', error);
+        alert('Failed to save estimate: ' + (error.message || 'Unknown error'));
     }
 },
 
