@@ -2189,22 +2189,6 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         doc.setFont('helvetica', 'normal');
         doc.text(lead.name || '', 1.5, y);
         y += 0.2;
-
-        if (lead.email) {
-            doc.setFont('helvetica', 'bold');
-            doc.text('EMAIL:', 0.75, y);
-            doc.setFont('helvetica', 'normal');
-            doc.text(lead.email, 1.5, y);
-            y += 0.2;
-        }
-
-        if (lead.phone) {
-            doc.setFont('helvetica', 'bold');
-            doc.text('PHONE:', 0.75, y);
-            doc.setFont('helvetica', 'normal');
-            doc.text(lead.phone, 1.5, y);
-            y += 0.2;
-        }
     }
 
     // Date info on right
@@ -2227,7 +2211,7 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
     doc.text('STATUS:', 5, yRight);
     doc.setFont('helvetica', 'normal');
     const statusText = estimate.status ? estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1) : 'Draft';
-    doc.text(statusText, 5.6, yRight);
+    doc.text(statusText, 6.0, yRight);
 
     y = Math.max(y, yRight) + 0.4;
 
@@ -2279,10 +2263,6 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
             doc.text(formatMoney(item.quantity * item.rate), 7.5, y, { align: 'right' });
             doc.setFont('helvetica', 'normal');
             y += 0.2;
-
-            // Line under each row
-            doc.setDrawColor(221, 221, 221);
-            doc.line(0.75, y - 0.05, 7.75, y - 0.05);
         });
 
         y += 0.2;
