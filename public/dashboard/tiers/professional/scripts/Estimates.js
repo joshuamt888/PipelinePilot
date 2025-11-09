@@ -1728,7 +1728,7 @@ estimates_showViewModal(estimateId) {
                 background: rgba(59, 130, 246, 0.05);
                 border: 1px solid var(--primary);
                 border-radius: 8px;
-                text-align: right;
+                text-align: left;
             }
 
             .estimate-view-total-label {
