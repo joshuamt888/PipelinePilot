@@ -294,7 +294,6 @@ window.EstimatesModule = {
         return `
             <div class="estimates-toolbar">
                 <div class="estimates-toolbar-left">
-                    <div class="estimates-count">${this.state.filteredEstimates.length} estimate${this.state.filteredEstimates.length !== 1 ? 's' : ''}</div>
                     <div class="estimates-search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <circle cx="11" cy="11" r="8" stroke-width="2"/>
@@ -3616,17 +3615,10 @@ estimates_formatStatus(status) {
     flex: 1;
 }
 
-.estimates-count {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    white-space: nowrap;
-}
-
 .estimates-search {
     position: relative;
     flex: 1;
-    max-width: 600px;
+    max-width: 800px;
 }
 
 .estimates-search input {
