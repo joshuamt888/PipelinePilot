@@ -1077,12 +1077,12 @@ window.JobsModule = {
                 .job-form-group input,
                 .job-form-group select,
                 .job-form-group textarea {
-                    padding: 0.75rem;
-                    border: 2px solid var(--border);
-                    border-radius: 8px;
-                    background: var(--bg);
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
                     color: var(--text-primary);
-                    font-size: 0.9rem;
+                    font-size: 14px;
                     transition: all 0.2s;
                 }
 
@@ -1090,8 +1090,17 @@ window.JobsModule = {
                 .job-form-group select:focus,
                 .job-form-group textarea:focus {
                     outline: none;
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    border-color: var(--primary);
+                }
+
+                .job-form-group select {
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px;
+                    cursor: pointer;
                 }
 
                 .job-form-group textarea {
@@ -1166,17 +1175,17 @@ window.JobsModule = {
                 }
 
                 .job-dynamic-row input {
-                    padding: 0.5rem;
+                    padding: 8px 10px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    background: var(--bg);
+                    background: var(--background);
                     color: var(--text-primary);
-                    font-size: 0.875rem;
+                    font-size: 13px;
                 }
 
                 .job-dynamic-row input:focus {
                     outline: none;
-                    border-color: #667eea;
+                    border-color: var(--primary);
                 }
 
                 .job-row-total {
