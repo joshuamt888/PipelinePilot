@@ -544,8 +544,8 @@ estimates_renderModalStyles() {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
-            width: 90%;
-            max-width: 900px;
+            width: 100%;
+            max-width: 600px;
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
