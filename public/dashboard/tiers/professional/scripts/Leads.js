@@ -3281,8 +3281,7 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: rgba(0, 0, 0, 0.6);
                 z-index: 10000;
                 display: flex;
                 align-items: center;
@@ -3325,18 +3324,18 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-modal-close {
                 background: none;
                 border: none;
-                font-size: 1.5rem;
+                font-size: 28px;
                 color: var(--text-secondary);
                 cursor: pointer;
-                width: 2rem;
-                height: 2rem;
-                border-radius: var(--radius);
-                transition: all 0.3s ease;
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                transition: all 0.2s ease;
             }
 
             .addlead-modal-close:hover {
-                background: var(--danger);
-                color: white;
+                background: var(--surface-hover);
+                color: var(--text-primary);
             }
 
             .addlead-modal-body {
@@ -3361,7 +3360,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-form-group {
                 display: flex;
                 flex-direction: column;
-                gap: 0.5rem;
+                gap: 8px;
             }
 
             .addlead-form-group.addlead-full-width {
@@ -3369,61 +3368,56 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-form-label {
-                font-weight: 600;
+                font-weight: 500;
                 color: var(--text-primary);
-                font-size: 0.9rem;
+                font-size: 14px;
             }
 
             .addlead-form-input,
             .addlead-form-textarea {
-                padding: 0.875rem 1rem;
-                border: 2px solid var(--border);
-                border-radius: var(--radius);
-                font-size: 0.95rem;
+                padding: 10px 12px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                font-size: 14px;
                 background: var(--background);
                 color: var(--text-primary);
-                transition: all 0.3s ease;
+                transition: all 0.2s ease;
                 font-family: inherit;
             }
 
             .addlead-form-select {
-                padding: 0.875rem 3rem 0.875rem 1.25rem;
-                border: 2px solid var(--border);
-                border-radius: 12px;
-                font-size: 0.95rem;
+                padding: 10px 40px 10px 12px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                font-size: 14px;
                 background: var(--background);
                 color: var(--text-primary);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: all 0.2s ease;
                 font-family: inherit;
                 font-weight: 500;
                 cursor: pointer;
                 appearance: none;
                 -webkit-appearance: none;
                 -moz-appearance: none;
-                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-                background-position: right 1rem center;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                 background-repeat: no-repeat;
-                background-size: 1.25rem;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                background-position: right 12px center;
+                background-size: 16px;
             }
 
             .addlead-form-select:hover {
                 border-color: var(--primary);
-                transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
             }
 
             .addlead-form-select:focus {
                 outline: none;
                 border-color: var(--primary);
-                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
             }
 
             .addlead-form-input:focus,
             .addlead-form-textarea:focus {
                 outline: none;
                 border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
 
             /* Input Validation States */
@@ -3585,12 +3579,13 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-primary {
-                background: var(--primary);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
+                border: none;
             }
 
             .addlead-btn-primary:hover:not(:disabled) {
-                background: var(--primary-dark);
+                background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
                 transform: translateY(-1px);
                 box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
             }
@@ -3601,15 +3596,13 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-secondary {
-                background: var(--surface-hover);
+                background: transparent;
                 color: var(--text-primary);
                 border: 1px solid var(--border);
             }
 
             .addlead-btn-secondary:hover {
-                background: var(--border);
-                border-color: var(--primary);
-                color: var(--primary);
+                background: var(--surface-hover);
             }
 
             .addlead-btn-danger {
