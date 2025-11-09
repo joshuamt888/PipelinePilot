@@ -219,13 +219,22 @@ window.SchedulingModule = {
                                    id="scheduling_searchInput"
                                    value="${API.escapeHtml(this.scheduling_state.searchTerm)}">
                         </div>
+                        <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
+                                onclick="SchedulingModule.scheduling_toggleBatchMode()">
+                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
+                            ${this.scheduling_state.batchEditMode ?
+                                `Cancel (${this.scheduling_state.selectedTaskIds.length} selected)` :
+                                'Edit Multiple'}
+                        </button>
                         <button class="scheduling-add-task-btn" onclick="SchedulingModule.scheduling_showAddTaskModal()">
                             + Add Task
                         </button>
                     </div>
                 </div>
-                
+
                 ${this.scheduling_renderActiveFiltersPanel()}
+                ${this.scheduling_state.batchEditMode && this.scheduling_state.selectedTaskIds.length > 0 ?
+                    this.scheduling_renderBatchActionsBar() : ''}
                 
                 <div class="scheduling-table-container">
                     ${filteredTasks.length > 0 ? 
@@ -275,20 +284,29 @@ window.SchedulingModule = {
         const typeIcon = this.scheduling_getTaskTypeIcon(task.task_type);
         const priorityIcon = this.scheduling_getPriorityIcon(task.priority);
         const formattedDate = this.scheduling_formatTaskDate(task.due_date);
-        
+        const isSelected = this.scheduling_state.selectedTaskIds.includes(task.id);
+
         const safeTitle = API.escapeHtml(task.title);
         const safeLeadName = API.escapeHtml(leadName || '-');
         const safeTime = task.due_time ? API.escapeHtml(this.scheduling_formatTime(task.due_time)) : '';
-        
+
         return `
-            <tr class="scheduling-task-row ${isCompleted ? 'scheduling-completed' : ''} ${isOverdue ? 'scheduling-overdue' : ''} scheduling-clickable-row"
+            <tr class="scheduling-task-row ${isCompleted ? 'scheduling-completed' : ''} ${isOverdue ? 'scheduling-overdue' : ''} ${this.scheduling_state.batchEditMode ? 'batch-mode' : 'scheduling-clickable-row'} ${isSelected ? 'selected' : ''}"
                 data-priority="${task.priority || 'medium'}"
-                onclick="SchedulingModule.scheduling_showTaskView('${task.id}')">
+                data-task-id="${task.id}"
+                onclick="${this.scheduling_state.batchEditMode ? `SchedulingModule.scheduling_toggleTaskSelection('${task.id}')` : `SchedulingModule.scheduling_showTaskView('${task.id}')`}">
                 <td class="scheduling-checkbox-col" onclick="event.stopPropagation()">
-                    <input type="checkbox" 
-                           class="scheduling-task-checkbox"
-                           ${isCompleted ? 'checked' : ''}
-                           onchange="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', this.checked)">
+                    ${this.scheduling_state.batchEditMode ? `
+                        <input type="checkbox"
+                               class="scheduling-batch-checkbox"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="SchedulingModule.scheduling_toggleTaskSelection('${task.id}')">
+                    ` : `
+                        <input type="checkbox"
+                               class="scheduling-task-checkbox"
+                               ${isCompleted ? 'checked' : ''}
+                               onchange="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', this.checked)">
+                    `}
                 </td>
                 <td class="scheduling-task-cell">
                     <div class="scheduling-task-title ${isCompleted ? 'scheduling-completed-text' : ''}">${safeTitle}</div>
@@ -2426,6 +2444,85 @@ modal.addEventListener('mouseup', (e) => {
                 };
                 this.scheduling_state.searchTerm = '';
             }
+        }
+    },
+
+    // Batch Operations
+    scheduling_toggleBatchMode() {
+        this.scheduling_state.batchEditMode = !this.scheduling_state.batchEditMode;
+        if (!this.scheduling_state.batchEditMode) {
+            this.scheduling_state.selectedTaskIds = [];
+        }
+        this.scheduling_render();
+    },
+
+    scheduling_toggleTaskSelection(taskId) {
+        const index = this.scheduling_state.selectedTaskIds.indexOf(taskId);
+        if (index > -1) {
+            this.scheduling_state.selectedTaskIds.splice(index, 1);
+        } else {
+            this.scheduling_state.selectedTaskIds.push(taskId);
+        }
+        this.scheduling_render();
+    },
+
+    scheduling_renderBatchActionsBar() {
+        const count = this.scheduling_state.selectedTaskIds.length;
+        return `
+            <div class="scheduling-batch-actions-bar">
+                <div class="scheduling-batch-actions-content">
+                    <span class="scheduling-batch-count">${count} task${count !== 1 ? 's' : ''} selected</span>
+                    <div class="scheduling-batch-buttons">
+                        <button class="scheduling-batch-btn scheduling-batch-complete"
+                                onclick="SchedulingModule.scheduling_batchComplete()">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            Complete Selected
+                        </button>
+                        <button class="scheduling-batch-btn scheduling-batch-delete"
+                                onclick="SchedulingModule.scheduling_batchDelete()">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    async scheduling_batchComplete() {
+        if (this.scheduling_state.selectedTaskIds.length === 0) return;
+
+        try {
+            await API.batchCompleteTasks(this.scheduling_state.selectedTaskIds);
+            this.scheduling_showNotification(`Completed ${this.scheduling_state.selectedTaskIds.length} task(s)`, 'success');
+
+            this.scheduling_state.selectedTaskIds = [];
+            this.scheduling_state.batchEditMode = false;
+            await this.scheduling_loadTasks();
+            this.scheduling_render();
+        } catch (error) {
+            console.error('Batch complete error:', error);
+            this.scheduling_showNotification('Failed to complete tasks', 'error');
+        }
+    },
+
+    async scheduling_batchDelete() {
+        if (this.scheduling_state.selectedTaskIds.length === 0) return;
+
+        const confirmed = confirm(`Delete ${this.scheduling_state.selectedTaskIds.length} task(s)? This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            await API.batchDeleteTasks(this.scheduling_state.selectedTaskIds);
+            this.scheduling_showNotification(`Deleted ${this.scheduling_state.selectedTaskIds.length} task(s)`, 'success');
+
+            this.scheduling_state.selectedTaskIds = [];
+            this.scheduling_state.batchEditMode = false;
+            await this.scheduling_loadTasks();
+            this.scheduling_render();
+        } catch (error) {
+            console.error('Batch delete error:', error);
+            this.scheduling_showNotification('Failed to delete tasks', 'error');
         }
     },
 
@@ -4902,6 +4999,98 @@ modal.addEventListener('mouseup', (e) => {
         width: 100%;
         justify-content: center;
     }
+}
+
+/* Batch Operations Styles */
+.scheduling-btn-batch-edit {
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.scheduling-btn-batch-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.scheduling-btn-batch-edit.active {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.scheduling-batch-actions-bar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.scheduling-batch-actions-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.scheduling-batch-count {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.scheduling-batch-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.scheduling-batch-btn {
+    padding: 0.75rem 1.25rem;
+    border: 2px solid white;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.scheduling-batch-btn:hover {
+    background: white;
+    color: #667eea;
+}
+
+.scheduling-batch-btn.scheduling-batch-delete:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+.scheduling-task-row.batch-mode {
+    cursor: pointer;
+}
+
+.scheduling-task-row.selected {
+    background: rgba(102, 126, 234, 0.1);
+    border-left: 4px solid #667eea;
+}
+
+.scheduling-batch-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
 
 /* Extra Small Mobile - Stack Everything */
