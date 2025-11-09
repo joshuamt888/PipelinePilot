@@ -3530,6 +3530,55 @@ window.EstimatesModule = {
                 Cancel (${selectedCount} selected)
             `;
         }
+
+        // Show/hide batch actions bar
+        const toolbar = container.querySelector('.estimates-toolbar');
+        const existingBatchActions = container.querySelector('.estimates-batch-actions');
+
+        if (selectedCount > 0) {
+            // Need to show batch actions
+            if (!existingBatchActions) {
+                const batchActionsHTML = `
+                    <div class="estimates-batch-actions">
+                        <div class="estimates-batch-actions-left">
+                            <div class="estimates-batch-selected">${selectedCount} selected</div>
+                        </div>
+                        <div class="estimates-batch-actions-right">
+                            <button class="estimates-batch-btn" data-action="batch-mark-sent">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>
+                                </svg>
+                                Mark Sent
+                            </button>
+                            <button class="estimates-batch-btn" data-action="batch-mark-accepted">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
+                                </svg>
+                                Mark Accepted
+                            </button>
+                            <button class="estimates-batch-btn delete" data-action="batch-delete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+                toolbar.insertAdjacentHTML('afterend', batchActionsHTML);
+            } else {
+                // Update count
+                const selectedDiv = existingBatchActions.querySelector('.estimates-batch-selected');
+                if (selectedDiv) {
+                    selectedDiv.textContent = `${selectedCount} selected`;
+                }
+            }
+        } else {
+            // Remove batch actions if no items selected
+            if (existingBatchActions) {
+                existingBatchActions.remove();
+            }
+        }
     },
 
     /**
