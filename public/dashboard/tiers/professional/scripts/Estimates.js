@@ -2036,6 +2036,12 @@ estimates_showViewModal(estimateId) {
     // Download client copy
     overlay.querySelector('[data-action="download-client-copy"]').addEventListener('click', () => {
         this.estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice);
+
+        // Close modal instantly like other actions
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.remove();
+        }, 200);
     });
 
     // Delete estimate
@@ -2144,39 +2150,46 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         });
     }
 
+    // Helper to format currency
+    const formatMoney = (val) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+    };
+
     // Create the HTML content for PDF
     const content = `
-        <div style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.5; color: #000; padding: 40px;">
+        <div style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.5; color: #000; padding: 40px; background: white;">
             <div style="text-align: center; border-bottom: 3px solid #333; padding-bottom: 15px; margin-bottom: 25px;">
-                <h1 style="font-size: 24pt; font-weight: bold; margin-bottom: 5px; color: #333; margin: 0;">${estimate.title}</h1>
+                <h1 style="font-size: 24pt; font-weight: bold; margin-bottom: 5px; color: #333; margin: 0;">${estimate.title || 'Estimate'}</h1>
                 <div style="font-size: 10pt; color: #666;">Estimate #${estimate.estimate_number || 'N/A'}</div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
-                <div style="flex: 1;">
-                    ${lead ? `
-                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">CLIENT:</span> ${lead.name}</div>
-                        ${lead.email ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">EMAIL:</span> ${lead.email}</div>` : ''}
-                        ${lead.phone ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">PHONE:</span> ${lead.phone}</div>` : ''}
-                    ` : ''}
-                </div>
-                <div style="flex: 1; text-align: right;">
-                    <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">DATE:</span> ${new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                    ${estimate.expires_at ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">VALID UNTIL:</span> ${new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
-                    <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">STATUS:</span> ${this.estimates_formatStatus(estimate.status)}</div>
-                </div>
-            </div>
+            <table style="width: 100%; margin-bottom: 25px;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        ${lead ? `
+                            <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">CLIENT:</span> ${lead.name || ''}</div>
+                            ${lead.email ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">EMAIL:</span> ${lead.email}</div>` : ''}
+                            ${lead.phone ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">PHONE:</span> ${lead.phone}</div>` : ''}
+                        ` : ''}
+                    </td>
+                    <td style="width: 50%; vertical-align: top; text-align: right;">
+                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">DATE:</span> ${new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                        ${estimate.expires_at ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">VALID UNTIL:</span> ${new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
+                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">STATUS:</span> ${this.estimates_formatStatus(estimate.status)}</div>
+                    </td>
+                </tr>
+            </table>
 
             ${estimate.description ? `
                 <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">PROJECT DESCRIPTION</div>
-                <div style="background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; font-size: 10pt;">${estimate.description}</div>
+                <div style="background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; white-space: pre-wrap; font-size: 10pt;">${estimate.description || ''}</div>
             ` : ''}
 
             ${lineItems.length > 0 ? `
                 <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">SCOPE OF WORK</div>
                 <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    <thead style="background: #333; color: white;">
-                        <tr>
+                    <thead>
+                        <tr style="background: #333; color: white;">
                             <th style="padding: 10px; text-align: left; font-weight: bold; font-size: 10pt;">Description</th>
                             <th style="padding: 10px; width: 80px; text-align: center; font-weight: bold; font-size: 10pt;">Qty</th>
                             <th style="padding: 10px; width: 100px; text-align: right; font-weight: bold; font-size: 10pt;">Rate</th>
@@ -2188,16 +2201,16 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
                             <tr>
                                 <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 10pt;">${item.description || '-'}</td>
                                 <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 10pt;">${item.quantity}</td>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;">${formatCurrency(item.rate)}</td>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;"><strong>${formatCurrency(item.quantity * item.rate)}</strong></td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;">${formatMoney(item.rate)}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;"><strong>${formatMoney(item.quantity * item.rate)}</strong></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
 
-                <div style="margin: 25px 0; padding: 15px; background: #f5f5f5; border: 2px solid #333; border-radius: 4px;">
+                <div style="margin: 25px 0; padding: 15px; background: #f5f5f5; border: 2px solid #333;">
                     <div style="font-size: 12pt; font-weight: bold; color: #333; margin-bottom: 8px;">TOTAL ESTIMATE</div>
-                    <div style="font-size: 28pt; font-weight: bold; color: #000;">${formatCurrency(totalPrice)}</div>
+                    <div style="font-size: 28pt; font-weight: bold; color: #000;">${formatMoney(totalPrice)}</div>
                 </div>
             ` : ''}
 
@@ -2212,12 +2225,20 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         </div>
     `;
 
-    // Create temporary container
+    // Create temporary container - VISIBLE but hidden visually
     const element = document.createElement('div');
     element.innerHTML = content;
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
+    element.style.position = 'fixed';
+    element.style.top = '0';
+    element.style.left = '0';
+    element.style.width = '8.5in';
+    element.style.opacity = '0';
+    element.style.pointerEvents = 'none';
+    element.style.zIndex = '-1';
     document.body.appendChild(element);
+
+    // Wait a moment for rendering
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Generate and download PDF
     const filename = `Estimate-${estimate.estimate_number || 'draft'}.pdf`;
@@ -2226,7 +2247,11 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         margin: 0.75,
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false
+        },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
