@@ -1,1032 +1,901 @@
 /**
- * ═══════════════════════════════════════════════════════════════════
- * ESTIMATES MODULE - CONCEPT & DESIGN DOCUMENT
- * ═══════════════════════════════════════════════════════════════════
- *
- * PURPOSE: Quote/proposal builder with client acceptance and auto-job creation
- * INSPIRATION: PandaDoc simplicity + Stripe checkout flow + DocuSign UX
- *
- * ═══════════════════════════════════════════════════════════════════
+ * ESTIMATES MODULE
+ * Quote management system - converts to jobs when accepted
  */
 
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  DATABASE SCHEMA DESIGN                                          │
- * └─────────────────────────────────────────────────────────────────┘
- */
+window.EstimatesModule = {
+    // STATE
+    state: {
+        estimates: [],
+        leads: [],
+        filteredEstimates: [],
+        container: 'estimates-content',
 
-/*
--- `proposals` table
-CREATE TABLE proposals (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id             UUID REFERENCES users(id) ON DELETE CASCADE,
-    lead_id             UUID REFERENCES leads(id) ON DELETE SET NULL,
+        // Filters
+        statusFilter: 'all',
+        leadFilter: 'all',
+        dateFilter: 'all',
 
-    -- Identification
-    estimate_number     TEXT UNIQUE,                    -- "PROP-2024-001" (auto-generated)
-    title               TEXT NOT NULL,                  -- "Website Redesign Proposal"
+        // Modal state
+        editingEstimateId: null,
 
-    -- Line Items (JSONB array)
-    line_items          JSONB NOT NULL DEFAULT '[]'::JSONB,
-    /* Structure:
-    [
-      {
-        "id": "item-1",
-        "description": "Homepage design mockups",
-        "quantity": 1,
-        "rate": 500.00,
-        "unit": "item",           // "item", "hour", "day", "month"
-        "total": 500.00
-      }
-    ]
-    */
+        // Stats
+        stats: {
+            totalQuoted: 0,
+            totalAccepted: 0,
+            totalPending: 0,
+            acceptanceRate: 0
+        }
+    },
 
-    -- Pricing
-    subtotal            NUMERIC DEFAULT 0,
-    tax_rate            NUMERIC DEFAULT 0,              -- 8.5% stored as 8.5
-    tax_amount          NUMERIC DEFAULT 0,
-    discount_type       TEXT,                           -- 'percentage' or 'fixed'
-    discount_value      NUMERIC DEFAULT 0,
-    discount_amount     NUMERIC DEFAULT 0,
-    total               NUMERIC DEFAULT 0,
+    // Constants
+    STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
 
-    -- Terms & Conditions
-    payment_terms       TEXT DEFAULT 'Net 30',          -- "Net 30", "50% upfront", "Due on receipt"
-    valid_until         DATE,                           -- Expiration date
-    notes               TEXT,                           -- Additional terms/conditions
-    template_name       TEXT,                           -- "Hourly", "Fixed", "Package", etc.
+    /**
+     * Initialize the Estimates module
+     */
+    async estimates_init(targetContainer = 'estimates-content') {
+        this.state.container = targetContainer;
+        this.estimates_showLoading();
 
-    -- Status & Tracking
-    status              TEXT DEFAULT 'draft',           -- draft, sent, viewed, accepted, declined, expired
-    sent_at             TIMESTAMPTZ,
-    sent_to_email       TEXT,                           -- Client email
-    viewed_at           TIMESTAMPTZ,                    -- First time client viewed
-    view_count          INTEGER DEFAULT 0,
-    last_viewed_at      TIMESTAMPTZ,                    -- Most recent view
+        try {
+            // Load estimates and leads in parallel
+            const [estimates, leads] = await Promise.all([
+                API.getEstimates(),
+                API.getLeads()
+            ]);
 
-    -- Client Response
-    accepted_at         TIMESTAMPTZ,
-    accepted_by_name    TEXT,
-    accepted_by_email   TEXT,
-    accepted_signature  TEXT,                           -- "I agree" or signature text
-    accepted_ip         TEXT,                           -- For legal records
+            this.state.estimates = estimates || [];
+            this.state.leads = leads || [];
+            this.state.filteredEstimates = this.state.estimates;
 
-    declined_at         TIMESTAMPTZ,
-    decline_reason      TEXT,
+            this.estimates_calculateStats();
+            this.estimates_render();
+        } catch (error) {
+            console.error('Error initializing Estimates:', error);
+            this.estimates_showError('Failed to load estimates');
+        }
+    },
 
-    -- Auto-conversion to Job
-    auto_create_job     BOOLEAN DEFAULT true,
-    created_job_id      UUID REFERENCES jobs(id) ON DELETE SET NULL,
+    /**
+     * Main render function
+     */
+    estimates_render() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
 
-    -- Metadata
-    created_at          TIMESTAMPTZ DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ DEFAULT NOW()
-);
+        // Apply filters
+        this.estimates_applyFilters();
 
--- Indexes
-CREATE INDEX idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX idx_proposals_lead_id ON proposals(lead_id);
-CREATE INDEX idx_proposals_status ON proposals(status);
-CREATE INDEX idx_proposals_number ON proposals(estimate_number);
-CREATE INDEX idx_proposals_created_at ON proposals(created_at DESC);
+        container.innerHTML = `
+            ${this.estimates_renderStyles()}
+            <div class="estimates-container">
+                ${this.estimates_renderHeader()}
+                ${this.estimates_renderStats()}
+                ${this.estimates_renderFilters()}
+                ${this.estimates_renderGrid()}
+            </div>
+        `;
 
--- RLS Policies
-ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
+        // Smooth fade-in
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            container.style.opacity = '1';
+            this.estimates_attachEvents();
+        }, 50);
+    },
 
-CREATE POLICY "Users can view own proposals"
-    ON proposals FOR SELECT
-    USING (auth.uid() = user_id);
+    /**
+     * Render inline styles
+     */
+    estimates_renderStyles() {
+        return `
+            <style>
+                .estimates-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
 
-CREATE POLICY "Users can create own proposals"
-    ON proposals FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+                /* Header */
+                .estimates-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 30px;
+                }
 
-CREATE POLICY "Users can update own proposals"
-    ON proposals FOR UPDATE
-    USING (auth.uid() = user_id);
+                .estimates-header-content h1 {
+                    font-size: 32px;
+                    font-weight: 600;
+                    margin: 0 0 8px 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    color: var(--text-primary);
+                }
 
-CREATE POLICY "Users can delete own proposals"
-    ON proposals FOR DELETE
-    USING (auth.uid() = user_id);
+                .estimates-title-icon {
+                    width: 32px;
+                    height: 32px;
+                    color: var(--primary);
+                }
 
--- Trigger to update updated_at
-CREATE TRIGGER update_proposals_updated_at
-    BEFORE UPDATE ON proposals
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+                .estimates-subtitle {
+                    color: var(--text-secondary);
+                    font-size: 14px;
+                    margin: 0;
+                }
 
--- Function to generate proposal number
-CREATE OR REPLACE FUNCTION generate_estimate_number()
-RETURNS TEXT AS $$
-DECLARE
-    new_number TEXT;
-    year TEXT;
-    counter INTEGER;
-BEGIN
-    year := TO_CHAR(NOW(), 'YYYY');
+                .estimates-btn-primary {
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.2s;
+                }
 
-    -- Get the highest counter for this year
-    SELECT COALESCE(MAX(
-        CAST(
-            SUBSTRING(estimate_number FROM 'PROP-' || year || '-([0-9]+)')
-            AS INTEGER
-        )
-    ), 0) + 1
-    INTO counter
-    FROM proposals
-    WHERE estimate_number LIKE 'PROP-' || year || '-%';
+                .estimates-btn-primary:hover {
+                    background: var(--primary-dark);
+                    transform: translateY(-1px);
+                }
 
-    -- Format as PROP-2024-001
-    new_number := 'PROP-' || year || '-' || LPAD(counter::TEXT, 3, '0');
+                .estimates-btn-primary svg {
+                    width: 18px;
+                    height: 18px;
+                }
 
-    RETURN new_number;
-END;
-$$ LANGUAGE plpgsql;
+                /* Stats Banners */
+                .estimates-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                    gap: 16px;
+                    margin-bottom: 24px;
+                }
 
--- Trigger to auto-generate proposal number on insert
-CREATE OR REPLACE FUNCTION set_estimate_number()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.estimate_number IS NULL THEN
-        NEW.estimate_number := generate_estimate_number();
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+                .estimates-stat-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    transition: all 0.2s;
+                }
 
-CREATE TRIGGER trigger_set_estimate_number
-    BEFORE INSERT ON proposals
-    FOR EACH ROW
-    EXECUTE FUNCTION set_estimate_number();
-*/
+                .estimates-stat-card:hover {
+                    border-color: var(--primary);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                }
 
-/*
--- `estimate_templates` table (Optional - for saving custom templates)
-CREATE TABLE estimate_templates (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
+                .estimates-stat-icon {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
 
-    name            TEXT NOT NULL,                      -- "Hourly Consulting Template"
-    description     TEXT,
-    line_items      JSONB NOT NULL DEFAULT '[]'::JSONB,
-    payment_terms   TEXT,
-    notes           TEXT,
+                .estimates-stat-icon.quoted {
+                    background: rgba(59, 130, 246, 0.1);
+                    color: #3b82f6;
+                }
 
-    is_default      BOOLEAN DEFAULT false,
+                .estimates-stat-icon.accepted {
+                    background: rgba(34, 197, 94, 0.1);
+                    color: #22c55e;
+                }
 
-    created_at      TIMESTAMPTZ DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
-);
+                .estimates-stat-icon.pending {
+                    background: rgba(251, 191, 36, 0.1);
+                    color: #fbbf24;
+                }
 
--- RLS for templates
-ALTER TABLE estimate_templates ENABLE ROW LEVEL SECURITY;
+                .estimates-stat-icon svg {
+                    width: 24px;
+                    height: 24px;
+                }
 
-CREATE POLICY "Users can manage own templates"
-    ON estimate_templates
-    USING (auth.uid() = user_id);
-*/
+                .estimates-stat-content {
+                    flex: 1;
+                }
 
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  API.JS FUNCTIONS                                                │
- * └─────────────────────────────────────────────────────────────────┘
- */
+                .estimates-stat-value {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 4px;
+                }
 
-/*
-// Add to api.js
+                .estimates-stat-label {
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
 
-// =====================================================
-// PROPOSALS (Pro Tier - Quote Builder)
-// =====================================================
+                /* Filters */
+                .estimates-filters {
+                    display: flex;
+                    gap: 12px;
+                    margin-bottom: 24px;
+                    flex-wrap: wrap;
+                }
 
-static async getProposals(filters = {}) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+                .estimates-filters select {
+                    padding: 10px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    background: var(--card-bg);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
 
-    let query = supabase
-        .from('proposals')
-        .select(`
-            *,
-            lead:leads(id, name, company, email)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+                .estimates-filters select:hover {
+                    border-color: var(--primary);
+                }
 
-    // Apply filters
-    if (filters.status) {
-        query = query.eq('status', filters.status);
-    }
-    if (filters.lead_id) {
-        query = query.eq('lead_id', filters.lead_id);
-    }
+                /* Grid */
+                .estimates-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                    gap: 20px;
+                }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
-}
+                /* Card */
+                .estimate-card {
+                    background: var(--card-bg);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 20px;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                }
 
-static async createProposal(proposalData) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+                .estimate-card:hover {
+                    border-color: var(--primary);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                }
 
-    // Calculate totals
-    const subtotal = proposalData.line_items.reduce((sum, item) =>
-        sum + (item.quantity * item.rate), 0);
+                .estimate-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 16px;
+                }
 
-    const tax_amount = subtotal * (proposalData.tax_rate || 0) / 100;
+                .estimate-number {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
 
-    let discount_amount = 0;
-    if (proposalData.discount_type === 'percentage') {
-        discount_amount = subtotal * (proposalData.discount_value || 0) / 100;
-    } else if (proposalData.discount_type === 'fixed') {
-        discount_amount = proposalData.discount_value || 0;
-    }
+                .estimate-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin: 8px 0;
+                }
 
-    const total = subtotal + tax_amount - discount_amount;
+                .estimate-lead {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--text-secondary);
+                    font-size: 14px;
+                    margin-bottom: 12px;
+                }
 
-    const { data, error } = await supabase
-        .from('proposals')
-        .insert({
-            ...proposalData,
-            user_id: user.id,
-            subtotal,
-            tax_amount,
-            discount_amount,
-            total,
-            status: 'draft'
-        })
-        .select()
-        .single();
+                .estimate-lead svg {
+                    width: 16px;
+                    height: 16px;
+                }
 
-    if (error) throw error;
-    return data;
-}
+                .estimate-status {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
 
-static async updateProposal(proposalId, updates) {
-    // Recalculate totals if line items or pricing changed
-    if (updates.line_items || updates.tax_rate || updates.discount_value) {
-        const subtotal = updates.line_items
-            ? updates.line_items.reduce((sum, item) => sum + (item.quantity * item.rate), 0)
-            : undefined;
+                .estimate-status.draft {
+                    background: rgba(107, 114, 128, 0.1);
+                    color: #6b7280;
+                }
 
-        if (subtotal !== undefined) {
-            updates.subtotal = subtotal;
-            updates.tax_amount = subtotal * (updates.tax_rate || 0) / 100;
+                .estimate-status.sent {
+                    background: rgba(59, 130, 246, 0.1);
+                    color: #3b82f6;
+                }
 
-            let discount_amount = 0;
-            if (updates.discount_type === 'percentage') {
-                discount_amount = subtotal * (updates.discount_value || 0) / 100;
-            } else if (updates.discount_type === 'fixed') {
-                discount_amount = updates.discount_value || 0;
-            }
-            updates.discount_amount = discount_amount;
-            updates.total = subtotal + updates.tax_amount - discount_amount;
+                .estimate-status.accepted {
+                    background: rgba(34, 197, 94, 0.1);
+                    color: #22c55e;
+                }
+
+                .estimate-status.rejected {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                }
+
+                .estimate-status.expired {
+                    background: rgba(156, 163, 175, 0.1);
+                    color: #9ca3af;
+                }
+
+                .estimate-status svg {
+                    width: 14px;
+                    height: 14px;
+                }
+
+                .estimate-photos {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: var(--text-secondary);
+                    font-size: 13px;
+                    margin-top: 12px;
+                }
+
+                .estimate-photos svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .estimate-total {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: var(--primary);
+                    margin: 16px 0 12px 0;
+                }
+
+                .estimate-expiry {
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                }
+
+                .estimate-expiry.warning {
+                    color: #f59e0b;
+                    font-weight: 500;
+                }
+
+                .estimate-card-actions {
+                    display: flex;
+                    gap: 8px;
+                    margin-top: 16px;
+                    padding-top: 16px;
+                    border-top: 1px solid var(--border);
+                }
+
+                .estimate-btn {
+                    flex: 1;
+                    padding: 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: transparent;
+                    color: var(--text-primary);
+                    font-size: 13px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                }
+
+                .estimate-btn:hover {
+                    background: var(--hover-bg);
+                    border-color: var(--primary);
+                }
+
+                .estimate-btn svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .estimate-btn-primary {
+                    background: var(--primary);
+                    color: white;
+                    border-color: var(--primary);
+                }
+
+                .estimate-btn-primary:hover {
+                    background: var(--primary-dark);
+                }
+
+                .estimate-btn-danger {
+                    color: #ef4444;
+                }
+
+                .estimate-btn-danger:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-color: #ef4444;
+                }
+
+                /* Empty State */
+                .estimates-empty {
+                    text-align: center;
+                    padding: 60px 20px;
+                }
+
+                .estimates-empty svg {
+                    width: 64px;
+                    height: 64px;
+                    color: var(--text-tertiary);
+                    margin-bottom: 16px;
+                }
+
+                .estimates-empty h3 {
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin: 0 0 8px 0;
+                }
+
+                .estimates-empty p {
+                    color: var(--text-secondary);
+                    font-size: 14px;
+                    margin: 0 0 24px 0;
+                }
+            </style>
+        `;
+    },
+
+    /**
+     * Render header
+     */
+    estimates_renderHeader() {
+        return `
+            <div class="estimates-header">
+                <div class="estimates-header-content">
+                    <h1>
+                        <svg class="estimates-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Estimates
+                    </h1>
+                    <p class="estimates-subtitle">Create quotes and convert accepted estimates to jobs</p>
+                </div>
+                <button class="estimates-btn-primary" data-action="new-estimate">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    New Estimate
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Render stats cards
+     */
+    estimates_renderStats() {
+        const { totalQuoted, totalAccepted, totalPending, acceptanceRate } = this.state.stats;
+
+        return `
+            <div class="estimates-stats">
+                <div class="estimates-stat-card">
+                    <div class="estimates-stat-icon quoted">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="estimates-stat-content">
+                        <div class="estimates-stat-value">${formatCurrency(totalQuoted)}</div>
+                        <div class="estimates-stat-label">Total Quoted</div>
+                    </div>
+                </div>
+
+                <div class="estimates-stat-card">
+                    <div class="estimates-stat-icon accepted">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="estimates-stat-content">
+                        <div class="estimates-stat-value">${formatCurrency(totalAccepted)}</div>
+                        <div class="estimates-stat-label">Accepted (${acceptanceRate}%)</div>
+                    </div>
+                </div>
+
+                <div class="estimates-stat-card">
+                    <div class="estimates-stat-icon pending">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="estimates-stat-content">
+                        <div class="estimates-stat-value">${formatCurrency(totalPending)}</div>
+                        <div class="estimates-stat-label">Pending</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Render filters
+     */
+    estimates_renderFilters() {
+        return `
+            <div class="estimates-filters">
+                <select data-filter="status">
+                    <option value="all">All Status</option>
+                    ${this.STATUSES.map(status => `
+                        <option value="${status}" ${this.state.statusFilter === status ? 'selected' : ''}>
+                            ${this.estimates_formatStatus(status)}
+                        </option>
+                    `).join('')}
+                </select>
+
+                <select data-filter="lead">
+                    <option value="all">All Leads</option>
+                    ${this.state.leads.map(lead => `
+                        <option value="${lead.id}" ${this.state.leadFilter === lead.id ? 'selected' : ''}>
+                            ${lead.name}
+                        </option>
+                    `).join('')}
+                </select>
+
+                <select data-filter="date">
+                    <option value="all">All Time</option>
+                    <option value="week" ${this.state.dateFilter === 'week' ? 'selected' : ''}>This Week</option>
+                    <option value="month" ${this.state.dateFilter === 'month' ? 'selected' : ''}>This Month</option>
+                    <option value="quarter" ${this.state.dateFilter === 'quarter' ? 'selected' : ''}>This Quarter</option>
+                </select>
+            </div>
+        `;
+    },
+
+    /**
+     * Render estimates grid
+     */
+    estimates_renderGrid() {
+        if (this.state.filteredEstimates.length === 0) {
+            return `
+                <div class="estimates-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <h3>No estimates found</h3>
+                    <p>Create your first estimate to start quoting clients</p>
+                    <button class="estimates-btn-primary" data-action="new-estimate">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        New Estimate
+                    </button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="estimates-grid">
+                ${this.state.filteredEstimates.map(est => this.estimates_renderCard(est)).join('')}
+            </div>
+        `;
+    },
+
+    /**
+     * Render estimate card
+     */
+    estimates_renderCard(estimate) {
+        const lead = this.state.leads.find(l => l.id === estimate.lead_id);
+        const photoCount = (estimate.photos || []).length;
+        const expiryInfo = this.estimates_getExpiryInfo(estimate);
+
+        // Show "Convert to Job" if accepted, otherwise "View" and "Edit"
+        const actions = estimate.status === 'accepted' ? `
+            <button class="estimate-btn estimate-btn-primary" data-action="convert-to-job" data-id="${estimate.id}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Convert to Job
+            </button>
+        ` : `
+            <button class="estimate-btn" data-action="view-estimate" data-id="${estimate.id}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/>
+                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/>
+                </svg>
+                View
+            </button>
+            <button class="estimate-btn" data-action="edit-estimate" data-id="${estimate.id}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Edit
+            </button>
+        `;
+
+        return `
+            <div class="estimate-card" data-id="${estimate.id}">
+                <div class="estimate-card-header">
+                    <div>
+                        <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
+                        <h3 class="estimate-title">${estimate.title || 'Untitled'}</h3>
+                    </div>
+                    ${this.estimates_renderStatusBadge(estimate.status)}
+                </div>
+
+                ${lead ? `
+                    <div class="estimate-lead">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        ${lead.name}
+                    </div>
+                ` : ''}
+
+                ${photoCount > 0 ? `
+                    <div class="estimate-photos">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        ${photoCount} photo${photoCount > 1 ? 's' : ''}
+                    </div>
+                ` : ''}
+
+                <div class="estimate-total">${formatCurrency(estimate.total_price || 0)}</div>
+
+                ${expiryInfo ? `
+                    <div class="estimate-expiry ${expiryInfo.warning ? 'warning' : ''}">
+                        ${expiryInfo.text}
+                    </div>
+                ` : ''}
+
+                <div class="estimate-card-actions">
+                    ${actions}
+                    <button class="estimate-btn estimate-btn-danger" data-action="delete-estimate" data-id="${estimate.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Render status badge
+     */
+    estimates_renderStatusBadge(status) {
+        const icons = {
+            draft: '<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" stroke-width="2"/><path d="M18 2l-8 8v4h4l8-8-4-4z" stroke-width="2"/>',
+            sent: '<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>',
+            accepted: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            rejected: '<path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            expired: '<circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2"/>'
+        };
+
+        return `
+            <div class="estimate-status ${status}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    ${icons[status] || icons.draft}
+                </svg>
+                ${this.estimates_formatStatus(status)}
+            </div>
+        `;
+    },
+
+    /**
+     * Get expiry info
+     */
+    estimates_getExpiryInfo(estimate) {
+        if (!estimate.expires_at) return null;
+
+        const now = new Date();
+        const expiresAt = new Date(estimate.expires_at);
+        const daysUntil = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+
+        if (daysUntil < 0) {
+            return { text: 'Expired', warning: true };
+        } else if (daysUntil === 0) {
+            return { text: 'Expires today', warning: true };
+        } else if (daysUntil <= 7) {
+            return { text: `Expires in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`, warning: true };
+        } else {
+            return { text: `Expires in ${daysUntil} days`, warning: false };
+        }
+    },
+
+    /**
+     * Apply filters
+     */
+    estimates_applyFilters() {
+        let filtered = [...this.state.estimates];
+
+        // Status filter
+        if (this.state.statusFilter !== 'all') {
+            filtered = filtered.filter(e => e.status === this.state.statusFilter);
+        }
+
+        // Lead filter
+        if (this.state.leadFilter !== 'all') {
+            filtered = filtered.filter(e => e.lead_id === this.state.leadFilter);
+        }
+
+        // Date filter
+        if (this.state.dateFilter !== 'all') {
+            const now = new Date();
+            filtered = filtered.filter(e => {
+                const createdAt = new Date(e.created_at);
+
+                switch (this.state.dateFilter) {
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        return createdAt >= weekAgo;
+                    case 'month':
+                        return createdAt.getMonth() === now.getMonth() &&
+                               createdAt.getFullYear() === now.getFullYear();
+                    case 'quarter':
+                        const quarter = Math.floor(now.getMonth() / 3);
+                        const estQuarter = Math.floor(createdAt.getMonth() / 3);
+                        return estQuarter === quarter &&
+                               createdAt.getFullYear() === now.getFullYear();
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        this.state.filteredEstimates = filtered;
+    },
+
+    /**
+     * Calculate stats
+     */
+    estimates_calculateStats() {
+        const allEstimates = this.state.estimates;
+
+        const totalQuoted = allEstimates.reduce((sum, e) => sum + (e.total_price || 0), 0);
+        const accepted = allEstimates.filter(e => e.status === 'accepted');
+        const totalAccepted = accepted.reduce((sum, e) => sum + (e.total_price || 0), 0);
+        const pending = allEstimates.filter(e => e.status === 'sent' || e.status === 'draft');
+        const totalPending = pending.reduce((sum, e) => sum + (e.total_price || 0), 0);
+
+        const acceptanceRate = allEstimates.length > 0
+            ? Math.round((accepted.length / allEstimates.length) * 100)
+            : 0;
+
+        this.state.stats = { totalQuoted, totalAccepted, totalPending, acceptanceRate };
+    },
+
+    /**
+     * Format status
+     */
+    estimates_formatStatus(status) {
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    },
+
+    /**
+     * Attach event listeners
+     */
+    estimates_attachEvents() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        // New estimate button
+        container.querySelectorAll('[data-action="new-estimate"]').forEach(btn => {
+            btn.addEventListener('click', () => this.estimates_openModal());
+        });
+
+        // Edit estimate
+        container.querySelectorAll('[data-action="edit-estimate"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.id;
+                this.estimates_openModal(id);
+            });
+        });
+
+        // Delete estimate
+        container.querySelectorAll('[data-action="delete-estimate"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.id;
+                this.estimates_deleteEstimate(id);
+            });
+        });
+
+        // Filter changes
+        container.querySelectorAll('[data-filter]').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const filterType = e.target.dataset.filter;
+                const value = e.target.value;
+
+                if (filterType === 'status') this.state.statusFilter = value;
+                if (filterType === 'lead') this.state.leadFilter = value;
+                if (filterType === 'date') this.state.dateFilter = value;
+
+                this.estimates_render();
+            });
+        });
+    },
+
+    /**
+     * Open add/edit modal (placeholder for Session 1)
+     */
+    estimates_openModal(estimateId = null) {
+        this.state.editingEstimateId = estimateId;
+        showNotification('Estimate modal coming in next session!', 'info');
+        // TODO: Build in Session 2
+    },
+
+    /**
+     * Delete estimate
+     */
+    async estimates_deleteEstimate(estimateId) {
+        const estimate = this.state.estimates.find(e => e.id === estimateId);
+        if (!estimate) return;
+
+        const confirmed = confirm(`Delete estimate "${estimate.title}"? This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            await API.deleteEstimate(estimateId);
+            this.state.estimates = this.state.estimates.filter(e => e.id !== estimateId);
+            this.estimates_calculateStats();
+            this.estimates_render();
+            showNotification('Estimate deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting estimate:', error);
+            showNotification('Failed to delete estimate', 'error');
+        }
+    },
+
+    /**
+     * Loading state
+     */
+    estimates_showLoading() {
+        const container = document.getElementById(this.state.container);
+        if (container) {
+            container.innerHTML = '<div style="text-align: center; padding: 60px; color: var(--text-secondary);">Loading estimates...</div>';
+        }
+    },
+
+    /**
+     * Error state
+     */
+    estimates_showError(message) {
+        const container = document.getElementById(this.state.container);
+        if (container) {
+            container.innerHTML = `<div style="text-align: center; padding: 60px; color: #ef4444;">${message}</div>`;
         }
     }
+};
 
-    const { data, error } = await supabase
-        .from('proposals')
-        .update(updates)
-        .eq('id', proposalId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
-static async deleteProposal(proposalId) {
-    const { error } = await supabase
-        .from('proposals')
-        .delete()
-        .eq('id', proposalId);
-
-    if (error) throw error;
-    return { success: true };
-}
-
-static async sendProposal(proposalId, recipientEmail) {
-    // Update status to sent
-    const { data: proposal, error: updateError } = await supabase
-        .from('proposals')
-        .update({
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-            sent_to_email: recipientEmail
-        })
-        .eq('id', proposalId)
-        .select()
-        .single();
-
-    if (updateError) throw updateError;
-
-    // TODO: Send email via backend service
-    // For now, just return the proposal with a public view link
-    const viewLink = `${window.location.origin}/proposals/view/${proposalId}`;
-
-    return {
-        proposal,
-        viewLink,
-        message: 'Proposal sent successfully'
-    };
-}
-
-static async trackProposalView(proposalId) {
-    // Increment view count and update timestamps
-    const { data, error } = await supabase.rpc('track_estimate_view', {
-        p_estimate_id: proposalId
+// Auto-init if on estimates page
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.location.pathname.includes('estimates')) {
+            EstimatesModule.estimates_init();
+        }
     });
-
-    if (error) throw error;
-    return data;
-}
-
-static async acceptProposal(proposalId, acceptanceData) {
-    const { name, email, signature, ip } = acceptanceData;
-
-    const { data: proposal, error } = await supabase
-        .from('proposals')
-        .update({
-            status: 'accepted',
-            accepted_at: new Date().toISOString(),
-            accepted_by_name: name,
-            accepted_by_email: email,
-            accepted_signature: signature,
-            accepted_ip: ip
-        })
-        .eq('id', proposalId)
-        .select()
-        .single();
-
-    if (error) throw error;
-
-    // Auto-create job if enabled
-    if (proposal.auto_create_job && !proposal.created_job_id) {
-        const job = await this.createJobFromProposal(proposalId);
-
-        // Link job to proposal
-        await supabase
-            .from('proposals')
-            .update({ created_job_id: job.id })
-            .eq('id', proposalId);
-
-        return { proposal, job };
+} else {
+    if (window.location.pathname.includes('estimates')) {
+        EstimatesModule.estimates_init();
     }
-
-    return { proposal };
 }
-
-static async declineProposal(proposalId, reason) {
-    const { data, error } = await supabase
-        .from('proposals')
-        .update({
-            status: 'declined',
-            declined_at: new Date().toISOString(),
-            decline_reason: reason
-        })
-        .eq('id', proposalId)
-        .select()
-        .single();
-
-    if (error) throw error;
-    return data;
-}
-
-static async createJobFromProposal(proposalId) {
-    const { data: proposal, error: proposalError } = await supabase
-        .from('proposals')
-        .select('*, lead:leads(*)')
-        .eq('id', proposalId)
-        .single();
-
-    if (proposalError) throw proposalError;
-
-    // Create job with proposal details
-    const jobData = {
-        lead_id: proposal.lead_id,
-        title: proposal.title,
-        description: `Created from proposal ${proposal.estimate_number}`,
-        quoted_price: proposal.total,
-        status: 'pending',
-        payment_status: 'pending',
-        notes: proposal.notes
-    };
-
-    const { data: job, error: jobError } = await this.createJob(jobData);
-    if (jobError) throw jobError;
-
-    return job;
-}
-
-static async duplicateProposal(proposalId) {
-    const { data: original, error: fetchError } = await supabase
-        .from('proposals')
-        .select('*')
-        .eq('id', proposalId)
-        .single();
-
-    if (fetchError) throw fetchError;
-
-    // Remove unique fields and reset status
-    const {
-        id,
-        estimate_number,
-        created_at,
-        updated_at,
-        sent_at,
-        viewed_at,
-        accepted_at,
-        declined_at,
-        created_job_id,
-        ...duplicateData
-    } = original;
-
-    duplicateData.title = `${original.title} (Copy)`;
-    duplicateData.status = 'draft';
-
-    return await this.createProposal(duplicateData);
-}
-
-// Database function for tracking views (add to migration)
-/*
-CREATE OR REPLACE FUNCTION track_estimate_view(p_estimate_id UUID)
-RETURNS VOID AS $$
-BEGIN
-    UPDATE proposals
-    SET
-        view_count = view_count + 1,
-        last_viewed_at = NOW(),
-        viewed_at = COALESCE(viewed_at, NOW()),
-        status = CASE
-            WHEN status = 'sent' THEN 'viewed'
-            ELSE status
-        END
-    WHERE id = p_estimate_id;
-END;
-$$ LANGUAGE plpgsql;
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  UI/UX CONCEPT & VISUAL DESIGN                                   │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                      ESTIMATES MODULE LAYOUT                              ║
-╠═══════════════════════════════════════════════════════════════════════════╣
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  HEADER & FILTERS                                                   │ ║
-║  │  ┌──────────────────┐  ┌────────────────────────┐  ┌────────────┐ │ ║
-║  │  │  Proposals  📄   │  │  🔍 Search proposals   │  │ + New      │ │ ║
-║  │  └──────────────────┘  └────────────────────────┘  └────────────┘ │ ║
-║  │                                                                      │ ║
-║  │  [All] [Draft] [Sent] [Viewed] [Accepted] [Declined]               │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  STATUS PIPELINE                                                     │ ║
-║  │  ┌────────┐   ┌────────┐   ┌────────┐   ┌──────────┐   ┌────────┐ │ ║
-║  │  │ Draft  │ → │  Sent  │ → │ Viewed │ → │ Accepted │   │ Declined│ │ ║
-║  │  │   3    │   │   5    │   │   2    │   │    8     │   │    1    │ │ ║
-║  │  └────────┘   └────────┘   └────────┘   └──────────┘   └────────┘ │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  PROPOSALS LIST                                                      │ ║
-║  │                                                                       │ ║
-║  │  ┌─────────────────────────────────────────────────────────────────┐│ ║
-║  │  │ PROP-2024-042  Website Redesign                     $2,265.50   ││ ║
-║  │  │ John Smith - Acme Corp                                          ││ ║
-║  │  │ 🟢 Accepted Nov 15 • Job #042 created                          ││ ║
-║  │  │ [View] [Download PDF]                                           ││ ║
-║  │  └─────────────────────────────────────────────────────────────────┘│ ║
-║  │                                                                       │ ║
-║  │  ┌─────────────────────────────────────────────────────────────────┐│ ║
-║  │  │ PROP-2024-041  Marketing Retainer               $5,000/month    ││ ║
-║  │  │ Jane Cooper - Tech Startup                                      ││ ║
-║  │  │ 👁️ Viewed 3 times • Last viewed 2 hours ago                     ││ ║
-║  │  │ ⏰ Expires in 5 days                                            ││ ║
-║  │  │ [Follow Up] [Edit] [View]                                       ││ ║
-║  │  └─────────────────────────────────────────────────────────────────┘│ ║
-║  │                                                                       │ ║
-║  │  ┌─────────────────────────────────────────────────────────────────┐│ ║
-║  │  │ PROP-2024-040  E-commerce Build                    $12,500.00   ││ ║
-║  │  │ Mike Johnson - Retail Co                                        ││ ║
-║  │  │ 📧 Sent 1 week ago • Not viewed yet                            ││ ║
-║  │  │ [Resend] [Edit] [View]                                          ││ ║
-║  │  └─────────────────────────────────────────────────────────────────┘│ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-*/
-
-/*
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                    PROPOSAL BUILDER MODAL                                 ║
-╠═══════════════════════════════════════════════════════════════════════════╣
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  New Proposal for John Smith - Acme Corp               [× Close]    │ ║
-║  ├─────────────────────────────────────────────────────────────────────┤ ║
-║  │                                                                      │ ║
-║  │  BASIC INFO                                                          │ ║
-║  │  ┌──────────────────────────────────────────────────────────────┐  │ ║
-║  │  │ Title: [Website Redesign Proposal                        ]  │  │ ║
-║  │  └──────────────────────────────────────────────────────────────┘  │ ║
-║  │                                                                      │ ║
-║  │  ┌──────────────────────────────────────────────────────────────┐  │ ║
-║  │  │ Template: [Custom ▼]                                        │  │ ║
-║  │  │           Hourly | Fixed Price | Package | Retainer         │  │ ║
-║  │  └──────────────────────────────────────────────────────────────┘  │ ║
-║  │                                                                      │ ║
-║  │  ─────────────────────────────────────────────────────────────────  │ ║
-║  │  LINE ITEMS                                                          │ ║
-║  │  ┌──────────────────────────────────────────────────────────────┐  │ ║
-║  │  │ Description            Qty   Rate      Unit    Total         │  │ ║
-║  │  │ ──────────────────────────────────────────────────────────── │  │ ║
-║  │  │ Homepage design        1     $500.00   item    $500.00   [x] │  │ ║
-║  │  │ Development (hourly)   20    $75.00    hour    $1,500.00 [x] │  │ ║
-║  │  │ Content migration      1     $300.00   item    $300.00   [x] │  │ ║
-║  │  │                                                              │  │ ║
-║  │  │ [+ Add Item]  [+ Add from Template]  [Bulk Import]         │  │ ║
-║  │  └──────────────────────────────────────────────────────────────┘  │ ║
-║  │                                                                      │ ║
-║  │  ─────────────────────────────────────────────────────────────────  │ ║
-║  │  PRICING                                                             │ ║
-║  │  ┌──────────────────────────────────────────────────────────────┐  │ ║
-║  │  │ Subtotal:                                        $2,300.00   │  │ ║
-║  │  │                                                              │  │ ║
-║  │  │ Tax:  [8.5%]                                     $  195.50   │  │ ║
-║  │  │                                                              │  │ ║
-║  │  │ Discount: [10    ] [Percentage ▼]              -$  230.00   │  │ ║
-║  │  │                                                              │  │ ║
-║  │  │ ──────────────────────────────────────────────────────────── │  │ ║
-║  │  │ TOTAL:                                           $2,265.50   │  │ ║
-║  │  └──────────────────────────────────────────────────────────────┘  │ ║
-║  │                                                                      │ ║
-║  │  ─────────────────────────────────────────────────────────────────  │ ║
-║  │  TERMS                                                               │ ║
-║  │  ┌──────────────────────────────────────────────────────────────┐  │ ║
-║  │  │ Payment Terms: [Net 30 ▼]                                   │  │ ║
-║  │  │ Valid Until: [Nov 30, 2024]                                  │  │ ║
-║  │  │                                                              │  │ ║
-║  │  │ Notes/Conditions:                                            │  │ ║
-║  │  │ [50% deposit required before work begins...              ]  │  ║
-║  │  └──────────────────────────────────────────────────────────────┘  │ ║
-║  │                                                                      │ ║
-║  │  ☑ Auto-create job when proposal is accepted                       │ ║
-║  │                                                                      │ ║
-║  │  [Preview PDF]  [Save Draft]              [Send to Client] →       │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-*/
-
-/*
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                   CLIENT VIEW (Public Page)                               ║
-╠═══════════════════════════════════════════════════════════════════════════╣
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │                      YOUR COMPANY LOGO                              │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  PROPOSAL FOR                                                        │ ║
-║  │  John Smith                                                          │ ║
-║  │  Acme Corporation                                                    │ ║
-║  │  john@acme.com                                                       │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  Website Redesign Proposal                                          │ ║
-║  │  PROP-2024-042                                                       │ ║
-║  │  Valid until: November 30, 2024                                     │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  SERVICES                                                            │ ║
-║  │                                                                       │ ║
-║  │  1. Homepage design mockups                                         │ ║
-║  │     1 × $500.00                                      $500.00        │ ║
-║  │                                                                       │ ║
-║  │  2. Development (hourly)                                            │ ║
-║  │     20 hours × $75.00                               $1,500.00       │ ║
-║  │                                                                       │ ║
-║  │  3. Content migration                                               │ ║
-║  │     1 × $300.00                                      $300.00        │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  Subtotal:                                           $2,300.00      │ ║
-║  │  Tax (8.5%):                                         $  195.50      │ ║
-║  │  Discount (10%):                                    -$  230.00      │ ║
-║  │  ──────────────────────────────────────────────────────────────────  │ ║
-║  │  TOTAL:                                              $2,265.50      │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  PAYMENT TERMS                                                       │ ║
-║  │  50% deposit required before work begins                            │ ║
-║  │  Remaining balance due upon completion                              │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐ ║
-║  │  ACCEPTANCE                                                          │ ║
-║  │                                                                       │ ║
-║  │  Your Name: [John Smith                                         ]  │ ║
-║  │                                                                       │ ║
-║  │  ☑ I agree to the terms and conditions outlined above               │ ║
-║  │                                                                       │ ║
-║  │  [✓ Accept Proposal]                    [✗ Decline]                │ ║
-║  └─────────────────────────────────────────────────────────────────────┘ ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  FEATURE IDEAS & FUNCTIONALITY                                   │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-🎯 CORE FEATURES:
-
-1. QUICK CREATION
-   - Click "Send Proposal" from lead detail
-   - Choose template or start from scratch
-   - Auto-fills lead info
-   - Duplicate existing proposals
-
-2. LINE ITEM BUILDER
-   - Add/remove line items
-   - Drag to reorder
-   - Quick templates (hourly, fixed, package)
-   - Bulk import from CSV
-   - Save common items as templates
-
-3. SMART CALCULATIONS
-   - Auto-calculate subtotal from line items
-   - Percentage or fixed discount
-   - Tax rate with auto-calculation
-   - Final total updates in real-time
-   - Currency formatting
-
-4. TEMPLATES SYSTEM
-   Pre-built templates:
-   - Hourly Rate (consulting)
-   - Fixed Price (projects)
-   - Package Pricing (Bronze/Silver/Gold)
-   - Retainer (monthly recurring)
-   - Time & Materials (estimates)
-
-5. PDF GENERATION
-   - Professional PDF layout
-   - Custom branding/logo
-   - Download or email
-   - Mobile-friendly view
-   - Print-optimized
-
-6. CLIENT ACCEPTANCE PAGE
-   - Clean public view (no CRM UI)
-   - Accept/Decline buttons
-   - Name + signature capture
-   - Records IP and timestamp
-   - Email confirmations
-
-7. STATUS TRACKING
-   - Draft → Sent → Viewed → Accepted/Declined
-   - View count tracking
-   - Last viewed timestamp
-   - Time to acceptance metrics
-   - Expiration warnings
-
-8. AUTO-CONVERSION
-   When accepted:
-   - Auto-create job with line items
-   - Update lead status to converted
-   - Link proposal to job
-   - Email notifications
-   - Set job value = proposal total
-
-9. INTEGRATION
-   - "Send Proposal" from lead detail
-   - Show proposal count on lead card
-   - Pipeline stage: "Proposal Sent"
-   - Analytics: conversion rate, avg value
-   - Goal tracking: proposals sent/accepted
-
-10. REMINDERS & NOTIFICATIONS
-    - "Proposal viewed" notification
-    - "Proposal accepted" celebration
-    - Expiration warnings
-    - Follow-up reminders for unseen proposals
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  TEMPLATES LIBRARY                                               │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-BUILT-IN TEMPLATES:
-
-1. HOURLY CONSULTING
-   Line items:
-   - Consulting services (hourly)
-   Payment: Net 30
-   Notes: "Hourly rate subject to change with 30 days notice"
-
-2. FIXED PROJECT
-   Line items:
-   - Discovery & planning (fixed)
-   - Design (fixed)
-   - Development (fixed)
-   - Testing & deployment (fixed)
-   Payment: 33% deposit, 33% midpoint, 34% completion
-   Notes: "Scope changes may incur additional fees"
-
-3. PACKAGE PRICING
-   Line items (client selects tier):
-   - Bronze Package ($X/month)
-   - Silver Package ($Y/month)
-   - Gold Package ($Z/month)
-   Payment: Monthly recurring
-   Notes: "Cancel anytime with 30 days notice"
-
-4. RETAINER
-   Line items:
-   - Monthly retainer (X hours included)
-   - Additional hours (hourly rate)
-   Payment: Due on 1st of each month
-   Notes: "Unused hours do not roll over"
-
-5. TIME & MATERIALS
-   Line items:
-   - Estimated hours (range)
-   - Materials (estimated)
-   Payment: Weekly invoicing
-   Notes: "Final cost may vary based on actual time and materials"
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  CLIENT ACCEPTANCE FLOW                                          │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-STEP 1: Client receives email
-┌────────────────────────────────────────────┐
-│ Subject: Proposal from Your Company        │
-│                                            │
-│ Hi John,                                   │
-│                                            │
-│ Please review your proposal for Website   │
-│ Redesign.                                  │
-│                                            │
-│ [View Proposal]                            │
-│                                            │
-│ This proposal expires on Nov 30, 2024      │
-└────────────────────────────────────────────┘
-
-STEP 2: Client clicks link → public view page
-- Clean, professional layout
-- No CRM interface
-- Clear pricing breakdown
-- Terms and conditions
-
-STEP 3: Client reviews and decides
-Option A: Accept
-  - Enter name
-  - Check "I agree" box
-  - Click "Accept Proposal"
-  - See confirmation: "Proposal accepted! We'll be in touch soon."
-
-Option B: Decline
-  - Click "Decline"
-  - Optional: provide reason
-  - See message: "Thanks for considering us"
-
-STEP 4: System actions
-If accepted:
-  - Send confirmation email to client
-  - Notify sales person
-  - Update proposal status to "accepted"
-  - Auto-create job (if enabled)
-  - Update lead status to "converted"
-
-If declined:
-  - Send notification to sales person
-  - Update proposal status to "declined"
-  - Store decline reason
-  - Opportunity for follow-up
-
-STEP 5: Sales person sees update
-- Dashboard notification: "John accepted your proposal!"
-- Proposal card updates to green "Accepted" badge
-- Job appears in Jobs module
-- Lead status updated
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  ANALYTICS & INSIGHTS                                            │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-PROPOSAL METRICS:
-
-1. CONVERSION FUNNEL
-   Draft (12) → Sent (8) → Viewed (6) → Accepted (3)
-   Conversion rate: 37.5%
-
-2. AVERAGE TIME TO ACCEPTANCE
-   - Draft → Sent: 2 days
-   - Sent → Viewed: 1 day
-   - Viewed → Accepted: 3 days
-   - Total: 6 days average
-
-3. PROPOSAL VALUE METRICS
-   - Total value sent: $45,000
-   - Total value accepted: $18,500
-   - Average proposal value: $5,625
-   - Win rate by value tier
-
-4. VIEW TRACKING
-   - Proposals viewed multiple times (higher intent)
-   - Proposals never viewed (follow up needed)
-   - Average views before acceptance: 2.3
-
-5. TEMPLATE PERFORMANCE
-   - Which templates convert best
-   - Average value by template
-   - Most popular templates
-
-6. EXPIRATION ANALYSIS
-   - Proposals expiring soon
-   - Expired proposals (lost opportunity)
-   - Average time between send and expiration
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  INTEGRATION POINTS                                              │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-LEADS MODULE:
-- "Send Proposal" button in lead detail
-- Proposal count badge on lead card
-- Show latest proposal status
-- Filter: "Has pending proposal"
-
-PIPELINE MODULE:
-- New stage: "Proposal Sent"
-- Auto-move when proposal sent
-- Auto-move to "Converted" when accepted
-- Show proposal value in deal card
-
-JOBS MODULE:
-- Auto-create job from accepted proposal
-- Copy line items as job materials/tasks
-- Link proposal in job detail
-- "View Original Proposal" button
-
-GOALS MODULE:
-- Track: "Send X proposals this month"
-- Track: "Close $X in proposals"
-- Auto-update when proposals accepted
-
-ANALYTICS MODULE:
-- Proposal conversion rate chart
-- Average proposal value trend
-- Time to acceptance metrics
-- Revenue from proposals graph
-
-NOTES MODULE:
-- Quick note: "Sent proposal to John"
-- Auto-link note to proposal
-- Template: "Proposal follow-up notes"
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  MOBILE OPTIMIZATION                                             │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-MOBILE VIEW (390px):
-- Stack proposal cards vertically
-- Simplified line item view
-- Touch-friendly buttons
-- Swipe to mark sent/viewed
-- Mobile-optimized PDF view
-
-CLIENT MOBILE VIEW:
-- Responsive layout for all screen sizes
-- Large touch targets for accept/decline
-- Easy signature/name input
-- Mobile-friendly terms scrolling
-- Quick loading on slow connections
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  IMPLEMENTATION PLAN                                             │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-PHASE 1: Foundation (3-4 hours)
-├── Create estimates table
-├── Create proposal number generation function
-├── Add RLS policies
-├── Create API functions in api.js
-└── Test CRUD operations
-
-PHASE 2: Builder UI (4-5 hours)
-├── Proposal list view
-├── Create/edit modal
-├── Line item management (add/remove/reorder)
-├── Real-time calculations
-└── Template selector
-
-PHASE 3: PDF Generation (2-3 hours)
-├── HTML to PDF library integration
-├── Professional layout design
-├── Custom branding support
-├── Download functionality
-└── Email attachment
-
-PHASE 4: Client View (3-4 hours)
-├── Public proposal view page
-├── Accept/decline flow
-├── Signature capture
-├── Confirmation screens
-└── Email notifications
-
-PHASE 5: Integration (2-3 hours)
-├── Link to leads (send from lead detail)
-├── Auto-create jobs on acceptance
-├── Pipeline stage updates
-├── Analytics tracking
-└── Goal progress updates
-
-PHASE 6: Advanced Features (2-3 hours)
-├── Templates system
-├── Duplicate proposals
-├── View tracking
-├── Expiration logic
-└── Follow-up reminders
-
-PHASE 7: Polish (2-3 hours)
-├── Mobile responsive
-├── Loading states
-├── Error handling
-├── Empty states
-└── Animations
-
-TOTAL TIME: 18-25 hours
-*/
-
-/**
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  SECURITY CONSIDERATIONS                                         │
- * └─────────────────────────────────────────────────────────────────┘
- */
-
-/*
-PUBLIC VIEW PAGE SECURITY:
-- UUID-based URLs (hard to guess)
-- No authentication required (client-friendly)
-- Rate limiting on acceptance endpoint
-- IP tracking for legal validity
-- Timestamp everything for audit trail
-
-DATA VALIDATION:
-- Validate line items before saving
-- Sanitize all text inputs
-- Check totals match calculations
-- Verify proposal belongs to user
-- Ensure lead access permissions
-
-EMAIL SECURITY:
-- Use trusted email service (SendGrid, Mailgun)
-- SPF/DKIM for deliverability
-- Unsubscribe link compliance
-- Track email opens/clicks
-- Bounce handling
-*/
-
-console.log('📄 Estimates module design ready for implementation');
-console.log('Database schema, API functions, and UI mockups defined above');
-console.log('Estimated implementation time: 18-25 hours');
