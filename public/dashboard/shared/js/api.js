@@ -2077,11 +2077,52 @@ static async getGoalTasks(goalId) {
 static async createTaskForGoal(goalId, taskData) {
     // Create the task first
     const task = await this.createTask(taskData);
-    
+
     // Link it to the goal
     await this.linkTasksToGoal(goalId, [task.id]);
-    
+
     return task;
+}
+
+/**
+ * Batch create multiple tasks and link them to a goal
+ * Much faster than individual createTaskForGoal calls
+ * @param {string} goalId - Goal UUID
+ * @param {array} tasksArray - Array of task objects {title, due_date, status, etc}
+ */
+static async batchCreateTasksForGoal(goalId, tasksArray) {
+    if (!tasksArray || tasksArray.length === 0) {
+        return { created: 0, tasks: [] };
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Add user_id to all tasks
+    const tasksWithUserId = tasksArray.map(task => ({
+        ...task,
+        user_id: user.id,
+        status: task.status || 'pending'
+    }));
+
+    // Batch insert tasks
+    const { data: createdTasks, error: createError } = await supabase
+        .from('tasks')
+        .insert(tasksWithUserId)
+        .select();
+
+    if (createError) throw createError;
+
+    // Extract task IDs
+    const taskIds = createdTasks.map(t => t.id);
+
+    // Link all tasks to the goal in one call
+    await this.linkTasksToGoal(goalId, taskIds);
+
+    return {
+        created: createdTasks.length,
+        tasks: createdTasks
+    };
 }
 
 /**

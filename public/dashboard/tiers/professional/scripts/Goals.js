@@ -2405,15 +2405,14 @@ goals_attachEvents() {
                 await API.linkTasksToGoal(newGoal.id, this.state.selectedTaskIds);
             }
 
-            // Create and link new tasks
+            // Create and link new tasks (batched for performance)
             if (this.state.newTasks && this.state.newTasks.length > 0) {
-                for (const taskData of this.state.newTasks) {
-                    await API.createTaskForGoal(newGoal.id, {
-                        title: taskData.title,
-                        due_date: taskData.due_date,
-                        status: 'pending'
-                    });
-                }
+                const tasksToCreate = this.state.newTasks.map(taskData => ({
+                    title: taskData.title,
+                    due_date: taskData.due_date,
+                    status: 'pending'
+                }));
+                await API.batchCreateTasksForGoal(newGoal.id, tasksToCreate);
             }
         }
 
@@ -2477,13 +2476,14 @@ goals_attachEvents() {
                     await API.linkTasksToGoal(goalId, tasksToLink);
                 }
 
-                // Create and link new tasks
+                // Create and link new tasks (batched for performance)
                 if (this.state.newTasks && this.state.newTasks.length > 0) {
-                    for (const newTask of this.state.newTasks) {
+                    const tasksToCreate = this.state.newTasks.map(newTask => {
                         // Remove tempId before sending to API (it's only for UI tracking)
                         const { tempId, ...taskData } = newTask;
-                        await API.createTaskForGoal(goalId, taskData);
-                    }
+                        return taskData;
+                    });
+                    await API.batchCreateTasksForGoal(goalId, tasksToCreate);
                 }
 
                 // After all task operations, get the updated task count and update target_value
