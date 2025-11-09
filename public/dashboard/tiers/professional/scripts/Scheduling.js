@@ -455,10 +455,10 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Date</label>
-                        <input type="date" name="due_date" id="scheduling_dueDate" class="scheduling-form-input" value="${selectedDate}">
+                        <input type="date" name="due_date" id="scheduling_dueDate" class="scheduling-form-input" value="${selectedDate}" disabled>
                         <div style="margin-top: 0.5rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
-                                <input type="checkbox" id="scheduling_noDueDate" style="cursor: pointer;">
+                                <input type="checkbox" id="scheduling_noDueDate" checked style="cursor: pointer;">
                                 No due date
                             </label>
                         </div>
@@ -466,7 +466,7 @@ modal.addEventListener('mouseup', (e) => {
 
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Time</label>
-                        <input type="time" name="due_time" id="scheduling_dueTime" class="scheduling-form-input">
+                        <input type="time" name="due_time" id="scheduling_dueTime" class="scheduling-form-input" disabled>
                     </div>
                     
                     <div class="scheduling-form-group">
