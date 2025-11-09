@@ -2667,6 +2667,7 @@ addlead_showCustomSourceInput(targetInput) {
                     <div class="addlead-batch-buttons">
                         <button class="addlead-batch-btn addlead-batch-delete"
                                 onclick="AddLeadModule.addlead_showBatchDeleteModal()">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
                             Delete Selected
                         </button>
                     </div>
@@ -4511,6 +4512,7 @@ addlead_showCustomSourceInput(targetInput) {
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                gap: 0.5rem;
                 transition: all 0.2s ease;
                 backdrop-filter: blur(10px);
                 min-width: 140px;

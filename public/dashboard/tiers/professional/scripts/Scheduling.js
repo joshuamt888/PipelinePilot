@@ -2476,10 +2476,12 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="scheduling-batch-buttons">
                         <button class="scheduling-batch-btn scheduling-batch-complete"
                                 onclick="SchedulingModule.scheduling_batchComplete()">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
                             Complete Selected
                         </button>
                         <button class="scheduling-batch-btn scheduling-batch-delete"
                                 onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
                             Delete Selected
                         </button>
                     </div>
@@ -5072,6 +5074,7 @@ modal.addEventListener('mouseup', (e) => {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
     transition: all 0.2s ease;
     backdrop-filter: blur(10px);
     min-width: 140px;
