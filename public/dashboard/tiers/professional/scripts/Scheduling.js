@@ -394,6 +394,29 @@ modal.addEventListener('mouseup', (e) => {
                 form.onsubmit = (e) => this.scheduling_handleSubmit(e);
             }
 
+            // Setup "No due date" checkbox toggle
+            const noDueDateCheckbox = document.getElementById('scheduling_noDueDate');
+            const dueDateInput = document.getElementById('scheduling_dueDate');
+            const dueTimeInput = document.getElementById('scheduling_dueTime');
+            if (noDueDateCheckbox && dueDateInput && dueTimeInput) {
+                noDueDateCheckbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        dueDateInput.disabled = true;
+                        dueTimeInput.disabled = true;
+                        dueDateInput.value = '';
+                        dueTimeInput.value = '';
+                    } else {
+                        dueDateInput.disabled = false;
+                        dueTimeInput.disabled = false;
+                        // Set default to today if no value
+                        if (!dueDateInput.value) {
+                            const today = new Date().toISOString().split('T')[0];
+                            dueDateInput.value = today;
+                        }
+                    }
+                });
+            }
+
             const firstInput = modal.querySelector('input[name="title"]');
             if (firstInput) firstInput.focus();
         }, 10);
@@ -432,12 +455,18 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Date</label>
-                        <input type="date" name="due_date" class="scheduling-form-input" value="${selectedDate}">
+                        <input type="date" name="due_date" id="scheduling_dueDate" class="scheduling-form-input" value="${selectedDate}">
+                        <div style="margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                                <input type="checkbox" id="scheduling_noDueDate" style="cursor: pointer;">
+                                No due date
+                            </label>
+                        </div>
                     </div>
-                    
+
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Time</label>
-                        <input type="time" name="due_time" class="scheduling-form-input">
+                        <input type="time" name="due_time" id="scheduling_dueTime" class="scheduling-form-input">
                     </div>
                     
                     <div class="scheduling-form-group">
@@ -555,6 +584,29 @@ modal.addEventListener('mouseup', (e) => {
             if (editForm) {
                 editForm.onsubmit = (e) => this.scheduling_handleEditSubmit(e);
             }
+
+            // Setup "No due date" checkbox toggle for edit form
+            const noDueDateCheckbox = document.getElementById('scheduling_edit_noDueDate');
+            const dueDateInput = document.getElementById('scheduling_edit_dueDate');
+            const dueTimeInput = document.getElementById('scheduling_edit_dueTime');
+            if (noDueDateCheckbox && dueDateInput && dueTimeInput) {
+                noDueDateCheckbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        dueDateInput.disabled = true;
+                        dueTimeInput.disabled = true;
+                        dueDateInput.value = '';
+                        dueTimeInput.value = '';
+                    } else {
+                        dueDateInput.disabled = false;
+                        dueTimeInput.disabled = false;
+                        // Set default to today if no value
+                        if (!dueDateInput.value) {
+                            const today = new Date().toISOString().split('T')[0];
+                            dueDateInput.value = today;
+                        }
+                    }
+                });
+            }
         }, 10);
     },
 
@@ -591,12 +643,18 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Date</label>
-                        <input type="date" name="due_date" class="scheduling-form-input" value="${taskDate}">
+                        <input type="date" name="due_date" id="scheduling_edit_dueDate" class="scheduling-form-input" value="${taskDate}" ${!taskDate ? 'disabled' : ''}>
+                        <div style="margin-top: 0.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                                <input type="checkbox" id="scheduling_edit_noDueDate" ${!taskDate ? 'checked' : ''} style="cursor: pointer;">
+                                No due date
+                            </label>
+                        </div>
                     </div>
-                    
+
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Time</label>
-                        <input type="time" name="due_time" class="scheduling-form-input" value="${task.due_time || ''}">
+                        <input type="time" name="due_time" id="scheduling_edit_dueTime" class="scheduling-form-input" value="${task.due_time || ''}" ${!taskDate ? 'disabled' : ''}>
                     </div>
                     
                     <div class="scheduling-form-group">
