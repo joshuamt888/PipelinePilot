@@ -42,13 +42,13 @@ window.EstimatesModule = {
 
         try {
             // Load estimates and leads in parallel
-            const [estimates, leads] = await Promise.all([
+            const [estimates, leadsData] = await Promise.all([
                 API.getEstimates(),
                 API.getLeads()
             ]);
 
             this.state.estimates = Array.isArray(estimates) ? estimates : [];
-            this.state.leads = Array.isArray(leads) ? leads : [];
+            this.state.leads = leadsData?.all || [];
             this.state.filteredEstimates = this.state.estimates;
 
             console.log(`[Estimates] Loaded ${this.state.estimates.length} estimates and ${this.state.leads.length} leads`);
@@ -1958,9 +1958,9 @@ window.EstimatesModule = {
         const total = (item.quantity || 0) * (item.rate || 0);
         return `
             <div class="estimate-line-item" data-index="${index}">
-                <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description">
-                <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" step="0.01" data-field="quantity">
-                <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" step="0.01" data-field="rate">
+                <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="25">
+                <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" max="99999999.99" step="0.01" data-field="quantity">
+                <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" max="99999999.99" step="0.01" data-field="rate">
                 <div class="estimate-line-item-total">${formatCurrency(total)}</div>
                 <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -2061,6 +2061,23 @@ window.EstimatesModule = {
                 this.estimates_updateLineItemsTotal();
             }
         });
+
+        // Line item decimal validation on blur
+        overlay.addEventListener('blur', (e) => {
+            if (e.target.classList.contains('line-item-quantity') ||
+                e.target.classList.contains('line-item-rate')) {
+                const value = parseFloat(e.target.value);
+                if (!isNaN(value)) {
+                    // Format to 2 decimal places
+                    e.target.value = value.toFixed(2);
+                    // Enforce max value
+                    if (value > 99999999.99) {
+                        e.target.value = '99999999.99';
+                    }
+                    this.estimates_updateLineItemsTotal();
+                }
+            }
+        }, true);
 
         // Character counters
         const titleInput = overlay.querySelector('#estimateTitle');
