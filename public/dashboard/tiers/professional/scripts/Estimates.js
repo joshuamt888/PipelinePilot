@@ -45,14 +45,22 @@ window.EstimatesModule = {
                 API.getLeads()
             ]);
 
-            this.state.estimates = estimates || [];
-            this.state.leads = leads || [];
+            this.state.estimates = Array.isArray(estimates) ? estimates : [];
+            this.state.leads = Array.isArray(leads) ? leads : [];
             this.state.filteredEstimates = this.state.estimates;
+
+            console.log(`[Estimates] Loaded ${this.state.estimates.length} estimates and ${this.state.leads.length} leads`);
 
             this.estimates_calculateStats();
             this.estimates_render();
         } catch (error) {
             console.error('Error initializing Estimates:', error);
+
+            // Ensure state is valid even on error
+            this.state.estimates = [];
+            this.state.leads = [];
+            this.state.filteredEstimates = [];
+
             this.estimates_showError('Failed to load estimates');
         }
     },
@@ -550,7 +558,7 @@ window.EstimatesModule = {
 
                 <select data-filter="lead">
                     <option value="all">All Leads</option>
-                    ${this.state.leads.map(lead => `
+                    ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
                         <option value="${lead.id}" ${this.state.leadFilter === lead.id ? 'selected' : ''}>
                             ${lead.name}
                         </option>
@@ -600,7 +608,7 @@ window.EstimatesModule = {
      * Render estimate card
      */
     estimates_renderCard(estimate) {
-        const lead = this.state.leads.find(l => l.id === estimate.lead_id);
+        const lead = (Array.isArray(this.state.leads) ? this.state.leads : []).find(l => l.id === estimate.lead_id);
         const photoCount = (estimate.photos || []).length;
         const expiryInfo = this.estimates_getExpiryInfo(estimate);
 
@@ -1362,7 +1370,7 @@ window.EstimatesModule = {
             <select id="estimateLead" required>
                 <option value="">Select lead...</option>
                 <option value="__create__" style="font-weight: bold; color: var(--primary);">+ Create New Lead</option>
-                ${this.state.leads.map(lead => `
+                ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
                     <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
                         ${lead.name}${lead.company ? ` (${lead.company})` : ''}
                     </option>
@@ -1452,6 +1460,7 @@ window.EstimatesModule = {
 
                     try {
                         const lead = await API.createLead({ name, phone, email, source: 'manual' });
+                        if (!Array.isArray(this.state.leads)) this.state.leads = [];
                         this.state.leads.unshift(lead);
 
                         // Add new option
@@ -1801,7 +1810,7 @@ window.EstimatesModule = {
             return;
         }
 
-        const lead = this.state.leads.find(l => l.id === estimate.lead_id);
+        const lead = (Array.isArray(this.state.leads) ? this.state.leads : []).find(l => l.id === estimate.lead_id);
         const lineItems = estimate.line_items || [];
         const photos = estimate.photos || [];
 
