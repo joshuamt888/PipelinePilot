@@ -34,7 +34,7 @@ window.EstimatesModule = {
     /**
      * Initialize the Estimates module
      */
-    async estimates_init(targetContainer = 'estimates-content') {
+    async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
         this.estimates_showLoading();
 
@@ -2337,11 +2337,11 @@ window.EstimatesModule = {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         if (window.location.pathname.includes('estimates')) {
-            EstimatesModule.estimates_init();
+            EstimatesModule.init();
         }
     });
 } else {
     if (window.location.pathname.includes('estimates')) {
-        EstimatesModule.estimates_init();
+        EstimatesModule.init();
     }
 }
