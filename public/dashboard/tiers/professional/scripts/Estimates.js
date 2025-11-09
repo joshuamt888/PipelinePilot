@@ -542,13 +542,12 @@ estimates_renderModalStyles() {
 
         .estimate-modal {
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            width: 100%;
-            max-width: 600px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             animation: slideUp 0.3s ease;
         }
 
@@ -561,30 +560,30 @@ estimates_renderModalStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 2rem 2.5rem;
-            border-bottom: 2px solid var(--border);
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
         }
 
         .estimate-modal-header h2 {
             margin: 0;
-            font-size: 1.75rem;
-            font-weight: 800;
+            font-size: 24px;
+            font-weight: 600;
             color: var(--text-primary);
         }
 
         .estimate-modal-close {
             background: transparent;
             border: none;
-            font-size: 2rem;
+            font-size: 28px;
             color: var(--text-secondary);
             cursor: pointer;
             padding: 0;
-            width: 2.5rem;
-            height: 2.5rem;
+            width: 32px;
+            height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: var(--radius);
+            border-radius: 6px;
             transition: all 0.2s;
         }
 
@@ -594,73 +593,69 @@ estimates_renderModalStyles() {
         }
 
         .estimate-modal-body {
-            padding: 2.5rem;
-            max-height: calc(90vh - 200px);
-            overflow-y: auto;
+            padding: 24px;
         }
 
         .estimate-form-section {
-            margin-bottom: 2.5rem;
+            margin-bottom: 32px;
         }
 
         .estimate-form-section-title {
-            font-size: 0.875rem;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
-            margin-bottom: 1.25rem;
+            margin-bottom: 16px;
         }
 
         .estimate-form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.25rem;
-            margin-bottom: 1.25rem;
+            gap: 16px;
+            margin-top: 12px;
+            margin-bottom: 16px;
         }
 
         .estimate-form-group {
             display: flex;
             flex-direction: column;
-            gap: 0.625rem;
-            margin-bottom: 1.25rem;
+            gap: 8px;
         }
 
         .estimate-form-group label {
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             color: var(--text-primary);
         }
 
         .estimate-form-group input,
         .estimate-form-group select,
         .estimate-form-group textarea {
-            padding: 0.875rem 1rem;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
             background: var(--background);
             color: var(--text-primary);
-            font-size: 0.95rem;
+            font-size: 14px;
             transition: all 0.2s;
-            font-family: inherit;
         }
 
         .estimate-form-group input:focus,
         .estimate-form-group select:focus,
         .estimate-form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
         }
 
         .estimate-form-group textarea {
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
         }
 
         /* Character Counter */
         .estimate-input-hint {
-            font-size: 0.75rem;
+            font-size: 12px;
             color: var(--text-tertiary);
             font-weight: 500;
         }
@@ -678,7 +673,7 @@ estimates_renderModalStyles() {
         /* Lead Dropdown with Search */
         .estimate-lead-dropdown-wrapper {
             display: flex;
-            gap: 0.5rem;
+            gap: 8px;
             align-items: stretch;
         }
 
@@ -687,25 +682,25 @@ estimates_renderModalStyles() {
         }
 
         .estimate-lead-search-btn {
-            padding: 0.5rem 1rem;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
             background: var(--background);
             color: var(--text-primary);
-            font-size: 0.875rem;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 0.375rem;
+            gap: 6px;
             white-space: nowrap;
         }
 
         .estimate-lead-search-btn:hover {
-            border-color: #667eea;
+            border-color: var(--primary);
             background: rgba(102, 126, 234, 0.05);
-            color: #667eea;
+            color: var(--primary);
         }
 
         /* Section Header with Counter */
@@ -713,7 +708,7 @@ estimates_renderModalStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
+            margin-bottom: 16px;
         }
 
         .estimate-section-header .estimate-form-section-title {
@@ -721,7 +716,7 @@ estimates_renderModalStyles() {
         }
 
         .estimate-line-item-counter {
-            font-size: 0.875rem;
+            font-size: 13px;
             font-weight: 500;
             color: var(--text-tertiary);
         }
@@ -729,18 +724,18 @@ estimates_renderModalStyles() {
         /* Line Items */
         .estimate-line-items {
             background: var(--background);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
         }
 
         .estimate-line-item-header {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 40px;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            font-size: 0.75rem;
-            font-weight: 700;
+            grid-template-columns: 2fr 1fr 1fr 40px;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
@@ -748,33 +743,33 @@ estimates_renderModalStyles() {
 
         .estimate-line-item {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 40px;
-            gap: 1rem;
-            margin-bottom: 1rem;
+            grid-template-columns: 2fr 1fr 1fr 40px;
+            gap: 12px;
+            margin-bottom: 12px;
             align-items: center;
         }
 
         .estimate-line-item input {
-            padding: 0.625rem 0.75rem;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
             background: var(--surface);
             color: var(--text-primary);
-            font-size: 0.9rem;
+            font-size: 14px;
         }
 
         .estimate-line-item-total {
-            font-weight: 600;
+            font-weight: 500;
             color: var(--text-primary);
         }
 
         .estimate-line-item-remove {
             background: transparent;
             border: 1px solid var(--border);
-            border-radius: var(--radius);
+            border-radius: 4px;
             color: #ef4444;
             cursor: pointer;
-            padding: 0.5rem;
+            padding: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -789,67 +784,64 @@ estimates_renderModalStyles() {
         .estimate-add-line-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.875rem;
+            gap: 8px;
+            padding: 10px;
             background: transparent;
-            border: 2px dashed var(--border);
-            border-radius: var(--radius);
-            color: #667eea;
-            font-size: 0.9rem;
-            font-weight: 600;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
-            margin-top: 1rem;
-            width: 100%;
+            margin-top: 12px;
         }
 
         .estimate-add-line-item:hover {
-            background: rgba(102, 126, 234, 0.05);
-            border-color: #667eea;
+            background: rgba(59, 130, 246, 0.05);
+            border-color: var(--primary);
         }
 
         .estimate-total-box {
-            margin-top: 1.5rem;
-            padding: 1.5rem;
-            background: rgba(102, 126, 234, 0.05);
-            border: 2px solid #667eea;
-            border-radius: var(--radius);
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid var(--primary);
+            border-radius: 6px;
             text-align: right;
         }
 
         .estimate-total-label {
-            font-size: 0.875rem;
+            font-size: 14px;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
+            margin-bottom: 4px;
         }
 
         .estimate-total-value {
-            font-size: 2rem;
-            font-weight: 900;
-            color: #667eea;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--primary);
         }
 
         /* Photos */
         .estimate-photo-counter {
-            font-size: 0.875rem;
+            font-size: 13px;
             color: var(--text-secondary);
-            margin-bottom: 1rem;
-            font-weight: 500;
+            margin-bottom: 12px;
         }
 
         .estimate-photo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
         }
 
         .estimate-photo-item {
             position: relative;
             aspect-ratio: 1;
-            border-radius: var(--radius);
+            border-radius: 8px;
             overflow: hidden;
-            border: 2px solid var(--border);
+            border: 1px solid var(--border);
         }
 
         .estimate-photo-item img {
@@ -860,14 +852,14 @@ estimates_renderModalStyles() {
 
         .estimate-photo-remove {
             position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
+            top: 4px;
+            right: 4px;
             background: rgba(0, 0, 0, 0.7);
             border: none;
             color: white;
-            border-radius: var(--radius);
-            padding: 0.25rem 0.625rem;
-            font-size: 0.875rem;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -879,32 +871,31 @@ estimates_renderModalStyles() {
         .estimate-photo-upload {
             aspect-ratio: 1;
             border: 2px dashed var(--border);
-            border-radius: var(--radius);
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s;
-            background: var(--background);
+            background: var(--bg);
         }
 
         .estimate-photo-upload:hover {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.05);
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.05);
         }
 
         .estimate-photo-upload svg {
-            width: 2.5rem;
-            height: 2.5rem;
+            width: 32px;
+            height: 32px;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
         }
 
         .estimate-photo-upload span {
-            font-size: 0.875rem;
+            font-size: 13px;
             color: var(--text-secondary);
-            font-weight: 500;
         }
 
         /* Lead Search Modal */
@@ -938,22 +929,22 @@ estimates_renderModalStyles() {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.25rem 1.5rem;
-            border-bottom: 2px solid var(--border);
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
         }
 
         .estimate-search-modal-header h3 {
             margin: 0;
-            font-size: 1.125rem;
+            font-size: 18px;
             font-weight: 600;
             color: var(--text-primary);
         }
 
         .estimate-search-modal-body {
-            padding: 1.25rem;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 16px;
             flex: 1;
             min-height: 0;
         }
@@ -975,19 +966,19 @@ estimates_renderModalStyles() {
 
         .estimate-search-input-wrapper input {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            padding: 12px 16px 12px 44px;
             border: 2px solid var(--border);
-            border-radius: var(--radius);
+            border-radius: 8px;
             background: var(--background);
             color: var(--text-primary);
-            font-size: 0.9375rem;
+            font-size: 15px;
             transition: all 0.2s;
         }
 
         .estimate-search-input-wrapper input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
 
         .estimate-lead-results {
@@ -995,84 +986,81 @@ estimates_renderModalStyles() {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 8px;
         }
 
         .estimate-lead-result-item {
-            padding: 0.875rem 1rem;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             background: var(--surface);
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 4px;
         }
 
         .estimate-lead-result-item:hover {
-            border-color: #667eea;
+            border-color: var(--primary);
             background: rgba(102, 126, 234, 0.05);
             transform: translateX(4px);
         }
 
         .estimate-lead-result-name {
-            font-size: 0.9375rem;
+            font-size: 15px;
             font-weight: 600;
             color: var(--text-primary);
         }
 
         .estimate-lead-result-details {
-            font-size: 0.8125rem;
+            font-size: 13px;
             color: var(--text-secondary);
         }
 
         .estimate-lead-no-results {
             text-align: center;
-            padding: 2.5rem 1.25rem;
+            padding: 40px 20px;
             color: var(--text-secondary);
-            font-size: 0.875rem;
+            font-size: 14px;
         }
 
         /* Modal Footer */
         .estimate-modal-footer {
-            padding: 1.5rem 2.5rem;
-            border-top: 2px solid var(--border);
+            padding: 20px 24px;
+            border-top: 1px solid var(--border);
             display: flex;
             justify-content: flex-end;
-            gap: 1rem;
+            gap: 12px;
         }
 
         .estimate-modal-btn {
-            padding: 0.875rem 1.75rem;
-            border-radius: var(--radius-lg);
-            font-size: 0.95rem;
-            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .estimate-modal-btn-cancel {
             background: transparent;
-            border: 2px solid var(--border);
+            border: 1px solid var(--border);
             color: var(--text-primary);
         }
 
         .estimate-modal-btn-cancel:hover {
             background: var(--surface-hover);
-            border-color: var(--text-secondary);
         }
 
         .estimate-modal-btn-save {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary);
             border: none;
             color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .estimate-modal-btn-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            background: var(--primary-dark);
         }
 
         @media (max-width: 768px) {
@@ -1118,13 +1106,11 @@ estimates_renderLeadDropdown(selectedLeadId = null) {
  * Render line item row
  */
 estimates_renderLineItemRow(item, index) {
-    const total = (item.quantity || 0) * (item.rate || 0);
     return `
         <div class="estimate-line-item" data-index="${index}">
             <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35">
             <input type="text" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" data-field="quantity">
             <input type="text" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate">
-            <div class="estimate-line-item-total">${formatCurrency(total)}</div>
             <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
                     <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
@@ -1236,7 +1222,6 @@ estimates_renderModal(estimate) {
                             <div>Description</div>
                             <div>Quantity</div>
                             <div>Rate</div>
-                            <div>Total</div>
                             <div></div>
                         </div>
                         <div id="lineItemsContainer">
