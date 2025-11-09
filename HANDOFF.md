@@ -1394,8 +1394,8 @@ Lightweight quote/proposal system that feeds into Jobs. Estimates capture client
 ```sql
 CREATE TABLE estimates (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users NOT NULL,
-  lead_id UUID REFERENCES leads(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,  -- Optional (nullable)
 
   estimate_number TEXT UNIQUE,  -- EST-2025-001
   title TEXT NOT NULL,
