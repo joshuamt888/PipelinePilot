@@ -658,6 +658,74 @@ estimates_renderModalStyles() {
             min-height: 100px;
         }
 
+        /* Character Counter */
+        .estimate-input-hint {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        /* Custom Select Styling */
+        .estimate-select-custom {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px !important;
+        }
+
+        /* Lead Dropdown with Search */
+        .estimate-lead-dropdown-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+
+        .estimate-lead-dropdown-wrapper select {
+            flex: 1;
+        }
+
+        .estimate-lead-search-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--background);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            white-space: nowrap;
+        }
+
+        .estimate-lead-search-btn:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            color: #667eea;
+        }
+
+        /* Section Header with Counter */
+        .estimate-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .estimate-section-header .estimate-form-section-title {
+            margin-bottom: 0;
+        }
+
+        .estimate-line-item-counter {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+        }
+
         /* Line Items */
         .estimate-line-items {
             background: var(--background);
@@ -839,6 +907,133 @@ estimates_renderModalStyles() {
             font-weight: 500;
         }
 
+        /* Lead Search Modal */
+        .estimate-search-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .estimate-search-modal {
+            background: var(--surface);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: slideUp 0.3s ease;
+        }
+
+        .estimate-search-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .estimate-search-modal-header h3 {
+            margin: 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .estimate-search-modal-body {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .estimate-search-input-wrapper {
+            position: relative;
+        }
+
+        .estimate-search-input-wrapper svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .estimate-search-input-wrapper input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--background);
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+        }
+
+        .estimate-search-input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .estimate-lead-results {
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .estimate-lead-result-item {
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .estimate-lead-result-item:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateX(4px);
+        }
+
+        .estimate-lead-result-name {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .estimate-lead-result-details {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .estimate-lead-no-results {
+            text-align: center;
+            padding: 2.5rem 1.25rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
         /* Modal Footer */
         .estimate-modal-footer {
             padding: 1.5rem 2.5rem;
@@ -895,19 +1090,27 @@ estimates_renderModalStyles() {
 },
 
 /**
- * Render lead dropdown
+ * Render lead dropdown with search button
  */
 estimates_renderLeadDropdown(selectedLeadId = null) {
     return `
-        <select id="estimateLead" required>
-            <option value="">Select lead...</option>
-            <option value="__create__" style="font-weight: bold; color: #667eea;">+ Create New Lead</option>
-            ${this.state.leads.map(lead => `
-                <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
-                    ${lead.name}${lead.company ? ` (${lead.company})` : ''}
-                </option>
-            `).join('')}
-        </select>
+        <div class="estimate-lead-dropdown-wrapper">
+            <select id="estimateLead" class="estimate-select-custom">
+                <option value="">Select lead (optional)</option>
+                ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
+                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                        ${this.estimates_truncateText(lead.name, 50)}${lead.company ? ` (${this.estimates_truncateText(lead.company, 30)})` : ''}
+                    </option>
+                `).join('')}
+            </select>
+            <button type="button" class="estimate-lead-search-btn" data-action="search-lead">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                Search
+            </button>
+        </div>
     `;
 },
 
@@ -918,9 +1121,9 @@ estimates_renderLineItemRow(item, index) {
     const total = (item.quantity || 0) * (item.rate || 0);
     return `
         <div class="estimate-line-item" data-index="${index}">
-            <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description">
-            <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" step="0.01" data-field="quantity">
-            <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" step="0.01" data-field="rate">
+            <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35">
+            <input type="text" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" data-field="quantity">
+            <input type="text" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate">
             <div class="estimate-line-item-total">${formatCurrency(total)}</div>
             <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -988,25 +1191,13 @@ estimates_renderModal(estimate) {
 
                     <div class="estimate-form-group">
                         <label>Title *</label>
-                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" required>
+                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="100" required>
+                        <span class="estimate-input-hint" id="titleCounter">100 characters remaining</span>
                     </div>
 
-                    <div class="estimate-form-row">
-                        <div class="estimate-form-group">
-                            <label>Lead *</label>
-                            ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
-                        </div>
-
-                        <div class="estimate-form-group">
-                            <label>Status</label>
-                            <select id="estimateStatus">
-                                ${this.STATUSES.map(status => `
-                                    <option value="${status}" ${estimate?.status === status ? 'selected' : ''}>
-                                        ${status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </div>
+                    <div class="estimate-form-group">
+                        <label>Lead</label>
+                        ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
                     </div>
 
                     <div class="estimate-form-row">
@@ -1014,17 +1205,32 @@ estimates_renderModal(estimate) {
                             <label>Expires On</label>
                             <input type="date" id="estimateExpiry" value="${expiryDate}">
                         </div>
+
+                        <div class="estimate-form-group">
+                            <label>Status</label>
+                            <select id="estimateStatus" class="estimate-select-custom">
+                                ${this.STATUSES.map(status => `
+                                    <option value="${status}" ${estimate?.status === status ? 'selected' : ''}>
+                                        ${this.estimates_formatStatus(status)}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
                     </div>
 
                     <div class="estimate-form-group">
                         <label>Description</label>
-                        <textarea id="estimateDescription" placeholder="Brief description of the work...">${estimate?.description || ''}</textarea>
+                        <textarea id="estimateDescription" placeholder="Brief description of the work..." maxlength="500">${estimate?.description || ''}</textarea>
+                        <span class="estimate-input-hint" id="descriptionCounter">500 characters remaining</span>
                     </div>
                 </div>
 
                 <!-- Line Items -->
                 <div class="estimate-form-section">
-                    <div class="estimate-form-section-title">Line Items</div>
+                    <div class="estimate-section-header">
+                        <div class="estimate-form-section-title">Line Items</div>
+                        <div class="estimate-line-item-counter" id="lineItemCounter">${lineItems.length}/50 line items</div>
+                    </div>
                     <div class="estimate-line-items">
                         <div class="estimate-line-item-header">
                             <div>Description</div>
@@ -1064,7 +1270,8 @@ estimates_renderModal(estimate) {
                 <div class="estimate-form-section">
                     <div class="estimate-form-section-title">Terms & Conditions</div>
                     <div class="estimate-form-group">
-                        <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc...">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                        <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc..." maxlength="1000">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                        <span class="estimate-input-hint" id="termsCounter">1000 characters remaining</span>
                     </div>
                 </div>
 
@@ -1072,7 +1279,8 @@ estimates_renderModal(estimate) {
                 <div class="estimate-form-section">
                     <div class="estimate-form-section-title">Internal Notes</div>
                     <div class="estimate-form-group">
-                        <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)...">${estimate?.notes || ''}</textarea>
+                        <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)..." maxlength="500">${estimate?.notes || ''}</textarea>
+                        <span class="estimate-input-hint" id="notesCounter">500 characters remaining</span>
                     </div>
                 </div>
             </div>
@@ -1138,13 +1346,97 @@ estimates_initModalEvents(overlay) {
         });
     }
 
-    // Line item changes - auto-calculate totals
+    // Line item changes with real-time validation
     overlay.addEventListener('input', (e) => {
         if (e.target.classList.contains('line-item-quantity') ||
             e.target.classList.contains('line-item-rate')) {
+
+            // Get the current value
+            let value = e.target.value;
+
+            // Remove any non-numeric characters except decimal point
+            value = value.replace(/[^0-9.]/g, '');
+
+            // Ensure only one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+
+            // Limit decimal places to 2
+            if (parts.length === 2 && parts[1].length > 2) {
+                value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+
+            // Limit to 8 digits before decimal (max 99,999,999.99)
+            if (parts[0].length > 8) {
+                value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
+            }
+
+            // Update the input value
+            e.target.value = value;
+
+            // Visual feedback if at max
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue) && numValue >= 99999999.99) {
+                e.target.style.borderColor = '#ef4444';
+                e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
+            } else {
+                e.target.style.borderColor = '';
+                e.target.style.backgroundColor = '';
+            }
+
+            // Update total
             this.estimates_updateLineItemsTotal();
         }
     });
+
+    // Line item decimal validation on blur (format to 2 decimals)
+    overlay.addEventListener('blur', (e) => {
+        if (e.target.classList.contains('line-item-quantity') ||
+            e.target.classList.contains('line-item-rate')) {
+            const value = parseFloat(e.target.value);
+            if (!isNaN(value)) {
+                // Format to 2 decimal places
+                e.target.value = value.toFixed(2);
+                // Clear any visual feedback
+                e.target.style.borderColor = '';
+                e.target.style.backgroundColor = '';
+                this.estimates_updateLineItemsTotal();
+            }
+        }
+    }, true);
+
+    // Character counters
+    const titleInput = overlay.querySelector('#estimateTitle');
+    const descInput = overlay.querySelector('#estimateDescription');
+    const termsInput = overlay.querySelector('#estimateTerms');
+    const notesInput = overlay.querySelector('#estimateNotes');
+
+    const updateCounter = (input, counterId, maxLength) => {
+        const counter = overlay.querySelector(`#${counterId}`);
+        if (!counter || !input) return;
+        const remaining = maxLength - input.value.length;
+        counter.textContent = `${remaining} character${remaining === 1 ? '' : 's'} remaining`;
+        counter.style.color = remaining < 20 ? '#ef4444' : 'var(--text-tertiary)';
+    };
+
+    if (titleInput) {
+        updateCounter(titleInput, 'titleCounter', 100);
+        titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 100));
+    }
+    if (descInput) {
+        updateCounter(descInput, 'descriptionCounter', 500);
+        descInput.addEventListener('input', () => updateCounter(descInput, 'descriptionCounter', 500));
+    }
+    if (termsInput) {
+        updateCounter(termsInput, 'termsCounter', 1000);
+        termsInput.addEventListener('input', () => updateCounter(termsInput, 'termsCounter', 1000));
+    }
+    if (notesInput) {
+        updateCounter(notesInput, 'notesCounter', 500);
+        notesInput.addEventListener('input', () => updateCounter(notesInput, 'notesCounter', 500));
+    }
 
     // Add line item
     overlay.querySelectorAll('[data-action="add-line-item"]').forEach(btn => {
@@ -1187,6 +1479,12 @@ estimates_initModalEvents(overlay) {
     overlay.querySelectorAll('[data-action="save-estimate"]').forEach(btn => {
         btn.addEventListener('click', () => this.estimates_handleSave(overlay));
     });
+
+    // Lead search button
+    const searchLeadBtn = overlay.querySelector('[data-action="search-lead"]');
+    if (searchLeadBtn) {
+        searchLeadBtn.addEventListener('click', () => this.estimates_openLeadSearch(overlay));
+    }
 },
 
 /**
@@ -1208,11 +1506,18 @@ estimates_addLineItem(overlay) {
     const container = overlay.querySelector('#lineItemsContainer');
     const currentItems = container.querySelectorAll('.estimate-line-item').length;
 
+    // Cap at 50 line items
+    if (currentItems >= 50) {
+        alert('Maximum 50 line items allowed');
+        return;
+    }
+
     const newItem = { description: '', quantity: 1, rate: 0 };
     const html = this.estimates_renderLineItemRow(newItem, currentItems);
 
     container.insertAdjacentHTML('beforeend', html);
     this.estimates_updateLineItemsTotal();
+    this.estimates_updateLineItemCounter(overlay);
 },
 
 /**
@@ -1236,6 +1541,7 @@ estimates_removeLineItem(overlay, index) {
     });
 
     this.estimates_updateLineItemsTotal();
+    this.estimates_updateLineItemCounter(overlay);
 },
 
 /**
@@ -1388,11 +1694,6 @@ async estimates_handleSave(overlay) {
             return;
         }
 
-        if (!leadId || leadId === '__create__') {
-            alert('Please select a lead');
-            return;
-        }
-
         // Gather line items
         const lineItems = [];
         overlay.querySelectorAll('.estimate-line-item').forEach(row => {
@@ -1417,7 +1718,7 @@ async estimates_handleSave(overlay) {
 
         const estimateData = {
             title,
-            lead_id: leadId,
+            lead_id: leadId || null,
             status,
             expires_at: expiresAt || null,
             description,
@@ -1457,6 +1758,134 @@ async estimates_handleSave(overlay) {
         console.error('[Estimates] Save error:', error);
         alert('Failed to save estimate: ' + (error.message || 'Unknown error'));
     }
+},
+
+/**
+ * Update line item counter and button state
+ */
+estimates_updateLineItemCounter(overlay) {
+    const container = overlay.querySelector('#lineItemsContainer');
+    const counter = overlay.querySelector('#lineItemCounter');
+    const addButton = overlay.querySelector('[data-action="add-line-item"]');
+
+    if (!container || !counter) return;
+
+    const count = container.querySelectorAll('.estimate-line-item').length;
+    counter.textContent = `${count}/50 line items`;
+
+    // Disable add button if at max
+    if (addButton) {
+        if (count >= 50) {
+            addButton.disabled = true;
+            addButton.style.opacity = '0.5';
+            addButton.style.cursor = 'not-allowed';
+        } else {
+            addButton.disabled = false;
+            addButton.style.opacity = '';
+            addButton.style.cursor = '';
+        }
+    }
+},
+
+/**
+ * Open lead search modal
+ */
+estimates_openLeadSearch(parentOverlay) {
+    const searchModalHtml = `
+        <div class="estimate-search-modal-overlay" id="leadSearchModal">
+            <div class="estimate-search-modal">
+                <div class="estimate-search-modal-header">
+                    <h3>Search Leads</h3>
+                    <button class="estimate-modal-close" onclick="document.getElementById('leadSearchModal').remove()">×</button>
+                </div>
+                <div class="estimate-search-modal-body">
+                    <div class="estimate-search-input-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" id="leadSearchInput" placeholder="Type to search leads..." autofocus>
+                    </div>
+                    <div class="estimate-lead-results" id="leadSearchResults">
+                        ${this.estimates_renderLeadSearchResults('')}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', searchModalHtml);
+
+    // Attach search events
+    const searchInput = document.getElementById('leadSearchInput');
+    const resultsContainer = document.getElementById('leadSearchResults');
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        resultsContainer.innerHTML = this.estimates_renderLeadSearchResults(query);
+    });
+
+    // Handle lead selection
+    document.getElementById('leadSearchModal').addEventListener('click', (e) => {
+        const leadItem = e.target.closest('.estimate-lead-result-item');
+        if (leadItem) {
+            const leadId = leadItem.dataset.leadId;
+            const leadSelect = parentOverlay.querySelector('#estimateLead');
+            if (leadSelect) {
+                leadSelect.value = leadId;
+            }
+            document.getElementById('leadSearchModal').remove();
+        }
+    });
+},
+
+/**
+ * Render lead search results
+ */
+estimates_renderLeadSearchResults(query) {
+    const leads = Array.isArray(this.state.leads) ? this.state.leads : [];
+
+    const filtered = query ? leads.filter(lead => {
+        const searchText = `${lead.name} ${lead.company || ''} ${lead.email || ''} ${lead.phone || ''}`.toLowerCase();
+        return searchText.includes(query);
+    }) : leads;
+
+    if (filtered.length === 0) {
+        return `<div class="estimate-lead-no-results">No leads found${query ? ` for "${query}"` : ''}</div>`;
+    }
+
+    return filtered.map(lead => `
+        <div class="estimate-lead-result-item" data-lead-id="${lead.id}">
+            <div class="estimate-lead-result-name">${this.estimates_truncateText(lead.name, 60)}</div>
+            <div class="estimate-lead-result-details">
+                ${lead.company ? this.estimates_truncateText(lead.company, 50) : 'No company'}
+                ${lead.phone ? ` • ${lead.phone}` : ''}
+                ${lead.email ? ` • ${this.estimates_truncateText(lead.email, 40)}` : ''}
+            </div>
+        </div>
+    `).join('');
+},
+
+/**
+ * Truncate text to max length
+ */
+estimates_truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+},
+
+/**
+ * Format status for display
+ */
+estimates_formatStatus(status) {
+    const statusMap = {
+        'draft': 'Draft',
+        'sent': 'Sent',
+        'accepted': 'Accepted',
+        'rejected': 'Rejected',
+        'expired': 'Expired'
+    };
+    return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
 },
 
     /**
