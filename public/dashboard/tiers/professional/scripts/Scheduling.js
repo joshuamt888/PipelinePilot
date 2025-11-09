@@ -17,6 +17,8 @@ window.SchedulingModule = {
         taskActionLoading: false,
         lastNotificationMessage: null,
         lastNotificationTime: 0,
+        customTaskType: null,
+        customTaskTypeForEdit: null,
         currentFilters: {
             types: [],
             priorities: [],
@@ -377,8 +379,134 @@ modal.addEventListener('mouseup', (e) => {
             setTimeout(() => {
                 modal.remove();
                 this.scheduling_state.selectedDate = null;
+                this.scheduling_state.customTaskType = null;
             }, 200);
         }
+    },
+
+    // Custom Task Type Popup
+    scheduling_showCustomTaskTypePopup(mode = 'add') {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'scheduling-modal-overlay scheduling-show';
+            modal.id = 'scheduling_customTaskTypePopup';
+            modal.innerHTML = `
+                <div class="scheduling-modal scheduling-modal-small" onclick="event.stopPropagation()">
+                    <div class="scheduling-modal-header">
+                        <h2 class="scheduling-modal-title">Custom Task Type</h2>
+                        <button class="scheduling-modal-close" data-action="close">×</button>
+                    </div>
+                    <div class="scheduling-modal-body">
+                        <div class="scheduling-form-group">
+                            <label class="scheduling-form-label">Task Type Name *</label>
+                            <input type="text"
+                                   id="scheduling_customTaskTypePopupInput"
+                                   class="scheduling-form-input"
+                                   placeholder="e.g., Site Visit, Installation, Training..."
+                                   maxlength="20"
+                                   autofocus>
+                            <span class="scheduling-input-hint" id="scheduling_customTaskTypePopupCounter">20 characters remaining</span>
+                        </div>
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                            <button class="scheduling-btn-secondary" data-action="cancel">
+                                Cancel
+                            </button>
+                            <button class="scheduling-btn-primary" data-action="save">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const input = document.getElementById('scheduling_customTaskTypePopupInput');
+            const counter = document.getElementById('scheduling_customTaskTypePopupCounter');
+            const closeBtn = modal.querySelector('[data-action="close"]');
+            const cancelBtn = modal.querySelector('[data-action="cancel"]');
+            const saveBtn = modal.querySelector('[data-action="save"]');
+
+            // Character counter
+            const updateCounter = () => {
+                let value = input.value;
+                if (value.length > 20) {
+                    value = value.substring(0, 20);
+                    input.value = value;
+                }
+
+                const remaining = 20 - value.length;
+                counter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
+
+                if (remaining === 0) {
+                    counter.textContent = 'Max reached';
+                    counter.style.color = 'var(--danger)';
+                    counter.style.fontWeight = '700';
+                } else if (remaining <= 5) {
+                    counter.style.color = 'var(--warning)';
+                    counter.style.fontWeight = '600';
+                } else {
+                    counter.style.color = 'var(--text-tertiary)';
+                    counter.style.fontWeight = '400';
+                }
+            };
+
+            input.addEventListener('input', updateCounter);
+
+            // Close handlers
+            const closeModal = (returnValue = null) => {
+                modal.classList.remove('scheduling-show');
+                setTimeout(() => {
+                    modal.remove();
+                    resolve(returnValue);
+                }, 200);
+            };
+
+            // Close on background click
+            let mouseDownTarget = null;
+            modal.addEventListener('mousedown', (e) => {
+                mouseDownTarget = e.target;
+            });
+            modal.addEventListener('mouseup', (e) => {
+                if (mouseDownTarget === modal && e.target === modal) {
+                    closeModal(null);
+                }
+                mouseDownTarget = null;
+            });
+
+            closeBtn.onclick = () => closeModal(null);
+            cancelBtn.onclick = () => closeModal(null);
+
+            // Save handler
+            saveBtn.onclick = () => {
+                const value = input.value.trim();
+                if (!value) {
+                    input.style.borderColor = 'var(--danger)';
+                    input.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                    counter.textContent = 'Task type name is required';
+                    counter.style.color = 'var(--danger)';
+                    counter.style.fontWeight = '600';
+                    input.focus();
+                    return;
+                }
+                closeModal(value);
+            };
+
+            // Enter to save, Escape to cancel
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveBtn.click();
+                } else if (e.key === 'Escape') {
+                    closeModal(null);
+                }
+            });
+
+            // Focus input
+            setTimeout(() => input.focus(), 100);
+        });
     },
 
     // Add task form
@@ -439,14 +567,6 @@ modal.addEventListener('mouseup', (e) => {
                         </select>
                     </div>
 
-                    <div class="scheduling-form-group" id="scheduling_customTaskTypeInput" style="display: none;">
-                        <label class="scheduling-form-label">Custom Task Type Name</label>
-                        <input type="text" id="scheduling_customTaskType" class="scheduling-form-input"
-                               placeholder="e.g., Site Visit, Installation, Training..."
-                               maxlength="20">
-                        <span class="scheduling-input-hint" id="scheduling_customTaskTypeCounter">20 characters remaining</span>
-                    </div>
-                    
                     <div class="scheduling-form-group scheduling-full-width">
                         <label class="scheduling-form-label">Notes</label>
                         <textarea name="description" 
@@ -475,9 +595,17 @@ modal.addEventListener('mouseup', (e) => {
     scheduling_editTask(taskId) {
         const task = this.scheduling_state.tasks.find(t => t.id.toString() === taskId.toString());
         if (!task) return;
-        
+
         this.scheduling_state.currentEditTask = task;
-        
+
+        // Initialize custom task type if it's a custom type
+        const standardTypes = ['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'];
+        if (!standardTypes.includes(task.task_type)) {
+            this.scheduling_state.customTaskTypeForEdit = task.task_type;
+        } else {
+            this.scheduling_state.customTaskTypeForEdit = null;
+        }
+
         // Remove any existing edit modals
         document.getElementById('scheduling_editModal')?.remove();
         
@@ -536,6 +664,7 @@ modal.addEventListener('mouseup', (e) => {
             setTimeout(() => modal.remove(), 200);
         }
         this.scheduling_state.currentEditTask = null;
+        this.scheduling_state.customTaskTypeForEdit = null;
     },
 
     // Edit form
@@ -598,15 +727,6 @@ modal.addEventListener('mouseup', (e) => {
                         </select>
                     </div>
 
-                    <div class="scheduling-form-group" id="scheduling_edit_customTaskTypeInput" style="display: ${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? 'block' : 'none'};">
-                        <label class="scheduling-form-label">Custom Task Type Name</label>
-                        <input type="text" id="scheduling_edit_customTaskType" class="scheduling-form-input"
-                               placeholder="e.g., Site Visit, Installation, Training..."
-                               maxlength="20"
-                               value="${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? API.escapeHtml(task.task_type) : ''}">
-                        <span class="scheduling-input-hint" id="scheduling_edit_customTaskTypeCounter">20 characters remaining</span>
-                    </div>
-                    
                     <div class="scheduling-form-group scheduling-full-width">
                         <label class="scheduling-form-label">Notes</label>
                         <textarea name="description" 
@@ -788,58 +908,44 @@ modal.addEventListener('mouseup', (e) => {
 
     // Custom task type toggle and counter
     scheduling_setupCustomTaskTypeToggle(mode) {
-        const prefix = mode === 'edit' ? 'scheduling_edit_' : 'scheduling_';
         const selectId = mode === 'edit' ? 'scheduling_edit_taskTypeSelect' : 'scheduling_taskTypeSelect';
-        const customInputId = mode === 'edit' ? 'scheduling_edit_customTaskTypeInput' : 'scheduling_customTaskTypeInput';
-        const customTypeId = mode === 'edit' ? 'scheduling_edit_customTaskType' : 'scheduling_customTaskType';
-        const customCounterId = mode === 'edit' ? 'scheduling_edit_customTaskTypeCounter' : 'scheduling_customTaskTypeCounter';
-
         const taskTypeSelect = document.getElementById(selectId);
-        const customTaskTypeContainer = document.getElementById(customInputId);
-        const customTaskTypeInput = document.getElementById(customTypeId);
-        const customTaskTypeCounter = document.getElementById(customCounterId);
 
-        if (taskTypeSelect && customTaskTypeInput && customTaskTypeCounter) {
-            // Toggle custom input visibility
-            taskTypeSelect.addEventListener('change', () => {
+        if (taskTypeSelect) {
+            let previousValue = taskTypeSelect.value;
+
+            taskTypeSelect.addEventListener('change', async () => {
                 if (taskTypeSelect.value === 'custom') {
-                    customTaskTypeContainer.style.display = 'block';
+                    // Show popup to get custom task type
+                    const customType = await this.scheduling_showCustomTaskTypePopup(mode);
+
+                    if (customType) {
+                        // User provided a custom type
+                        if (mode === 'edit') {
+                            this.scheduling_state.customTaskTypeForEdit = customType;
+                        } else {
+                            this.scheduling_state.customTaskType = customType;
+                        }
+                        previousValue = 'custom';
+                    } else {
+                        // User cancelled, reset to previous value
+                        taskTypeSelect.value = previousValue;
+                        if (mode === 'edit') {
+                            this.scheduling_state.customTaskTypeForEdit = null;
+                        } else {
+                            this.scheduling_state.customTaskType = null;
+                        }
+                    }
                 } else {
-                    customTaskTypeContainer.style.display = 'none';
+                    // Standard task type selected, clear custom type
+                    if (mode === 'edit') {
+                        this.scheduling_state.customTaskTypeForEdit = null;
+                    } else {
+                        this.scheduling_state.customTaskType = null;
+                    }
+                    previousValue = taskTypeSelect.value;
                 }
             });
-
-            // Character counter
-            const updateCustomTaskTypeCounter = () => {
-                let value = customTaskTypeInput.value;
-                if (value.length > 20) {
-                    value = value.substring(0, 20);
-                    customTaskTypeInput.value = value;
-                }
-
-                const remaining = 20 - value.length;
-                customTaskTypeCounter.textContent = remaining === 1
-                    ? '1 character remaining'
-                    : `${remaining} characters remaining`;
-
-                if (remaining === 0) {
-                    customTaskTypeCounter.textContent = 'Max reached';
-                    customTaskTypeCounter.style.color = 'var(--danger)';
-                    customTaskTypeCounter.style.fontWeight = '700';
-                } else if (remaining <= 5) {
-                    customTaskTypeCounter.style.color = 'var(--danger)';
-                    customTaskTypeCounter.style.fontWeight = '700';
-                } else if (remaining <= 10) {
-                    customTaskTypeCounter.style.color = 'var(--warning)';
-                    customTaskTypeCounter.style.fontWeight = '600';
-                } else {
-                    customTaskTypeCounter.style.color = 'var(--text-tertiary)';
-                    customTaskTypeCounter.style.fontWeight = '500';
-                }
-            };
-
-            customTaskTypeInput.addEventListener('input', updateCustomTaskTypeCounter);
-            if (mode === 'edit') updateCustomTaskTypeCounter();
         }
     },
 
@@ -871,21 +977,9 @@ modal.addEventListener('mouseup', (e) => {
 
             // Handle custom task type
             if (taskData.task_type === 'custom') {
-                const customTaskType = document.getElementById('scheduling_customTaskType').value.trim();
+                const customTaskType = this.scheduling_state.customTaskType;
                 if (!customTaskType) {
-                    const customTaskTypeInput = document.getElementById('scheduling_customTaskType');
-                    const customTaskTypeCounter = document.getElementById('scheduling_customTaskTypeCounter');
-
-                    customTaskTypeInput.style.borderColor = 'var(--danger)';
-                    customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
-
-                    if (customTaskTypeCounter) {
-                        customTaskTypeCounter.textContent = 'Custom task type name is required';
-                        customTaskTypeCounter.style.color = 'var(--danger)';
-                        customTaskTypeCounter.style.fontWeight = '600';
-                    }
-
-                    customTaskTypeInput.focus();
+                    this.scheduling_showNotification('Custom task type is required', 'error');
                     this.scheduling_setLoadingState(false);
                     return;
                 }
@@ -941,21 +1035,9 @@ modal.addEventListener('mouseup', (e) => {
 
             // Handle custom task type
             if (taskData.task_type === 'custom') {
-                const customTaskType = document.getElementById('scheduling_edit_customTaskType').value.trim();
+                const customTaskType = this.scheduling_state.customTaskTypeForEdit;
                 if (!customTaskType) {
-                    const customTaskTypeInput = document.getElementById('scheduling_edit_customTaskType');
-                    const customTaskTypeCounter = document.getElementById('scheduling_edit_customTaskTypeCounter');
-
-                    customTaskTypeInput.style.borderColor = 'var(--danger)';
-                    customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
-
-                    if (customTaskTypeCounter) {
-                        customTaskTypeCounter.textContent = 'Custom task type name is required';
-                        customTaskTypeCounter.style.color = 'var(--danger)';
-                        customTaskTypeCounter.style.fontWeight = '600';
-                    }
-
-                    customTaskTypeInput.focus();
+                    this.scheduling_showNotification('Custom task type is required', 'error');
                     this.scheduling_setEditLoadingState(false);
                     return;
                 }
@@ -3349,6 +3431,10 @@ modal.addEventListener('mouseup', (e) => {
                     transform: scale(0.9) translateY(20px);
                     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     border: 1px solid var(--border);
+                }
+
+                .scheduling-modal-small {
+                    max-width: 450px;
                 }
 
                 .scheduling-modal-overlay.scheduling-show .scheduling-modal {
