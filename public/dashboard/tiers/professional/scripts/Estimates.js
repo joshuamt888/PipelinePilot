@@ -489,6 +489,10 @@ window.EstimatesModule = {
 estimates_showCreateModal(estimateId = null) {
     this.state.editingEstimateId = estimateId;
 
+    // Clean up any existing modals first
+    const existingModals = document.querySelectorAll('.estimate-modal-overlay');
+    existingModals.forEach(m => m.remove());
+
     // Get estimate data if editing
     let estimate = null;
     if (estimateId) {
@@ -1491,6 +1495,10 @@ estimates_showViewModal(estimateId) {
     const estimate = this.state.estimates.find(e => e.id === estimateId);
     if (!estimate) return;
 
+    // Clean up any existing modals first
+    const existingModals = document.querySelectorAll('.estimate-modal-overlay, .estimate-confirm-overlay');
+    existingModals.forEach(m => m.remove());
+
     const lead = this.state.leads.find(l => l.id === estimate.lead_id);
     const lineItems = estimate.line_items || [];
     const photos = estimate.photos || [];
@@ -1959,8 +1967,11 @@ estimates_showViewModal(estimateId) {
 
     // Edit estimate
     overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', () => {
-        overlay.remove();
-        this.estimates_showCreateModal(estimate.id);
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.remove();
+            this.estimates_showCreateModal(estimate.id);
+        }, 200);
     });
 
     // Delete estimate
@@ -1984,7 +1995,8 @@ estimates_showViewModal(estimateId) {
             }
 
             // Close modal and update UI
-            overlay.remove();
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
@@ -2009,7 +2021,8 @@ estimates_showViewModal(estimateId) {
             }
 
             // Close modal and update UI
-            overlay.remove();
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
