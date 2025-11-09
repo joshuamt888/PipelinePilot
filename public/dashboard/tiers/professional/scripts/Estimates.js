@@ -2091,12 +2091,26 @@ estimates_formatStatus(status) {
         if (!confirm(`Mark ${count} estimate${count > 1 ? 's' : ''} as sent?`)) return;
 
         try {
+            // Update in backend
             for (const id of this.state.selectedEstimateIds) {
                 await API.markEstimateSent(id);
+
+                // Update local state immediately
+                const estimate = this.state.estimates.find(e => e.id === id);
+                if (estimate) {
+                    estimate.status = 'sent';
+                }
             }
 
+            // Clear selections and exit batch mode
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+
+            // Instant UI update without reload
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as sent`, 'success');
-            await this.init(this.state.container);
         } catch (error) {
             console.error('Batch mark sent error:', error);
             window.SteadyUtils.showToast('Failed to update estimates', 'error');
@@ -2110,12 +2124,26 @@ estimates_formatStatus(status) {
         if (!confirm(`Mark ${count} estimate${count > 1 ? 's' : ''} as accepted?`)) return;
 
         try {
+            // Update in backend
             for (const id of this.state.selectedEstimateIds) {
                 await API.markEstimateAccepted(id);
+
+                // Update local state immediately
+                const estimate = this.state.estimates.find(e => e.id === id);
+                if (estimate) {
+                    estimate.status = 'accepted';
+                }
             }
 
+            // Clear selections and exit batch mode
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+
+            // Instant UI update without reload
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as accepted`, 'success');
-            await this.init(this.state.container);
         } catch (error) {
             console.error('Batch mark accepted error:', error);
             window.SteadyUtils.showToast('Failed to update estimates', 'error');
@@ -2129,12 +2157,26 @@ estimates_formatStatus(status) {
         if (!confirm(`Delete ${count} estimate${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
 
         try {
+            // Update in backend
             for (const id of this.state.selectedEstimateIds) {
                 await API.deleteEstimate(id);
+
+                // Remove from local state immediately
+                const index = this.state.estimates.findIndex(e => e.id === id);
+                if (index !== -1) {
+                    this.state.estimates.splice(index, 1);
+                }
             }
 
+            // Clear selections and exit batch mode
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+
+            // Instant UI update without reload
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
-            await this.init(this.state.container);
         } catch (error) {
             console.error('Batch delete error:', error);
             window.SteadyUtils.showToast('Failed to delete estimates', 'error');
