@@ -1559,7 +1559,6 @@ addlead_showCustomSourceInput(targetInput) {
         confirmModal.innerHTML = `
             <div class="addlead-delete-confirm-modal">
                 <div class="addlead-confirm-header">
-                    <div class="addlead-confirm-icon">⚠️</div>
                     <h3 class="addlead-confirm-title">Delete Lead</h3>
                 </div>
                 
@@ -3690,23 +3689,9 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-confirm-header {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 1.5rem 1.5rem 1rem;
+                padding: 1.5rem;
                 background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
                 color: white;
-            }
-
-            .addlead-confirm-icon {
-                font-size: 1.5rem;
-                width: 40px;
-                height: 40px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: rgba(255, 255, 255, 0.2);
             }
 
             .addlead-confirm-title {
