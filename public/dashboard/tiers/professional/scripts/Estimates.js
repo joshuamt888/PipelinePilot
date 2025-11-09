@@ -2862,7 +2862,42 @@ async estimates_handleSave(overlay) {
 
         // Validation
         if (!title) {
-            alert('Title is required');
+            const titleInput = overlay.querySelector('#estimateTitle');
+            const titleCounter = overlay.querySelector('#titleCounter');
+
+            // Add error styling
+            titleInput.style.borderColor = 'var(--danger)';
+            titleInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+            // Update hint text to show error
+            if (titleCounter) {
+                titleCounter.textContent = 'Title is required';
+                titleCounter.style.color = 'var(--danger)';
+                titleCounter.style.fontWeight = '600';
+            }
+
+            // Focus the input
+            titleInput.focus();
+
+            // Scroll to the top of the modal to make the error visible
+            const modalBody = overlay.querySelector('.estimate-modal-body');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+
+            // Remove error styling when user types
+            titleInput.addEventListener('input', function clearError() {
+                titleInput.style.borderColor = '';
+                titleInput.style.boxShadow = '';
+                if (titleCounter) {
+                    const remaining = 50 - titleInput.value.length;
+                    titleCounter.textContent = `${remaining} characters remaining`;
+                    titleCounter.style.color = remaining <= 5 ? 'var(--warning)' : '';
+                    titleCounter.style.fontWeight = '500';
+                }
+                titleInput.removeEventListener('input', clearError);
+            }, { once: true });
+
             return;
         }
 
