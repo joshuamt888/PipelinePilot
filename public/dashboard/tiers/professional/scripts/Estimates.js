@@ -87,13 +87,63 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Smooth fade-in
+        // Smooth fade-in (only on initial load)
         container.style.opacity = '0';
         container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
             container.style.opacity = '1';
             this.estimates_attachEvents();
         }, 50);
+    },
+
+    /**
+     * Update filtered content without flicker (for search/sort/filter changes)
+     */
+    estimates_updateFiltered() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        // Apply filters
+        this.estimates_applyFilters();
+
+        // Find the toolbar and grid containers
+        const estimatesContainer = container.querySelector('.estimates-container');
+        if (!estimatesContainer) return;
+
+        // Update stats (for active filter highlighting)
+        const statsContainer = estimatesContainer.querySelector('.estimates-stats');
+        if (statsContainer) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.estimates_renderStats();
+            statsContainer.innerHTML = tempDiv.firstElementChild.innerHTML;
+        }
+
+        // Update toolbar (to update count and maintain search value)
+        const toolbarContainer = estimatesContainer.querySelector('.estimates-toolbar');
+        const batchActionsContainer = estimatesContainer.querySelector('.estimates-batch-actions');
+        if (toolbarContainer) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.estimates_renderToolbar();
+
+            // Replace toolbar and batch actions if present
+            if (batchActionsContainer) {
+                batchActionsContainer.remove();
+            }
+
+            toolbarContainer.outerHTML = tempDiv.innerHTML;
+        }
+
+        // Update grid
+        const gridContainer = estimatesContainer.querySelector('.estimates-grid') ||
+                             estimatesContainer.querySelector('.estimates-empty');
+        if (gridContainer) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.estimates_renderGrid();
+            gridContainer.outerHTML = tempDiv.firstElementChild.outerHTML;
+        }
+
+        // Reattach only the necessary events (no fade animation)
+        this.estimates_attachEvents();
     },
 
     /**
@@ -293,7 +343,7 @@ window.EstimatesModule = {
                 .estimates-search {
                     position: relative;
                     flex: 1;
-                    max-width: 400px;
+                    max-width: 600px;
                 }
 
                 .estimates-search input {
@@ -710,10 +760,15 @@ window.EstimatesModule = {
                 /* EMPTY STATE */
                 .estimates-empty {
                     text-align: center;
-                    padding: 5rem 2rem;
+                    padding: 6rem 2rem;
                     background: var(--surface);
                     border: 2px dashed var(--border);
                     border-radius: var(--radius-lg);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 400px;
                 }
 
                 .estimates-empty svg {
@@ -734,7 +789,7 @@ window.EstimatesModule = {
                 .estimates-empty p {
                     color: var(--text-secondary);
                     font-size: 1rem;
-                    margin: 0 0 2rem 0;
+                    margin: 0;
                 }
             </style>
         `;
@@ -897,12 +952,6 @@ window.EstimatesModule = {
                     </svg>
                     <h3>No estimates found</h3>
                     <p>Create your first estimate to start quoting clients</p>
-                    <button class="estimates-btn-primary" data-action="new-estimate">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        New Estimate
-                    </button>
                 </div>
             `;
         }
@@ -1134,7 +1183,7 @@ window.EstimatesModule = {
             card.addEventListener('click', (e) => {
                 const filter = e.currentTarget.dataset.filter;
                 this.state.activeFilter = filter;
-                this.estimates_render();
+                this.estimates_updateFiltered();
             });
         });
 
@@ -1143,7 +1192,7 @@ window.EstimatesModule = {
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.state.searchQuery = e.target.value;
-                this.estimates_render();
+                this.estimates_updateFiltered();
             });
         }
 
@@ -1152,7 +1201,7 @@ window.EstimatesModule = {
         if (sortSelect) {
             sortSelect.addEventListener('change', (e) => {
                 this.state.sortBy = e.target.value;
-                this.estimates_render();
+                this.estimates_updateFiltered();
             });
         }
 
@@ -1164,7 +1213,7 @@ window.EstimatesModule = {
                 if (!this.state.batchMode) {
                     this.state.selectedEstimateIds = [];
                 }
-                this.estimates_render();
+                this.estimates_updateFiltered();
             });
         }
 
@@ -1182,7 +1231,7 @@ window.EstimatesModule = {
                     this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
                 }
 
-                this.estimates_render();
+                this.estimates_updateFiltered();
             });
         });
 
