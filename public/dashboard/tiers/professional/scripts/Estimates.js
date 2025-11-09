@@ -2446,7 +2446,6 @@ window.EstimatesModule = {
             const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
             const lineTotal = qty * rate;
 
-            row.querySelector('.estimate-line-item-total').textContent = formatCurrency(lineTotal);
             total += lineTotal;
         });
 
