@@ -863,10 +863,12 @@ window.PipelineModule = {
                 <div class="modal-body">
                     <div class="move-options">
                         ${this.stages.map(stage => `
-                            <button class="move-option ${stage.id === lead.status ? 'current' : ''}" 
+                            <button class="move-option ${stage.id === lead.status ? 'current' : ''}"
                                     onclick="PipelineModule.moveToStage('${lead.id}', '${stage.id}')"
                                     ${stage.id === lead.status ? 'disabled' : ''}>
-                                <div class="option-icon" style="background: ${stage.color}">${stage.icon}</div>
+                                <div class="option-icon" style="background: ${stage.color}">
+                                    <i data-lucide="${stage.icon}" style="width: 20px; height: 20px; color: white;"></i>
+                                </div>
                                 <div class="option-content">
                                     <div class="option-name">${stage.name}</div>
                                     <div class="option-desc">${stage.desc}</div>
