@@ -227,17 +227,6 @@ window.EstimatesModule = {
                     </svg>
                     <span>${total} / ${this.state.estimateLimit} estimates</span>
                 </div>
-                <button class="estimates-btn-batch ${this.state.batchMode ? 'active' : ''}" data-action="toggle-batch">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        ${this.state.batchMode ? `
-                            <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        ` : `
-                            <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        `}
-                    </svg>
-                    ${this.state.batchMode ? `Cancel (${selected} selected)` : 'Edit Multiple'}
-                </button>
             </div>
         `;
     },
@@ -291,6 +280,8 @@ window.EstimatesModule = {
     },
 
     estimates_renderToolbar() {
+        const selected = this.state.selectedEstimateIds.length;
+
         return `
             <div class="estimates-toolbar">
                 <div class="estimates-toolbar-left">
@@ -304,6 +295,17 @@ window.EstimatesModule = {
                     </div>
                 </div>
                 <div class="estimates-toolbar-right">
+                    <button class="estimates-btn-batch ${this.state.batchMode ? 'active' : ''}" data-action="toggle-batch">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            ${this.state.batchMode ? `
+                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            ` : `
+                                <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            `}
+                        </svg>
+                        ${this.state.batchMode ? `Cancel (${selected} selected)` : 'Edit Multiple'}
+                    </button>
                     <div class="estimates-sort">
                         <select id="estimatesSortSelect">
                             <option value="date_new" ${this.state.sortBy === 'date_new' ? 'selected' : ''}>Date: Newest First</option>
