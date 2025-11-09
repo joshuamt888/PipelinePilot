@@ -2216,46 +2216,46 @@ addlead_showCustomSourceInput(targetInput) {
         }
     },
 
-    // View transitions WITH FADE
+    // View transitions - INSTANT
     addlead_showDashboard() {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (container) {
             container.style.opacity = '0';
-            
+
             setTimeout(() => {
                 this.addlead_state.currentView = 'dashboard';
                 this.addlead_hideAllModals();
                 this.addlead_render();
-                
+
                 setTimeout(() => {
                     container.style.opacity = '1';
                     this.addlead_state.isTransitioning = false;
                 }, 50);
-            }, 300);
+            }, 50);
         }
     },
 
     addlead_showTableView() {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (container) {
             container.style.opacity = '0';
-            
+
             setTimeout(() => {
                 this.addlead_state.currentView = 'table';
                 this.addlead_hideAllModals();
                 this.addlead_render();
-                
+
                 setTimeout(() => {
                     container.style.opacity = '1';
                     this.addlead_state.isTransitioning = false;
                 }, 50);
-            }, 300);
+            }, 50);
         }
     },
 

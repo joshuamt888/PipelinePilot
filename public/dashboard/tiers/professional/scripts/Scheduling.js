@@ -1135,46 +1135,46 @@ modal.addEventListener('mouseup', (e) => {
         }
     },
 
-    // View Management WITH FADE
+    // View Management - INSTANT transitions
     scheduling_showDashboard() {
         if (this.scheduling_state.isTransitioning) return;
         this.scheduling_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.scheduling_state.targetContainer);
         if (container) {
             container.style.opacity = '0';
-            
+
             setTimeout(() => {
                 this.scheduling_state.currentView = 'dashboard';
                 this.scheduling_hideAllModals();
                 this.scheduling_render();
-                
+
                 setTimeout(() => {
                     container.style.opacity = '1';
                     this.scheduling_state.isTransitioning = false;
                 }, 50);
-            }, 300);
+            }, 50);
         }
     },
 
     scheduling_showTableView() {
         if (this.scheduling_state.isTransitioning) return;
         this.scheduling_state.isTransitioning = true;
-        
+
         const container = document.getElementById(this.scheduling_state.targetContainer);
         if (container) {
             container.style.opacity = '0';
-            
+
             setTimeout(() => {
                 this.scheduling_state.currentView = 'table';
                 this.scheduling_hideAllModals();
                 this.scheduling_render();
-                
+
                 setTimeout(() => {
                     container.style.opacity = '1';
                     this.scheduling_state.isTransitioning = false;
                 }, 50);
-            }, 300);
+            }, 50);
         }
     },
 
