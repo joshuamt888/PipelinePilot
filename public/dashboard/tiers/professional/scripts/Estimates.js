@@ -1524,6 +1524,27 @@ estimates_showViewModal(estimateId) {
     overlay.className = 'estimate-modal-overlay';
     overlay.innerHTML = `
         <style>
+            .estimate-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(8px);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                animation: fadeIn 0.2s ease;
+                padding: 2rem;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
             .estimate-view-modal {
                 background: var(--surface);
                 border-radius: 12px;
