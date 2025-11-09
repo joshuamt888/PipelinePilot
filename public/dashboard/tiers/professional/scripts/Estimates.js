@@ -1993,9 +1993,6 @@ estimates_showViewModal(estimateId) {
                 </button>
 
                 <button class="estimate-view-btn estimate-view-btn-download" data-action="download-client-copy" data-id="${estimate.id}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
                     Download Client Copy
                 </button>
 
@@ -2132,14 +2129,11 @@ estimates_showViewModal(estimateId) {
 },
 
 /**
- * Download professional client copy PDF
+ * Download professional client copy as HTML file
  */
 estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
-    // Create print window with professional styling
-    const printWindow = window.open('', '_blank');
-    const doc = printWindow.document;
-
-    doc.write(`
+    // Create professional HTML document
+    const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -2345,17 +2339,20 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
             ` : ''}
         </body>
         </html>
-    `);
+    `;
 
-    doc.close();
+    // Create a blob and download it
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Estimate-${estimate.estimate_number || estimate.title.replace(/\s+/g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-    // Wait for images to load, then print
-    printWindow.onload = () => {
-        setTimeout(() => {
-            printWindow.print();
-            setTimeout(() => printWindow.close(), 500);
-        }, 500);
-    };
+    window.SteadyUtils.showToast('Client copy downloaded successfully', 'success');
 },
 
 /**
