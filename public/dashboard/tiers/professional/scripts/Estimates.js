@@ -1367,7 +1367,7 @@ estimates_initModalEvents(overlay) {
             e.target.value = value;
 
             // Visual feedback if at max
-            const numValue = parseFloat(value);
+            const numValue = parseFloat(value || '0');
             if (!isNaN(numValue) && numValue >= 99999999.99) {
                 e.target.style.borderColor = '#ef4444';
                 e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
@@ -1376,8 +1376,8 @@ estimates_initModalEvents(overlay) {
                 e.target.style.backgroundColor = '';
             }
 
-            // Update total
-            this.estimates_updateLineItemsTotal();
+            // Update total with small delay to ensure DOM updates
+            setTimeout(() => this.estimates_updateLineItemsTotal(), 10);
         }
     });
 
@@ -1385,15 +1385,27 @@ estimates_initModalEvents(overlay) {
     overlay.addEventListener('blur', (e) => {
         if (e.target.classList.contains('line-item-quantity') ||
             e.target.classList.contains('line-item-rate')) {
-            const value = parseFloat(e.target.value);
-            if (!isNaN(value)) {
-                // Format to 2 decimal places
-                e.target.value = value.toFixed(2);
-                // Clear any visual feedback
-                e.target.style.borderColor = '';
-                e.target.style.backgroundColor = '';
-                this.estimates_updateLineItemsTotal();
+            let value = e.target.value.trim();
+
+            // Handle empty or invalid input - default to 0
+            if (value === '' || value === '.') {
+                e.target.value = '0.00';
+            } else {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && isFinite(numValue)) {
+                    // Format to 2 decimal places
+                    e.target.value = numValue.toFixed(2);
+                } else {
+                    e.target.value = '0.00';
+                }
             }
+
+            // Clear any visual feedback
+            e.target.style.borderColor = '';
+            e.target.style.backgroundColor = '';
+
+            // Update total after formatting
+            setTimeout(() => this.estimates_updateLineItemsTotal(), 10);
         }
     }, true);
 
@@ -2207,13 +2219,8 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         yRight += 0.2;
     }
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('STATUS:', 5, yRight);
-    doc.setFont('helvetica', 'normal');
-    const statusText = estimate.status ? estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1) : 'Draft';
-    doc.text(statusText, 6.0, yRight);
-
-    y = Math.max(y, yRight) + 0.4;
+    // Status removed from client copy as requested
+    y = Math.max(y, yRight) + 0.2;
 
     // Description
     if (estimate.description) {
@@ -2643,8 +2650,12 @@ estimates_addLineItem(overlay) {
     const html = this.estimates_renderLineItemRow(newItem, currentItems);
 
     container.insertAdjacentHTML('beforeend', html);
-    this.estimates_updateLineItemsTotal();
-    this.estimates_updateLineItemCounter(overlay);
+
+    // Update total and counter after DOM updates
+    setTimeout(() => {
+        this.estimates_updateLineItemsTotal();
+        this.estimates_updateLineItemCounter(overlay);
+    }, 10);
 },
 
 /**
@@ -2667,8 +2678,11 @@ estimates_removeLineItem(overlay, index) {
         item.querySelector('[data-action="remove-line-item"]').dataset.index = newIndex;
     });
 
-    this.estimates_updateLineItemsTotal();
-    this.estimates_updateLineItemCounter(overlay);
+    // Update total and counter after DOM updates
+    setTimeout(() => {
+        this.estimates_updateLineItemsTotal();
+        this.estimates_updateLineItemCounter(overlay);
+    }, 10);
 },
 
 /**
@@ -2680,15 +2694,31 @@ estimates_updateLineItemsTotal() {
 
     let total = 0;
     container.querySelectorAll('.estimate-line-item').forEach(row => {
-        const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
-        const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
-        const lineTotal = qty * rate;
+        const qtyInput = row.querySelector('.line-item-quantity');
+        const rateInput = row.querySelector('.line-item-rate');
+
+        if (!qtyInput || !rateInput) return;
+
+        // Parse values carefully - handle empty strings and invalid inputs
+        let qty = parseFloat(qtyInput.value);
+        let rate = parseFloat(rateInput.value);
+
+        // Default to 0 if invalid
+        if (isNaN(qty) || !isFinite(qty)) qty = 0;
+        if (isNaN(rate) || !isFinite(rate)) rate = 0;
+
+        // Calculate line total with proper decimal handling
+        const lineTotal = Math.round((qty * rate) * 100) / 100;
         total += lineTotal;
     });
 
+    // Round total to 2 decimal places
+    total = Math.round(total * 100) / 100;
+
     const displayEl = document.querySelector('#estimateTotalDisplay');
     if (displayEl) {
-        displayEl.textContent = formatCurrency(total);
+        // Format with 2 decimal places for display
+        displayEl.textContent = '$' + total.toFixed(2);
     }
 },
 
@@ -2823,16 +2853,31 @@ async estimates_handleSave(overlay) {
         const lineItems = [];
         overlay.querySelectorAll('.estimate-line-item').forEach(row => {
             const desc = row.querySelector('.line-item-description').value.trim();
-            const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
-            const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
+            const qtyInput = row.querySelector('.line-item-quantity').value;
+            const rateInput = row.querySelector('.line-item-rate').value;
+
+            // Parse values carefully
+            let qty = parseFloat(qtyInput);
+            let rate = parseFloat(rateInput);
+
+            // Handle invalid inputs
+            if (isNaN(qty) || !isFinite(qty)) qty = 0;
+            if (isNaN(rate) || !isFinite(rate)) rate = 0;
+
+            // Round to 2 decimal places to avoid floating point errors
+            qty = Math.round(qty * 100) / 100;
+            rate = Math.round(rate * 100) / 100;
 
             if (desc || qty > 0 || rate > 0) {
                 lineItems.push({ description: desc, quantity: qty, rate: rate });
             }
         });
 
-        // Calculate total
-        const totalPrice = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+        // Calculate total with proper decimal handling
+        const totalPrice = lineItems.reduce((sum, item) => {
+            const lineTotal = Math.round((item.quantity * item.rate) * 100) / 100;
+            return Math.round((sum + lineTotal) * 100) / 100;
+        }, 0);
 
         // Gather photos
         const photoElements = overlay.querySelectorAll('.estimate-photo-item img');
