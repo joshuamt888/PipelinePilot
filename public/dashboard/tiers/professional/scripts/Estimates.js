@@ -2129,11 +2129,14 @@ estimates_showViewModal(estimateId) {
 },
 
 /**
- * Download professional client copy as HTML file
+ * Download professional client copy as printable PDF
  */
 estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
-    // Create professional HTML document
-    const htmlContent = `
+    // Create professional print-ready document
+    const printWindow = window.open('', '_blank');
+    const doc = printWindow.document;
+
+    doc.write(`
         <!DOCTYPE html>
         <html>
         <head>
@@ -2141,127 +2144,190 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
             <title>Estimate - ${estimate.title}</title>
             <style>
                 @page {
+                    size: letter;
                     margin: 0.75in;
                 }
+
                 * {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
                 }
+
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-family: 'Helvetica', 'Arial', sans-serif;
                     font-size: 11pt;
-                    line-height: 1.6;
-                    color: #1a1a1a;
+                    line-height: 1.5;
+                    color: #000;
+                    background: white;
                 }
+
                 .header {
-                    border-bottom: 3px solid #667eea;
-                    padding-bottom: 20px;
-                    margin-bottom: 30px;
+                    text-align: center;
+                    border-bottom: 3px solid #333;
+                    padding-bottom: 15px;
+                    margin-bottom: 25px;
                 }
+
                 .header h1 {
-                    font-size: 28pt;
-                    color: #667eea;
-                    margin-bottom: 8px;
-                }
-                .meta {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 30px;
-                    font-size: 10pt;
-                }
-                .meta-item {
-                    margin-bottom: 4px;
-                }
-                .meta-label {
-                    font-weight: 600;
-                    color: #666;
-                }
-                .description {
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border-radius: 6px;
-                    margin-bottom: 30px;
-                    white-space: pre-wrap;
-                }
-                .section-title {
-                    font-size: 14pt;
-                    font-weight: 600;
-                    margin: 30px 0 15px 0;
+                    font-size: 24pt;
+                    font-weight: bold;
+                    margin-bottom: 5px;
                     color: #333;
                 }
+
+                .header .estimate-number {
+                    font-size: 10pt;
+                    color: #666;
+                    font-weight: normal;
+                }
+
+                .info-section {
+                    display: table;
+                    width: 100%;
+                    margin-bottom: 25px;
+                }
+
+                .info-left, .info-right {
+                    display: table-cell;
+                    width: 50%;
+                    vertical-align: top;
+                }
+
+                .info-right {
+                    text-align: right;
+                }
+
+                .info-item {
+                    margin-bottom: 5px;
+                    font-size: 10pt;
+                }
+
+                .info-label {
+                    font-weight: bold;
+                    color: #333;
+                }
+
+                .section-title {
+                    font-size: 12pt;
+                    font-weight: bold;
+                    margin: 20px 0 10px 0;
+                    padding-bottom: 5px;
+                    border-bottom: 2px solid #333;
+                    color: #333;
+                }
+
+                .description-box {
+                    background: #f5f5f5;
+                    padding: 12px;
+                    margin-bottom: 20px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    white-space: pre-wrap;
+                    font-size: 10pt;
+                }
+
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 20px;
+                    margin: 15px 0;
                 }
+
                 thead {
-                    background: #667eea;
+                    background: #333;
                     color: white;
                 }
+
                 th {
-                    padding: 12px;
+                    padding: 10px;
                     text-align: left;
-                    font-weight: 600;
+                    font-weight: bold;
                     font-size: 10pt;
                 }
+
                 td {
-                    padding: 10px 12px;
-                    border-bottom: 1px solid #e5e7eb;
+                    padding: 8px 10px;
+                    border-bottom: 1px solid #ddd;
+                    font-size: 10pt;
                 }
-                tr:hover {
-                    background: #f9fafb;
+
+                tbody tr:last-child td {
+                    border-bottom: 2px solid #333;
                 }
+
                 .text-right {
                     text-align: right;
                 }
-                .total-box {
-                    background: #667eea10;
-                    border: 2px solid #667eea;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin: 20px 0;
-                    text-align: left;
+
+                .total-section {
+                    margin: 25px 0;
+                    padding: 15px;
+                    background: #f5f5f5;
+                    border: 2px solid #333;
+                    border-radius: 4px;
                 }
+
                 .total-label {
                     font-size: 12pt;
-                    color: #666;
+                    font-weight: bold;
+                    color: #333;
                     margin-bottom: 8px;
                 }
-                .total-value {
-                    font-size: 32pt;
-                    font-weight: 700;
-                    color: #667eea;
+
+                .total-amount {
+                    font-size: 28pt;
+                    font-weight: bold;
+                    color: #000;
                 }
-                .photos {
+
+                .photos-grid {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
                     gap: 15px;
-                    margin: 20px 0;
+                    margin: 15px 0;
                 }
-                .photo {
-                    border: 1px solid #e5e7eb;
-                    border-radius: 8px;
+
+                .photo-container {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
                     overflow: hidden;
+                    page-break-inside: avoid;
                 }
-                .photo img {
+
+                .photo-container img {
                     width: 100%;
                     height: auto;
                     display: block;
                 }
-                .terms {
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border-left: 4px solid #667eea;
-                    margin-top: 30px;
+
+                .terms-box {
+                    background: #f9f9f9;
+                    padding: 12px;
+                    border-left: 4px solid #333;
+                    margin-top: 20px;
                     white-space: pre-wrap;
+                    font-size: 9pt;
+                    color: #333;
+                    page-break-inside: avoid;
+                }
+
+                .footer {
+                    margin-top: 40px;
+                    padding-top: 15px;
+                    border-top: 1px solid #ddd;
+                    text-align: center;
                     font-size: 9pt;
                     color: #666;
                 }
+
                 @media print {
                     body {
                         print-color-adjust: exact;
                         -webkit-print-color-adjust: exact;
+                    }
+
+                    .page-break {
+                        page-break-before: always;
                     }
                 }
             </style>
@@ -2269,90 +2335,90 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
         <body>
             <div class="header">
                 <h1>${estimate.title}</h1>
-                <div style="font-size: 10pt; color: #666;">
-                    Estimate #${estimate.estimate_number || 'N/A'}
-                </div>
+                <div class="estimate-number">Estimate #${estimate.estimate_number || 'N/A'}</div>
             </div>
 
-            <div class="meta">
-                <div>
+            <div class="info-section">
+                <div class="info-left">
                     ${lead ? `
-                        <div class="meta-item"><span class="meta-label">Client:</span> ${lead.name}</div>
-                        ${lead.email ? `<div class="meta-item"><span class="meta-label">Email:</span> ${lead.email}</div>` : ''}
-                        ${lead.phone ? `<div class="meta-item"><span class="meta-label">Phone:</span> ${lead.phone}</div>` : ''}
+                        <div class="info-item"><span class="info-label">CLIENT:</span> ${lead.name}</div>
+                        ${lead.email ? `<div class="info-item"><span class="info-label">EMAIL:</span> ${lead.email}</div>` : ''}
+                        ${lead.phone ? `<div class="info-item"><span class="info-label">PHONE:</span> ${lead.phone}</div>` : ''}
                     ` : ''}
                 </div>
-                <div style="text-align: right;">
-                    <div class="meta-item"><span class="meta-label">Date:</span> ${new Date(estimate.created_at).toLocaleDateString()}</div>
-                    ${estimate.expires_at ? `<div class="meta-item"><span class="meta-label">Expires:</span> ${new Date(estimate.expires_at).toLocaleDateString()}</div>` : ''}
-                    <div class="meta-item"><span class="meta-label">Status:</span> ${this.estimates_formatStatus(estimate.status)}</div>
+                <div class="info-right">
+                    <div class="info-item"><span class="info-label">DATE:</span> ${new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    ${estimate.expires_at ? `<div class="info-item"><span class="info-label">VALID UNTIL:</span> ${new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
+                    <div class="info-item"><span class="info-label">STATUS:</span> ${this.estimates_formatStatus(estimate.status)}</div>
                 </div>
             </div>
 
             ${estimate.description ? `
-                <div class="description">${estimate.description}</div>
+                <div class="section-title">PROJECT DESCRIPTION</div>
+                <div class="description-box">${estimate.description}</div>
             ` : ''}
 
             ${lineItems.length > 0 ? `
-                <div class="section-title">Line Items</div>
+                <div class="section-title">SCOPE OF WORK</div>
                 <table>
                     <thead>
                         <tr>
                             <th>Description</th>
-                            <th style="width: 100px;">Quantity</th>
-                            <th style="width: 120px;">Rate</th>
-                            <th style="width: 120px;" class="text-right">Total</th>
+                            <th style="width: 80px; text-align: center;">Qty</th>
+                            <th style="width: 100px; text-align: right;">Rate</th>
+                            <th style="width: 120px; text-align: right;">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${lineItems.map(item => `
                             <tr>
                                 <td>${item.description || '-'}</td>
-                                <td>${item.quantity}</td>
-                                <td>${formatCurrency(item.rate)}</td>
-                                <td class="text-right">${formatCurrency(item.quantity * item.rate)}</td>
+                                <td style="text-align: center;">${item.quantity}</td>
+                                <td class="text-right">${formatCurrency(item.rate)}</td>
+                                <td class="text-right"><strong>${formatCurrency(item.quantity * item.rate)}</strong></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
 
-                <div class="total-box">
-                    <div class="total-label">Total Estimate</div>
-                    <div class="total-value">${formatCurrency(totalPrice)}</div>
+                <div class="total-section">
+                    <div class="total-label">TOTAL ESTIMATE</div>
+                    <div class="total-amount">${formatCurrency(totalPrice)}</div>
                 </div>
             ` : ''}
 
             ${photos.length > 0 ? `
-                <div class="section-title">Photos</div>
-                <div class="photos">
+                <div class="page-break"></div>
+                <div class="section-title">REFERENCE PHOTOS</div>
+                <div class="photos-grid">
                     ${photos.map(photo => `
-                        <div class="photo">
-                            <img src="${photo.url}" alt="${photo.caption || 'Photo'}">
+                        <div class="photo-container">
+                            <img src="${photo.url}" alt="${photo.caption || 'Reference photo'}">
                         </div>
                     `).join('')}
                 </div>
             ` : ''}
 
             ${estimate.terms ? `
-                <div class="section-title">Terms & Conditions</div>
-                <div class="terms">${estimate.terms}</div>
+                <div class="section-title">TERMS & CONDITIONS</div>
+                <div class="terms-box">${estimate.terms}</div>
             ` : ''}
+
+            <div class="footer">
+                This estimate is valid for the period specified above. Work will commence upon acceptance and deposit receipt.
+            </div>
         </body>
         </html>
-    `;
+    `);
 
-    // Create a blob and download it
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Estimate-${estimate.estimate_number || estimate.title.replace(/\s+/g, '-')}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    doc.close();
 
-    window.SteadyUtils.showToast('Client copy downloaded successfully', 'success');
+    // Auto-trigger print dialog after page loads
+    printWindow.onload = () => {
+        setTimeout(() => {
+            printWindow.print();
+        }, 250);
+    };
 },
 
 /**
