@@ -21,9 +21,6 @@ window.EstimatesModule = {
         // Modal state
         editingEstimateId: null,
 
-        // Render state
-        hasRendered: false, // Track if initial render has happened
-
         // Stats
         stats: {
             totalQuoted: 0,
@@ -41,7 +38,6 @@ window.EstimatesModule = {
      */
     async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
-        this.state.hasRendered = false; // Reset on each init for fade-in
         // No loading message - direct load like Goals
 
         try {
@@ -91,11 +87,8 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Manual fade-in for smooth appearance (just like Goals)
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
+        // Attach events after DOM is ready
         setTimeout(() => {
-            container.style.opacity = '1';
             this.estimates_attachEvents();
         }, 50);
     },
@@ -1433,7 +1426,7 @@ window.EstimatesModule = {
                 }
 
                 .estimate-modal {
-                    background: var(--card-bg);
+                    background: var(--surface);
                     border-radius: 12px;
                     width: 90%;
                     max-width: 800px;
@@ -1480,7 +1473,7 @@ window.EstimatesModule = {
                 }
 
                 .estimate-modal-close:hover {
-                    background: var(--hover-bg);
+                    background: var(--surface-hover);
                     color: var(--text-primary);
                 }
 
@@ -1526,7 +1519,7 @@ window.EstimatesModule = {
                     padding: 10px 12px;
                     border: 1px solid var(--border);
                     border-radius: 6px;
-                    background: var(--bg);
+                    background: var(--background);
                     color: var(--text-primary);
                     font-size: 14px;
                     transition: all 0.2s;
@@ -1546,7 +1539,7 @@ window.EstimatesModule = {
 
                 /* Line Items Table */
                 .estimate-line-items {
-                    background: var(--bg);
+                    background: var(--background);
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     padding: 16px;
@@ -1576,7 +1569,7 @@ window.EstimatesModule = {
                     padding: 8px 10px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    background: var(--card-bg);
+                    background: var(--surface);
                     color: var(--text-primary);
                     font-size: 14px;
                 }
@@ -1746,7 +1739,7 @@ window.EstimatesModule = {
                 }
 
                 .estimate-modal-btn-cancel:hover {
-                    background: var(--hover-bg);
+                    background: var(--surface-hover);
                 }
 
                 .estimate-modal-btn-save {
@@ -2376,7 +2369,7 @@ window.EstimatesModule = {
                 }
 
                 .estimate-detail-close:hover {
-                    background: var(--hover-bg);
+                    background: var(--surface-hover);
                 }
 
                 .estimate-detail-body {
