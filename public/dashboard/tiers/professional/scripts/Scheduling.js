@@ -21,7 +21,9 @@ window.SchedulingModule = {
             types: [],
             priorities: [],
             date: ''
-        }
+        },
+        batchEditMode: false,
+        selectedTaskIds: []
     },
 
     // Init with fade-in
