@@ -475,8 +475,8 @@ async goals_loadAvailableTasks() {
                         <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
-                                   placeholder="Q4 Revenue Target" autocomplete="off">
-                            <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
+                                   placeholder="Q4 Revenue Target" autocomplete="off" maxlength="50">
+                            <span class="goals-input-hint" id="titleCounter">50 characters remaining</span>
                         </div>
 
                         <div class="goals-divider"></div>
@@ -654,9 +654,9 @@ async goals_loadAvailableTasks() {
                             <div class="goals-form-row-v2">
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Target Value</label>
-                                    <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                           placeholder="10000">
-                                    <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
+                                    <input type="number" id="goalTarget" class="goals-form-input-v2"
+                                           placeholder="10000" step="any" min="0">
+                                    <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                 </div>
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Unit</label>
@@ -870,8 +870,8 @@ async goals_loadAvailableTasks() {
                         <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
-                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}">
-                            <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
+                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}" maxlength="50">
+                            <span class="goals-input-hint" id="titleCounter">50 characters remaining</span>
                         </div>
 
                         <div class="goals-divider"></div>
@@ -1053,9 +1053,9 @@ async goals_loadAvailableTasks() {
                                 <div class="goals-form-row-v2">
                                     <div class="goals-form-group-v2">
                                         <label class="goals-form-label-v2">Target Value</label>
-                                        <input type="text" id="goalTarget" class="goals-form-input-v2"
-                                               placeholder="10000" value="${goal.target_value}">
-                                        <span class="goals-input-hint" id="targetCounter">8 digits remaining</span>
+                                        <input type="number" id="goalTarget" class="goals-form-input-v2"
+                                               placeholder="10000" value="${goal.target_value}" step="any" min="0">
+                                        <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                     </div>
                                     <div class="goals-form-group-v2">
                                         <label class="goals-form-label-v2">Unit</label>
@@ -2206,7 +2206,7 @@ goals_attachEvents() {
         const isRecurring = document.getElementById('goalRecurring').checked || false;
 
         // Validation
-        if (!title || title.length > 35) {
+        if (!title || title.length > 50) {
             const titleInput = document.getElementById('goalTitle');
             const titleCounter = document.querySelector('#titleCounter');
 
@@ -2216,7 +2216,7 @@ goals_attachEvents() {
 
             // Update hint text to show error
             if (titleCounter) {
-                titleCounter.textContent = !title ? 'Title is required' : 'Title must be 35 characters or less';
+                titleCounter.textContent = !title ? 'Title is required' : 'Title must be 50 characters or less';
                 titleCounter.style.color = 'var(--danger)';
                 titleCounter.style.fontWeight = '600';
             }
@@ -2449,8 +2449,8 @@ goals_attachEvents() {
             const title = document.getElementById('goalTitle').value.trim();
             const selectedColor = document.querySelector('input[name="color"]:checked')?.value;
 
-            if (!title || title.length > 35) {
-                window.SteadyUtils.showToast('Invalid title (max 35 characters)', 'error');
+            if (!title || title.length > 50) {
+                window.SteadyUtils.showToast('Invalid title (max 50 characters)', 'error');
                 return false;
             }
 

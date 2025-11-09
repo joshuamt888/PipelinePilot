@@ -2630,6 +2630,24 @@ window.EstimatesModule = {
      * Handle estimate save
      */
     async estimates_handleSave(overlay) {
+        // Get save button and prevent spam clicking
+        const saveBtn = overlay.querySelector('[data-action="save-estimate"]');
+        if (!saveBtn) return;
+
+        // Disable button and show loading state
+        if (saveBtn.disabled) return; // Already processing
+        saveBtn.disabled = true;
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px; animation: spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+            </svg>
+            <style>@keyframes spin { to { transform: rotate(360deg); }}</style>
+            Saving...
+        `;
+        saveBtn.style.opacity = '0.7';
+        saveBtn.style.cursor = 'not-allowed';
+
         try {
             // Gather form data
             const title = overlay.querySelector('#estimateTitle').value.trim();
@@ -2643,6 +2661,11 @@ window.EstimatesModule = {
             // Validation
             if (!title) {
                 window.SteadyUtils.showToast('Title is required', 'error');
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+                saveBtn.style.opacity = '1';
+                saveBtn.style.cursor = 'pointer';
                 return;
             }
 
@@ -2709,6 +2732,12 @@ window.EstimatesModule = {
         } catch (error) {
             console.error('Error saving estimate:', error);
             window.SteadyUtils.showToast('Failed to save estimate', 'error');
+
+            // Re-enable button on error
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+            saveBtn.style.opacity = '1';
+            saveBtn.style.cursor = 'pointer';
         }
     },
 
