@@ -1549,7 +1549,7 @@ estimates_showViewModal(estimateId) {
                 background: var(--surface);
                 border-radius: 12px;
                 width: 90%;
-                max-width: 900px;
+                max-width: 630px;
                 max-height: 90vh;
                 overflow-y: auto;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -1760,6 +1760,29 @@ estimates_showViewModal(estimateId) {
 
             .estimate-view-photo:hover {
                 transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            }
+
+            .estimate-photo-lightbox {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10001;
+                animation: fadeIn 0.2s ease;
+                cursor: pointer;
+            }
+
+            .estimate-photo-lightbox img {
+                max-width: 90%;
+                max-height: 90vh;
+                border-radius: 8px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             }
 
             .estimate-view-photo img {
@@ -2052,6 +2075,26 @@ estimates_showViewModal(estimateId) {
             console.error('Update status error:', error);
             window.SteadyUtils.showToast('Failed to update status', 'error');
         }
+    });
+
+    // Photo click to enlarge
+    overlay.querySelectorAll('.estimate-view-photo img').forEach(img => {
+        img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const lightbox = document.createElement('div');
+            lightbox.className = 'estimate-photo-lightbox';
+            lightbox.innerHTML = `<img src="${img.src}" alt="${img.alt}">`;
+            document.body.appendChild(lightbox);
+
+            setTimeout(() => {
+                lightbox.style.opacity = '1';
+            }, 10);
+
+            lightbox.addEventListener('click', () => {
+                lightbox.style.opacity = '0';
+                setTimeout(() => lightbox.remove(), 200);
+            });
+        });
     });
 
     // Close on overlay click
