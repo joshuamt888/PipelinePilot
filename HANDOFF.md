@@ -446,6 +446,122 @@ updated_at              TIMESTAMPTZ DEFAULT NOW()
 
 ---
 
+## 🔒 ROW LEVEL SECURITY (RLS) POLICIES
+
+**Status:** ✅ PRODUCTION - All tables secured with RLS
+
+### Policy Pattern
+All tables follow the same simple pattern:
+- **SELECT**: Users can only see their own data (`user_id = auth.uid()`)
+- **INSERT**: Users can only create data for themselves
+- **UPDATE**: Users can only update their own data
+- **DELETE**: Users can only delete their own data
+
+### Tables with RLS Enabled
+- ✅ `users` - 2 policies (SELECT, UPDATE only)
+- ✅ `leads` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
+- ✅ `tasks` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
+- ✅ `goals` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
+- ✅ `goal_tasks` - 3 policies (SELECT, INSERT, DELETE)
+- ✅ `estimates` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
+- ✅ `jobs` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
+
+### Policy Details
+
+**Users Table:**
+```sql
+-- Users can only see their own profile
+CREATE POLICY users_select_own ON public.users
+    FOR SELECT TO authenticated
+    USING (id = auth.uid());
+
+-- Users can only update their own profile
+CREATE POLICY users_update_own ON public.users
+    FOR UPDATE TO authenticated
+    USING (id = auth.uid())
+    WITH CHECK (id = auth.uid());
+```
+
+**Standard Pattern (Leads, Tasks, Goals, Estimates, Jobs):**
+```sql
+-- Example: leads_select_own
+CREATE POLICY leads_select_own ON public.leads
+    FOR SELECT TO authenticated
+    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
+
+CREATE POLICY leads_insert_own ON public.leads
+    FOR INSERT TO authenticated
+    WITH CHECK (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
+
+CREATE POLICY leads_update_own ON public.leads
+    FOR UPDATE TO authenticated
+    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()))
+    WITH CHECK (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
+
+CREATE POLICY leads_delete_own ON public.leads
+    FOR DELETE TO authenticated
+    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
+```
+
+**Junction Table Pattern (Goal Tasks):**
+```sql
+-- Users can only see/modify links for their own goals
+CREATE POLICY goal_tasks_select_own ON public.goal_tasks
+    FOR SELECT TO authenticated
+    USING (
+        goal_id IN (
+            SELECT id FROM public.goals
+            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
+        )
+    );
+
+CREATE POLICY goal_tasks_insert_own ON public.goal_tasks
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        goal_id IN (
+            SELECT id FROM public.goals
+            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
+        )
+    );
+
+CREATE POLICY goal_tasks_delete_own ON public.goal_tasks
+    FOR DELETE TO authenticated
+    USING (
+        goal_id IN (
+            SELECT id FROM public.goals
+            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
+        )
+    );
+```
+
+### Security Notes
+- All policies use `TO authenticated` - anonymous users have no access
+- RLS is enabled on all tables - no data leaks possible
+- Policies use subquery pattern for consistency
+- Junction tables inherit security from parent (goals)
+- No BYPASS RLS permissions granted to any role
+
+### Verification Query
+```sql
+-- Run this to verify all policies are active
+SELECT tablename, COUNT(*) as policy_count
+FROM pg_policies
+WHERE schemaname = 'public'
+GROUP BY tablename
+ORDER BY tablename;
+```
+
+**Expected Results:**
+- users: 2 policies
+- leads: 4 policies
+- tasks: 4 policies
+- goals: 4 policies
+- goal_tasks: 3 policies
+- estimates: 4 policies
+- jobs: 4 policies
+
+---
+
 ## 🔌 API REFERENCE (v5.0 - Clean)
 
 **Location:** `/dashboard/shared/js/api.js`
