@@ -139,40 +139,9 @@ window.EstimatesModule = {
 
     // MAIN CONTENT
     estimates_renderMain() {
-        let estimatesToShow = [];
-
-        if (this.state.currentFilter === 'all') {
-            estimatesToShow = this.state.estimates;
-        } else if (this.state.currentFilter === 'accepted') {
-            estimatesToShow = this.state.estimates.filter(e => e.status === 'accepted');
-        } else if (this.state.currentFilter === 'pending') {
-            estimatesToShow = this.state.estimates.filter(e => e.status === 'sent' || e.status === 'draft');
-        }
-
         return `
             <main class="est-main">
-                ${estimatesToShow.length > 0 ? `
-                    <div class="est-grid">
-                        ${estimatesToShow.map(estimate => this.estimates_renderCard(estimate)).join('')}
-                    </div>
-                ` : `
-                    <div class="est-empty">
-                        <div class="est-empty-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
-                                <polyline points="14 2 14 8 20 8" stroke-width="2"/>
-                            </svg>
-                        </div>
-                        <h3 class="est-empty-title">No estimates yet</h3>
-                        <p class="est-empty-text">Create your first estimate to get started</p>
-                        <button class="est-btn-primary" data-action="create-estimate">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                            New Estimate
-                        </button>
-                    </div>
-                `}
+                ${this.estimates_renderMainContent()}
             </main>
         `;
     },
@@ -251,6 +220,71 @@ window.EstimatesModule = {
         `;
     },
 
+    // UPDATE FILTER (NO RE-RENDER)
+    estimates_updateFilter(newFilter) {
+        if (this.state.currentFilter === newFilter) return;
+
+        this.state.currentFilter = newFilter;
+
+        // Update sidebar active states
+        const navItems = document.querySelectorAll('.est-nav-item');
+        navItems.forEach(item => {
+            const action = item.dataset.action;
+            const filter = action.replace('filter-', '');
+            if (filter === newFilter) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+
+        // Update main content
+        const main = document.querySelector('.est-main');
+        if (main) {
+            main.innerHTML = this.estimates_renderMainContent();
+        }
+    },
+
+    // RENDER MAIN CONTENT ONLY
+    estimates_renderMainContent() {
+        let estimatesToShow = [];
+
+        if (this.state.currentFilter === 'all') {
+            estimatesToShow = this.state.estimates;
+        } else if (this.state.currentFilter === 'accepted') {
+            estimatesToShow = this.state.estimates.filter(e => e.status === 'accepted');
+        } else if (this.state.currentFilter === 'pending') {
+            estimatesToShow = this.state.estimates.filter(e => e.status === 'sent' || e.status === 'draft');
+        }
+
+        if (estimatesToShow.length > 0) {
+            return `
+                <div class="est-grid">
+                    ${estimatesToShow.map(estimate => this.estimates_renderCard(estimate)).join('')}
+                </div>
+            `;
+        } else {
+            return `
+                <div class="est-empty">
+                    <div class="est-empty-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
+                            <polyline points="14 2 14 8 20 8" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <h3 class="est-empty-title">No estimates yet</h3>
+                    <p class="est-empty-text">Create your first estimate to get started</p>
+                    <button class="est-btn-primary" data-action="create-estimate">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        New Estimate
+                    </button>
+                </div>
+            `;
+        }
+    },
+
     // ATTACH EVENTS
     estimates_attachEvents() {
         const container = document.getElementById(this.state.container);
@@ -274,10 +308,7 @@ window.EstimatesModule = {
                 case 'filter-accepted':
                 case 'filter-pending':
                     const filter = action.replace('filter-', '');
-                    if (this.state.currentFilter !== filter) {
-                        this.state.currentFilter = filter;
-                        this.estimates_render();
-                    }
+                    this.estimates_updateFilter(filter);
                     break;
             }
         };
