@@ -4377,21 +4377,22 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-btn-primary,
                 .scheduling-btn-secondary,
                 .scheduling-btn-danger {
-                    padding: 10px 20px;
-                    border-radius: 6px;
-                    font-weight: 500;
-                    font-size: 14px;
+                    padding: 0.875rem 2rem;
+                    border-radius: var(--radius);
+                    font-weight: 600;
+                    font-size: 0.95rem;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    transition: all 0.3s ease;
+                    border: none;
                     display: flex;
                     align-items: center;
+                    justify-content: center;
                     gap: 0.5rem;
                 }
 
                 .scheduling-btn-primary {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
-                    border: none;
                 }
 
                 .scheduling-btn-primary:hover:not(:disabled) {
