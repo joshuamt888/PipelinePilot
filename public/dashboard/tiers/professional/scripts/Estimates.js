@@ -255,8 +255,8 @@ window.EstimatesModule = {
             });
         }
 
-        // Reattach only the necessary events (no fade animation)
-        this.estimates_attachEvents();
+        // NO EVENT REATTACHMENT - event delegation handles everything
+        // attachEvents is called ONCE on init, never again
     },
 
     /**
