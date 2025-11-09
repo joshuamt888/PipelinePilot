@@ -2140,9 +2140,10 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
     iframe.style.width = '0';
     iframe.style.height = '0';
     iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document;
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
 
     doc.write(`
         <!DOCTYPE html>
@@ -2421,18 +2422,25 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
 
     doc.close();
 
-    // Wait for content to load, then trigger print
-    iframe.onload = () => {
-        setTimeout(() => {
+    // Wait for content and images to load, then trigger print
+    setTimeout(() => {
+        try {
             iframe.contentWindow.focus();
             iframe.contentWindow.print();
 
-            // Clean up iframe after printing
+            // Clean up iframe after printing/canceling
             setTimeout(() => {
-                document.body.removeChild(iframe);
+                if (iframe.parentNode) {
+                    document.body.removeChild(iframe);
+                }
             }, 1000);
-        }, 250);
-    };
+        } catch (error) {
+            console.error('Print error:', error);
+            if (iframe.parentNode) {
+                document.body.removeChild(iframe);
+            }
+        }
+    }, 500);
 },
 
 /**
