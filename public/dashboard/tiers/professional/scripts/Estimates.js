@@ -3396,7 +3396,15 @@ window.EstimatesModule = {
             if (!estimate) return;
 
             const statusLabel = this.estimates_formatStatus(newStatus);
-            const confirmed = confirm(`Mark estimate "${estimate.title}" as ${statusLabel}?`);
+
+            // Use custom confirmation popup
+            const confirmed = await this.estimates_showConfirmation(
+                'Update Status',
+                `Mark estimate "${estimate.title}" as ${statusLabel}?`,
+                'Confirm',
+                newStatus === 'accepted' ? 'success' : newStatus === 'rejected' ? 'danger' : 'primary'
+            );
+
             if (!confirmed) return;
 
             // Call appropriate API method
@@ -3440,13 +3448,12 @@ window.EstimatesModule = {
                 return;
             }
 
-            const confirmed = confirm(
-                `Convert estimate "${estimate.title}" to a job?\n\n` +
-                `This will create a new job with:\n` +
-                `- All estimate details\n` +
-                `- Photos as "before" photos\n` +
-                `- Line items as materials\n` +
-                `- Quoted price: ${formatCurrency(estimate.total_price || 0)}`
+            // Use custom confirmation popup
+            const confirmed = await this.estimates_showConfirmation(
+                'Convert to Job',
+                `Convert estimate "${estimate.title}" to a job?\n\nThis will create a new job with all estimate details, photos, and line items.`,
+                'Convert',
+                'success'
             );
 
             if (!confirmed) return;
@@ -3469,10 +3476,7 @@ window.EstimatesModule = {
     },
 
     /**
-     * Toggle batch selection mode (LIGHTWEIGHT - like Goals)
-     */
-    /**
-     * Toggle batch selection mode
+     * Toggle batch selection mode (LIGHTWEIGHT - like Goals, no re-render)
      */
     estimates_toggleBatchMode() {
         this.state.batchMode = !this.state.batchMode;
@@ -3482,8 +3486,79 @@ window.EstimatesModule = {
             this.state.selectedEstimateIds = [];
         }
 
-        // Re-render to show/hide checkboxes
-        this.estimates_render();
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const allCards = container.querySelectorAll('.estimate-card');
+        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+
+        if (this.state.batchMode) {
+            // ENTER BATCH MODE - add checkboxes to existing cards (instant, no transition)
+            allCards.forEach(card => {
+                card.classList.add('batch-selectable');
+                const estimateId = card.dataset.id;
+
+                // Add checkbox wrapper
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'estimate-checkbox';
+                checkboxWrapper.innerHTML = `
+                    <input type="checkbox"
+                           class="estimate-checkbox-input"
+                           data-action="toggle-estimate-selection"
+                           data-id="${estimateId}">
+                    <div class="estimate-checkbox-custom">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                `;
+                card.insertBefore(checkboxWrapper, card.firstChild);
+
+                // Change card action to toggle selection instead of view
+                card.dataset.action = 'toggle-estimate-selection';
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.add('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Cancel (0 selected)
+                `;
+            }
+
+        } else {
+            // EXIT BATCH MODE - remove checkboxes and selections (instant, no transition)
+            allCards.forEach(card => {
+                card.classList.remove('batch-selectable', 'selected');
+
+                // Remove checkbox
+                const checkbox = card.querySelector('.estimate-checkbox');
+                if (checkbox) checkbox.remove();
+
+                // Restore card action to view
+                card.dataset.action = 'view-estimate';
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.remove('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Select Multiple
+                `;
+            }
+
+            // Remove batch actions toolbar
+            const batchActionsToolbar = container.querySelector('.estimates-batch-actions');
+            if (batchActionsToolbar) {
+                batchActionsToolbar.remove();
+            }
+        }
     },
 
     /**
@@ -3719,108 +3794,6 @@ window.EstimatesModule = {
     },
 
     /**
-     * OLD toggleBatchMode - keeping for reference, will be removed
-     */
-    estimates_toggleBatchMode_OLD() {
-        this.state.batchMode = !this.state.batchMode;
-
-        if (!this.state.batchMode) {
-            // Clear selections when exiting batch mode
-            this.state.selectedEstimateIds = [];
-        }
-
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
-
-        const allCards = container.querySelectorAll('.estimate-card');
-        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
-
-        if (this.state.batchMode) {
-            // ENTER BATCH MODE - add checkboxes to existing cards
-            allCards.forEach(card => {
-                card.classList.add('batch-selectable');
-                const estimateId = card.dataset.id;
-
-                // Add checkbox
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'estimate-card-checkbox';
-                checkbox.dataset.action = 'toggle-selection';
-                checkbox.dataset.id = estimateId;
-
-                // Add event listener
-                checkbox.addEventListener('change', (e) => {
-                    const id = e.currentTarget.dataset.id;
-                    const isChecked = e.currentTarget.checked;
-
-                    if (isChecked) {
-                        if (!this.state.selectedEstimateIds.includes(id)) {
-                            this.state.selectedEstimateIds.push(id);
-                        }
-                        card.classList.add('selected');
-                    } else {
-                        this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
-                        card.classList.remove('selected');
-                    }
-
-                    // Update button text
-                    if (batchBtn) {
-                        batchBtn.innerHTML = `
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Cancel (${this.state.selectedEstimateIds.length} selected)
-                        `;
-                    }
-
-                    // Update batch actions toolbar
-                    this.estimates_updateBatchActionsToolbar();
-                });
-
-                card.insertBefore(checkbox, card.firstChild);
-            });
-
-            // Update button
-            if (batchBtn) {
-                batchBtn.classList.add('active');
-                batchBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Cancel (0 selected)
-                `;
-            }
-
-        } else {
-            // EXIT BATCH MODE - remove checkboxes and selections
-            allCards.forEach(card => {
-                card.classList.remove('batch-selectable', 'selected');
-
-                // Remove checkbox
-                const checkbox = card.querySelector('.estimate-card-checkbox');
-                if (checkbox) checkbox.remove();
-            });
-
-            // Update button
-            if (batchBtn) {
-                batchBtn.classList.remove('active');
-                batchBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Select Multiple
-                `;
-            }
-
-            // Remove batch actions toolbar
-            const batchActionsToolbar = container.querySelector('.estimates-batch-actions');
-            if (batchActionsToolbar) {
-                batchActionsToolbar.remove();
-            }
-        }
-    },
-
-    /**
      * Update batch actions toolbar (lightweight)
      */
     estimates_updateBatchActionsToolbar() {
@@ -3984,7 +3957,14 @@ window.EstimatesModule = {
         const estimate = this.state.estimates.find(e => e.id === estimateId);
         if (!estimate) return;
 
-        const confirmed = confirm(`Delete estimate "${estimate.title}"? This cannot be undone.`);
+        // Use custom confirmation popup
+        const confirmed = await this.estimates_showConfirmation(
+            'Delete Estimate',
+            `Delete estimate "${estimate.title}"? This cannot be undone.`,
+            'Delete',
+            'danger'
+        );
+
         if (!confirmed) return;
 
         try {
