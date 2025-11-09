@@ -61,12 +61,8 @@ window.EstimatesModule = {
             </div>
         `;
 
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
-            this.estimates_attachEvents();
-        }, 50);
+        // Attach events immediately - CSS handles fade-in
+        this.estimates_attachEvents();
     },
 
     // SIDEBAR
