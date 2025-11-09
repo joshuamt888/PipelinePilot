@@ -684,19 +684,53 @@ const JobsModule = {
     },
 
     /**
-     * Render lead dropdown with search
+     * Render lead dropdown with quick create option
      */
     jobs_renderLeadDropdown(selectedLeadId = null) {
         return `
-            <select name="lead_id">
-                <option value="">No lead selected</option>
-                ${this.state.leads.map(lead => `
-                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
-                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
-                    </option>
-                `).join('')}
-            </select>
+            <div class="lead-dropdown-wrapper">
+                <select name="lead_id" id="leadDropdown">
+                    <option value="">Select lead...</option>
+                    <option value="__create__" style="font-weight: bold; color: var(--primary);">+ Create New Lead</option>
+                    ${this.state.leads.map(lead => `
+                        <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                            ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
         `;
+    },
+
+    /**
+     * Handle lead dropdown change (quick create)
+     */
+    jobs_handleLeadDropdownChange(select) {
+        if (select.value === '__create__') {
+            // Quick create lead modal
+            const name = prompt('Lead Name:');
+            if (!name) {
+                select.value = '';
+                return;
+            }
+
+            const phone = prompt('Phone (optional):');
+            const email = prompt('Email (optional):');
+
+            // Create lead
+            API.createLead({ name, phone, email, source: 'manual' })
+                .then(lead => {
+                    this.state.leads.unshift(lead);
+                    select.innerHTML += `<option value="${lead.id}" selected>${lead.name}</option>`;
+                    select.value = lead.id;
+                    showNotification(`Lead "${lead.name}" created!`, 'success');
+                })
+                .catch(err => {
+                    console.error('Failed to create lead:', err);
+                    showNotification('Failed to create lead', 'error');
+                    select.value = '';
+                });
+        }
     },
 
     /**
@@ -708,6 +742,14 @@ const JobsModule = {
 
         // Refresh icons
         if (window.lucide) lucide.createIcons();
+
+        // Lead dropdown quick create
+        const leadDropdown = modal.querySelector('#leadDropdown');
+        if (leadDropdown) {
+            leadDropdown.addEventListener('change', (e) => {
+                this.jobs_handleLeadDropdownChange(e.target);
+            });
+        }
 
         // Live profit calculation
         modal.querySelectorAll('[data-calc-trigger]').forEach(input => {

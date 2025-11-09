@@ -1548,12 +1548,157 @@ FOR DELETE TO authenticated USING (bucket_id = 'estimate-photos');
 
 ### Build Priority
 
-**Not building yet** - Jobs comes first. Estimates will be built after Jobs is complete, since the convert-to-job flow depends on Jobs being functional.
+**🔥 BUILD THIS FIRST** - Estimates comes before Jobs. Natural flow: Quote → Job.
 
-**Estimated Build Time:** 4-6 hours
-- Session 1: List view, CRUD, filters (2 hours)
-- Session 2: Line items table, photo upload (2 hours)
-- Session 3: Convert to job, status workflow (1-2 hours)
+**Total Build Time:** 5-7 hours
+
+---
+
+## 🏗️ ESTIMATES MODULE - IMPLEMENTATION ROADMAP
+
+### Why Build Estimates First?
+
+Natural workflow: Client requests quote → You create estimate → Client accepts → Convert to job → Execute work
+
+Building estimates first means:
+- Jobs can reference estimates (estimate_id link)
+- Convert-to-job flow makes sense
+- Users can start quoting immediately
+- Photos transfer smoothly to jobs
+
+### Implementation Sessions
+
+**Session 1: Foundation (2-3 hours)**
+1. Module structure + state management
+2. Estimates list view with cards
+3. Filters (status, date, lead)
+4. Add/Edit estimate modal:
+   - Lead dropdown with quick create
+   - Title, description
+   - Status dropdown
+   - Expiration date picker
+   - Terms textarea
+   - Notes
+5. Delete estimate with confirmation
+6. Quick stats (total quoted, accepted, pending)
+
+**Session 2: Line Items + Photos (2-3 hours)**
+7. Line items table (editable rows)
+   - Add/remove rows dynamically
+   - Columns: Description, Quantity, Rate, Total
+   - Auto-sum total price
+8. Photo upload section (3 max)
+   - Drag & drop or file picker
+   - Photo counter "2/3 photos used"
+   - Photo preview with delete
+   - Compression on upload
+9. Visual total calculation box
+
+**Session 3: Status Workflow + Convert to Job (1-2 hours)**
+10. Estimate detail view (read-only)
+11. Status action buttons (sent, accepted, rejected)
+12. **"Convert to Job" button** (only for accepted)
+    - Calls `API.convertEstimateToJob()`
+    - Redirects to Jobs with new job
+13. Expiration warning badges
+
+### Visual Mockups
+
+#### Estimates List View
+```
+┌────────────────────────────────────────────────────────────┐
+│ ESTIMATES                                    + New Estimate│
+├────────────────────────────────────────────────────────────┤
+│ Quick Stats: Quoted $28K | Accepted $18K | Pending $10K   │
+│                                                            │
+│ Filters: [Status ▾] [Lead ▾] [Date ▾]                     │
+│                                                            │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│ │EST-2025-042  │ │EST-2025-041  │ │EST-2025-040  │       │
+│ │Kitchen Remod │ │Deck Repair   │ │Fence Install │       │
+│ │John Smith    │ │Sarah Johnson │ │Mike Davis    │       │
+│ │              │ │              │ │              │       │
+│ │🟢 Accepted   │ │🔵 Sent       │ │⚫ Draft      │       │
+│ │📷 2 photos   │ │📷 1 photo    │ │No photos     │       │
+│ │              │ │              │ │              │       │
+│ │Total: $2,500 │ │Total: $1,200 │ │Total: $3,800 │       │
+│ │Exp: 12 days  │ │Exp: 5 days⚠️│ │Not sent      │       │
+│ │              │ │              │ │              │       │
+│ │[Convert Job] │ │[View][Edit]  │ │[Edit][Send]  │       │
+│ └──────────────┘ └──────────────┘ └──────────────┘       │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### Add/Edit Estimate Modal
+```
+┌────────────────────────────────────────────────────────────┐
+│ ✕ New Estimate                                             │
+├────────────────────────────────────────────────────────────┤
+│ BASIC INFO                                                 │
+│ Title: [Kitchen Remodel___________]                        │
+│ Lead:  [🔍 John Smith ▾] or [+ Create New Lead]           │
+│ Status: [Draft ▾]        Expires: [Dec 31, 2025]          │
+│ Description: [____________________________________]         │
+│                                                            │
+│ LINE ITEMS                                                 │
+│ ┌──────────────────────────────────────────────────────┐   │
+│ │ Description        Qty    Rate      Total            │   │
+│ │ [Labor________]   [1]  [$1000]   = $1,000  [✕]      │   │
+│ │ [Materials____]   [1]  [$500 ]   = $500    [✕]      │   │
+│ │ [+ Add Line Item]                                    │   │
+│ │                                   ─────────────      │   │
+│ │                                   TOTAL: $1,500      │   │
+│ └──────────────────────────────────────────────────────┘   │
+│                                                            │
+│ PHOTOS (2/3 used)                                          │
+│ ┌────┐ ┌────┐ ┌──────────┐                                │
+│ │📷 │ │📷 │ │+ Upload  │                                │
+│ │ ✕ │ │ ✕ │ │or Drag   │                                │
+│ └────┘ └────┘ └──────────┘                                │
+│                                                            │
+│ TERMS & CONDITIONS                                         │
+│ [Standard terms... payment due 30 days...]                 │
+│                                                            │
+│ NOTES (Internal)                                           │
+│ [Client prefers oak cabinets...]                           │
+│                                                            │
+│                              [Cancel] [Save Estimate]      │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Build Checklist
+
+**Session 1: Foundation (2-3 hours)**
+- [ ] Create Estimates.js module structure
+- [ ] Add state management (estimates, leads, filters)
+- [ ] Build estimates_init() - load estimates and leads
+- [ ] Build estimates_render() - main render function
+- [ ] Build estimates_renderStatsBar() - quick stats
+- [ ] Build estimates_renderFilters() - status/lead/date filters
+- [ ] Build estimates_renderEstimatesGrid() - card layout
+- [ ] Build estimates_renderAddEditModal() - basic form
+- [ ] Build estimates_handleSave() - create/update logic
+- [ ] Build estimates_renderLeadDropdown() - with quick create
+- [ ] Test create/update/delete flows
+
+**Session 2: Line Items + Photos (2-3 hours)**
+- [ ] Build line items table component
+- [ ] Add/remove row functionality
+- [ ] Auto-calculate totals
+- [ ] Build photo upload section
+- [ ] Integrate API.uploadEstimatePhoto()
+- [ ] Photo preview grid with delete
+- [ ] Photo counter "X/3 photos"
+- [ ] Test photo upload/compression/delete
+
+**Session 3: Status Workflow + Convert (1-2 hours)**
+- [ ] Build estimates_renderDetailView() - read-only
+- [ ] Build status action buttons (sent, accepted, rejected)
+- [ ] Build "Convert to Job" button
+- [ ] Handle API.convertEstimateToJob()
+- [ ] Redirect to Jobs with new job open
+- [ ] Add expiration warnings
+- [ ] Final testing & polish
 
 ---
 
