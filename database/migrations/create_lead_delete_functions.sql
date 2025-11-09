@@ -11,6 +11,10 @@
 -- ============================================================================
 -- Function 1: Delete single lead
 -- ============================================================================
+
+-- Drop old version if exists (parameter names changed)
+DROP FUNCTION IF EXISTS delete_lead_with_decrement(UUID, UUID);
+
 CREATE OR REPLACE FUNCTION delete_lead_with_decrement(
     p_lead_id UUID,
     p_user_id UUID
@@ -47,6 +51,10 @@ COMMENT ON FUNCTION delete_lead_with_decrement(UUID, UUID) IS
 -- ============================================================================
 -- Function 2: Batch delete multiple leads
 -- ============================================================================
+
+-- Drop old version if exists (parameter names changed)
+DROP FUNCTION IF EXISTS batch_delete_leads(UUID[], UUID);
+
 CREATE OR REPLACE FUNCTION batch_delete_leads(
     p_lead_ids UUID[],
     p_user_id UUID
