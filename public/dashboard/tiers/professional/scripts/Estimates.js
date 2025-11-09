@@ -38,7 +38,7 @@ window.EstimatesModule = {
      */
     async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
-        this.estimates_showLoading();
+        // No loading message - direct load like Goals
 
         try {
             // Load estimates and leads in parallel
@@ -903,9 +903,13 @@ window.EstimatesModule = {
                     </div>
                     <button class="estimates-batch-toggle ${this.state.batchMode ? 'active' : ''}" data-action="toggle-batch">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            ${this.state.batchMode ? `
+                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            ` : `
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            `}
                         </svg>
-                        Select Multiple
+                        ${this.state.batchMode ? `Cancel (${this.state.selectedEstimateIds.length} selected)` : 'Select Multiple'}
                     </button>
                 </div>
             </div>
