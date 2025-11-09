@@ -1540,17 +1540,17 @@ window.PipelineModule = {
                 .modal-content { background: var(--surface); border-radius: 24px; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3); width: 100%; max-width: 600px; max-height: 90vh; overflow: hidden; position: relative; z-index: 1; border: 1px solid var(--border); }
                 .modal-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-hover); }
                 .modal-title { font-size: 1.375rem; font-weight: 800; color: var(--text-primary); margin: 0; }
-                .modal-close { background: none; border: none; width: 2.5rem; height: 2.5rem; border-radius: var(--radius); cursor: pointer; font-size: 1.5rem; color: var(--text-secondary); transition: all 0.2s ease; }
-                .modal-close:hover { background: var(--danger); color: white; }
+                .modal-close { background: none; border: none; width: 32px; height: 32px; border-radius: var(--radius); cursor: pointer; font-size: 28px; color: var(--text-secondary); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+                .modal-close:hover { background: var(--surface-hover); color: var(--text-primary); }
                 .modal-body { padding: 2rem; overflow-y: auto; max-height: 60vh; }
                 
                 .form-section { background: var(--surface-hover); border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border); margin-bottom: 1.5rem; }
-                .form-label { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: block; }
+                .form-label { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; display: block; }
                 
                 .temperature-toggle { display: flex; gap: 1rem; }
-                .temp-btn { flex: 1; padding: 1rem 1.5rem; border: 2px solid var(--border); border-radius: var(--radius); background: var(--background); color: var(--text-secondary); cursor: pointer; transition: all 0.3s ease; font-weight: 600; }
+                .temp-btn { flex: 1; padding: 1rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); color: var(--text-secondary); cursor: pointer; transition: all 0.3s ease; font-weight: 600; }
                 .temp-btn:hover { border-color: var(--primary); }
-                .temp-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+                .temp-btn.active { border-color: var(--primary); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
                 
                 .quality-slider-container { display: flex; align-items: center; gap: 2rem; }
                 .score-track { flex: 1; }
@@ -1561,8 +1561,8 @@ window.PipelineModule = {
                 .score-number { font-size: 2.5rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 0.25rem; }
                 .score-label { font-size: 0.8rem; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; }
                 
-                .notes-textarea { width: 100%; padding: 1.25rem; border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; background: var(--background); color: var(--text-primary); transition: all 0.3s ease; font-family: inherit; line-height: 1.6; resize: vertical; min-height: 140px; }
-                .notes-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+                .notes-textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: var(--background); color: var(--text-primary); transition: all 0.2s; font-family: inherit; line-height: 1.6; resize: vertical; min-height: 140px; }
+                .notes-textarea:focus { outline: none; border-color: var(--primary); }
                 .input-feedback { font-size: 0.8rem; margin-top: 0.5rem; font-weight: 500; }
                 .input-feedback.normal { color: var(--text-tertiary); }
                 .input-feedback.warning { color: var(--warning); }
@@ -1572,17 +1572,17 @@ window.PipelineModule = {
                 
                 .form-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border); }
                 .form-actions-right { display: flex; gap: 1rem; }
-                .btn-primary, .btn-secondary, .btn-danger { padding: 1rem 2rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: all 0.3s ease; border: none; display: flex; align-items: center; gap: 0.5rem; }
-                .btn-primary { background: var(--primary); color: white; }
-                .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-2px); }
+                .btn-primary, .btn-secondary, .btn-danger { padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
+                .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; }
+                .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%); transform: translateY(-2px); }
                 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-                .btn-secondary { background: var(--surface-hover); color: var(--text-primary); border: 2px solid var(--border); }
-                .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
-                .btn-danger { background: var(--danger); color: white; }
+                .btn-secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+                .btn-secondary:hover { background: var(--surface-hover); }
+                .btn-danger { background: var(--danger); color: white; border: none; }
                 .btn-danger:hover { background: #dc2626; }
                 
                 .move-options { display: flex; flex-direction: column; gap: 0.75rem; }
-                .move-option { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: var(--background); border: 2px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s ease; text-align: left; }
+                .move-option { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s ease; text-align: left; }
                 .move-option:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-2px); }
                 .move-option:disabled { opacity: 0.6; cursor: not-allowed; }
                 .move-option.current { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
@@ -1594,63 +1594,59 @@ window.PipelineModule = {
                 
                 .value-input-group { position: relative; display: flex; align-items: center; }
                 .value-prefix { position: absolute; left: 1.25rem; font-size: 1.25rem; font-weight: 700; color: var(--success); pointer-events: none; }
-                .value-input { width: 100%; padding: 1rem 1rem 1rem 3rem; border: 2px solid var(--border); border-radius: var(--radius); font-size: 1.25rem; font-weight: 700; background: var(--background); color: var(--text-primary); transition: all 0.2s ease; }
-                .value-input:focus { outline: none; border-color: var(--success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+                .value-input { width: 100%; padding: 10px 12px 10px 3rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 1.25rem; font-weight: 700; background: var(--background); color: var(--text-primary); transition: all 0.2s; }
+                .value-input:focus { outline: none; border-color: var(--success); }
                 
                 .quick-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem; }
-                .quick-value-btn { padding: 0.75rem 1rem; background: var(--background); border: 2px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s ease; font-weight: 600; }
+                .quick-value-btn { padding: 0.75rem 1rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s; font-weight: 600; }
                 .quick-value-btn:hover { border-color: var(--success); color: var(--success); background: rgba(16, 185, 129, 0.05); }
                 
                 .reason-select {
                     width: 100%;
-                    padding: 0.875rem 3rem 0.875rem 1.25rem;
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: all 0.2s;
                     font-family: inherit;
                     font-weight: 500;
                     cursor: pointer;
                     appearance: none;
                     -webkit-appearance: none;
                     -moz-appearance: none;
-                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-                    background-position: right 1rem center;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                     background-repeat: no-repeat;
-                    background-size: 1.25rem;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px !important;
                 }
-                
+
                 .reason-select:hover {
                     border-color: var(--primary);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
                 }
-                
+
                 .reason-select:focus {
                     outline: none;
                     border-color: var(--danger);
-                    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(239, 68, 68, 0.15);
                 }
                 
                 .custom-reason-input {
                     width: 100%;
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s ease;
+                    transition: all 0.2s;
                     font-family: inherit;
                 }
-                
+
                 .custom-reason-input:focus {
                     outline: none;
                     border-color: var(--danger);
-                    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
                 }
                 
                 .input-warning {
