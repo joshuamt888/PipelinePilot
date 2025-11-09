@@ -279,14 +279,14 @@ window.AddLeadModule = {
                     </div>
                 </td>
                 <td class="addlead-contact-cell">
-                    ${safeEmail ? `<div class="addlead-contact-item"><i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safeEmail}</div>` : ''}
-                    ${safePhone ? `<div class="addlead-contact-item"><i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safePhone}</div>` : ''}
+                    ${safeEmail ? `<div class="addlead-contact-item">${safeEmail}</div>` : ''}
+                    ${safePhone ? `<div class="addlead-contact-item">${safePhone}</div>` : ''}
                 </td>
                 <td class="addlead-status-cell">
                     <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
                 </td>
                 <td class="addlead-source-cell">
-                    <span class="addlead-source-badge"><i data-lucide="${sourceIcon}" style="width: 14px; height: 14px; margin-right: 4px;"></i>${safeSource}</span>
+                    <span class="addlead-source-badge">${safeSource}</span>
                 </td>
                 <td class="addlead-value-cell">
                     ${lead.potential_value > 0 ? 
