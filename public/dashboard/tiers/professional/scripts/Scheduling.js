@@ -2476,12 +2476,10 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="scheduling-batch-buttons">
                         <button class="scheduling-batch-btn scheduling-batch-complete"
                                 onclick="SchedulingModule.scheduling_batchComplete()">
-                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
                             Complete Selected
                         </button>
                         <button class="scheduling-batch-btn scheduling-batch-delete"
-                                onclick="SchedulingModule.scheduling_batchDelete()">
-                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                                onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
                             Delete Selected
                         </button>
                     </div>
@@ -2490,28 +2488,34 @@ modal.addEventListener('mouseup', (e) => {
         `;
     },
 
-    async scheduling_batchComplete() {
-        if (this.scheduling_state.selectedTaskIds.length === 0) return;
-
-        try {
-            await API.batchCompleteTasks(this.scheduling_state.selectedTaskIds);
-            this.scheduling_showNotification(`Completed ${this.scheduling_state.selectedTaskIds.length} task(s)`, 'success');
-
-            this.scheduling_state.selectedTaskIds = [];
-            this.scheduling_state.batchEditMode = false;
-            await this.scheduling_loadTasks();
-            this.scheduling_render();
-        } catch (error) {
-            console.error('Batch complete error:', error);
-            this.scheduling_showNotification('Failed to complete tasks', 'error');
-        }
+    scheduling_showBatchDeleteModal() {
+        const count = this.scheduling_state.selectedTaskIds.length;
+        const modal = document.createElement('div');
+        modal.className = 'scheduling-batch-delete-modal';
+        modal.innerHTML = `
+            <div class="scheduling-batch-delete-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="scheduling-batch-delete-content">
+                <h3 class="scheduling-batch-delete-title">Delete ${count} Task${count !== 1 ? 's' : ''}?</h3>
+                <p class="scheduling-batch-delete-message">
+                    This will permanently delete ${count} task${count !== 1 ? 's' : ''}. This action cannot be undone.
+                </p>
+                <div class="scheduling-batch-delete-actions">
+                    <button class="scheduling-btn-cancel-batch-delete" onclick="this.closest('.scheduling-batch-delete-modal').remove()">
+                        Cancel
+                    </button>
+                    <button class="scheduling-btn-confirm-batch-delete" onclick="SchedulingModule.scheduling_confirmBatchDelete()">
+                        Delete ${count} Task${count !== 1 ? 's' : ''}
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     },
 
-    async scheduling_batchDelete() {
+    async scheduling_confirmBatchDelete() {
+        // Close modal
+        document.querySelector('.scheduling-batch-delete-modal')?.remove();
         if (this.scheduling_state.selectedTaskIds.length === 0) return;
-
-        const confirmed = confirm(`Delete ${this.scheduling_state.selectedTaskIds.length} task(s)? This cannot be undone.`);
-        if (!confirmed) return;
 
         try {
             await API.batchDeleteTasks(this.scheduling_state.selectedTaskIds);
@@ -5058,7 +5062,7 @@ modal.addEventListener('mouseup', (e) => {
 }
 
 .scheduling-batch-btn {
-    padding: 0.75rem 1.25rem;
+    padding: 0.75rem 1.5rem;
     border: 2px solid white;
     background: rgba(255, 255, 255, 0.15);
     color: white;
@@ -5067,9 +5071,10 @@ modal.addEventListener('mouseup', (e) => {
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
     transition: all 0.2s ease;
     backdrop-filter: blur(10px);
+    min-width: 140px;
 }
 
 .scheduling-batch-btn:hover {
@@ -5081,6 +5086,103 @@ modal.addEventListener('mouseup', (e) => {
     background: #ef4444;
     border-color: #ef4444;
     color: white;
+}
+
+/* Batch Delete Modal */
+.scheduling-batch-delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scheduling-batch-delete-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.scheduling-batch-delete-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: scheduling-batch-modal-in 0.2s ease;
+}
+
+@keyframes scheduling-batch-modal-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.scheduling-batch-delete-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: center;
+}
+
+.scheduling-batch-delete-message {
+    margin: 0 0 2rem 0;
+    color: #6b7280;
+    font-size: 1rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.scheduling-batch-delete-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.scheduling-btn-cancel-batch-delete,
+.scheduling-btn-confirm-batch-delete {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    min-width: 120px;
+}
+
+.scheduling-btn-cancel-batch-delete {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.scheduling-btn-cancel-batch-delete:hover {
+    background: #d1d5db;
+}
+
+.scheduling-btn-confirm-batch-delete {
+    background: #ef4444;
+    color: white;
+}
+
+.scheduling-btn-confirm-batch-delete:hover {
+    background: #dc2626;
 }
 
 .scheduling-task-row.batch-mode {

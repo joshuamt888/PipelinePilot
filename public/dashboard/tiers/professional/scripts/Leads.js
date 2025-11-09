@@ -2666,8 +2666,7 @@ addlead_showCustomSourceInput(targetInput) {
                     <span class="addlead-batch-count">${count} lead${count !== 1 ? 's' : ''} selected</span>
                     <div class="addlead-batch-buttons">
                         <button class="addlead-batch-btn addlead-batch-delete"
-                                onclick="AddLeadModule.addlead_batchDelete()">
-                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                                onclick="AddLeadModule.addlead_showBatchDeleteModal()">
                             Delete Selected
                         </button>
                     </div>
@@ -2676,11 +2675,34 @@ addlead_showCustomSourceInput(targetInput) {
         `;
     },
 
-    async addlead_batchDelete() {
-        if (this.addlead_state.selectedLeadIds.length === 0) return;
+    addlead_showBatchDeleteModal() {
+        const count = this.addlead_state.selectedLeadIds.length;
+        const modal = document.createElement('div');
+        modal.className = 'addlead-batch-delete-modal';
+        modal.innerHTML = `
+            <div class="addlead-batch-delete-overlay" onclick="this.parentElement.remove()"></div>
+            <div class="addlead-batch-delete-content">
+                <h3 class="addlead-batch-delete-title">Delete ${count} Lead${count !== 1 ? 's' : ''}?</h3>
+                <p class="addlead-batch-delete-message">
+                    This will permanently delete ${count} lead${count !== 1 ? 's' : ''} and any associated tasks. This action cannot be undone.
+                </p>
+                <div class="addlead-batch-delete-actions">
+                    <button class="addlead-btn-cancel-batch-delete" onclick="this.closest('.addlead-batch-delete-modal').remove()">
+                        Cancel
+                    </button>
+                    <button class="addlead-btn-confirm-batch-delete" onclick="AddLeadModule.addlead_confirmBatchDelete()">
+                        Delete ${count} Lead${count !== 1 ? 's' : ''}
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
 
-        const confirmed = confirm(`Delete ${this.addlead_state.selectedLeadIds.length} lead(s)? This will also delete any associated tasks. This cannot be undone.`);
-        if (!confirmed) return;
+    async addlead_confirmBatchDelete() {
+        // Close modal
+        document.querySelector('.addlead-batch-delete-modal')?.remove();
+        if (this.addlead_state.selectedLeadIds.length === 0) return;
 
         try {
             await API.batchDeleteLeads(this.addlead_state.selectedLeadIds);
@@ -4479,7 +4501,7 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-batch-btn {
-                padding: 0.75rem 1.25rem;
+                padding: 0.75rem 1.5rem;
                 border: 2px solid white;
                 background: rgba(255, 255, 255, 0.15);
                 color: white;
@@ -4488,9 +4510,10 @@ addlead_showCustomSourceInput(targetInput) {
                 cursor: pointer;
                 display: flex;
                 align-items: center;
-                gap: 0.5rem;
+                justify-content: center;
                 transition: all 0.2s ease;
                 backdrop-filter: blur(10px);
+                min-width: 140px;
             }
 
             .addlead-batch-btn:hover {
@@ -4502,6 +4525,103 @@ addlead_showCustomSourceInput(targetInput) {
                 background: #ef4444;
                 border-color: #ef4444;
                 color: white;
+            }
+
+            /* Batch Delete Modal */
+            .addlead-batch-delete-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .addlead-batch-delete-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
+            }
+
+            .addlead-batch-delete-content {
+                position: relative;
+                background: white;
+                border-radius: 12px;
+                padding: 2rem;
+                max-width: 450px;
+                width: 90%;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: addlead-batch-modal-in 0.2s ease;
+            }
+
+            @keyframes addlead-batch-modal-in {
+                from {
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
+            .addlead-batch-delete-title {
+                margin: 0 0 1rem 0;
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #1f2937;
+                text-align: center;
+            }
+
+            .addlead-batch-delete-message {
+                margin: 0 0 2rem 0;
+                color: #6b7280;
+                font-size: 1rem;
+                line-height: 1.6;
+                text-align: center;
+            }
+
+            .addlead-batch-delete-actions {
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+            }
+
+            .addlead-btn-cancel-batch-delete,
+            .addlead-btn-confirm-batch-delete {
+                padding: 0.75rem 1.5rem;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 1rem;
+                min-width: 120px;
+            }
+
+            .addlead-btn-cancel-batch-delete {
+                background: #e5e7eb;
+                color: #374151;
+            }
+
+            .addlead-btn-cancel-batch-delete:hover {
+                background: #d1d5db;
+            }
+
+            .addlead-btn-confirm-batch-delete {
+                background: #ef4444;
+                color: white;
+            }
+
+            .addlead-btn-confirm-batch-delete:hover {
+                background: #dc2626;
             }
 
             .addlead-table-row.batch-mode {
