@@ -854,10 +854,7 @@ window.EstimatesModule = {
                 .estimate-total {
                     font-size: 1.5rem;
                     font-weight: 900;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
+                    color: var(--text-primary);
                     line-height: 1;
                 }
 
@@ -1304,22 +1301,10 @@ window.EstimatesModule = {
         const expiryInfo = this.estimates_getExpiryInfo(estimate);
         const isSelected = this.state.selectedEstimateIds.includes(estimate.id);
 
-        // Card color based on status
-        const statusColors = {
-            draft: '#9ca3af',
-            sent: '#667eea',
-            accepted: '#10b981',
-            rejected: '#ef4444',
-            expired: '#d1d5db'
-        };
-        const cardColor = statusColors[estimate.status] || statusColors.draft;
-
         return `
             <div class="estimate-card estimate-card-${estimate.status} ${this.state.batchMode ? 'batch-mode' : ''} ${isSelected ? 'selected' : ''}"
                  data-action="${this.state.batchMode ? 'toggle-estimate-selection' : 'view-estimate'}"
                  data-id="${estimate.id}">
-
-                ${cardColor ? `<div class="estimate-card-accent" style="background: ${cardColor}"></div>` : ''}
 
                 ${this.state.batchMode ? `
                     <div class="estimate-card-checkbox">
