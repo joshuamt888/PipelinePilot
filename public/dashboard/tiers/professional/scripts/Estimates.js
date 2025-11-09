@@ -100,96 +100,110 @@ window.EstimatesModule = {
     estimates_renderStyles() {
         return `
             <style>
+                /* ESTIMATES MODULE - Clean Ticket Design */
+
                 .estimates-container {
                     max-width: 1400px;
                     margin: 0 auto;
-                    padding: 20px;
+                    animation: fadeInUp 0.5s ease;
                 }
 
-                /* Header */
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                /* HEADER - Big & Bold */
                 .estimates-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 30px;
+                    align-items: flex-start;
+                    margin-bottom: 2.5rem;
+                    gap: 2rem;
                 }
 
                 .estimates-header-content h1 {
-                    font-size: 32px;
-                    font-weight: 600;
-                    margin: 0 0 8px 0;
+                    font-size: 2.75rem;
+                    font-weight: 900;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin: 0 0 0.5rem 0;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    color: var(--text-primary);
+                    gap: 1rem;
                 }
 
                 .estimates-title-icon {
-                    width: 32px;
-                    height: 32px;
-                    color: var(--primary);
+                    width: 2.5rem;
+                    height: 2.5rem;
                 }
 
                 .estimates-subtitle {
                     color: var(--text-secondary);
-                    font-size: 14px;
+                    font-size: 1.125rem;
                     margin: 0;
+                    font-weight: 500;
                 }
 
                 .estimates-btn-primary {
-                    background: var(--primary);
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
                     border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: 500;
+                    padding: 1rem 2rem;
+                    border-radius: var(--radius-lg);
+                    font-size: 0.95rem;
+                    font-weight: 700;
                     cursor: pointer;
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
-                    gap: 8px;
-                    transition: all 0.2s;
+                    gap: 0.625rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
                 }
 
                 .estimates-btn-primary:hover {
-                    background: var(--primary-dark);
-                    transform: translateY(-1px);
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
                 }
 
                 .estimates-btn-primary svg {
-                    width: 18px;
-                    height: 18px;
+                    width: 1.25rem;
+                    height: 1.25rem;
+                    stroke-width: 2.5;
                 }
 
-                /* Stats Banners */
+                /* STATS - Revenue at a Glance */
                 .estimates-stats {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                    gap: 16px;
-                    margin-bottom: 24px;
+                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                    gap: 1.5rem;
+                    margin-bottom: 2.5rem;
                 }
 
                 .estimates-stat-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--border);
-                    border-radius: 12px;
-                    padding: 20px;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
                     display: flex;
                     align-items: center;
-                    gap: 16px;
-                    transition: all 0.2s;
+                    gap: 1.5rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
                 }
 
                 .estimates-stat-card:hover {
-                    border-color: var(--primary);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                    border-color: #667eea;
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
                 }
 
                 .estimates-stat-icon {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 10px;
+                    width: 4rem;
+                    height: 4rem;
+                    border-radius: var(--radius-lg);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -197,241 +211,287 @@ window.EstimatesModule = {
                 }
 
                 .estimates-stat-icon.quoted {
-                    background: rgba(59, 130, 246, 0.1);
-                    color: #3b82f6;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
                 }
 
                 .estimates-stat-icon.accepted {
-                    background: rgba(34, 197, 94, 0.1);
-                    color: #22c55e;
+                    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
                 }
 
                 .estimates-stat-icon.pending {
-                    background: rgba(251, 191, 36, 0.1);
-                    color: #fbbf24;
+                    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
                 }
 
                 .estimates-stat-icon svg {
-                    width: 24px;
-                    height: 24px;
+                    width: 2rem;
+                    height: 2rem;
+                    stroke-width: 2;
                 }
 
-                .estimates-stat-content {
-                    flex: 1;
-                }
+                .estimates-stat-icon.quoted svg { stroke: #667eea; }
+                .estimates-stat-icon.accepted svg { stroke: #10b981; }
+                .estimates-stat-icon.pending svg { stroke: #fbbf24; }
+
+                .estimates-stat-content { flex: 1; }
 
                 .estimates-stat-value {
-                    font-size: 28px;
-                    font-weight: 600;
+                    font-size: 2.5rem;
+                    font-weight: 900;
                     color: var(--text-primary);
-                    margin-bottom: 4px;
+                    line-height: 1;
+                    margin-bottom: 0.5rem;
                 }
 
                 .estimates-stat-label {
-                    font-size: 14px;
+                    font-size: 0.95rem;
+                    font-weight: 600;
                     color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
 
-                /* Filters */
+                /* FILTERS - Pill Style */
                 .estimates-filters {
                     display: flex;
-                    gap: 12px;
-                    margin-bottom: 24px;
+                    gap: 1rem;
+                    margin-bottom: 2rem;
                     flex-wrap: wrap;
                 }
 
                 .estimates-filters select {
-                    padding: 10px 16px;
-                    border: 1px solid var(--border);
-                    border-radius: 8px;
-                    background: var(--card-bg);
+                    padding: 0.75rem 1.25rem;
+                    border: 2px solid var(--border);
+                    border-radius: 999px;
+                    background: var(--surface);
                     color: var(--text-primary);
-                    font-size: 14px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
                     cursor: pointer;
                     transition: all 0.2s;
                 }
 
-                .estimates-filters select:hover {
-                    border-color: var(--primary);
+                .estimates-filters select:hover,
+                .estimates-filters select:focus {
+                    border-color: #667eea;
+                    outline: none;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
-                /* Grid */
+                /* GRID - Masonry Style */
                 .estimates-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-                    gap: 20px;
+                    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                    gap: 1.5rem;
                 }
 
-                /* Card */
+                /* CARD - Ticket Design with Left Border Accent */
                 .estimate-card {
-                    background: var(--card-bg);
-                    border: 1px solid var(--border);
-                    border-radius: 12px;
-                    padding: 20px;
-                    transition: all 0.2s;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-left: 5px solid;
+                    border-radius: var(--radius-lg);
+                    padding: 1.75rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     cursor: pointer;
+                    position: relative;
                 }
+
+                .estimate-card.draft { border-left-color: #9ca3af; }
+                .estimate-card.sent { border-left-color: #667eea; }
+                .estimate-card.accepted { border-left-color: #10b981; }
+                .estimate-card.rejected { border-left-color: #ef4444; }
+                .estimate-card.expired { border-left-color: #d1d5db; }
 
                 .estimate-card:hover {
-                    border-color: var(--primary);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                    transform: translateY(-6px) scale(1.02);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+                    border-color: #667eea;
                 }
 
                 .estimate-card-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
-                    margin-bottom: 16px;
+                    margin-bottom: 1rem;
                 }
 
                 .estimate-number {
-                    font-size: 12px;
-                    font-weight: 600;
+                    font-size: 0.75rem;
+                    font-weight: 700;
                     color: var(--text-secondary);
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 1px;
+                    opacity: 0.7;
                 }
 
                 .estimate-title {
-                    font-size: 18px;
-                    font-weight: 600;
+                    font-size: 1.375rem;
+                    font-weight: 700;
                     color: var(--text-primary);
-                    margin: 8px 0;
+                    margin: 0.75rem 0;
+                    line-height: 1.3;
                 }
 
                 .estimate-lead {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 0.5rem;
                     color: var(--text-secondary);
-                    font-size: 14px;
-                    margin-bottom: 12px;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                    margin-bottom: 1rem;
                 }
 
                 .estimate-lead svg {
-                    width: 16px;
-                    height: 16px;
+                    width: 1rem;
+                    height: 1rem;
+                    opacity: 0.6;
                 }
 
                 .estimate-status {
                     display: inline-flex;
                     align-items: center;
-                    gap: 6px;
-                    padding: 6px 12px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: 500;
+                    gap: 0.5rem;
+                    padding: 0.5rem 1rem;
+                    border-radius: 999px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .estimate-status.draft {
-                    background: rgba(107, 114, 128, 0.1);
+                    background: rgba(156, 163, 175, 0.15);
                     color: #6b7280;
                 }
 
                 .estimate-status.sent {
-                    background: rgba(59, 130, 246, 0.1);
-                    color: #3b82f6;
+                    background: rgba(102, 126, 234, 0.15);
+                    color: #667eea;
                 }
 
                 .estimate-status.accepted {
-                    background: rgba(34, 197, 94, 0.1);
-                    color: #22c55e;
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
                 }
 
                 .estimate-status.rejected {
-                    background: rgba(239, 68, 68, 0.1);
+                    background: rgba(239, 68, 68, 0.15);
                     color: #ef4444;
                 }
 
                 .estimate-status.expired {
-                    background: rgba(156, 163, 175, 0.1);
+                    background: rgba(209, 213, 219, 0.15);
                     color: #9ca3af;
                 }
 
                 .estimate-status svg {
-                    width: 14px;
-                    height: 14px;
+                    width: 0.875rem;
+                    height: 0.875rem;
                 }
 
                 .estimate-photos {
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: 0.5rem;
                     color: var(--text-secondary);
-                    font-size: 13px;
-                    margin-top: 12px;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    margin-top: 1rem;
+                    padding: 0.5rem 0.75rem;
+                    background: rgba(102, 126, 234, 0.05);
+                    border-radius: 0.5rem;
                 }
 
                 .estimate-photos svg {
-                    width: 16px;
-                    height: 16px;
+                    width: 1rem;
+                    height: 1rem;
                 }
 
                 .estimate-total {
-                    font-size: 24px;
-                    font-weight: 600;
-                    color: var(--primary);
-                    margin: 16px 0 12px 0;
+                    font-size: 2.25rem;
+                    font-weight: 900;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin: 1.5rem 0 0.75rem 0;
+                    line-height: 1;
                 }
 
                 .estimate-expiry {
-                    font-size: 13px;
+                    font-size: 0.85rem;
                     color: var(--text-secondary);
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
                 }
 
                 .estimate-expiry.warning {
                     color: #f59e0b;
-                    font-weight: 500;
+                    font-weight: 600;
                 }
 
                 .estimate-card-actions {
                     display: flex;
-                    gap: 8px;
-                    margin-top: 16px;
-                    padding-top: 16px;
-                    border-top: 1px solid var(--border);
+                    gap: 0.625rem;
+                    margin-top: 1.5rem;
+                    padding-top: 1.5rem;
+                    border-top: 2px solid var(--border);
+                    opacity: 0;
+                    transform: translateY(-10px);
+                    transition: all 0.3s ease;
+                }
+
+                .estimate-card:hover .estimate-card-actions {
+                    opacity: 1;
+                    transform: translateY(0);
                 }
 
                 .estimate-btn {
                     flex: 1;
-                    padding: 10px;
-                    border: 1px solid var(--border);
-                    border-radius: 6px;
+                    padding: 0.75rem 1rem;
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius);
                     background: transparent;
                     color: var(--text-primary);
-                    font-size: 13px;
-                    font-weight: 500;
+                    font-size: 0.85rem;
+                    font-weight: 600;
                     cursor: pointer;
                     transition: all 0.2s;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 6px;
+                    gap: 0.5rem;
                 }
 
                 .estimate-btn:hover {
-                    background: var(--hover-bg);
-                    border-color: var(--primary);
+                    background: rgba(102, 126, 234, 0.1);
+                    border-color: #667eea;
+                    color: #667eea;
+                    transform: translateY(-2px);
                 }
 
                 .estimate-btn svg {
-                    width: 16px;
-                    height: 16px;
+                    width: 1rem;
+                    height: 1rem;
                 }
 
                 .estimate-btn-primary {
-                    background: var(--primary);
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
-                    border-color: var(--primary);
+                    border: none;
                 }
 
                 .estimate-btn-primary:hover {
-                    background: var(--primary-dark);
+                    background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
                 }
 
                 .estimate-btn-danger {
                     color: #ef4444;
+                    border-color: rgba(239, 68, 68, 0.3);
                 }
 
                 .estimate-btn-danger:hover {
@@ -439,30 +499,34 @@ window.EstimatesModule = {
                     border-color: #ef4444;
                 }
 
-                /* Empty State */
+                /* EMPTY STATE */
                 .estimates-empty {
                     text-align: center;
-                    padding: 60px 20px;
+                    padding: 5rem 2rem;
+                    background: var(--surface);
+                    border: 2px dashed var(--border);
+                    border-radius: var(--radius-lg);
                 }
 
                 .estimates-empty svg {
-                    width: 64px;
-                    height: 64px;
+                    width: 5rem;
+                    height: 5rem;
                     color: var(--text-tertiary);
-                    margin-bottom: 16px;
+                    margin-bottom: 1.5rem;
+                    opacity: 0.5;
                 }
 
                 .estimates-empty h3 {
-                    font-size: 20px;
-                    font-weight: 600;
+                    font-size: 1.5rem;
+                    font-weight: 700;
                     color: var(--text-primary);
-                    margin: 0 0 8px 0;
+                    margin: 0 0 0.75rem 0;
                 }
 
                 .estimates-empty p {
                     color: var(--text-secondary);
-                    font-size: 14px;
-                    margin: 0 0 24px 0;
+                    font-size: 1rem;
+                    margin: 0 0 2rem 0;
                 }
             </style>
         `;
