@@ -105,9 +105,11 @@ async goals_loadAvailableTasks() {
             </div>
         `;
 
-        // Attach events immediately - CSS handles fade-in
-        this.goals_attachEvents();
-        this.goals_startCountdownTimer(); // Start live countdown for urgent goals
+        // Let DOM settle before attaching events
+        setTimeout(() => {
+            this.goals_attachEvents();
+            this.goals_startCountdownTimer(); // Start live countdown for urgent goals
+        }, 50);
     },
 
     // UPDATE FILTER (NO RE-RENDER)
