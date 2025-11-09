@@ -114,22 +114,62 @@ async goals_loadAvailableTasks() {
         }, 50);
     },
 
-    // SMOOTH FILTER CHANGE (with fade transition)
-    async goals_smoothFilterChange(newFilter) {
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
+    // UPDATE FILTER (NO RE-RENDER)
+    goals_updateFilter(newFilter) {
+        if (this.state.currentFilter === newFilter) return;
 
-        // Fade out
-        container.style.opacity = '0';
-
-        // Wait for fade out
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // Change filter
         this.state.currentFilter = newFilter;
 
-        // Re-render (will fade back in)
-        this.goals_render();
+        // Update banner active states
+        const banners = document.querySelectorAll('.goals-banner');
+        banners.forEach(banner => {
+            const action = banner.dataset.action;
+            const filter = action.replace('filter-', '');
+            if (filter === newFilter) {
+                banner.classList.add('active');
+            } else {
+                banner.classList.remove('active');
+            }
+        });
+
+        // Update goals section content
+        const goalsSection = document.querySelector('.goals-section');
+        if (goalsSection) {
+            goalsSection.outerHTML = this.goals_renderGoalsContent();
+
+            // Re-attach search handler for the new content
+            const searchInput = document.querySelector('#goalsSearchInput');
+            if (searchInput) {
+                searchInput.oninput = (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    const cards = document.querySelectorAll('.goals-card');
+                    const countBadge = document.querySelector('#goalsCount');
+
+                    if (!query) {
+                        cards.forEach(card => card.style.display = '');
+                        if (countBadge) countBadge.textContent = cards.length;
+                    } else {
+                        let visibleCount = 0;
+                        cards.forEach(card => {
+                            const titleEl = card.querySelector('.goals-card-title');
+                            const title = titleEl ? titleEl.textContent.toLowerCase() : '';
+                            if (title.includes(query)) {
+                                card.style.display = '';
+                                visibleCount++;
+                            } else {
+                                card.style.display = 'none';
+                            }
+                        });
+                        if (countBadge) countBadge.textContent = visibleCount;
+                    }
+                };
+            }
+        }
+    },
+
+    // RENDER GOALS CONTENT ONLY
+    goals_renderGoalsContent() {
+        return this.goals_renderGoalsGrid();
     },
 
     // HEADER
@@ -2091,10 +2131,10 @@ goals_attachEvents() {
                 document.querySelector('.goals-modal-overlay')?.remove();
                 break;
             case 'filter-active':
-                await this.goals_smoothFilterChange('active');
+                this.goals_updateFilter('active');
                 break;
             case 'filter-completed':
-                await this.goals_smoothFilterChange('completed');
+                this.goals_updateFilter('completed');
                 break;
             case 'toggle-batch-edit':
                 this.goals_toggleBatchEditMode();

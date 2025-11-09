@@ -61,7 +61,12 @@ window.EstimatesModule = {
             </div>
         `;
 
-        setTimeout(() => this.estimates_attachEvents(), 50);
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            container.style.opacity = '1';
+            this.estimates_attachEvents();
+        }, 50);
     },
 
     // SIDEBAR
