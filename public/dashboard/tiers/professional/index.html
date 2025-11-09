@@ -570,32 +570,16 @@
                 console.log(`Already on ${pageName}`);
                 return;
             }
-
+            
             console.log(`Loading: ${pageName}`);
-
-            // Fade out current page
-            const currentPage = document.querySelector('.page-content.active');
-            if (currentPage) {
-                currentPage.style.opacity = '0';
-                await new Promise(resolve => setTimeout(resolve, 150));
-            }
-
-            // Update UI - switch active states
+            
+            // Update UI
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
-            const newPage = document.getElementById(`${pageName}-content`);
-            if (newPage) {
-                newPage.classList.add('active');
-                // Start invisible
-                newPage.style.opacity = '0';
-                // Force reflow
-                newPage.offsetHeight;
-                // Fade in
-                newPage.style.opacity = '1';
-            }
-
+            document.getElementById(`${pageName}-content`)?.classList.add('active');
+            
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-
+            
             const titles = {
                 dashboard: 'Dashboard',
                 leads: 'Add Leads',
@@ -609,11 +593,11 @@
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
-
+            
             // Update state
             appState.currentPage = pageName;
-
-            // Load module (happens in background while fade-in plays)
+            
+            // Load module
             await loadModule(pageName);
         }
 

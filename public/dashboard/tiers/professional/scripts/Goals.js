@@ -105,8 +105,10 @@ async goals_loadAvailableTasks() {
             </div>
         `;
 
-        // Attach events - index.html handles fade animation
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
+            container.style.opacity = '1';
             this.goals_attachEvents();
             this.goals_startCountdownTimer(); // Start live countdown for urgent goals
         }, 50);
