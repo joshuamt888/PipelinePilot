@@ -2132,9 +2132,17 @@ estimates_showViewModal(estimateId) {
  * Download professional client copy as printable PDF
  */
 estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
-    // Create professional print-ready document
-    const printWindow = window.open('', '_blank');
-    const doc = printWindow.document;
+    // Create hidden iframe for clean PDF generation
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
 
     doc.write(`
         <!DOCTYPE html>
@@ -2413,10 +2421,16 @@ estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
 
     doc.close();
 
-    // Auto-trigger print dialog after page loads
-    printWindow.onload = () => {
+    // Wait for content to load, then trigger print
+    iframe.onload = () => {
         setTimeout(() => {
-            printWindow.print();
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+
+            // Clean up iframe after printing
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 1000);
         }, 250);
     };
 },
