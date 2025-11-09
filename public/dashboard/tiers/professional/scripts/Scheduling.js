@@ -740,7 +740,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="scheduling-form-actions">
                     <button type="button" class="scheduling-btn-danger" onclick="SchedulingModule.scheduling_showDeleteConfirmation('${task.id}')">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>Delete
+                        Delete Task
                     </button>
                     <div class="scheduling-form-actions-right">
                         <button type="button" class="scheduling-btn-secondary" onclick="SchedulingModule.scheduling_hideEditTaskModal()">

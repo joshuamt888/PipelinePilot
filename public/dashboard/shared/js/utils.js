@@ -31,11 +31,8 @@ class SteadyUtils {
         const toast = document.createElement('div');
         toast.className = `steady-toast steady-toast-${type}`;
         toast.dataset.key = toastKey;
-        
-        const icons = { success: '✓', error: '✕', warning: '!', info: 'i' };
-        
+
         toast.innerHTML = `
-            <span class="steady-toast-icon">${icons[type] || icons.info}</span>
             <span class="steady-toast-message">${safeMessage}</span>
             <button class="steady-toast-close" aria-label="Close">×</button>
         `;
@@ -203,16 +200,6 @@ class SteadyUtils {
             .steady-toast-error { border-left-color: var(--danger); }
             .steady-toast-warning { border-left-color: var(--warning); }
             .steady-toast-info { border-left-color: var(--info); }
-
-            .steady-toast-icon {
-                font-size: 1.25rem;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 700;
-            }
 
             .steady-toast-message {
                 flex: 1;
