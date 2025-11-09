@@ -2088,7 +2088,14 @@ estimates_formatStatus(status) {
         const count = this.state.selectedEstimateIds.length;
         if (count === 0) return;
 
-        if (!confirm(`Mark ${count} estimate${count > 1 ? 's' : ''} as sent?`)) return;
+        const confirmed = await this.estimates_showConfirmation({
+            title: 'Mark as Sent',
+            message: `Are you sure you want to mark ${count} estimate${count > 1 ? 's' : ''} as sent?`,
+            confirmText: 'Mark Sent',
+            type: 'warning'
+        });
+
+        if (!confirmed) return;
 
         try {
             // Update in backend
@@ -2121,7 +2128,14 @@ estimates_formatStatus(status) {
         const count = this.state.selectedEstimateIds.length;
         if (count === 0) return;
 
-        if (!confirm(`Mark ${count} estimate${count > 1 ? 's' : ''} as accepted?`)) return;
+        const confirmed = await this.estimates_showConfirmation({
+            title: 'Mark as Accepted',
+            message: `Are you sure you want to mark ${count} estimate${count > 1 ? 's' : ''} as accepted?`,
+            confirmText: 'Mark Accepted',
+            type: 'success'
+        });
+
+        if (!confirmed) return;
 
         try {
             // Update in backend
@@ -2154,7 +2168,15 @@ estimates_formatStatus(status) {
         const count = this.state.selectedEstimateIds.length;
         if (count === 0) return;
 
-        if (!confirm(`Delete ${count} estimate${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+        const confirmed = await this.estimates_showConfirmation({
+            title: 'Delete Estimates',
+            message: `Are you sure you want to delete ${count} estimate${count > 1 ? 's' : ''}? This action cannot be undone.`,
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+
+        if (!confirmed) return;
 
         try {
             // Update in backend
@@ -2181,6 +2203,188 @@ estimates_formatStatus(status) {
             console.error('Batch delete error:', error);
             window.SteadyUtils.showToast('Failed to delete estimates', 'error');
         }
+    },
+
+    /**
+     * Custom styled confirmation modal
+     */
+    estimates_showConfirmation(options) {
+        return new Promise((resolve) => {
+            const { title, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'warning' } = options;
+
+            const icons = {
+                warning: '<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+                danger: '<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+                success: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>'
+            };
+
+            const colors = {
+                warning: '#f59e0b',
+                danger: '#ef4444',
+                success: '#10b981'
+            };
+
+            const overlay = document.createElement('div');
+            overlay.className = 'estimate-confirm-overlay';
+            overlay.innerHTML = `
+                <style>
+                    .estimate-confirm-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.6);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10001;
+                        animation: fadeIn 0.2s ease;
+                    }
+
+                    .estimate-confirm-modal {
+                        background: var(--surface);
+                        border-radius: 12px;
+                        width: 90%;
+                        max-width: 480px;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        animation: slideUp 0.3s ease;
+                    }
+
+                    .estimate-confirm-header {
+                        padding: 24px 24px 16px 24px;
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 16px;
+                    }
+
+                    .estimate-confirm-icon {
+                        flex-shrink: 0;
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: ${colors[type]}15;
+                    }
+
+                    .estimate-confirm-icon svg {
+                        width: 24px;
+                        height: 24px;
+                        stroke: ${colors[type]};
+                    }
+
+                    .estimate-confirm-content {
+                        flex: 1;
+                        padding-top: 4px;
+                    }
+
+                    .estimate-confirm-title {
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: var(--text-primary);
+                        margin: 0 0 8px 0;
+                    }
+
+                    .estimate-confirm-message {
+                        font-size: 14px;
+                        color: var(--text-secondary);
+                        line-height: 1.5;
+                        margin: 0;
+                    }
+
+                    .estimate-confirm-footer {
+                        padding: 16px 24px 24px 24px;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 12px;
+                    }
+
+                    .estimate-confirm-btn {
+                        padding: 10px 20px;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        border: none;
+                    }
+
+                    .estimate-confirm-btn-cancel {
+                        background: transparent;
+                        border: 1px solid var(--border);
+                        color: var(--text-primary);
+                    }
+
+                    .estimate-confirm-btn-cancel:hover {
+                        background: var(--surface-hover);
+                    }
+
+                    .estimate-confirm-btn-confirm {
+                        background: ${colors[type]};
+                        color: white;
+                    }
+
+                    .estimate-confirm-btn-confirm:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                    }
+                </style>
+                <div class="estimate-confirm-modal">
+                    <div class="estimate-confirm-header">
+                        <div class="estimate-confirm-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                ${icons[type]}
+                            </svg>
+                        </div>
+                        <div class="estimate-confirm-content">
+                            <h3 class="estimate-confirm-title">${title}</h3>
+                            <p class="estimate-confirm-message">${message}</p>
+                        </div>
+                    </div>
+                    <div class="estimate-confirm-footer">
+                        <button class="estimate-confirm-btn estimate-confirm-btn-cancel" data-action="cancel">
+                            ${cancelText}
+                        </button>
+                        <button class="estimate-confirm-btn estimate-confirm-btn-confirm" data-action="confirm">
+                            ${confirmText}
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const handleConfirm = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+                resolve(true);
+            };
+
+            const handleCancel = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+                resolve(false);
+            };
+
+            overlay.querySelector('[data-action="confirm"]').addEventListener('click', handleConfirm);
+            overlay.querySelector('[data-action="cancel"]').addEventListener('click', handleCancel);
+
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) handleCancel();
+            });
+
+            // ESC key to cancel
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    handleCancel();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
     },
 
     /**
