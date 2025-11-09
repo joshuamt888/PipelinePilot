@@ -188,7 +188,7 @@ class SteadyUtils {
                 display: flex;
                 align-items: center;
                 gap: 0.75rem;
-                z-index: 3000;
+                z-index: 11000;
                 opacity: 0;
                 transform: translateX(100%) translateY(20px) scale(0.95);
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
