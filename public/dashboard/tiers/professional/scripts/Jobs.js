@@ -1818,10 +1818,23 @@ window.JobsModule = {
                                 </div>
                             </div>
 
-                            <div class="job-form-row">
+                            <div class="job-form-row single">
                                 <div class="job-form-group">
                                     <label>Client</label>
                                     ${this.jobs_renderLeadSelect(job?.lead_id)}
+                                </div>
+                            </div>
+
+                            <div class="job-form-row triple">
+                                <div class="job-form-group">
+                                    <label>Status <span class="required">*</span></label>
+                                    <select name="status" required>
+                                        ${this.STATUSES.map(status => `
+                                            <option value="${status}" ${(job?.status || 'draft') === status ? 'selected' : ''}>
+                                                ${this.jobs_formatStatus(status)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Job Type</label>
@@ -1838,19 +1851,6 @@ window.JobsModule = {
                                                placeholder="Enter custom job type..." maxlength="25">
                                         <div class="job-char-counter"><span id="customTypeCounter">${job?.custom_job_type?.length || 0}</span> / 25</div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div class="job-form-row">
-                                <div class="job-form-group">
-                                    <label>Status <span class="required">*</span></label>
-                                    <select name="status" required>
-                                        ${this.STATUSES.map(status => `
-                                            <option value="${status}" ${(job?.status || 'draft') === status ? 'selected' : ''}>
-                                                ${this.jobs_formatStatus(status)}
-                                            </option>
-                                        `).join('')}
-                                    </select>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Priority</label>

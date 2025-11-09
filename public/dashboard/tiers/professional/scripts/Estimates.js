@@ -73,6 +73,9 @@ window.EstimatesModule = {
 
         this.estimates_applyFilters();
 
+        // Clear any lingering inline styles from other modules
+        container.removeAttribute('style');
+
         container.innerHTML = `
             ${this.estimates_renderStyles()}
             <div class="estimates-container">
@@ -84,12 +87,10 @@ window.EstimatesModule = {
             </div>
         `;
 
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
+        // Use a single requestAnimationFrame for smoother rendering
+        requestAnimationFrame(() => {
             this.estimates_attachEvents();
-        }, 50);
+        });
     },
 
     /**

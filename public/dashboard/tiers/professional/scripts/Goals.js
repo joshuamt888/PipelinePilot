@@ -96,6 +96,9 @@ async goals_loadAvailableTasks() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        // Clear any lingering inline styles from other modules
+        container.removeAttribute('style');
+
         container.innerHTML = `
             ${this.goals_renderStyles()}
             <div class="goals-container">
@@ -105,13 +108,11 @@ async goals_loadAvailableTasks() {
             </div>
         `;
 
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
+        // Use a single requestAnimationFrame for smoother rendering
+        requestAnimationFrame(() => {
             this.goals_attachEvents();
             this.goals_startCountdownTimer(); // Start live countdown for urgent goals
-        }, 50);
+        });
     },
 
     // INSTANT FILTER CHANGE (no fade - just like Estimates)
@@ -475,8 +476,8 @@ async goals_loadAvailableTasks() {
                         <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
-                                   placeholder="Q4 Revenue Target" autocomplete="off" maxlength="50">
-                            <span class="goals-input-hint" id="titleCounter">50 characters remaining</span>
+                                   placeholder="Q4 Revenue Target" autocomplete="off" maxlength="35">
+                            <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
                         <div class="goals-divider"></div>
@@ -654,8 +655,8 @@ async goals_loadAvailableTasks() {
                             <div class="goals-form-row-v2">
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Target Value</label>
-                                    <input type="number" id="goalTarget" class="goals-form-input-v2"
-                                           placeholder="10000" step="0.01" min="0" max="99999999.99">
+                                    <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                           placeholder="10000" inputmode="decimal">
                                     <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                 </div>
                                 <div class="goals-form-group-v2">
@@ -870,8 +871,8 @@ async goals_loadAvailableTasks() {
                         <!-- TITLE -->
                         <div class="goals-form-group-v2">
                             <input type="text" id="goalTitle" class="goals-form-input-v2 goals-form-input-large"
-                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}" maxlength="50">
-                            <span class="goals-input-hint" id="titleCounter">50 characters remaining</span>
+                                   placeholder="Q4 Revenue Target" autocomplete="off" value="${API.escapeHtml(goal.title)}" maxlength="35">
+                            <span class="goals-input-hint" id="titleCounter">35 characters remaining</span>
                         </div>
 
                         <div class="goals-divider"></div>
@@ -1053,8 +1054,8 @@ async goals_loadAvailableTasks() {
                                 <div class="goals-form-row-v2">
                                     <div class="goals-form-group-v2">
                                         <label class="goals-form-label-v2">Target Value</label>
-                                        <input type="number" id="goalTarget" class="goals-form-input-v2"
-                                               placeholder="10000" value="${goal.target_value}" step="0.01" min="0" max="99999999.99">
+                                        <input type="text" id="goalTarget" class="goals-form-input-v2"
+                                               placeholder="10000" value="${goal.target_value}" inputmode="decimal">
                                         <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                     </div>
                                     <div class="goals-form-group-v2">
