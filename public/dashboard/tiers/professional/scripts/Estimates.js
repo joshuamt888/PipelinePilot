@@ -1397,6 +1397,7 @@ window.EstimatesModule = {
         setTimeout(() => {
             this.estimates_initModalEvents(overlay);
             this.estimates_updateLineItemsTotal();
+            this.estimates_updateLineItemCounter(overlay);
         }, 0);
     },
 
@@ -1494,6 +1495,13 @@ window.EstimatesModule = {
                     margin-bottom: 32px;
                 }
 
+                .estimate-section-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 16px;
+                }
+
                 .estimate-form-section-title {
                     font-size: 14px;
                     font-weight: 600;
@@ -1501,6 +1509,16 @@ window.EstimatesModule = {
                     letter-spacing: 0.5px;
                     color: var(--text-secondary);
                     margin-bottom: 16px;
+                }
+
+                .estimate-section-header .estimate-form-section-title {
+                    margin-bottom: 0;
+                }
+
+                .estimate-line-item-counter {
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: var(--text-tertiary);
                 }
 
                 .estimate-form-row {
@@ -1861,7 +1879,10 @@ window.EstimatesModule = {
 
                     <!-- Line Items -->
                     <div class="estimate-form-section">
-                        <div class="estimate-form-section-title">Line Items</div>
+                        <div class="estimate-section-header">
+                            <div class="estimate-form-section-title">Line Items</div>
+                            <div class="estimate-line-item-counter" id="lineItemCounter">${lineItems.length}/50 line items</div>
+                        </div>
                         <div class="estimate-line-items">
                             <div class="estimate-line-item-header">
                                 <div>Description</div>
@@ -2403,11 +2424,18 @@ window.EstimatesModule = {
         const container = overlay.querySelector('#lineItemsContainer');
         const currentItems = container.querySelectorAll('.estimate-line-item').length;
 
+        // Cap at 50 line items
+        if (currentItems >= 50) {
+            window.SteadyUtils.showToast('Maximum 50 line items allowed', 'warning');
+            return;
+        }
+
         const newItem = { description: '', quantity: 1, rate: 0 };
         const html = this.estimates_renderLineItemRow(newItem, currentItems);
 
         container.insertAdjacentHTML('beforeend', html);
         this.estimates_updateLineItemsTotal();
+        this.estimates_updateLineItemCounter(overlay);
     },
 
     /**
@@ -2431,6 +2459,34 @@ window.EstimatesModule = {
         });
 
         this.estimates_updateLineItemsTotal();
+        this.estimates_updateLineItemCounter(overlay);
+    },
+
+    /**
+     * Update line item counter and button state
+     */
+    estimates_updateLineItemCounter(overlay) {
+        const container = overlay.querySelector('#lineItemsContainer');
+        const counter = overlay.querySelector('#lineItemCounter');
+        const addButton = overlay.querySelector('[data-action="add-line-item"]');
+
+        if (!container || !counter) return;
+
+        const count = container.querySelectorAll('.estimate-line-item').length;
+        counter.textContent = `${count}/50 line items`;
+
+        // Disable add button if at max
+        if (addButton) {
+            if (count >= 50) {
+                addButton.disabled = true;
+                addButton.style.opacity = '0.5';
+                addButton.style.cursor = 'not-allowed';
+            } else {
+                addButton.disabled = false;
+                addButton.style.opacity = '';
+                addButton.style.cursor = '';
+            }
+        }
     },
 
     /**
