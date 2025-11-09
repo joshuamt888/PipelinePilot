@@ -2138,10 +2138,10 @@ estimates_showViewModal(estimateId) {
  * Download professional client copy as printable PDF
  */
 async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
-    // Load html2pdf library if not already loaded
-    if (!window.html2pdf) {
+    // Load jsPDF library if not already loaded
+    if (!window.jspdf) {
         const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
         document.head.appendChild(script);
 
         // Wait for script to load
@@ -2155,118 +2155,182 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
     };
 
-    // Create the HTML content for PDF
-    const content = `
-        <div style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.5; color: #000; padding: 40px; background: white;">
-            <div style="text-align: center; border-bottom: 3px solid #333; padding-bottom: 15px; margin-bottom: 25px;">
-                <h1 style="font-size: 24pt; font-weight: bold; margin-bottom: 5px; color: #333; margin: 0;">${estimate.title || 'Estimate'}</h1>
-                <div style="font-size: 10pt; color: #666;">Estimate #${estimate.estimate_number || 'N/A'}</div>
-            </div>
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        unit: 'in',
+        format: 'letter',
+        orientation: 'portrait'
+    });
 
-            <table style="width: 100%; margin-bottom: 25px;">
-                <tr>
-                    <td style="width: 50%; vertical-align: top;">
-                        ${lead ? `
-                            <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">CLIENT:</span> ${lead.name || ''}</div>
-                            ${lead.email ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">EMAIL:</span> ${lead.email}</div>` : ''}
-                            ${lead.phone ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">PHONE:</span> ${lead.phone}</div>` : ''}
-                        ` : ''}
-                    </td>
-                    <td style="width: 50%; vertical-align: top; text-align: right;">
-                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">DATE:</span> ${new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                        ${estimate.expires_at ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">VALID UNTIL:</span> ${new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
-                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">STATUS:</span> ${this.estimates_formatStatus(estimate.status)}</div>
-                    </td>
-                </tr>
-            </table>
+    let y = 1; // Current Y position
 
-            ${estimate.description ? `
-                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">PROJECT DESCRIPTION</div>
-                <div style="background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; white-space: pre-wrap; font-size: 10pt;">${estimate.description || ''}</div>
-            ` : ''}
+    // Title
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text(estimate.title || 'Estimate', 4.25, y, { align: 'center' });
+    y += 0.3;
 
-            ${lineItems.length > 0 ? `
-                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">SCOPE OF WORK</div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    <thead>
-                        <tr style="background: #333; color: white;">
-                            <th style="padding: 10px; text-align: left; font-weight: bold; font-size: 10pt;">Description</th>
-                            <th style="padding: 10px; width: 80px; text-align: center; font-weight: bold; font-size: 10pt;">Qty</th>
-                            <th style="padding: 10px; width: 100px; text-align: right; font-weight: bold; font-size: 10pt;">Rate</th>
-                            <th style="padding: 10px; width: 120px; text-align: right; font-weight: bold; font-size: 10pt;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${lineItems.map(item => `
-                            <tr>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 10pt;">${item.description || '-'}</td>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 10pt;">${item.quantity}</td>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;">${formatMoney(item.rate)}</td>
-                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;"><strong>${formatMoney(item.quantity * item.rate)}</strong></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+    // Estimate Number
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Estimate #${estimate.estimate_number || 'N/A'}`, 4.25, y, { align: 'center' });
+    y += 0.2;
 
-                <div style="margin: 25px 0; padding: 15px; background: #f5f5f5; border: 2px solid #333;">
-                    <div style="font-size: 12pt; font-weight: bold; color: #333; margin-bottom: 8px;">TOTAL ESTIMATE</div>
-                    <div style="font-size: 28pt; font-weight: bold; color: #000;">${formatMoney(totalPrice)}</div>
-                </div>
-            ` : ''}
+    // Line
+    doc.setLineWidth(0.02);
+    doc.line(0.75, y, 7.75, y);
+    y += 0.4;
 
-            ${estimate.terms ? `
-                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">TERMS & CONDITIONS</div>
-                <div style="background: #f9f9f9; padding: 12px; border-left: 4px solid #333; margin-top: 20px; white-space: pre-wrap; font-size: 9pt; color: #333;">${estimate.terms}</div>
-            ` : ''}
+    // Client Info (Left) and Date Info (Right)
+    doc.setFontSize(10);
+    if (lead) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('CLIENT:', 0.75, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(lead.name || '', 1.5, y);
+        y += 0.2;
 
-            <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9pt; color: #666;">
-                This estimate is valid for the period specified above. Work will commence upon acceptance and deposit receipt.
-            </div>
-        </div>
-    `;
+        if (lead.email) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('EMAIL:', 0.75, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(lead.email, 1.5, y);
+            y += 0.2;
+        }
 
-    // Create temporary container - VISIBLE but hidden visually
-    const element = document.createElement('div');
-    element.innerHTML = content;
-    element.style.position = 'fixed';
-    element.style.top = '0';
-    element.style.left = '0';
-    element.style.width = '8.5in';
-    element.style.opacity = '0';
-    element.style.pointerEvents = 'none';
-    element.style.zIndex = '-1';
-    document.body.appendChild(element);
-
-    // Wait a moment for rendering
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Generate and download PDF
-    const filename = `Estimate-${estimate.estimate_number || 'draft'}.pdf`;
-
-    const opt = {
-        margin: 0.75,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false
-        },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    try {
-        await html2pdf().set(opt).from(element).save();
-        window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        window.SteadyUtils.showToast('Failed to generate PDF', 'error');
-    } finally {
-        // Clean up
-        document.body.removeChild(element);
+        if (lead.phone) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('PHONE:', 0.75, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(lead.phone, 1.5, y);
+            y += 0.2;
+        }
     }
-},
 
+    // Date info on right
+    let yRight = 1.9;
+    doc.setFont('helvetica', 'bold');
+    doc.text('DATE:', 5, yRight);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 5.6, yRight);
+    yRight += 0.2;
+
+    if (estimate.expires_at) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('VALID UNTIL:', 5, yRight);
+        doc.setFont('helvetica', 'normal');
+        doc.text(new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 6.1, yRight);
+        yRight += 0.2;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('STATUS:', 5, yRight);
+    doc.setFont('helvetica', 'normal');
+    const statusText = estimate.status ? estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1) : 'Draft';
+    doc.text(statusText, 5.6, yRight);
+
+    y = Math.max(y, yRight) + 0.4;
+
+    // Description
+    if (estimate.description) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PROJECT DESCRIPTION', 0.75, y);
+        y += 0.05;
+        doc.line(0.75, y, 7.75, y);
+        y += 0.25;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const descLines = doc.splitTextToSize(estimate.description, 6.5);
+        doc.text(descLines, 0.75, y);
+        y += (descLines.length * 0.15) + 0.3;
+    }
+
+    // Line Items
+    if (lineItems.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SCOPE OF WORK', 0.75, y);
+        y += 0.05;
+        doc.line(0.75, y, 7.75, y);
+        y += 0.3;
+
+        // Table header
+        doc.setFillColor(51, 51, 51);
+        doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Description', 0.85, y);
+        doc.text('Qty', 4.5, y, { align: 'center' });
+        doc.text('Rate', 5.5, y, { align: 'right' });
+        doc.text('Amount', 7.5, y, { align: 'right' });
+        y += 0.25;
+
+        // Table rows
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        lineItems.forEach((item, idx) => {
+            doc.text(item.description || '-', 0.85, y);
+            doc.text(String(item.quantity), 4.5, y, { align: 'center' });
+            doc.text(formatMoney(item.rate), 5.5, y, { align: 'right' });
+            doc.setFont('helvetica', 'bold');
+            doc.text(formatMoney(item.quantity * item.rate), 7.5, y, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+            y += 0.2;
+
+            // Line under each row
+            doc.setDrawColor(221, 221, 221);
+            doc.line(0.75, y - 0.05, 7.75, y - 0.05);
+        });
+
+        y += 0.2;
+
+        // Total box
+        doc.setFillColor(245, 245, 245);
+        doc.setDrawColor(51, 51, 51);
+        doc.setLineWidth(0.02);
+        doc.rect(0.75, y, 7, 0.6, 'FD');
+        y += 0.2;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL ESTIMATE', 0.85, y);
+        y += 0.25;
+
+        doc.setFontSize(22);
+        doc.text(formatMoney(totalPrice), 0.85, y);
+        y += 0.4;
+    }
+
+    // Terms
+    if (estimate.terms) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TERMS & CONDITIONS', 0.75, y);
+        y += 0.05;
+        doc.line(0.75, y, 7.75, y);
+        y += 0.25;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const termsLines = doc.splitTextToSize(estimate.terms, 6.5);
+        doc.text(termsLines, 0.75, y);
+        y += (termsLines.length * 0.12) + 0.3;
+    }
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('This estimate is valid for the period specified above. Work will commence upon acceptance and deposit receipt.', 4.25, 10.5, { align: 'center' });
+
+    // Save PDF
+    const filename = `Estimate-${estimate.estimate_number || 'draft'}.pdf`;
+    doc.save(filename);
+
+    window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
+},
 /**
  * DEPRECATED - Old print version
  */
