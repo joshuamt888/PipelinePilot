@@ -3189,7 +3189,7 @@ modal.addEventListener('mouseup', (e) => {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.3);
+                    background: rgba(0, 0, 0, 0.6);
                     z-index: 10000;
                     display: flex;
                     align-items: center;
@@ -3211,8 +3211,8 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-modal {
                     background: var(--surface);
-                    border-radius: var(--radius-lg);
-                    box-shadow: var(--shadow-xl);
+                    border-radius: 12px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                     width: 100%;
                     max-width: 600px;
                     max-height: 90vh;
@@ -3227,7 +3227,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-modal-header {
-                    padding: 2rem 2rem 1rem;
+                    padding: 24px;
                     border-bottom: 1px solid var(--border);
                     display: flex;
                     justify-content: space-between;
@@ -3235,31 +3235,34 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-modal-title {
-                    font-size: 1.5rem;
-                    font-weight: 700;
+                    font-size: 24px;
+                    font-weight: 600;
                     color: var(--text-primary);
                     margin: 0;
                 }
 
                 .scheduling-modal-close {
-                    background: none;
+                    background: transparent;
                     border: none;
-                    font-size: 1.5rem;
+                    font-size: 28px;
                     color: var(--text-secondary);
                     cursor: pointer;
-                    width: 2rem;
-                    height: 2rem;
-                    border-radius: var(--radius);
-                    transition: all 0.3s ease;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
                 }
 
                 .scheduling-modal-close:hover {
-                    background: var(--danger);
-                    color: white;
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
                 }
 
                 .scheduling-modal-body {
-                    padding: 2rem;
+                    padding: 24px;
                     overflow-y: auto;
                     max-height: 60vh;
                 }
@@ -3280,7 +3283,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-form-group {
                     display: flex;
                     flex-direction: column;
-                    gap: 0.5rem;
+                    gap: 8px;
                 }
 
                 .scheduling-form-group.scheduling-full-width {
@@ -3288,20 +3291,20 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-form-label {
-                    font-weight: 600;
+                    font-weight: 500;
                     color: var(--text-primary);
-                    font-size: 0.9rem;
+                    font-size: 14px;
                 }
 
                 .scheduling-form-input,
                 .scheduling-form-textarea {
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s ease;
+                    transition: all 0.2s;
                     font-family: inherit;
                 }
 
@@ -3309,7 +3312,6 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-form-textarea:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
                 .scheduling-input-warning {
@@ -3345,36 +3347,33 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-form-select {
-                    padding: 0.875rem 3rem 0.875rem 1.25rem;
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    padding-right: 40px !important;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: all 0.2s;
                     font-family: inherit;
                     font-weight: 500;
                     cursor: pointer;
                     appearance: none;
                     -webkit-appearance: none;
                     -moz-appearance: none;
-                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-                    background-position: right 1rem center;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                     background-repeat: no-repeat;
-                    background-size: 1.25rem;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    background-position: right 12px center;
+                    background-size: 16px;
                 }
 
                 .scheduling-form-select:hover {
                     border-color: var(--primary);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
                 }
 
                 .scheduling-form-select:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
                 }
 
                 /* Priority Glow */
@@ -3414,12 +3413,12 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-lead-selector-display {
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
                     background: var(--background);
                     cursor: pointer;
-                    transition: all 0.3s ease;
+                    transition: all 0.2s;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -3427,8 +3426,6 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-lead-selector-display:hover {
                     border-color: var(--primary);
-                    background: var(--surface-hover);
-                    transform: translateY(-1px);
                 }
 
                 .scheduling-selected-lead {
@@ -4254,39 +4251,38 @@ modal.addEventListener('mouseup', (e) => {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding-top: 1rem;
+                    padding-top: 20px;
                     border-top: 1px solid var(--border);
                 }
 
                 .scheduling-form-actions-right {
                     display: flex;
-                    gap: 1rem;
+                    gap: 12px;
                 }
 
                 .scheduling-btn-primary,
                 .scheduling-btn-secondary,
                 .scheduling-btn-danger {
-                    padding: 0.875rem 2rem;
-                    border-radius: var(--radius);
-                    font-weight: 600;
-                    font-size: 0.95rem;
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-weight: 500;
+                    font-size: 14px;
                     cursor: pointer;
-                    transition: all 0.3s ease;
-                    border: none;
+                    transition: all 0.2s;
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
                 }
 
                 .scheduling-btn-primary {
-                    background: var(--primary);
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
+                    border: none;
                 }
 
                 .scheduling-btn-primary:hover:not(:disabled) {
-                    background: var(--primary-dark);
-                    transform: translateY(-1px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
                 }
 
                 .scheduling-btn-primary:disabled {
@@ -4295,15 +4291,13 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-btn-secondary {
-                    background: var(--surface-hover);
+                    background: transparent;
                     color: var(--text-primary);
                     border: 1px solid var(--border);
                 }
 
                 .scheduling-btn-secondary:hover {
-                    background: var(--border);
-                    border-color: var(--primary);
-                    color: var(--primary);
+                    background: var(--surface-hover);
                 }
 
                 .scheduling-btn-danger {
