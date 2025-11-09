@@ -38,7 +38,7 @@ window.EstimatesModule = {
      */
     async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
-        // No loading message - direct load like Goals
+        this.estimates_showLoading();
 
         try {
             // Load estimates and leads in parallel
@@ -87,8 +87,10 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Attach events after DOM is ready
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
+            container.style.opacity = '1';
             this.estimates_attachEvents();
         }, 50);
     },
@@ -3507,7 +3509,8 @@ window.EstimatesModule = {
     estimates_showLoading() {
         const container = document.getElementById(this.state.container);
         if (container) {
-            container.innerHTML = '<div style="text-align: center; padding: 60px; color: var(--text-secondary);">Loading estimates...</div>';
+            container.style.opacity = '0';
+            container.innerHTML = `<div style="min-height: 400px;"></div>`;
         }
     },
 
