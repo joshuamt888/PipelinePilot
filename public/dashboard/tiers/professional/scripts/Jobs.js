@@ -15,7 +15,7 @@ window.JobsModule = {
         // UI state
         searchQuery: '',
         sortBy: 'date_new',
-        activeFilter: 'all', // all, in_progress, completed
+        activeFilter: 'all', // all, draft, scheduled, in_progress, completed, invoiced, paid, cancelled
 
         // Batch mode
         batchMode: false,
@@ -27,11 +27,16 @@ window.JobsModule = {
         // Limits
         jobLimit: 1000,
 
-        // Stats
-        stats: {
-            totalRevenue: 0,
-            totalProfit: 0,
-            avgMargin: 0
+        // Status counts
+        statusCounts: {
+            all: 0,
+            draft: 0,
+            scheduled: 0,
+            in_progress: 0,
+            completed: 0,
+            invoiced: 0,
+            paid: 0,
+            cancelled: 0
         },
 
         // Custom job type
@@ -112,13 +117,13 @@ window.JobsModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        // Update stats active state
-        const statCards = container.querySelectorAll('.jobs-stat-card');
-        statCards.forEach(card => {
-            if (card.dataset.filter === this.state.activeFilter) {
-                card.classList.add('active');
+        // Update status filters active state
+        const statusBoxes = container.querySelectorAll('.jobs-status-box');
+        statusBoxes.forEach(box => {
+            if (box.dataset.filter === this.state.activeFilter) {
+                box.classList.add('active');
             } else {
-                card.classList.remove('active');
+                box.classList.remove('active');
             }
         });
 
@@ -145,10 +150,8 @@ window.JobsModule = {
         let filtered = [...this.state.jobs];
 
         // Filter by status
-        if (this.state.activeFilter === 'in_progress') {
-            filtered = filtered.filter(j => j.status === 'in_progress');
-        } else if (this.state.activeFilter === 'completed') {
-            filtered = filtered.filter(j => j.status === 'completed' || j.status === 'invoiced' || j.status === 'paid');
+        if (this.state.activeFilter !== 'all') {
+            filtered = filtered.filter(j => j.status === this.state.activeFilter);
         }
 
         // Search
@@ -179,15 +182,21 @@ window.JobsModule = {
     },
 
     /**
-     * Calculate stats
+     * Calculate status counts
      */
     jobs_calculateStats() {
         const all = this.state.jobs;
-        const totalRevenue = all.reduce((sum, j) => sum + (j.final_price || j.quoted_price || 0), 0);
-        const totalProfit = all.reduce((sum, j) => sum + (j.profit || 0), 0);
-        const avgMargin = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
 
-        this.state.stats = { totalRevenue, totalProfit, avgMargin };
+        this.state.statusCounts = {
+            all: all.length,
+            draft: all.filter(j => j.status === 'draft').length,
+            scheduled: all.filter(j => j.status === 'scheduled').length,
+            in_progress: all.filter(j => j.status === 'in_progress').length,
+            completed: all.filter(j => j.status === 'completed').length,
+            invoiced: all.filter(j => j.status === 'invoiced').length,
+            paid: all.filter(j => j.status === 'paid').length,
+            cancelled: all.filter(j => j.status === 'cancelled').length
+        };
     },
 
     /**
@@ -233,48 +242,52 @@ window.JobsModule = {
     },
 
     jobs_renderStats() {
-        const { totalRevenue, totalProfit, avgMargin } = this.state.stats;
+        const counts = this.state.statusCounts;
 
         return `
-            <div class="jobs-stats">
-                <div class="jobs-stat-card ${this.state.activeFilter === 'all' ? 'active' : ''}"
-                     data-filter="all" data-action="filter-stat">
-                    <div class="jobs-stat-icon revenue">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round"/>
-                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
+            <div class="jobs-status-filters">
+                <div class="jobs-status-row">
+                    <div class="jobs-status-box ${this.state.activeFilter === 'all' ? 'active' : ''}"
+                         data-filter="all" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.all}</div>
+                        <div class="jobs-status-label">All</div>
                     </div>
-                    <div class="jobs-stat-content">
-                        <div class="jobs-stat-value">${formatCurrency(totalRevenue)}</div>
-                        <div class="jobs-stat-label">Total Revenue</div>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'draft' ? 'active' : ''}"
+                         data-filter="draft" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.draft}</div>
+                        <div class="jobs-status-label">Draft</div>
                     </div>
-                </div>
-
-                <div class="jobs-stat-card ${this.state.activeFilter === 'in_progress' ? 'active' : ''}"
-                     data-filter="in_progress" data-action="filter-stat">
-                    <div class="jobs-stat-icon profit">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'scheduled' ? 'active' : ''}"
+                         data-filter="scheduled" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.scheduled}</div>
+                        <div class="jobs-status-label">Scheduled</div>
                     </div>
-                    <div class="jobs-stat-content">
-                        <div class="jobs-stat-value">${formatCurrency(totalProfit)}</div>
-                        <div class="jobs-stat-label">Total Profit</div>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'in_progress' ? 'active' : ''}"
+                         data-filter="in_progress" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.in_progress}</div>
+                        <div class="jobs-status-label">In Progress</div>
                     </div>
                 </div>
-
-                <div class="jobs-stat-card ${this.state.activeFilter === 'completed' ? 'active' : ''}"
-                     data-filter="completed" data-action="filter-stat">
-                    <div class="jobs-stat-icon margin">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <polyline points="17 6 23 6 23 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                <div class="jobs-status-row">
+                    <div class="jobs-status-box ${this.state.activeFilter === 'completed' ? 'active' : ''}"
+                         data-filter="completed" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.completed}</div>
+                        <div class="jobs-status-label">Completed</div>
                     </div>
-                    <div class="jobs-stat-content">
-                        <div class="jobs-stat-value">${avgMargin}%</div>
-                        <div class="jobs-stat-label">Avg Margin</div>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'invoiced' ? 'active' : ''}"
+                         data-filter="invoiced" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.invoiced}</div>
+                        <div class="jobs-status-label">Invoiced</div>
+                    </div>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'paid' ? 'active' : ''}"
+                         data-filter="paid" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.paid}</div>
+                        <div class="jobs-status-label">Paid</div>
+                    </div>
+                    <div class="jobs-status-box ${this.state.activeFilter === 'cancelled' ? 'active' : ''}"
+                         data-filter="cancelled" data-action="filter-status">
+                        <div class="jobs-status-count">${counts.cancelled}</div>
+                        <div class="jobs-status-label">Cancelled</div>
                     </div>
                 </div>
             </div>
@@ -529,7 +542,7 @@ window.JobsModule = {
                 case 'toggle-selection':
                     this.jobs_toggleSelection(id);
                     break;
-                case 'filter-stat':
+                case 'filter-status':
                     const filter = target.dataset.filter;
                     this.jobs_instantFilterChange(filter);
                     break;
@@ -1282,6 +1295,81 @@ window.JobsModule = {
                     padding: 3rem 1rem;
                     color: var(--text-tertiary);
                     font-size: 14px;
+                }
+
+                /* Photo Type Modal */
+                .job-photo-type-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.2s ease;
+                }
+
+                .job-photo-type-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 450px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                .job-photo-type-header {
+                    padding: 1.5rem 2rem;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .job-photo-type-header h3 {
+                    margin: 0;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .job-photo-type-body {
+                    padding: 2rem;
+                }
+
+                .job-photo-type-body label {
+                    display: block;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: var(--text-primary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .job-photo-type-body input {
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: var(--background);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    font-size: 14px;
+                    color: var(--text-primary);
+                    transition: all 0.2s;
+                }
+
+                .job-photo-type-body input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                .job-photo-type-footer {
+                    padding: 1rem 2rem 1.5rem;
+                    display: flex;
+                    gap: 1rem;
+                    justify-content: flex-end;
                 }
 
                 /* Materials/Crew Table */
@@ -2531,20 +2619,83 @@ window.JobsModule = {
         // Read file as data URL
         const reader = new FileReader();
         reader.onload = (e) => {
-            const photoType = prompt('Photo type (before, during, after):', 'before');
-            if (!photoType || !['before', 'during', 'after'].includes(photoType.toLowerCase())) {
-                window.SteadyUtils.showToast('Invalid photo type', 'error');
+            // Show photo type modal
+            this.jobs_showPhotoTypeModal(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    },
+
+    jobs_showPhotoTypeModal(photoDataUrl) {
+        const modalHtml = `
+            <div class="job-photo-type-overlay" id="photoTypeModal">
+                <div class="job-photo-type-modal">
+                    <div class="job-photo-type-header">
+                        <h3>Add Photo Type</h3>
+                        <button type="button" class="job-modal-close" data-action="close-photo-type">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="job-photo-type-body">
+                        <label>Photo Type</label>
+                        <input type="text" id="photoTypeInput" maxlength="20" placeholder="e.g., before, during, after" autofocus>
+                        <div class="job-char-counter">
+                            <span id="photoTypeCounter">0</span> / 20
+                        </div>
+                    </div>
+                    <div class="job-photo-type-footer">
+                        <button type="button" class="job-btn-secondary" data-action="close-photo-type">Cancel</button>
+                        <button type="button" class="job-btn-primary" data-action="save-photo-type">Add Photo</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('photoTypeModal');
+        const input = document.getElementById('photoTypeInput');
+        const counter = document.getElementById('photoTypeCounter');
+
+        // Character counter
+        input.addEventListener('input', () => {
+            counter.textContent = input.value.length;
+        });
+
+        // Close handlers
+        modal.querySelectorAll('[data-action="close-photo-type"]').forEach(btn => {
+            btn.addEventListener('click', () => modal.remove());
+        });
+
+        // Save handler
+        modal.querySelector('[data-action="save-photo-type"]').addEventListener('click', () => {
+            const photoType = input.value.trim();
+            if (!photoType) {
+                window.SteadyUtils.showToast('Please enter a photo type', 'warning');
                 return;
             }
 
             this.state.modalState.photos.push({
-                url: e.target.result,
-                type: photoType.toLowerCase()
+                url: photoDataUrl,
+                type: photoType
             });
 
             this.jobs_refreshPhotos();
-        };
-        reader.readAsDataURL(file);
+            modal.remove();
+            window.SteadyUtils.showToast('Photo added successfully', 'success');
+        });
+
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        // Enter to save
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                modal.querySelector('[data-action="save-photo-type"]').click();
+            }
+        });
     },
 
     async jobs_handleSave() {
@@ -2929,81 +3080,58 @@ window.JobsModule = {
     border-color: #667eea;
 }
 
-/* STATS */
-.jobs-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+/* STATUS FILTERS */
+.jobs-status-filters {
     margin-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.jobs-stat-card {
+.jobs-status-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.jobs-status-box {
     background: var(--surface);
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
+    padding: 1.5rem 1rem;
+    text-align: center;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-.jobs-stat-card:hover {
-    border-color: #667eea;
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+.jobs-status-box:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
-.jobs-stat-card.active {
-    border-color: #667eea;
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+.jobs-status-box.active {
+    border-color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
-.jobs-stat-icon {
-    width: 4rem;
-    height: 4rem;
-    border-radius: var(--radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.jobs-stat-icon.revenue {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
-}
-
-.jobs-stat-icon.profit {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
-}
-
-.jobs-stat-icon.margin {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
-}
-
-.jobs-stat-icon svg {
-    width: 2rem;
-    height: 2rem;
-    stroke-width: 2;
-}
-
-.jobs-stat-icon.revenue svg { stroke: #667eea; }
-.jobs-stat-icon.profit svg { stroke: #10b981; }
-.jobs-stat-icon.margin svg { stroke: #fbbf24; }
-
-.jobs-stat-content { flex: 1; }
-
-.jobs-stat-value {
-    font-size: 2.5rem;
-    font-weight: 900;
+.jobs-status-count {
+    font-size: 2rem;
+    font-weight: 800;
     color: var(--text-primary);
     line-height: 1;
     margin-bottom: 0.5rem;
 }
 
-.jobs-stat-label {
-    font-size: 0.95rem;
+.jobs-status-box.active .jobs-status-count {
+    color: var(--primary);
+}
+
+.jobs-status-label {
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -3492,8 +3620,8 @@ window.JobsModule = {
         align-items: stretch;
     }
 
-    .jobs-stats {
-        grid-template-columns: 1fr;
+    .jobs-status-row {
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .jobs-grid {
