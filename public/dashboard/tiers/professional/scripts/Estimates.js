@@ -5,9 +5,6 @@ window.EstimatesModule = {
         leads: [],
         container: 'estimates-content',
         currentFilter: 'all', // 'all', 'accepted', 'pending'
-        editingEstimateId: null,
-        batchEditMode: false,
-        selectedEstimateIds: [],
         stats: null
     },
 
@@ -204,53 +201,17 @@ window.EstimatesModule = {
             sectionTitle = 'Pending Estimates';
         }
 
-        const selectedCount = this.state.selectedEstimateIds.length;
-
         return `
             <div class="estimates-section">
-                ${estimatesToShow.length > 0 ? `
-                    <div class="estimates-toolbar">
-                        <button class="estimates-btn-batch-edit ${this.state.batchEditMode ? 'active' : ''}" data-action="toggle-batch-edit">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            ${this.state.batchEditMode ? `Cancel (${selectedCount} selected)` : 'Select Multiple'}
-                        </button>
-                    </div>
-                ` : ''}
-
                 <div class="estimates-section-header">
                     <h2 class="estimates-section-title">${sectionTitle}</h2>
-                    <div class="estimates-search-container">
-                        <svg class="estimates-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="11" cy="11" r="8" stroke-width="2"/>
-                            <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        <input type="text"
-                               id="estimatesSearchInput"
-                               class="estimates-search-input"
-                               placeholder="Search estimates..."
-                               autocomplete="off">
-                    </div>
-                    <span class="estimates-section-count" id="estimatesCount">${estimatesToShow.length}</span>
+                    <span class="estimates-section-count">${estimatesToShow.length}</span>
                 </div>
 
                 ${estimatesToShow.length > 0 ? `
                     <div class="estimates-grid">
                         ${estimatesToShow.map(estimate => this.estimates_renderEstimateCard(estimate)).join('')}
                     </div>
-                    ${this.state.batchEditMode && selectedCount > 0 ? `
-                        <div class="estimates-batch-actions">
-                            <button class="estimates-batch-btn estimates-batch-btn-delete" data-action="batch-delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Delete Selected (${selectedCount})
-                            </button>
-                        </div>
-                    ` : ''}
                 ` : `
                     <div class="estimates-empty">
                         <svg class="estimates-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -272,7 +233,6 @@ window.EstimatesModule = {
     estimates_renderEstimateCard(estimate) {
         const lead = this.state.leads.find(l => l.id === estimate.lead_id);
         const leadName = lead ? lead.name : 'Unknown Lead';
-        const isSelected = this.state.selectedEstimateIds.includes(estimate.id);
 
         // Status classes and colors
         let statusClass = 'draft';
@@ -286,24 +246,10 @@ window.EstimatesModule = {
         }
 
         return `
-            <div class="estimates-card estimates-card-${statusClass} ${this.state.batchEditMode ? 'batch-mode' : ''} ${isSelected ? 'selected' : ''}"
-                 data-action="${this.state.batchEditMode ? 'toggle-estimate-selection' : 'view-estimate'}"
+            <div class="estimates-card estimates-card-${statusClass}"
+                 data-action="view-estimate"
                  data-id="${estimate.id}">
                 <div class="estimates-card-accent" style="background: ${statusColor}"></div>
-
-                ${this.state.batchEditMode ? `
-                    <div class="estimates-card-checkbox">
-                        <input type="checkbox"
-                               class="estimates-checkbox-input"
-                               ${isSelected ? 'checked' : ''}
-                               data-estimate-id="${estimate.id}">
-                        <div class="estimates-checkbox-custom">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                    </div>
-                ` : ''}
 
                 <div class="estimates-card-header">
                     <h3 class="estimates-card-title">${API.escapeHtml(estimate.title || 'Untitled Estimate')}</h3>
@@ -374,12 +320,6 @@ window.EstimatesModule = {
                 case 'view-estimate':
                     this.estimates_showDetailModal(id);
                     break;
-                case 'edit-estimate':
-                    this.estimates_showEditModal(id);
-                    break;
-                case 'delete-estimate':
-                    this.estimates_showDeleteModal(id);
-                    break;
                 case 'filter-all':
                     await this.estimates_smoothFilterChange('all');
                     break;
@@ -389,226 +329,8 @@ window.EstimatesModule = {
                 case 'filter-pending':
                     await this.estimates_smoothFilterChange('pending');
                     break;
-                case 'toggle-batch-edit':
-                    this.estimates_toggleBatchEditMode();
-                    break;
-                case 'toggle-estimate-selection':
-                    this.estimates_toggleEstimateSelection(id);
-                    break;
-                case 'batch-delete':
-                    this.estimates_showBatchDeleteModal();
-                    break;
             }
         };
-
-        // SEARCH INPUT - Client-side filtering ONLY
-        const searchInput = container.querySelector('#estimatesSearchInput');
-        if (searchInput) {
-            searchInput.oninput = (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                const cards = container.querySelectorAll('.estimates-card');
-                const countBadge = container.querySelector('#estimatesCount');
-
-                if (!query) {
-                    // Show all cards
-                    cards.forEach(card => card.style.display = '');
-                    if (countBadge) countBadge.textContent = cards.length;
-                } else {
-                    // Filter cards
-                    let visibleCount = 0;
-                    cards.forEach(card => {
-                        const titleEl = card.querySelector('.estimates-card-title');
-                        const numberEl = card.querySelector('.estimates-card-number');
-                        const leadEl = card.querySelector('.estimates-card-lead');
-
-                        const title = titleEl ? titleEl.textContent.toLowerCase() : '';
-                        const number = numberEl ? numberEl.textContent.toLowerCase() : '';
-                        const lead = leadEl ? leadEl.textContent.toLowerCase() : '';
-
-                        if (title.includes(query) || number.includes(query) || lead.includes(query)) {
-                            card.style.display = '';
-                            visibleCount++;
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
-                    if (countBadge) countBadge.textContent = visibleCount;
-                }
-            };
-        }
-    },
-
-    // BATCH EDIT MODE TOGGLE
-    estimates_toggleBatchEditMode() {
-        this.state.batchEditMode = !this.state.batchEditMode;
-
-        if (!this.state.batchEditMode) {
-            // Clear selections when exiting
-            this.state.selectedEstimateIds = [];
-        }
-
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
-
-        const allCards = container.querySelectorAll('.estimates-card');
-        const batchBtn = container.querySelector('[data-action="toggle-batch-edit"]');
-
-        if (this.state.batchEditMode) {
-            // ENTER BATCH MODE
-            allCards.forEach(card => {
-                card.classList.add('batch-mode');
-                card.dataset.action = 'toggle-estimate-selection';
-
-                // Add checkbox
-                const estimateId = card.dataset.id;
-                const checkbox = document.createElement('div');
-                checkbox.className = 'estimates-card-checkbox';
-                checkbox.innerHTML = `
-                    <input type="checkbox"
-                           class="estimates-checkbox-input"
-                           data-estimate-id="${estimateId}">
-                    <div class="estimates-checkbox-custom">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                `;
-                card.insertBefore(checkbox, card.firstChild);
-            });
-
-            // Update button
-            if (batchBtn) {
-                batchBtn.classList.add('active');
-                batchBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Cancel (0 selected)
-                `;
-            }
-
-        } else {
-            // EXIT BATCH MODE
-            allCards.forEach(card => {
-                card.classList.remove('batch-mode', 'selected');
-                card.dataset.action = 'view-estimate';
-
-                // Remove checkbox
-                const checkbox = card.querySelector('.estimates-card-checkbox');
-                if (checkbox) checkbox.remove();
-            });
-
-            // Update button
-            if (batchBtn) {
-                batchBtn.classList.remove('active');
-                batchBtn.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Select Multiple
-                `;
-            }
-
-            // Remove batch actions bar
-            const batchActions = container.querySelector('.estimates-batch-actions');
-            if (batchActions) batchActions.remove();
-        }
-    },
-
-    // TOGGLE ESTIMATE SELECTION
-    estimates_toggleEstimateSelection(estimateId) {
-        const index = this.state.selectedEstimateIds.indexOf(estimateId);
-        if (index > -1) {
-            // Remove from selection
-            this.state.selectedEstimateIds.splice(index, 1);
-        } else {
-            // Add to selection
-            this.state.selectedEstimateIds.push(estimateId);
-        }
-
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
-
-        // Update the specific card
-        const card = container.querySelector(`[data-id="${estimateId}"]`);
-        if (card) {
-            if (index > -1) {
-                // Was deselected
-                card.classList.remove('selected');
-                const checkbox = card.querySelector('.estimates-checkbox-input');
-                if (checkbox) checkbox.checked = false;
-            } else {
-                // Was selected
-                card.classList.add('selected');
-                const checkbox = card.querySelector('.estimates-checkbox-input');
-                if (checkbox) checkbox.checked = true;
-            }
-        }
-
-        // Update button text
-        const selectedCount = this.state.selectedEstimateIds.length;
-        const batchBtn = container.querySelector('[data-action="toggle-batch-edit"]');
-        if (batchBtn) {
-            batchBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Cancel (${selectedCount} selected)
-            `;
-        }
-
-        // Update or create batch actions bar
-        this.estimates_updateBatchActionsBar();
-    },
-
-    // UPDATE BATCH ACTIONS BAR
-    estimates_updateBatchActionsBar() {
-        const container = document.getElementById(this.state.container);
-        if (!container) return;
-
-        const selectedCount = this.state.selectedEstimateIds.length;
-        const estimatesGrid = container.querySelector('.estimates-grid');
-        let batchActions = container.querySelector('.estimates-batch-actions');
-
-        if (selectedCount > 0) {
-            // Create or update batch actions bar
-            const actionsHTML = `
-                <button class="estimates-batch-btn estimates-batch-btn-delete" data-action="batch-delete">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <polyline points="3 6 5 6 21 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    Delete Selected (${selectedCount})
-                </button>
-            `;
-
-            if (!batchActions) {
-                // Create new bar
-                batchActions = document.createElement('div');
-                batchActions.className = 'estimates-batch-actions';
-                batchActions.style.opacity = '0';
-                batchActions.innerHTML = actionsHTML;
-                estimatesGrid.parentNode.appendChild(batchActions);
-
-                // Fade in
-                setTimeout(() => {
-                    batchActions.style.transition = 'opacity 0.3s ease';
-                    batchActions.style.opacity = '1';
-                }, 10);
-            } else {
-                // Update existing bar
-                batchActions.innerHTML = actionsHTML;
-            }
-        } else {
-            // Remove batch actions bar
-            if (batchActions) {
-                batchActions.style.opacity = '0';
-                setTimeout(() => batchActions.remove(), 300);
-            }
-        }
     },
 
     // UTILITY FUNCTIONS
@@ -647,19 +369,7 @@ window.EstimatesModule = {
         console.log('Detail modal for', id);
     },
 
-    estimates_showEditModal(id) {
-        console.log('Edit modal for', id);
-    },
-
-    estimates_showDeleteModal(id) {
-        console.log('Delete modal for', id);
-    },
-
-    estimates_showBatchDeleteModal() {
-        console.log('Batch delete modal');
-    },
-
-    // RENDER STYLES (matching Goals exactly, just renamed)
+    // RENDER STYLES
     estimates_renderStyles() {
         return `
             <style>
@@ -835,47 +545,10 @@ window.EstimatesModule = {
                     margin-bottom: 2rem;
                 }
 
-                .estimates-toolbar {
-                    display: flex;
-                    justify-content: flex-end;
-                    margin-bottom: 1.5rem;
-                }
-
-                .estimates-btn-batch-edit {
-                    background: var(--surface);
-                    border: 2px solid var(--border);
-                    color: var(--text-primary);
-                    padding: 0.75rem 1.25rem;
-                    border-radius: var(--radius-lg);
-                    font-size: 0.9375rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    transition: all 0.2s ease;
-                }
-
-                .estimates-btn-batch-edit:hover {
-                    border-color: #667eea;
-                    background: rgba(102, 126, 234, 0.05);
-                }
-
-                .estimates-btn-batch-edit.active {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border-color: transparent;
-                }
-
-                .estimates-btn-batch-edit svg {
-                    width: 1.125rem;
-                    height: 1.125rem;
-                }
-
                 .estimates-section-header {
                     display: flex;
                     align-items: center;
-                    gap: 1.5rem;
+                    justify-content: space-between;
                     margin-bottom: 1.5rem;
                 }
 
@@ -884,41 +557,6 @@ window.EstimatesModule = {
                     font-weight: 600;
                     color: var(--text-primary);
                     margin: 0;
-                    flex-shrink: 0;
-                }
-
-                .estimates-search-container {
-                    flex: 1;
-                    position: relative;
-                    max-width: 600px;
-                }
-
-                .estimates-search-icon {
-                    position: absolute;
-                    left: 1rem;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    width: 1.125rem;
-                    height: 1.125rem;
-                    color: var(--text-tertiary);
-                    pointer-events: none;
-                }
-
-                .estimates-search-input {
-                    width: 100%;
-                    padding: 0.875rem 1rem 0.875rem 2.75rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius-lg);
-                    background: var(--surface);
-                    color: var(--text-primary);
-                    font-size: 0.9375rem;
-                    transition: all 0.2s ease;
-                }
-
-                .estimates-search-input:focus {
-                    outline: none;
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
                 }
 
                 .estimates-section-count {
@@ -929,7 +567,6 @@ window.EstimatesModule = {
                     border-radius: var(--radius-lg);
                     font-size: 0.9375rem;
                     font-weight: 600;
-                    flex-shrink: 0;
                 }
 
                 /* Grid */
@@ -957,66 +594,12 @@ window.EstimatesModule = {
                     transform: translateY(-2px);
                 }
 
-                .estimates-card.batch-mode {
-                    padding-left: 3.5rem;
-                }
-
-                .estimates-card.selected {
-                    border-color: #667eea;
-                    background: rgba(102, 126, 234, 0.05);
-                }
-
                 .estimates-card-accent {
                     position: absolute;
                     left: 0;
                     top: 0;
                     bottom: 0;
                     width: 5px;
-                }
-
-                .estimates-card-checkbox {
-                    position: absolute;
-                    left: 1.25rem;
-                    top: 1.5rem;
-                    z-index: 10;
-                }
-
-                .estimates-checkbox-input {
-                    position: absolute;
-                    opacity: 0;
-                    cursor: pointer;
-                    width: 1.5rem;
-                    height: 1.5rem;
-                    margin: 0;
-                }
-
-                .estimates-checkbox-custom {
-                    width: 1.5rem;
-                    height: 1.5rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    background: var(--surface);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.2s ease;
-                }
-
-                .estimates-checkbox-input:checked ~ .estimates-checkbox-custom {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-color: transparent;
-                }
-
-                .estimates-checkbox-custom svg {
-                    width: 1rem;
-                    height: 1rem;
-                    color: white;
-                    opacity: 0;
-                    transition: opacity 0.2s ease;
-                }
-
-                .estimates-checkbox-input:checked ~ .estimates-checkbox-custom svg {
-                    opacity: 1;
                 }
 
                 .estimates-card-header {
@@ -1122,47 +705,6 @@ window.EstimatesModule = {
                 .estimates-card-items svg {
                     width: 1rem;
                     height: 1rem;
-                }
-
-                /* Batch Actions */
-                .estimates-batch-actions {
-                    margin-top: 1.5rem;
-                    padding: 1.25rem;
-                    background: var(--surface);
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius-lg);
-                    display: flex;
-                    gap: 1rem;
-                    justify-content: center;
-                }
-
-                .estimates-batch-btn {
-                    padding: 0.875rem 1.5rem;
-                    border-radius: var(--radius-lg);
-                    font-size: 0.9375rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    transition: all 0.2s ease;
-                    border: 2px solid transparent;
-                }
-
-                .estimates-batch-btn svg {
-                    width: 1.125rem;
-                    height: 1.125rem;
-                }
-
-                .estimates-batch-btn-delete {
-                    background: rgba(239, 68, 68, 0.1);
-                    color: #ef4444;
-                    border-color: transparent;
-                }
-
-                .estimates-batch-btn-delete:hover {
-                    background: #ef4444;
-                    color: white;
                 }
 
                 /* Empty State */
