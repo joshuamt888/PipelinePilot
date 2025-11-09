@@ -1060,6 +1060,46 @@ class TierScalingAPI {
   }
 
   /**
+   * Batch update jobs
+   * @param {Array<string>} jobIds - Array of job UUIDs
+   * @param {Object} updates - Fields to update
+   * @returns {Promise<Object>} Result object
+   * Example: batchUpdateJobs(['id1', 'id2'], { status: 'completed' })
+   */
+  static async batchUpdateJobs(jobIds, updates) {
+    const response = await fetch(`${this.baseUrl}/jobs/batch-update`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ job_ids: jobIds, updates })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Batch update failed: ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Batch delete jobs
+   * @param {Array<string>} jobIds - Array of job UUIDs to delete
+   * @returns {Promise<Object>} Result object
+   */
+  static async batchDeleteJobs(jobIds) {
+    const response = await fetch(`${this.baseUrl}/jobs/batch-delete`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ job_ids: jobIds })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Batch delete failed: ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
    * Get jobs by lead ID
    * @param {string} leadId - Lead UUID
    * @returns {Promise<Array>} Array of jobs for this lead

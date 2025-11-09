@@ -877,14 +877,1491 @@ window.JobsModule = {
         }
     },
 
-    jobs_showCreateModal() {
-        console.log('[Jobs] TODO: Implement create modal with all sections');
-        window.SteadyUtils.showToast('Job creation modal coming next...', 'info');
+    /**
+     * MODAL: Create/Edit Job
+     */
+    jobs_showCreateModal(jobId = null) {
+        this.state.editingJobId = jobId;
+        const job = jobId ? this.state.jobs.find(j => j.id === jobId) : null;
+
+        // Initialize modal state
+        this.state.modalState = {
+            materials: job?.materials || [],
+            crew: job?.crew_members || [],
+            photos: job?.photos || [],
+            collapsedSections: {
+                materials: true,
+                crew: true,
+                photos: true,
+                notes: true
+            }
+        };
+
+        const overlay = document.createElement('div');
+        overlay.className = 'job-modal-overlay';
+        overlay.id = 'jobModalOverlay';
+        overlay.innerHTML = this.jobs_renderModal(job);
+
+        document.body.appendChild(overlay);
+
+        // Attach events
+        setTimeout(() => {
+            this.jobs_attachModalEvents();
+            this.jobs_updateProfitCalculator();
+        }, 50);
+    },
+
+    jobs_renderModal(job) {
+        const isEdit = !!job;
+
+        return `
+            <style>
+                .job-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s ease;
+                    overflow-y: auto;
+                    padding: 2rem;
+                }
+
+                .job-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 100%;
+                    max-width: 900px;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                    margin: auto;
+                }
+
+                .job-modal-header {
+                    padding: 1.5rem 2rem;
+                    border-bottom: 2px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .job-modal-header h2 {
+                    margin: 0;
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .job-modal-close {
+                    width: 2rem;
+                    height: 2rem;
+                    border-radius: 6px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                }
+
+                .job-modal-close:hover {
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
+                }
+
+                .job-modal-body {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 2rem;
+                }
+
+                .job-form-section {
+                    margin-bottom: 2rem;
+                }
+
+                .job-form-section-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 1.5rem;
+                    padding-bottom: 0.75rem;
+                    border-bottom: 2px solid var(--border);
+                }
+
+                .job-form-section-header h3 {
+                    margin: 0;
+                    font-size: 1.125rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-form-section-toggle {
+                    background: none;
+                    border: none;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+
+                .job-form-section-toggle:hover {
+                    color: #667eea;
+                }
+
+                .job-form-section-toggle svg {
+                    width: 1rem;
+                    height: 1rem;
+                    transition: transform 0.2s;
+                }
+
+                .job-form-section-toggle.collapsed svg {
+                    transform: rotate(-90deg);
+                }
+
+                .job-form-section-content {
+                    display: block;
+                }
+
+                .job-form-section-content.collapsed {
+                    display: none;
+                }
+
+                .job-form-row {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+
+                .job-form-row.single {
+                    grid-template-columns: 1fr;
+                }
+
+                .job-form-row.triple {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+
+                .job-form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .job-form-group label {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .job-form-group label .required {
+                    color: #ef4444;
+                }
+
+                .job-form-group input,
+                .job-form-group select,
+                .job-form-group textarea {
+                    padding: 0.75rem;
+                    border: 2px solid var(--border);
+                    border-radius: 8px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 0.9rem;
+                    transition: all 0.2s;
+                }
+
+                .job-form-group input:focus,
+                .job-form-group select:focus,
+                .job-form-group textarea:focus {
+                    outline: none;
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                .job-form-group textarea {
+                    resize: vertical;
+                    min-height: 100px;
+                    font-family: inherit;
+                }
+
+                .job-form-group input[type="checkbox"] {
+                    width: auto;
+                    cursor: pointer;
+                }
+
+                .job-custom-type-input {
+                    display: none;
+                    animation: slideDown 0.2s ease;
+                }
+
+                .job-custom-type-input.show {
+                    display: block;
+                }
+
+                .job-char-counter {
+                    font-size: 0.75rem;
+                    color: var(--text-tertiary);
+                    text-align: right;
+                }
+
+                /* Materials/Crew Table */
+                .job-dynamic-table {
+                    width: 100%;
+                    border: 2px solid var(--border);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+
+                .job-dynamic-table-header {
+                    display: grid;
+                    background: var(--surface-hover);
+                    padding: 0.75rem;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-materials-header {
+                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 0.5fr;
+                    gap: 0.5rem;
+                }
+
+                .job-crew-header {
+                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 0.5fr;
+                    gap: 0.5rem;
+                }
+
+                .job-dynamic-row {
+                    display: grid;
+                    padding: 0.75rem;
+                    border-top: 1px solid var(--border);
+                    gap: 0.5rem;
+                    align-items: center;
+                }
+
+                .job-materials-row {
+                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 0.5fr;
+                }
+
+                .job-crew-row {
+                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 0.5fr;
+                }
+
+                .job-dynamic-row input {
+                    padding: 0.5rem;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 0.875rem;
+                }
+
+                .job-dynamic-row input:focus {
+                    outline: none;
+                    border-color: #667eea;
+                }
+
+                .job-row-total {
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .job-row-delete {
+                    background: none;
+                    border: none;
+                    color: #ef4444;
+                    cursor: pointer;
+                    padding: 0.25rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                }
+
+                .job-row-delete:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-radius: 4px;
+                }
+
+                .job-row-delete svg {
+                    width: 1rem;
+                    height: 1rem;
+                }
+
+                .job-add-row-btn {
+                    margin-top: 1rem;
+                    padding: 0.75rem 1rem;
+                    border: 2px dashed var(--border);
+                    border-radius: 8px;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    transition: all 0.2s;
+                    width: 100%;
+                }
+
+                .job-add-row-btn:hover {
+                    border-color: #667eea;
+                    color: #667eea;
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .job-add-row-btn svg {
+                    width: 1rem;
+                    height: 1rem;
+                }
+
+                .job-table-total {
+                    margin-top: 1rem;
+                    padding: 1rem;
+                    background: var(--surface-hover);
+                    border-radius: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-weight: 700;
+                }
+
+                .job-table-total-label {
+                    color: var(--text-secondary);
+                    font-size: 0.875rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-table-total-value {
+                    color: var(--text-primary);
+                    font-size: 1.25rem;
+                }
+
+                /* Photos */
+                .job-photos-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 1rem;
+                }
+
+                .job-photo-upload {
+                    aspect-ratio: 1;
+                    border: 2px dashed var(--border);
+                    border-radius: 8px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    position: relative;
+                }
+
+                .job-photo-upload:hover {
+                    border-color: #667eea;
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .job-photo-upload input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 100%;
+                    height: 100%;
+                    cursor: pointer;
+                }
+
+                .job-photo-upload svg {
+                    width: 2rem;
+                    height: 2rem;
+                    color: var(--text-tertiary);
+                }
+
+                .job-photo-upload-text {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                    font-weight: 600;
+                }
+
+                .job-photo-preview {
+                    aspect-ratio: 1;
+                    border: 2px solid var(--border);
+                    border-radius: 8px;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .job-photo-preview img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .job-photo-preview-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.7) 100%);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    padding: 0.5rem;
+                }
+
+                .job-photo-type {
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    color: white;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-photo-delete {
+                    background: rgba(239, 68, 68, 0.9);
+                    border: none;
+                    color: white;
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    align-self: flex-end;
+                }
+
+                .job-photo-delete svg {
+                    width: 1rem;
+                    height: 1rem;
+                }
+
+                /* Profit Calculator */
+                .job-profit-calculator {
+                    margin-top: 2rem;
+                    padding: 1.5rem;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+                    border: 2px solid rgba(102, 126, 234, 0.3);
+                    border-radius: 12px;
+                }
+
+                .job-profit-calculator-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    margin-bottom: 1rem;
+                }
+
+                .job-profit-calculator-header svg {
+                    width: 1.5rem;
+                    height: 1.5rem;
+                    color: #667eea;
+                }
+
+                .job-profit-calculator-header h4 {
+                    margin: 0;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-profit-breakdown {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .job-profit-line {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 0.9rem;
+                }
+
+                .job-profit-line-label {
+                    color: var(--text-secondary);
+                    font-weight: 500;
+                }
+
+                .job-profit-line-value {
+                    color: var(--text-primary);
+                    font-weight: 700;
+                }
+
+                .job-profit-line.indent {
+                    padding-left: 1.5rem;
+                    font-size: 0.85rem;
+                }
+
+                .job-profit-line.indent .job-profit-line-label {
+                    color: var(--text-tertiary);
+                }
+
+                .job-profit-divider {
+                    height: 1px;
+                    background: var(--border);
+                    margin: 0.5rem 0;
+                }
+
+                .job-profit-total {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1rem;
+                    background: var(--surface);
+                    border-radius: 8px;
+                    margin-top: 0.5rem;
+                }
+
+                .job-profit-total-label {
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-profit-total-value {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+
+                .job-profit-amount {
+                    font-size: 1.5rem;
+                    font-weight: 900;
+                }
+
+                .job-profit-amount.positive {
+                    color: #10b981;
+                }
+
+                .job-profit-amount.negative {
+                    color: #ef4444;
+                }
+
+                .job-profit-margin {
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                }
+
+                .job-modal-footer {
+                    padding: 1.5rem 2rem;
+                    border-top: 2px solid var(--border);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                }
+
+                .job-modal-btn {
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: none;
+                }
+
+                .job-modal-btn-cancel {
+                    background: transparent;
+                    border: 2px solid var(--border);
+                    color: var(--text-primary);
+                }
+
+                .job-modal-btn-cancel:hover {
+                    background: var(--surface-hover);
+                }
+
+                .job-modal-btn-save {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                }
+
+                .job-modal-btn-save:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+
+                @media (max-width: 768px) {
+                    .job-modal {
+                        max-width: 100%;
+                        max-height: 100vh;
+                        border-radius: 0;
+                    }
+
+                    .job-form-row {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .job-form-row.triple {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .job-materials-header,
+                    .job-materials-row {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .job-crew-header,
+                    .job-crew-row {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .job-photos-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+
+            <div class="job-modal">
+                <div class="job-modal-header">
+                    <h2>${isEdit ? 'Edit Job' : 'New Job'}</h2>
+                    <button class="job-modal-close" data-action="close-modal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="job-modal-body">
+                    <form id="jobForm">
+                        <!-- BASIC INFORMATION -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Basic Information</h3>
+                            </div>
+
+                            <div class="job-form-row single">
+                                <div class="job-form-group">
+                                    <label>Job Title <span class="required">*</span></label>
+                                    <input type="text" name="title" value="${job?.title || ''}"
+                                           placeholder="e.g., Kitchen Remodel" maxlength="50" required>
+                                    <div class="job-char-counter"><span id="titleCounter">${job?.title?.length || 0}</span> / 50</div>
+                                </div>
+                            </div>
+
+                            <div class="job-form-row">
+                                <div class="job-form-group">
+                                    <label>Client</label>
+                                    ${this.jobs_renderLeadSelect(job?.lead_id)}
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Job Type</label>
+                                    <select name="job_type" id="jobTypeSelect">
+                                        <option value="">Select Type</option>
+                                        ${this.JOB_TYPES.map(type => `
+                                            <option value="${type}" ${job?.job_type === type ? 'selected' : ''}>
+                                                ${type.charAt(0).toUpperCase() + type.slice(1)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                    <div class="job-custom-type-input ${job?.job_type === 'custom' ? 'show' : ''}" id="customJobTypeInput">
+                                        <input type="text" name="custom_job_type" value="${job?.custom_job_type || ''}"
+                                               placeholder="Enter custom job type..." maxlength="25">
+                                        <div class="job-char-counter"><span id="customTypeCounter">${job?.custom_job_type?.length || 0}</span> / 25</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="job-form-row">
+                                <div class="job-form-group">
+                                    <label>Status <span class="required">*</span></label>
+                                    <select name="status" required>
+                                        ${this.STATUSES.map(status => `
+                                            <option value="${status}" ${(job?.status || 'draft') === status ? 'selected' : ''}>
+                                                ${this.jobs_formatStatus(status)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Priority</label>
+                                    <select name="priority">
+                                        ${this.PRIORITIES.map(p => `
+                                            <option value="${p}" ${(job?.priority || 'medium') === p ? 'selected' : ''}>
+                                                ${p.charAt(0).toUpperCase() + p.slice(1)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="job-form-row triple">
+                                <div class="job-form-group">
+                                    <label>Scheduled Date</label>
+                                    <input type="date" name="scheduled_date" value="${job?.scheduled_date || ''}">
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Scheduled Time</label>
+                                    <input type="time" name="scheduled_time" value="${job?.scheduled_time || ''}">
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Duration (hours)</label>
+                                    <input type="number" name="duration_hours" value="${job?.duration_hours || ''}"
+                                           step="0.5" min="0" placeholder="8">
+                                </div>
+                            </div>
+
+                            <div class="job-form-row single">
+                                <div class="job-form-group">
+                                    <label>Description</label>
+                                    <textarea name="description" maxlength="500" placeholder="Describe the job...">${job?.description || ''}</textarea>
+                                    <div class="job-char-counter"><span id="descCounter">${job?.description?.length || 0}</span> / 500</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FINANCIAL -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Financial</h3>
+                            </div>
+
+                            <div class="job-form-row">
+                                <div class="job-form-group">
+                                    <label>Material Cost ($)</label>
+                                    <input type="number" name="material_cost" value="${job?.material_cost || ''}"
+                                           step="0.01" min="0" placeholder="0.00" data-calc-trigger>
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Labor Rate ($/hr)</label>
+                                    <input type="number" name="labor_rate" value="${job?.labor_rate || ''}"
+                                           step="0.01" min="0" placeholder="50.00" data-calc-trigger>
+                                </div>
+                            </div>
+
+                            <div class="job-form-row">
+                                <div class="job-form-group">
+                                    <label>Estimated Hours</label>
+                                    <input type="number" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}"
+                                           step="0.5" min="0" placeholder="8" data-calc-trigger>
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Other Expenses ($)</label>
+                                    <input type="number" name="other_expenses" value="${job?.other_expenses || ''}"
+                                           step="0.01" min="0" placeholder="0.00" data-calc-trigger>
+                                </div>
+                            </div>
+
+                            <div class="job-form-row">
+                                <div class="job-form-group">
+                                    <label>Quoted Price ($) <span class="required">*</span></label>
+                                    <input type="number" name="quoted_price" value="${job?.quoted_price || ''}"
+                                           step="0.01" min="0" placeholder="1000.00" required data-calc-trigger>
+                                </div>
+                                <div class="job-form-group">
+                                    <label>Deposit Amount ($)</label>
+                                    <input type="number" name="deposit_amount" value="${job?.deposit_amount || ''}"
+                                           step="0.01" min="0" placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <div class="job-form-row single">
+                                <div class="job-form-group">
+                                    <label>
+                                        <input type="checkbox" name="deposit_paid" ${job?.deposit_paid ? 'checked' : ''}>
+                                        Deposit Paid
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MATERIALS (Collapsible) -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Materials</h3>
+                                <button type="button" class="job-form-section-toggle" data-section="materials">
+                                    <span>${this.state.modalState.materials.length} item${this.state.modalState.materials.length !== 1 ? 's' : ''}</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="job-form-section-content collapsed" id="materialsSection">
+                                <div id="materialsContainer">
+                                    ${this.jobs_renderMaterialsTable()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CREW (Collapsible) -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Crew</h3>
+                                <button type="button" class="job-form-section-toggle" data-section="crew">
+                                    <span>${this.state.modalState.crew.length} member${this.state.modalState.crew.length !== 1 ? 's' : ''}</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="job-form-section-content collapsed" id="crewSection">
+                                <div id="crewContainer">
+                                    ${this.jobs_renderCrewTable()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PHOTOS (Collapsible, Pro tier) -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Photos (Pro Tier) 🔒</h3>
+                                <button type="button" class="job-form-section-toggle" data-section="photos">
+                                    <span>${this.state.modalState.photos.length} / 3 photos</span>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="job-form-section-content collapsed" id="photosSection">
+                                <div id="photosContainer">
+                                    ${this.jobs_renderPhotosGrid()}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NOTES (Collapsible) -->
+                        <div class="job-form-section">
+                            <div class="job-form-section-header">
+                                <h3>Notes</h3>
+                                <button type="button" class="job-form-section-toggle" data-section="notes">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="job-form-section-content collapsed" id="notesSection">
+                                <div class="job-form-group">
+                                    <label>Internal Notes</label>
+                                    <textarea name="notes" maxlength="500" placeholder="Internal notes about this job...">${job?.notes || ''}</textarea>
+                                    <div class="job-char-counter"><span id="notesCounter">${job?.notes?.length || 0}</span> / 500</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PROFIT CALCULATOR (Always visible, at bottom) -->
+                        <div class="job-profit-calculator" id="profitCalculator">
+                            <!-- Will be populated by jobs_updateProfitCalculator() -->
+                        </div>
+                    </form>
+                </div>
+
+                <div class="job-modal-footer">
+                    <button type="button" class="job-modal-btn job-modal-btn-cancel" data-action="close-modal">
+                        Cancel
+                    </button>
+                    <button type="button" class="job-modal-btn job-modal-btn-save" data-action="save-job">
+                        ${isEdit ? 'Update Job' : 'Create Job'}
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    jobs_renderLeadSelect(selectedLeadId = null) {
+        return `
+            <select name="lead_id">
+                <option value="">No Lead</option>
+                ${this.state.leads.map(lead => `
+                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    },
+
+    jobs_renderMaterialsTable() {
+        const materials = this.state.modalState.materials;
+
+        if (materials.length === 0) {
+            return `
+                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    No materials added yet
+                </p>
+                <button type="button" class="job-add-row-btn" data-action="add-material">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Add Material
+                </button>
+            `;
+        }
+
+        const total = materials.reduce((sum, m) => sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
+
+        return `
+            <div class="job-dynamic-table">
+                <div class="job-dynamic-table-header job-materials-header">
+                    <div>Name</div>
+                    <div>Qty</div>
+                    <div>Unit</div>
+                    <div>$/Unit</div>
+                    <div>Supplier</div>
+                    <div>Total</div>
+                    <div></div>
+                </div>
+                ${materials.map((m, i) => this.jobs_renderMaterialRow(m, i)).join('')}
+            </div>
+            <button type="button" class="job-add-row-btn" data-action="add-material">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Add Material
+            </button>
+            <div class="job-table-total">
+                <div class="job-table-total-label">Total Materials</div>
+                <div class="job-table-total-value">${formatCurrency(total)}</div>
+            </div>
+        `;
+    },
+
+    jobs_renderMaterialRow(material, index) {
+        const total = (material.quantity || 0) * (material.unit_price || 0);
+        return `
+            <div class="job-dynamic-row job-materials-row">
+                <input type="text" placeholder="Name" value="${material.name || ''}" data-material="${index}" data-field="name">
+                <input type="number" placeholder="0" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0">
+                <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit">
+                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0">
+                <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier">
+                <div class="job-row-total">${formatCurrency(total)}</div>
+                <button type="button" class="job-row-delete" data-action="delete-material" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+    },
+
+    jobs_renderCrewTable() {
+        const crew = this.state.modalState.crew;
+
+        if (crew.length === 0) {
+            return `
+                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                    No crew members added yet
+                </p>
+                <button type="button" class="job-add-row-btn" data-action="add-crew">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Add Crew Member
+                </button>
+            `;
+        }
+
+        const total = crew.reduce((sum, c) => sum + ((c.hours || 0) * (c.rate || 0)), 0);
+
+        return `
+            <div class="job-dynamic-table">
+                <div class="job-dynamic-table-header job-crew-header">
+                    <div>Name</div>
+                    <div>Role</div>
+                    <div>Hours</div>
+                    <div>Rate</div>
+                    <div>Total</div>
+                    <div></div>
+                </div>
+                ${crew.map((c, i) => this.jobs_renderCrewRow(c, i)).join('')}
+            </div>
+            <button type="button" class="job-add-row-btn" data-action="add-crew">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Add Crew Member
+            </button>
+            <div class="job-table-total">
+                <div class="job-table-total-label">Total Labor Cost</div>
+                <div class="job-table-total-value">${formatCurrency(total)}</div>
+            </div>
+        `;
+    },
+
+    jobs_renderCrewRow(member, index) {
+        const total = (member.hours || 0) * (member.rate || 0);
+        return `
+            <div class="job-dynamic-row job-crew-row">
+                <input type="text" placeholder="Name" value="${member.name || ''}" data-crew="${index}" data-field="name">
+                <input type="text" placeholder="Role" value="${member.role || ''}" data-crew="${index}" data-field="role">
+                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0">
+                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0">
+                <div class="job-row-total">${formatCurrency(total)}</div>
+                <button type="button" class="job-row-delete" data-action="delete-crew" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+    },
+
+    jobs_renderPhotosGrid() {
+        const photos = this.state.modalState.photos;
+        const canAddMore = photos.length < 3;
+
+        return `
+            <div class="job-photos-grid">
+                ${photos.map((photo, i) => `
+                    <div class="job-photo-preview">
+                        <img src="${photo.url}" alt="${photo.type}">
+                        <div class="job-photo-preview-overlay">
+                            <div class="job-photo-type">${photo.type}</div>
+                            <button type="button" class="job-photo-delete" data-action="delete-photo" data-index="${i}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+                ${canAddMore ? `
+                    <div class="job-photo-upload">
+                        <input type="file" accept="image/*" data-action="upload-photo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <path d="M21 15l-5-5L5 21" stroke-width="2"/>
+                        </svg>
+                        <div class="job-photo-upload-text">Upload Photo</div>
+                    </div>
+                ` : ''}
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-tertiary);">
+                ${photos.length} / 3 photos used
+            </p>
+        `;
+    },
+
+    jobs_updateProfitCalculator() {
+        const form = document.getElementById('jobForm');
+        const calc = document.getElementById('profitCalculator');
+        if (!form || !calc) return;
+
+        const materialCost = parseFloat(form.material_cost?.value) || 0;
+        const laborRate = parseFloat(form.labor_rate?.value) || 0;
+        const estimatedHours = parseFloat(form.estimated_labor_hours?.value) || 0;
+        const otherExpenses = parseFloat(form.other_expenses?.value) || 0;
+        const quotedPrice = parseFloat(form.quoted_price?.value) || 0;
+
+        // Add materials total
+        const materialsTotal = this.state.modalState.materials.reduce((sum, m) =>
+            sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
+
+        // Add crew total
+        const crewTotal = this.state.modalState.crew.reduce((sum, c) =>
+            sum + ((c.hours || 0) * (c.rate || 0)), 0);
+
+        const laborCost = laborRate * estimatedHours;
+        const totalCost = materialCost + materialsTotal + laborCost + crewTotal + otherExpenses;
+        const profit = quotedPrice - totalCost;
+        const profitMargin = quotedPrice > 0 ? (profit / quotedPrice) * 100 : 0;
+
+        const profitClass = profit >= 0 ? 'positive' : 'negative';
+
+        calc.innerHTML = `
+            <div class="job-profit-calculator-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="12" y1="1" x2="12" y2="23" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <h4>Live Profit Calculator</h4>
+            </div>
+            <div class="job-profit-breakdown">
+                <div class="job-profit-line">
+                    <div class="job-profit-line-label">Revenue:</div>
+                    <div class="job-profit-line-value">${formatCurrency(quotedPrice)}</div>
+                </div>
+                <div class="job-profit-line indent">
+                    <div class="job-profit-line-label">Materials (manual):</div>
+                    <div class="job-profit-line-value">-${formatCurrency(materialCost)}</div>
+                </div>
+                ${materialsTotal > 0 ? `
+                    <div class="job-profit-line indent">
+                        <div class="job-profit-line-label">Materials (table):</div>
+                        <div class="job-profit-line-value">-${formatCurrency(materialsTotal)}</div>
+                    </div>
+                ` : ''}
+                <div class="job-profit-line indent">
+                    <div class="job-profit-line-label">Labor (manual): ${estimatedHours}h × ${formatCurrency(laborRate)}/h</div>
+                    <div class="job-profit-line-value">-${formatCurrency(laborCost)}</div>
+                </div>
+                ${crewTotal > 0 ? `
+                    <div class="job-profit-line indent">
+                        <div class="job-profit-line-label">Labor (crew table):</div>
+                        <div class="job-profit-line-value">-${formatCurrency(crewTotal)}</div>
+                    </div>
+                ` : ''}
+                <div class="job-profit-line indent">
+                    <div class="job-profit-line-label">Other Expenses:</div>
+                    <div class="job-profit-line-value">-${formatCurrency(otherExpenses)}</div>
+                </div>
+                <div class="job-profit-divider"></div>
+                <div class="job-profit-total">
+                    <div class="job-profit-total-label">Estimated Profit</div>
+                    <div class="job-profit-total-value">
+                        <div class="job-profit-amount ${profitClass}">${formatCurrency(profit)}</div>
+                        <div class="job-profit-margin">(${profitMargin.toFixed(1)}%)</div>
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     jobs_showViewModal(jobId) {
         console.log('[Jobs] TODO: Implement view modal for job:', jobId);
-        window.SteadyUtils.showToast('Job view modal coming next...', 'info');
+        window.SteadyUtils.showToast('Job detail view coming soon...', 'info');
+    },
+
+    /**
+     * MODAL EVENT HANDLERS
+     */
+    jobs_attachModalEvents() {
+        const overlay = document.getElementById('jobModalOverlay');
+        if (!overlay) return;
+
+        // Close modal
+        overlay.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
+            btn.addEventListener('click', () => this.jobs_closeModal());
+        });
+
+        // Click outside to close
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.jobs_closeModal();
+        });
+
+        // ESC to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.jobs_closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+
+        // Toggle collapsible sections
+        overlay.querySelectorAll('.job-form-section-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const section = btn.dataset.section;
+                const content = document.getElementById(`${section}Section`);
+
+                if (content.classList.contains('collapsed')) {
+                    content.classList.remove('collapsed');
+                    btn.classList.remove('collapsed');
+                } else {
+                    content.classList.add('collapsed');
+                    btn.classList.add('collapsed');
+                }
+            });
+        });
+
+        // Custom job type toggle
+        const jobTypeSelect = document.getElementById('jobTypeSelect');
+        const customInput = document.getElementById('customJobTypeInput');
+        if (jobTypeSelect && customInput) {
+            jobTypeSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customInput.classList.add('show');
+                } else {
+                    customInput.classList.remove('show');
+                }
+            });
+        }
+
+        // Character counters
+        const form = document.getElementById('jobForm');
+        if (form) {
+            // Title counter
+            const titleInput = form.querySelector('[name="title"]');
+            const titleCounter = document.getElementById('titleCounter');
+            if (titleInput && titleCounter) {
+                titleInput.addEventListener('input', () => {
+                    titleCounter.textContent = titleInput.value.length;
+                });
+            }
+
+            // Custom type counter
+            const customTypeInput = form.querySelector('[name="custom_job_type"]');
+            const customTypeCounter = document.getElementById('customTypeCounter');
+            if (customTypeInput && customTypeCounter) {
+                customTypeInput.addEventListener('input', () => {
+                    customTypeCounter.textContent = customTypeInput.value.length;
+                });
+            }
+
+            // Description counter
+            const descInput = form.querySelector('[name="description"]');
+            const descCounter = document.getElementById('descCounter');
+            if (descInput && descCounter) {
+                descInput.addEventListener('input', () => {
+                    descCounter.textContent = descInput.value.length;
+                });
+            }
+
+            // Notes counter
+            const notesInput = form.querySelector('[name="notes"]');
+            const notesCounter = document.getElementById('notesCounter');
+            if (notesInput && notesCounter) {
+                notesInput.addEventListener('input', () => {
+                    notesCounter.textContent = notesInput.value.length;
+                });
+            }
+
+            // Financial inputs - trigger profit calculator
+            form.querySelectorAll('[data-calc-trigger]').forEach(input => {
+                input.addEventListener('input', () => this.jobs_updateProfitCalculator());
+            });
+        }
+
+        // Materials: Add row
+        overlay.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="add-material"]');
+            if (target) {
+                this.state.modalState.materials.push({
+                    name: '',
+                    quantity: 0,
+                    unit: 'pcs',
+                    unit_price: 0,
+                    supplier: ''
+                });
+                this.jobs_refreshMaterials();
+            }
+        });
+
+        // Materials: Delete row
+        overlay.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="delete-material"]');
+            if (target) {
+                const index = parseInt(target.dataset.index);
+                this.state.modalState.materials.splice(index, 1);
+                this.jobs_refreshMaterials();
+            }
+        });
+
+        // Materials: Input changes
+        overlay.addEventListener('input', (e) => {
+            if (e.target.dataset.material !== undefined) {
+                const index = parseInt(e.target.dataset.material);
+                const field = e.target.dataset.field;
+                let value = e.target.value;
+
+                if (field === 'quantity' || field === 'unit_price') {
+                    value = parseFloat(value) || 0;
+                }
+
+                this.state.modalState.materials[index][field] = value;
+                this.jobs_refreshMaterials();
+            }
+        });
+
+        // Crew: Add row
+        overlay.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="add-crew"]');
+            if (target) {
+                this.state.modalState.crew.push({
+                    name: '',
+                    role: '',
+                    hours: 0,
+                    rate: 0
+                });
+                this.jobs_refreshCrew();
+            }
+        });
+
+        // Crew: Delete row
+        overlay.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="delete-crew"]');
+            if (target) {
+                const index = parseInt(target.dataset.index);
+                this.state.modalState.crew.splice(index, 1);
+                this.jobs_refreshCrew();
+            }
+        });
+
+        // Crew: Input changes
+        overlay.addEventListener('input', (e) => {
+            if (e.target.dataset.crew !== undefined) {
+                const index = parseInt(e.target.dataset.crew);
+                const field = e.target.dataset.field;
+                let value = e.target.value;
+
+                if (field === 'hours' || field === 'rate') {
+                    value = parseFloat(value) || 0;
+                }
+
+                this.state.modalState.crew[index][field] = value;
+                this.jobs_refreshCrew();
+            }
+        });
+
+        // Photos: Upload
+        overlay.addEventListener('change', (e) => {
+            if (e.target.dataset.action === 'upload-photo') {
+                this.jobs_handlePhotoUpload(e.target.files[0]);
+            }
+        });
+
+        // Photos: Delete
+        overlay.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="delete-photo"]');
+            if (target) {
+                const index = parseInt(target.dataset.index);
+                this.state.modalState.photos.splice(index, 1);
+                this.jobs_refreshPhotos();
+            }
+        });
+
+        // Save job
+        overlay.querySelector('[data-action="save-job"]')?.addEventListener('click', () => {
+            this.jobs_handleSave();
+        });
+    },
+
+    jobs_refreshMaterials() {
+        const container = document.getElementById('materialsContainer');
+        if (container) {
+            container.innerHTML = this.jobs_renderMaterialsTable();
+            this.jobs_updateProfitCalculator();
+        }
+    },
+
+    jobs_refreshCrew() {
+        const container = document.getElementById('crewContainer');
+        if (container) {
+            container.innerHTML = this.jobs_renderCrewTable();
+            this.jobs_updateProfitCalculator();
+        }
+    },
+
+    jobs_refreshPhotos() {
+        const container = document.getElementById('photosContainer');
+        if (container) {
+            container.innerHTML = this.jobs_renderPhotosGrid();
+        }
+    },
+
+    jobs_handlePhotoUpload(file) {
+        if (!file) return;
+
+        // Check Pro tier
+        // TODO: Add tier check
+        if (this.state.modalState.photos.length >= 3) {
+            window.SteadyUtils.showToast('Maximum 3 photos allowed', 'warning');
+            return;
+        }
+
+        // Read file as data URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const photoType = prompt('Photo type (before, during, after):', 'before');
+            if (!photoType || !['before', 'during', 'after'].includes(photoType.toLowerCase())) {
+                window.SteadyUtils.showToast('Invalid photo type', 'error');
+                return;
+            }
+
+            this.state.modalState.photos.push({
+                url: e.target.result,
+                type: photoType.toLowerCase()
+            });
+
+            this.jobs_refreshPhotos();
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async jobs_handleSave() {
+        const form = document.getElementById('jobForm');
+        if (!form) return;
+
+        // Validate
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const formData = new FormData(form);
+
+        const jobData = {
+            title: formData.get('title'),
+            lead_id: formData.get('lead_id') || null,
+            job_type: formData.get('job_type') || null,
+            custom_job_type: formData.get('job_type') === 'custom' ? formData.get('custom_job_type') : null,
+            status: formData.get('status'),
+            priority: formData.get('priority'),
+            scheduled_date: formData.get('scheduled_date') || null,
+            scheduled_time: formData.get('scheduled_time') || null,
+            duration_hours: parseFloat(formData.get('duration_hours')) || null,
+            description: formData.get('description') || null,
+            material_cost: parseFloat(formData.get('material_cost')) || 0,
+            labor_rate: parseFloat(formData.get('labor_rate')) || 0,
+            estimated_labor_hours: parseFloat(formData.get('estimated_labor_hours')) || 0,
+            other_expenses: parseFloat(formData.get('other_expenses')) || 0,
+            quoted_price: parseFloat(formData.get('quoted_price')) || 0,
+            deposit_amount: parseFloat(formData.get('deposit_amount')) || 0,
+            deposit_paid: formData.get('deposit_paid') === 'on',
+            materials: this.state.modalState.materials,
+            crew_members: this.state.modalState.crew,
+            photos: this.state.modalState.photos,
+            notes: formData.get('notes') || null
+        };
+
+        try {
+            let result;
+            if (this.state.editingJobId) {
+                result = await API.updateJob(this.state.editingJobId, jobData);
+                const index = this.state.jobs.findIndex(j => j.id === this.state.editingJobId);
+                if (index !== -1) {
+                    this.state.jobs[index] = result;
+                }
+                window.SteadyUtils.showToast('Job updated successfully', 'success');
+            } else {
+                result = await API.createJob(jobData);
+                this.state.jobs.unshift(result);
+                window.SteadyUtils.showToast('Job created successfully', 'success');
+            }
+
+            this.jobs_calculateStats();
+            this.jobs_closeModal();
+            this.jobs_render();
+        } catch (error) {
+            console.error('Error saving job:', error);
+            window.SteadyUtils.showToast('Failed to save job', 'error');
+        }
+    },
+
+    jobs_closeModal() {
+        const overlay = document.getElementById('jobModalOverlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        }
     },
 
     jobs_showConfirmation(options) {
