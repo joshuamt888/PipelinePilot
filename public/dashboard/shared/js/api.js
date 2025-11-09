@@ -318,15 +318,15 @@ class TierScalingAPI {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
-        
+
         const { error } = await supabase.rpc('delete_lead_with_decrement', {
-            lead_id: leadId,
-            user_id_val: user.id
+            p_lead_id: leadId,
+            p_user_id: user.id
         });
-        
+
         if (error) throw error;
         return { success: true };
-        
+
     } catch (error) {
         console.error('Delete lead error:', error);
         throw error;
@@ -427,8 +427,8 @@ class TierScalingAPI {
 
     // Call the batch delete function (requires DB function)
     const { data, error } = await supabase.rpc('batch_delete_leads', {
-      lead_ids: leadIds,
-      user_id_val: user.id
+      p_lead_ids: leadIds,
+      p_user_id: user.id
     });
 
     if (error) throw error;
