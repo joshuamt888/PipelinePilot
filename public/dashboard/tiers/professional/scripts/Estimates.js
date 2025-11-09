@@ -11,10 +11,12 @@ window.EstimatesModule = {
         filteredEstimates: [],
         container: 'estimates-content',
 
-        // Filters
-        statusFilter: 'all',
-        leadFilter: 'all',
-        dateFilter: 'all',
+        // New UI state
+        searchQuery: '',
+        sortBy: 'date_new', // date_new, date_old, price_low, price_high
+        batchMode: false,
+        selectedEstimateIds: [],
+        activeFilter: 'all', // all, accepted, pending (for clickable banners)
 
         // Modal state
         editingEstimateId: null,
@@ -80,7 +82,7 @@ window.EstimatesModule = {
             <div class="estimates-container">
                 ${this.estimates_renderHeader()}
                 ${this.estimates_renderStats()}
-                ${this.estimates_renderFilters()}
+                ${this.estimates_renderToolbar()}
                 ${this.estimates_renderGrid()}
             </div>
         `;
@@ -250,31 +252,217 @@ window.EstimatesModule = {
                     letter-spacing: 0.05em;
                 }
 
-                /* FILTERS - Pill Style */
-                .estimates-filters {
+                /* Make stat cards clickable */
+                .estimates-stat-card {
+                    cursor: pointer;
+                }
+
+                .estimates-stat-card.active {
+                    border-color: #667eea;
+                    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+                }
+
+                /* TOOLBAR - Search, Sort, Batch Mode */
+                .estimates-toolbar {
                     display: flex;
+                    align-items: center;
+                    justify-content: space-between;
                     gap: 1rem;
                     margin-bottom: 2rem;
+                    padding: 1.25rem 1.5rem;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
                     flex-wrap: wrap;
                 }
 
-                .estimates-filters select {
-                    padding: 0.75rem 1.25rem;
-                    border: 2px solid var(--border);
-                    border-radius: 999px;
-                    background: var(--surface);
-                    color: var(--text-primary);
+                .estimates-toolbar-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    flex: 1;
+                }
+
+                .estimates-count {
                     font-size: 0.9rem;
                     font-weight: 600;
-                    cursor: pointer;
+                    color: var(--text-secondary);
+                    white-space: nowrap;
+                }
+
+                .estimates-search {
+                    position: relative;
+                    flex: 1;
+                    max-width: 400px;
+                }
+
+                .estimates-search input {
+                    width: 100%;
+                    padding: 0.75rem 1rem 0.75rem 2.75rem;
+                    border: 2px solid var(--border);
+                    border-radius: 999px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 0.9rem;
                     transition: all 0.2s;
                 }
 
-                .estimates-filters select:hover,
-                .estimates-filters select:focus {
-                    border-color: #667eea;
+                .estimates-search input:focus {
                     outline: none;
+                    border-color: #667eea;
                     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                .estimates-search svg {
+                    position: absolute;
+                    left: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 1.125rem;
+                    height: 1.125rem;
+                    color: var(--text-tertiary);
+                    pointer-events: none;
+                }
+
+                .estimates-toolbar-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+
+                .estimates-sort {
+                    position: relative;
+                }
+
+                .estimates-sort select {
+                    padding: 0.75rem 2.5rem 0.75rem 1rem;
+                    border: 2px solid var(--border);
+                    border-radius: 999px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    appearance: none;
+                }
+
+                .estimates-sort select:hover {
+                    border-color: #667eea;
+                }
+
+                .estimates-sort select:focus {
+                    outline: none;
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                .estimates-sort svg {
+                    position: absolute;
+                    right: 0.75rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 1rem;
+                    height: 1rem;
+                    color: var(--text-tertiary);
+                    pointer-events: none;
+                }
+
+                .estimates-batch-toggle {
+                    padding: 0.75rem 1.25rem;
+                    border: 2px solid var(--border);
+                    border-radius: 999px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    white-space: nowrap;
+                }
+
+                .estimates-batch-toggle:hover {
+                    border-color: #667eea;
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .estimates-batch-toggle.active {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-color: #667eea;
+                    color: white;
+                }
+
+                .estimates-batch-toggle svg {
+                    width: 1rem;
+                    height: 1rem;
+                }
+
+                /* Batch Mode Actions Toolbar */
+                .estimates-batch-actions {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 1rem;
+                    padding: 1rem 1.5rem;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+                    border: 2px solid #667eea;
+                    border-radius: var(--radius-lg);
+                    margin-bottom: 1.5rem;
+                }
+
+                .estimates-batch-actions-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+
+                .estimates-batch-selected {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: #667eea;
+                }
+
+                .estimates-batch-actions-right {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+
+                .estimates-batch-btn {
+                    padding: 0.625rem 1rem;
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    background: var(--surface);
+                    color: var(--text-primary);
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .estimates-batch-btn:hover {
+                    background: rgba(102, 126, 234, 0.1);
+                    border-color: #667eea;
+                }
+
+                .estimates-batch-btn svg {
+                    width: 1rem;
+                    height: 1rem;
+                }
+
+                .estimates-batch-btn.delete {
+                    color: #ef4444;
+                    border-color: rgba(239, 68, 68, 0.3);
+                }
+
+                .estimates-batch-btn.delete:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-color: #ef4444;
                 }
 
                 /* GRID - Masonry Style */
@@ -306,6 +494,26 @@ window.EstimatesModule = {
                     transform: translateY(-6px) scale(1.02);
                     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
                     border-color: #667eea;
+                }
+
+                /* Batch selection mode */
+                .estimate-card.batch-selectable {
+                    padding-left: 3.5rem;
+                }
+
+                .estimate-card-checkbox {
+                    position: absolute;
+                    left: 1.25rem;
+                    top: 1.75rem;
+                    width: 1.25rem;
+                    height: 1.25rem;
+                    cursor: pointer;
+                    accent-color: #667eea;
+                }
+
+                .estimate-card.selected {
+                    border-color: #667eea;
+                    background: rgba(102, 126, 234, 0.05);
                 }
 
                 .estimate-card-header {
@@ -558,14 +766,14 @@ window.EstimatesModule = {
     },
 
     /**
-     * Render stats cards
+     * Render stats cards - now clickable for filtering
      */
     estimates_renderStats() {
         const { totalQuoted, totalAccepted, totalPending, acceptanceRate } = this.state.stats;
 
         return `
             <div class="estimates-stats">
-                <div class="estimates-stat-card">
+                <div class="estimates-stat-card ${this.state.activeFilter === 'all' ? 'active' : ''}" data-filter="all">
                     <div class="estimates-stat-icon quoted">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -577,7 +785,7 @@ window.EstimatesModule = {
                     </div>
                 </div>
 
-                <div class="estimates-stat-card">
+                <div class="estimates-stat-card ${this.state.activeFilter === 'accepted' ? 'active' : ''}" data-filter="accepted">
                     <div class="estimates-stat-icon accepted">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -589,7 +797,7 @@ window.EstimatesModule = {
                     </div>
                 </div>
 
-                <div class="estimates-stat-card">
+                <div class="estimates-stat-card ${this.state.activeFilter === 'pending' ? 'active' : ''}" data-filter="pending">
                     <div class="estimates-stat-icon pending">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <circle cx="12" cy="12" r="10" stroke-width="2"/>
@@ -606,36 +814,74 @@ window.EstimatesModule = {
     },
 
     /**
-     * Render filters
+     * Render toolbar with search, sort, and batch mode
      */
-    estimates_renderFilters() {
+    estimates_renderToolbar() {
+        const count = this.state.filteredEstimates.length;
+
         return `
-            <div class="estimates-filters">
-                <select data-filter="status">
-                    <option value="all">All Status</option>
-                    ${this.STATUSES.map(status => `
-                        <option value="${status}" ${this.state.statusFilter === status ? 'selected' : ''}>
-                            ${this.estimates_formatStatus(status)}
-                        </option>
-                    `).join('')}
-                </select>
-
-                <select data-filter="lead">
-                    <option value="all">All Leads</option>
-                    ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
-                        <option value="${lead.id}" ${this.state.leadFilter === lead.id ? 'selected' : ''}>
-                            ${lead.name}
-                        </option>
-                    `).join('')}
-                </select>
-
-                <select data-filter="date">
-                    <option value="all">All Time</option>
-                    <option value="week" ${this.state.dateFilter === 'week' ? 'selected' : ''}>This Week</option>
-                    <option value="month" ${this.state.dateFilter === 'month' ? 'selected' : ''}>This Month</option>
-                    <option value="quarter" ${this.state.dateFilter === 'quarter' ? 'selected' : ''}>This Quarter</option>
-                </select>
+            <div class="estimates-toolbar">
+                <div class="estimates-toolbar-left">
+                    <div class="estimates-count">${count} estimate${count !== 1 ? 's' : ''}</div>
+                    <div class="estimates-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8" stroke-width="2"/>
+                            <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <input type="text"
+                               placeholder="Search estimates..."
+                               value="${this.state.searchQuery}"
+                               data-action="search">
+                    </div>
+                </div>
+                <div class="estimates-toolbar-right">
+                    <div class="estimates-sort">
+                        <select data-action="sort">
+                            <option value="date_new" ${this.state.sortBy === 'date_new' ? 'selected' : ''}>Date: Newest First</option>
+                            <option value="date_old" ${this.state.sortBy === 'date_old' ? 'selected' : ''}>Date: Oldest First</option>
+                            <option value="price_high" ${this.state.sortBy === 'price_high' ? 'selected' : ''}>Price: High → Low</option>
+                            <option value="price_low" ${this.state.sortBy === 'price_low' ? 'selected' : ''}>Price: Low → High</option>
+                        </select>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <button class="estimates-batch-toggle ${this.state.batchMode ? 'active' : ''}" data-action="toggle-batch">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Select Multiple
+                    </button>
+                </div>
             </div>
+
+            ${this.state.batchMode && this.state.selectedEstimateIds.length > 0 ? `
+                <div class="estimates-batch-actions">
+                    <div class="estimates-batch-actions-left">
+                        <div class="estimates-batch-selected">${this.state.selectedEstimateIds.length} selected</div>
+                    </div>
+                    <div class="estimates-batch-actions-right">
+                        <button class="estimates-batch-btn" data-action="batch-mark-sent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>
+                            </svg>
+                            Mark Sent
+                        </button>
+                        <button class="estimates-batch-btn" data-action="batch-mark-accepted">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
+                            </svg>
+                            Mark Accepted
+                        </button>
+                        <button class="estimates-batch-btn delete" data-action="batch-delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
         `;
     },
 
@@ -675,6 +921,7 @@ window.EstimatesModule = {
         const lead = (Array.isArray(this.state.leads) ? this.state.leads : []).find(l => l.id === estimate.lead_id);
         const photoCount = (estimate.photos || []).length;
         const expiryInfo = this.estimates_getExpiryInfo(estimate);
+        const isSelected = this.state.selectedEstimateIds.includes(estimate.id);
 
         // Show "Convert to Job" if accepted, otherwise "View" and "Edit"
         const actions = estimate.status === 'accepted' ? `
@@ -701,7 +948,15 @@ window.EstimatesModule = {
         `;
 
         return `
-            <div class="estimate-card" data-id="${estimate.id}">
+            <div class="estimate-card ${estimate.status} ${this.state.batchMode ? 'batch-selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${estimate.id}">
+                ${this.state.batchMode ? `
+                    <input type="checkbox"
+                           class="estimate-card-checkbox"
+                           data-action="toggle-selection"
+                           data-id="${estimate.id}"
+                           ${isSelected ? 'checked' : ''}>
+                ` : ''}
+
                 <div class="estimate-card-header">
                     <div>
                         <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
@@ -794,44 +1049,49 @@ window.EstimatesModule = {
     },
 
     /**
-     * Apply filters
+     * Apply filters with search, sort, and active filter
      */
     estimates_applyFilters() {
         let filtered = [...this.state.estimates];
 
-        // Status filter
-        if (this.state.statusFilter !== 'all') {
-            filtered = filtered.filter(e => e.status === this.state.statusFilter);
+        // Filter by active filter (from clickable banners)
+        if (this.state.activeFilter === 'accepted') {
+            filtered = filtered.filter(e => e.status === 'accepted');
+        } else if (this.state.activeFilter === 'pending') {
+            filtered = filtered.filter(e => e.status === 'sent' || e.status === 'draft');
         }
+        // 'all' shows everything
 
-        // Lead filter
-        if (this.state.leadFilter !== 'all') {
-            filtered = filtered.filter(e => e.lead_id === this.state.leadFilter);
-        }
-
-        // Date filter
-        if (this.state.dateFilter !== 'all') {
-            const now = new Date();
+        // Search filter
+        if (this.state.searchQuery.trim()) {
+            const query = this.state.searchQuery.toLowerCase();
             filtered = filtered.filter(e => {
-                const createdAt = new Date(e.created_at);
+                const title = (e.title || '').toLowerCase();
+                const estimateNumber = (e.estimate_number || '').toLowerCase();
+                const lead = (Array.isArray(this.state.leads) ? this.state.leads : []).find(l => l.id === e.lead_id);
+                const leadName = lead ? (lead.name || '').toLowerCase() : '';
 
-                switch (this.state.dateFilter) {
-                    case 'week':
-                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        return createdAt >= weekAgo;
-                    case 'month':
-                        return createdAt.getMonth() === now.getMonth() &&
-                               createdAt.getFullYear() === now.getFullYear();
-                    case 'quarter':
-                        const quarter = Math.floor(now.getMonth() / 3);
-                        const estQuarter = Math.floor(createdAt.getMonth() / 3);
-                        return estQuarter === quarter &&
-                               createdAt.getFullYear() === now.getFullYear();
-                    default:
-                        return true;
-                }
+                return title.includes(query) ||
+                       estimateNumber.includes(query) ||
+                       leadName.includes(query);
             });
         }
+
+        // Sort
+        filtered.sort((a, b) => {
+            switch (this.state.sortBy) {
+                case 'date_new':
+                    return new Date(b.created_at) - new Date(a.created_at);
+                case 'date_old':
+                    return new Date(a.created_at) - new Date(b.created_at);
+                case 'price_high':
+                    return (b.total_price || 0) - (a.total_price || 0);
+                case 'price_low':
+                    return (a.total_price || 0) - (b.total_price || 0);
+                default:
+                    return new Date(b.created_at) - new Date(a.created_at);
+            }
+        });
 
         this.state.filteredEstimates = filtered;
     },
@@ -868,6 +1128,79 @@ window.EstimatesModule = {
     estimates_attachEvents() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
+
+        // Clickable stat banners for filtering
+        container.querySelectorAll('.estimates-stat-card[data-filter]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const filter = e.currentTarget.dataset.filter;
+                this.state.activeFilter = filter;
+                this.estimates_render();
+            });
+        });
+
+        // Search input
+        const searchInput = container.querySelector('[data-action="search"]');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.state.searchQuery = e.target.value;
+                this.estimates_render();
+            });
+        }
+
+        // Sort dropdown
+        const sortSelect = container.querySelector('[data-action="sort"]');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                this.state.sortBy = e.target.value;
+                this.estimates_render();
+            });
+        }
+
+        // Batch mode toggle
+        const batchToggle = container.querySelector('[data-action="toggle-batch"]');
+        if (batchToggle) {
+            batchToggle.addEventListener('click', () => {
+                this.state.batchMode = !this.state.batchMode;
+                if (!this.state.batchMode) {
+                    this.state.selectedEstimateIds = [];
+                }
+                this.estimates_render();
+            });
+        }
+
+        // Checkbox selection in batch mode
+        container.querySelectorAll('[data-action="toggle-selection"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const id = e.currentTarget.dataset.id;
+                const isChecked = e.currentTarget.checked;
+
+                if (isChecked) {
+                    if (!this.state.selectedEstimateIds.includes(id)) {
+                        this.state.selectedEstimateIds.push(id);
+                    }
+                } else {
+                    this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
+                }
+
+                this.estimates_render();
+            });
+        });
+
+        // Batch actions
+        const batchMarkSent = container.querySelector('[data-action="batch-mark-sent"]');
+        if (batchMarkSent) {
+            batchMarkSent.addEventListener('click', () => this.estimates_batchMarkSent());
+        }
+
+        const batchMarkAccepted = container.querySelector('[data-action="batch-mark-accepted"]');
+        if (batchMarkAccepted) {
+            batchMarkAccepted.addEventListener('click', () => this.estimates_batchMarkAccepted());
+        }
+
+        const batchDelete = container.querySelector('[data-action="batch-delete"]');
+        if (batchDelete) {
+            batchDelete.addEventListener('click', () => this.estimates_batchDelete());
+        }
 
         // New estimate button
         container.querySelectorAll('[data-action="new-estimate"]').forEach(btn => {
@@ -907,20 +1240,6 @@ window.EstimatesModule = {
                 e.stopPropagation();
                 const id = e.currentTarget.dataset.id;
                 this.estimates_deleteEstimate(id);
-            });
-        });
-
-        // Filter changes
-        container.querySelectorAll('[data-filter]').forEach(select => {
-            select.addEventListener('change', (e) => {
-                const filterType = e.target.dataset.filter;
-                const value = e.target.value;
-
-                if (filterType === 'status') this.state.statusFilter = value;
-                if (filterType === 'lead') this.state.leadFilter = value;
-                if (filterType === 'date') this.state.dateFilter = value;
-
-                this.estimates_render();
             });
         });
     },
@@ -2360,6 +2679,90 @@ window.EstimatesModule = {
         } catch (error) {
             console.error('Error converting to job:', error);
             showNotification('Failed to convert to job', 'error');
+        }
+    },
+
+    /**
+     * Batch action: Mark selected as sent
+     */
+    async estimates_batchMarkSent() {
+        if (this.state.selectedEstimateIds.length === 0) return;
+
+        const confirmed = confirm(`Mark ${this.state.selectedEstimateIds.length} estimate(s) as Sent?`);
+        if (!confirmed) return;
+
+        try {
+            for (const id of this.state.selectedEstimateIds) {
+                await API.markEstimateSent(id);
+                const index = this.state.estimates.findIndex(e => e.id === id);
+                if (index !== -1) {
+                    this.state.estimates[index].status = 'sent';
+                }
+            }
+
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+            this.estimates_calculateStats();
+            this.estimates_render();
+            showNotification('Estimates marked as Sent', 'success');
+        } catch (error) {
+            console.error('Batch mark sent error:', error);
+            showNotification('Failed to update estimates', 'error');
+        }
+    },
+
+    /**
+     * Batch action: Mark selected as accepted
+     */
+    async estimates_batchMarkAccepted() {
+        if (this.state.selectedEstimateIds.length === 0) return;
+
+        const confirmed = confirm(`Mark ${this.state.selectedEstimateIds.length} estimate(s) as Accepted?`);
+        if (!confirmed) return;
+
+        try {
+            for (const id of this.state.selectedEstimateIds) {
+                await API.markEstimateAccepted(id);
+                const index = this.state.estimates.findIndex(e => e.id === id);
+                if (index !== -1) {
+                    this.state.estimates[index].status = 'accepted';
+                }
+            }
+
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+            this.estimates_calculateStats();
+            this.estimates_render();
+            showNotification('Estimates marked as Accepted', 'success');
+        } catch (error) {
+            console.error('Batch mark accepted error:', error);
+            showNotification('Failed to update estimates', 'error');
+        }
+    },
+
+    /**
+     * Batch action: Delete selected
+     */
+    async estimates_batchDelete() {
+        if (this.state.selectedEstimateIds.length === 0) return;
+
+        const confirmed = confirm(`Delete ${this.state.selectedEstimateIds.length} estimate(s)? This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            for (const id of this.state.selectedEstimateIds) {
+                await API.deleteEstimate(id);
+                this.state.estimates = this.state.estimates.filter(e => e.id !== id);
+            }
+
+            this.state.selectedEstimateIds = [];
+            this.state.batchMode = false;
+            this.estimates_calculateStats();
+            this.estimates_render();
+            showNotification('Estimates deleted successfully', 'success');
+        } catch (error) {
+            console.error('Batch delete error:', error);
+            showNotification('Failed to delete estimates', 'error');
         }
     },
 
