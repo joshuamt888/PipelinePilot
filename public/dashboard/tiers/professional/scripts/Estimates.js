@@ -1606,7 +1606,7 @@ window.EstimatesModule = {
 
                 .estimate-line-item-header {
                     display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+                    grid-template-columns: 2fr 1fr 1fr 40px;
                     gap: 12px;
                     margin-bottom: 12px;
                     font-size: 12px;
@@ -1618,7 +1618,7 @@ window.EstimatesModule = {
 
                 .estimate-line-item {
                     display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+                    grid-template-columns: 2fr 1fr 1fr 40px;
                     gap: 12px;
                     margin-bottom: 12px;
                     align-items: center;
@@ -1869,7 +1869,6 @@ window.EstimatesModule = {
                                 <div>Description</div>
                                 <div>Quantity</div>
                                 <div>Rate</div>
-                                <div>Total</div>
                                 <div></div>
                             </div>
                             <div id="lineItemsContainer">
@@ -1955,13 +1954,11 @@ window.EstimatesModule = {
      * Render line item row
      */
     estimates_renderLineItemRow(item, index) {
-        const total = (item.quantity || 0) * (item.rate || 0);
         return `
             <div class="estimate-line-item" data-index="${index}">
                 <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="25">
                 <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" max="99999999.99" step="0.01" data-field="quantity">
                 <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" max="99999999.99" step="0.01" data-field="rate">
-                <div class="estimate-line-item-total">${formatCurrency(total)}</div>
                 <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
                         <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
