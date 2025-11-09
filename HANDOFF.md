@@ -1384,6 +1384,179 @@ team_analytics (company_id, metrics, date)
 
 ---
 
+## 📋 ESTIMATES MODULE - QUOTE MANAGEMENT
+
+### Overview
+Lightweight quote/proposal system that feeds into Jobs. Estimates capture client requests with photos, generate professional quotes, and seamlessly convert to jobs when accepted.
+
+### Database Schema
+
+```sql
+CREATE TABLE estimates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users NOT NULL,
+  lead_id UUID REFERENCES leads(id) ON DELETE CASCADE NOT NULL,
+
+  estimate_number TEXT UNIQUE,  -- EST-2025-001
+  title TEXT NOT NULL,
+  description TEXT,
+
+  line_items JSONB DEFAULT '[]'::JSONB,  -- [{name, quantity, rate, total}]
+  total_price NUMERIC DEFAULT 0,
+
+  photos JSONB DEFAULT '[]'::JSONB,  -- Client reference photos (3 max)
+
+  status TEXT DEFAULT 'draft',  -- draft, sent, accepted, rejected, expired
+  expires_at TIMESTAMPTZ,
+  sent_at TIMESTAMPTZ,
+  accepted_at TIMESTAMPTZ,
+  rejected_at TIMESTAMPTZ,
+
+  terms TEXT,  -- Legal terms/conditions
+  notes TEXT,  -- Internal notes
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_estimates_user_id ON estimates(user_id);
+CREATE INDEX idx_estimates_lead_id ON estimates(lead_id);
+CREATE INDEX idx_estimates_status ON estimates(status);
+CREATE INDEX idx_estimates_created_at ON estimates(created_at DESC);
+```
+
+### Photo Storage
+- **Bucket:** `estimate-photos` (public bucket)
+- **Limit:** 3 photos max per estimate
+- **Type:** Client reference photos ("before I start" pics)
+- **Compression:** 1024px max width, 80% JPEG quality (~100-200KB each)
+- **Path:** `estimate-photos/{estimateId}/photo-{timestamp}.jpg`
+
+### Estimate → Job Workflow
+
+```
+Client: "Can you quote this?" + sends 2 photos
+   ↓
+Create Estimate
+   - Attach client photos
+   - Add line items (labor, materials)
+   - Total: $2,500
+   - Set expiration (30 days)
+   ↓
+Send to Client
+   - Status: draft → sent
+   - sent_at timestamp recorded
+   ↓
+Client Accepts
+   - Status: sent → accepted
+   - accepted_at timestamp recorded
+   ↓
+Click "Convert to Job" Button
+   - Auto-creates Job with:
+     - estimate_id link
+     - All estimate data pre-filled
+     - Photos copied as "before" photos
+     - Line items → materials
+     - Status: scheduled
+   ↓
+Job Execution
+   - Add scheduling
+   - Assign crew
+   - Track actual costs
+   - Add "during" and "after" photos
+   - Calculate profit
+```
+
+### API Methods (api.js)
+
+**Core CRUD:**
+```javascript
+API.getEstimates(filters)              // Get all estimates
+API.getEstimateById(id)                // Get single estimate
+API.createEstimate(data)               // Create new estimate
+API.updateEstimate(id, updates)        // Update estimate
+API.deleteEstimate(id)                 // Delete estimate
+API.generateEstimateNumber()           // EST-2025-001
+```
+
+**Photo Management:**
+```javascript
+API.uploadEstimatePhoto(file, estimateId, caption)  // Upload + compress
+API.addEstimatePhoto(estimateId, photoData)         // Add to estimate
+API.removeEstimatePhoto(estimateId, photoId)        // Remove photo
+API.compressImage(file, maxWidth, quality)          // Helper function
+```
+
+**Status Management:**
+```javascript
+API.markEstimateSent(estimateId)       // draft → sent
+API.markEstimateAccepted(estimateId)   // sent → accepted
+API.markEstimateRejected(estimateId)   // sent → rejected
+```
+
+**Convert to Job:**
+```javascript
+API.convertEstimateToJob(estimateId)   // Creates job from accepted estimate
+   - Only works if status === 'accepted'
+   - Copies all data to new job
+   - Photos become "before" photos
+   - Line items → materials
+   - Links job.estimate_id
+```
+
+### UI Features to Build
+
+**Estimates List View:**
+- Cards showing lead, total, status, expiration
+- Filter by status (draft, sent, accepted, rejected)
+- Photo thumbnail count badge
+- "Convert to Job" button (only for accepted)
+
+**Add/Edit Estimate Modal:**
+- Lead dropdown
+- Title, description
+- Line items table (add/remove rows)
+- Auto-sum total
+- Photo upload (3 max)
+- Terms textarea
+- Expiration date picker
+
+**Estimate Detail View:**
+- Read-only display
+- Show all line items
+- Photo gallery
+- "Send", "Accept", "Reject" buttons
+- "Convert to Job" button (if accepted)
+
+### Storage Bucket Setup
+
+**Create bucket:** `estimate-photos`
+**Policies:**
+```sql
+-- Allow authenticated uploads
+CREATE POLICY "Allow authenticated uploads" ON storage.objects
+FOR INSERT TO authenticated USING (bucket_id = 'estimate-photos');
+
+-- Public read access
+CREATE POLICY "Public read access" ON storage.objects
+FOR SELECT TO public USING (bucket_id = 'estimate-photos');
+
+-- Allow authenticated deletes
+CREATE POLICY "Allow authenticated deletes" ON storage.objects
+FOR DELETE TO authenticated USING (bucket_id = 'estimate-photos');
+```
+
+### Build Priority
+
+**Not building yet** - Jobs comes first. Estimates will be built after Jobs is complete, since the convert-to-job flow depends on Jobs being functional.
+
+**Estimated Build Time:** 4-6 hours
+- Session 1: List view, CRUD, filters (2 hours)
+- Session 2: Line items table, photo upload (2 hours)
+- Session 3: Convert to job, status workflow (1-2 hours)
+
+---
+
 ## 💼 JOBS MODULE - DETAILED ANALYSIS & RECOMMENDATIONS
 
 ### Current Schema Review (From Line 368)

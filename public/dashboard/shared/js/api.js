@@ -1358,6 +1358,370 @@ class TierScalingAPI {
   }
 
 // =====================================================
+// ESTIMATES (Pro Tier - Quote Management)
+// =====================================================
+
+  /**
+   * Get all estimates with optional filters
+   * @param {Object} filters - Filter criteria {status, lead_id}
+   * @returns {Promise<Array>} Array of estimate objects
+   */
+  static async getEstimates(filters = {}) {
+    let query = supabase
+      .from('estimates')
+      .select('*, leads(name, email, phone, company)')
+      .order('created_at', { ascending: false });
+
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.lead_id) query = query.eq('lead_id', filters.lead_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get estimate by ID
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<Object>} Estimate object
+   */
+  static async getEstimateById(estimateId) {
+    const { data, error } = await supabase
+      .from('estimates')
+      .select('*, leads(name, email, phone, company)')
+      .eq('id', estimateId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Create new estimate
+   * @param {Object} estimateData - Estimate data object
+   * @returns {Promise<Object>} Created estimate object
+   */
+  static async createEstimate(estimateData) {
+    // Generate estimate number
+    const estimateNumber = await this.generateEstimateNumber();
+
+    const { data, error } = await supabase
+      .from('estimates')
+      .insert([{
+        ...estimateData,
+        estimate_number: estimateNumber,
+        user_id: (await supabase.auth.getUser()).data.user.id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Update estimate
+   * @param {string} estimateId - Estimate UUID
+   * @param {Object} updates - Fields to update
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async updateEstimate(estimateId, updates) {
+    const { data, error } = await supabase
+      .from('estimates')
+      .update(updates)
+      .eq('id', estimateId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Delete estimate
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<void>}
+   */
+  static async deleteEstimate(estimateId) {
+    // Delete associated photos from storage first
+    const estimate = await this.getEstimateById(estimateId);
+    if (estimate.photos && estimate.photos.length > 0) {
+      for (const photo of estimate.photos) {
+        try {
+          await this.deleteEstimatePhotoFile(photo.url);
+        } catch (err) {
+          console.warn('Failed to delete photo file:', err);
+        }
+      }
+    }
+
+    const { error } = await supabase
+      .from('estimates')
+      .delete()
+      .eq('id', estimateId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Generate next estimate number (EST-YYYY-001)
+   * @returns {Promise<string>} Next estimate number
+   */
+  static async generateEstimateNumber() {
+    const year = new Date().getFullYear();
+
+    // Get most recent estimate number for this year
+    const { data: estimates } = await supabase
+      .from('estimates')
+      .select('estimate_number')
+      .like('estimate_number', `EST-${year}-%`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    let nextNumber = 1;
+    if (estimates && estimates.length > 0 && estimates[0].estimate_number) {
+      const lastNumber = parseInt(estimates[0].estimate_number.split('-').pop());
+      nextNumber = lastNumber + 1;
+    }
+
+    return `EST-${year}-${String(nextNumber).padStart(3, '0')}`;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ESTIMATE PHOTOS
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Upload photo to Supabase Storage (estimate-photos bucket)
+   * @param {File} file - File object from input
+   * @param {string} estimateId - Estimate UUID
+   * @param {string} caption - Photo caption
+   * @returns {Promise<string>} Public URL of uploaded photo
+   */
+  static async uploadEstimatePhoto(file, estimateId, caption = '') {
+    // Compress image before upload
+    const compressedFile = await this.compressImage(file, 1024, 0.8);
+
+    const fileExt = compressedFile.name.split('.').pop();
+    const fileName = `${estimateId}/photo-${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('estimate-photos')
+      .upload(fileName, compressedFile);
+
+    if (error) throw error;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('estimate-photos')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  }
+
+  /**
+   * Add photo to estimate
+   * @param {string} estimateId - Estimate UUID
+   * @param {Object} photoData - Photo object {url, caption}
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async addEstimatePhoto(estimateId, photoData) {
+    const estimate = await this.getEstimateById(estimateId);
+    const photos = estimate.photos || [];
+
+    // Enforce 3 photo limit
+    if (photos.length >= 3) {
+      throw new Error('Maximum 3 photos per estimate');
+    }
+
+    photos.push({
+      id: crypto.randomUUID(),
+      url: photoData.url,
+      type: 'reference',
+      caption: photoData.caption || '',
+      uploaded_at: new Date().toISOString()
+    });
+
+    return await this.updateEstimate(estimateId, { photos });
+  }
+
+  /**
+   * Remove photo from estimate
+   * @param {string} estimateId - Estimate UUID
+   * @param {string} photoId - Photo ID to remove
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async removeEstimatePhoto(estimateId, photoId) {
+    const estimate = await this.getEstimateById(estimateId);
+    const photo = estimate.photos.find(p => p.id === photoId);
+
+    if (photo) {
+      // Delete from storage
+      await this.deleteEstimatePhotoFile(photo.url);
+    }
+
+    const photos = (estimate.photos || []).filter(p => p.id !== photoId);
+    return await this.updateEstimate(estimateId, { photos });
+  }
+
+  /**
+   * Delete photo from Supabase Storage
+   * @param {string} photoUrl - Photo URL to delete
+   * @returns {Promise<void>}
+   */
+  static async deleteEstimatePhotoFile(photoUrl) {
+    // Extract file path from URL
+    const path = photoUrl.split('/estimate-photos/').pop();
+
+    const { error } = await supabase.storage
+      .from('estimate-photos')
+      .remove([path]);
+
+    if (error) throw error;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ESTIMATE STATUS MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Mark estimate as sent
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async markEstimateSent(estimateId) {
+    return await this.updateEstimate(estimateId, {
+      status: 'sent',
+      sent_at: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Mark estimate as accepted
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async markEstimateAccepted(estimateId) {
+    return await this.updateEstimate(estimateId, {
+      status: 'accepted',
+      accepted_at: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Mark estimate as rejected
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<Object>} Updated estimate object
+   */
+  static async markEstimateRejected(estimateId) {
+    return await this.updateEstimate(estimateId, {
+      status: 'rejected',
+      rejected_at: new Date().toISOString()
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // CONVERT ESTIMATE TO JOB
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Convert accepted estimate to job
+   * Copies estimate data, photos (as "before"), and links estimate_id
+   * @param {string} estimateId - Estimate UUID
+   * @returns {Promise<Object>} Created job object
+   */
+  static async convertEstimateToJob(estimateId) {
+    const estimate = await this.getEstimateById(estimateId);
+
+    // Only convert accepted estimates
+    if (estimate.status !== 'accepted') {
+      throw new Error('Only accepted estimates can be converted to jobs');
+    }
+
+    // Convert estimate photos to job "before" photos
+    const jobPhotos = (estimate.photos || []).map(photo => ({
+      ...photo,
+      type: 'before'  // Change from 'reference' to 'before'
+    }));
+
+    // Convert line_items to materials format
+    const materials = (estimate.line_items || []).map(item => ({
+      id: crypto.randomUUID(),
+      name: item.description || item.name,
+      quantity: item.quantity || 1,
+      unit: item.unit || 'unit',
+      cost_per_unit: item.rate || item.cost_per_unit || 0,
+      total: item.total || 0,
+      supplier: item.supplier || ''
+    }));
+
+    // Create job with estimate data
+    const jobData = {
+      estimate_id: estimate.id,
+      lead_id: estimate.lead_id,
+      title: estimate.title,
+      description: estimate.description,
+      quoted_price: estimate.total_price,
+      photos: jobPhotos,
+      materials: materials,
+      notes: estimate.notes,
+      status: 'scheduled'  // Start as scheduled
+    };
+
+    const job = await this.createJob(jobData);
+
+    // Mark estimate as converted (optional - add 'converted' status if you want)
+    // await this.updateEstimate(estimateId, { status: 'converted' });
+
+    return job;
+  }
+
+  /**
+   * Image compression helper
+   * @param {File} file - Image file to compress
+   * @param {number} maxWidth - Maximum width in pixels
+   * @param {number} quality - JPEG quality (0-1)
+   * @returns {Promise<File>} Compressed image file
+   */
+  static async compressImage(file, maxWidth = 1024, quality = 0.8) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Resize if needed
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              }));
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+      };
+    });
+  }
+
+// =====================================================
 // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
 // =====================================================
 
