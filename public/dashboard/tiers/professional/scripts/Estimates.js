@@ -635,26 +635,92 @@ window.EstimatesModule = {
                 }
 
                 /* CARD - Ticket Design with Left Border Accent */
+                /* ESTIMATE CARDS - Compact like Goals */
                 .estimate-card {
                     background: var(--surface);
                     border: 2px solid var(--border);
-                    border-left: 5px solid;
                     border-radius: var(--radius-lg);
-                    padding: 1.75rem;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    padding: 1.25rem;
                     cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     position: relative;
+                    overflow: hidden;
                 }
 
-                .estimate-card.draft { border-left-color: #9ca3af; }
-                .estimate-card.sent { border-left-color: #667eea; }
-                .estimate-card.accepted { border-left-color: #10b981; }
-                .estimate-card.rejected { border-left-color: #ef4444; }
-                .estimate-card.expired { border-left-color: #d1d5db; }
+                /* Left accent triangle */
+                .estimate-card-accent {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 60px;
+                    height: 60px;
+                    clip-path: polygon(0 0, 100% 0, 0 100%);
+                }
 
                 .estimate-card:hover {
-                    transform: translateY(-6px) scale(1.02);
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+                    border-color: #667eea;
+                }
+
+                .estimate-card.selected {
+                    border-color: #667eea;
+                    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+                }
+
+                .estimate-card.batch-mode {
+                    padding-left: 3.5rem;
+                }
+
+                /* Custom checkbox styling like Goals */
+                .estimate-card-checkbox {
+                    position: absolute;
+                    left: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    z-index: 10;
+                }
+
+                .estimate-checkbox-input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+
+                .estimate-checkbox-custom {
+                    width: 1.5rem;
+                    height: 1.5rem;
+                    border: 2px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                }
+
+                .estimate-checkbox-custom svg {
+                    width: 1rem;
+                    height: 1rem;
+                    stroke: white;
+                    opacity: 0;
+                    transform: scale(0);
+                    transition: all 0.2s;
+                }
+
+                .estimate-checkbox-input:checked + .estimate-checkbox-custom {
+                    background: #667eea;
+                    border-color: #667eea;
+                }
+
+                .estimate-checkbox-input:checked + .estimate-checkbox-custom svg {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+
+                .estimate-checkbox-custom:hover {
                     border-color: #667eea;
                 }
 
@@ -678,28 +744,43 @@ window.EstimatesModule = {
                     background: rgba(102, 126, 234, 0.05);
                 }
 
+                .estimate-card-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
                 .estimate-card-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
-                    margin-bottom: 1rem;
+                    gap: 0.75rem;
+                }
+
+                .estimate-header-left {
+                    flex: 1;
+                    min-width: 0;
                 }
 
                 .estimate-number {
-                    font-size: 0.75rem;
+                    font-size: 0.7rem;
                     font-weight: 700;
                     color: var(--text-secondary);
                     text-transform: uppercase;
-                    letter-spacing: 1px;
-                    opacity: 0.7;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 0.25rem;
+                    opacity: 0.8;
                 }
 
                 .estimate-title {
-                    font-size: 1.375rem;
+                    font-size: 1.125rem;
                     font-weight: 700;
                     color: var(--text-primary);
-                    margin: 0.75rem 0;
                     line-height: 1.3;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    margin: 0;
                 }
 
                 .estimate-lead {
@@ -707,9 +788,8 @@ window.EstimatesModule = {
                     align-items: center;
                     gap: 0.5rem;
                     color: var(--text-secondary);
-                    font-size: 0.9rem;
+                    font-size: 0.875rem;
                     font-weight: 500;
-                    margin-bottom: 1rem;
                 }
 
                 .estimate-lead svg {
@@ -760,36 +840,43 @@ window.EstimatesModule = {
                     height: 0.875rem;
                 }
 
-                .estimate-photos {
-                    display: inline-flex;
+                .estimate-card-meta {
+                    display: flex;
                     align-items: center;
-                    gap: 0.5rem;
-                    color: var(--text-secondary);
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                    margin-top: 1rem;
-                    padding: 0.5rem 0.75rem;
-                    background: rgba(102, 126, 234, 0.05);
-                    border-radius: 0.5rem;
-                }
-
-                .estimate-photos svg {
-                    width: 1rem;
-                    height: 1rem;
+                    justify-content: space-between;
+                    gap: 0.75rem;
                 }
 
                 .estimate-total {
-                    font-size: 2.25rem;
+                    font-size: 1.5rem;
                     font-weight: 900;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
-                    margin: 1.5rem 0 0.75rem 0;
+                    background-clip: text;
                     line-height: 1;
                 }
 
+                .estimate-photos-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    padding: 0.375rem 0.625rem;
+                    background: rgba(102, 126, 234, 0.1);
+                    border: 1px solid rgba(102, 126, 234, 0.2);
+                    border-radius: 6px;
+                    color: #667eea;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                }
+
+                .estimate-photos-badge svg {
+                    width: 0.875rem;
+                    height: 0.875rem;
+                }
+
                 .estimate-expiry {
-                    font-size: 0.85rem;
+                    font-size: 0.8rem;
                     color: var(--text-secondary);
                     font-weight: 500;
                     display: flex;
@@ -797,25 +884,14 @@ window.EstimatesModule = {
                     gap: 0.375rem;
                 }
 
+                .estimate-expiry svg {
+                    width: 0.875rem;
+                    height: 0.875rem;
+                }
+
                 .estimate-expiry.warning {
                     color: #f59e0b;
                     font-weight: 600;
-                }
-
-                .estimate-card-actions {
-                    display: flex;
-                    gap: 0.625rem;
-                    margin-top: 1.5rem;
-                    padding-top: 1.5rem;
-                    border-top: 2px solid var(--border);
-                    opacity: 0;
-                    transform: translateY(-10px);
-                    transition: all 0.3s ease;
-                }
-
-                .estimate-card:hover .estimate-card-actions {
-                    opacity: 1;
-                    transform: translateY(0);
                 }
 
                 .estimate-btn {
@@ -902,6 +978,98 @@ window.EstimatesModule = {
                     color: var(--text-secondary);
                     font-size: 1rem;
                     margin: 0;
+                }
+
+                /* CONFIRMATION MODAL */
+                .estimate-confirm-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .estimate-confirm-modal {
+                    background: var(--surface);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                }
+
+                .estimate-confirm-modal h3 {
+                    margin: 0 0 1rem 0;
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .estimate-confirm-modal p {
+                    margin: 0 0 1.5rem 0;
+                    color: var(--text-secondary);
+                    font-size: 1rem;
+                    line-height: 1.5;
+                }
+
+                .estimate-confirm-actions {
+                    display: flex;
+                    gap: 0.75rem;
+                    justify-content: flex-end;
+                }
+
+                .estimate-confirm-btn {
+                    padding: 0.75rem 1.5rem;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .estimate-confirm-btn.cancel {
+                    background: var(--border);
+                    color: var(--text-primary);
+                }
+
+                .estimate-confirm-btn.cancel:hover {
+                    background: var(--text-tertiary);
+                }
+
+                .estimate-confirm-btn.confirm {
+                    color: white;
+                }
+
+                .estimate-confirm-btn.confirm.primary {
+                    background: #667eea;
+                }
+
+                .estimate-confirm-btn.confirm.primary:hover {
+                    background: #5568d3;
+                }
+
+                .estimate-confirm-btn.confirm.success {
+                    background: #10b981;
+                }
+
+                .estimate-confirm-btn.confirm.success:hover {
+                    background: #059669;
+                }
+
+                .estimate-confirm-btn.confirm.danger {
+                    background: #ef4444;
+                }
+
+                .estimate-confirm-btn.confirm.danger:hover {
+                    background: #dc2626;
                 }
             </style>
         `;
@@ -1080,7 +1248,7 @@ window.EstimatesModule = {
     },
 
     /**
-     * Render estimate card
+     * Render estimate card - Now matches Goals module styling
      */
     estimates_renderCard(estimate) {
         const lead = (Array.isArray(this.state.leads) ? this.state.leads : []).find(l => l.id === estimate.lead_id);
@@ -1088,75 +1256,78 @@ window.EstimatesModule = {
         const expiryInfo = this.estimates_getExpiryInfo(estimate);
         const isSelected = this.state.selectedEstimateIds.includes(estimate.id);
 
-        // Show "Convert to Job" if accepted, otherwise "View" and "Edit"
-        const actions = estimate.status === 'accepted' ? `
-            <button class="estimate-btn estimate-btn-primary" data-action="convert-to-job" data-id="${estimate.id}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Convert to Job
-            </button>
-        ` : `
-            <button class="estimate-btn" data-action="view-estimate" data-id="${estimate.id}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/>
-                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/>
-                </svg>
-                View
-            </button>
-            <button class="estimate-btn" data-action="edit-estimate" data-id="${estimate.id}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Edit
-            </button>
-        `;
+        // Card color based on status
+        const statusColors = {
+            draft: '#9ca3af',
+            sent: '#667eea',
+            accepted: '#10b981',
+            rejected: '#ef4444',
+            expired: '#d1d5db'
+        };
+        const cardColor = statusColors[estimate.status] || statusColors.draft;
 
         return `
-            <div class="estimate-card ${estimate.status}" data-id="${estimate.id}">
-                <div class="estimate-card-header">
-                    <div>
-                        <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
-                        <h3 class="estimate-title">${this.estimates_truncateText(estimate.title || 'Untitled', 60)}</h3>
-                    </div>
-                    ${this.estimates_renderStatusBadge(estimate.status)}
-                </div>
+            <div class="estimate-card estimate-card-${estimate.status} ${this.state.batchMode ? 'batch-mode' : ''} ${isSelected ? 'selected' : ''}"
+                 data-action="${this.state.batchMode ? 'toggle-estimate-selection' : 'view-estimate'}"
+                 data-id="${estimate.id}">
 
-                ${lead ? `
-                    <div class="estimate-lead">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        ${this.estimates_truncateText(lead.name, 50)}
-                    </div>
-                ` : ''}
+                ${cardColor ? `<div class="estimate-card-accent" style="background: ${cardColor}"></div>` : ''}
 
-                ${photoCount > 0 ? `
-                    <div class="estimate-photos">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-                            <circle cx="8.5" cy="8.5" r="1.5"/>
-                            <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        ${photoCount} photo${photoCount > 1 ? 's' : ''}
+                ${this.state.batchMode ? `
+                    <div class="estimate-card-checkbox">
+                        <input type="checkbox"
+                               class="estimate-checkbox-input"
+                               ${isSelected ? 'checked' : ''}
+                               data-estimate-id="${estimate.id}">
+                        <div class="estimate-checkbox-custom">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <polyline points="20 6 9 17 4 12" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
                     </div>
                 ` : ''}
 
-                <div class="estimate-total">${formatCurrency(estimate.total_price || 0)}</div>
-
-                ${expiryInfo ? `
-                    <div class="estimate-expiry ${expiryInfo.warning ? 'warning' : ''}">
-                        ${expiryInfo.text}
+                <div class="estimate-card-content">
+                    <div class="estimate-card-header">
+                        <div class="estimate-header-left">
+                            <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
+                            <h3 class="estimate-title">${this.estimates_truncateText(estimate.title || 'Untitled', 50)}</h3>
+                        </div>
+                        ${this.estimates_renderStatusBadge(estimate.status)}
                     </div>
-                ` : ''}
 
-                <div class="estimate-card-actions">
-                    ${actions}
-                    <button class="estimate-btn estimate-btn-danger" data-action="delete-estimate" data-id="${estimate.id}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+                    ${lead ? `
+                        <div class="estimate-lead">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            ${this.estimates_truncateText(lead.name, 35)}
+                        </div>
+                    ` : ''}
+
+                    <div class="estimate-card-meta">
+                        <div class="estimate-total">${formatCurrency(estimate.total_price || 0)}</div>
+                        ${photoCount > 0 ? `
+                            <div class="estimate-photos-badge">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                ${photoCount}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    ${expiryInfo ? `
+                        <div class="estimate-expiry ${expiryInfo.warning ? 'warning' : ''}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            ${expiryInfo.text}
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -1319,8 +1490,14 @@ window.EstimatesModule = {
                     this.estimates_openModal();
                     break;
                 case 'view-estimate':
-                    e.stopPropagation();
-                    this.estimates_openDetailView(id);
+                    // Clicking the whole card opens detail view
+                    if (!e.target.closest('.estimate-checkbox-custom')) {
+                        this.estimates_openDetailView(id);
+                    }
+                    break;
+                case 'toggle-estimate-selection':
+                    // Toggle selection in batch mode
+                    this.estimates_toggleSelection(id);
                     break;
                 case 'edit-estimate':
                     e.stopPropagation();
@@ -1333,6 +1510,15 @@ window.EstimatesModule = {
                 case 'delete-estimate':
                     e.stopPropagation();
                     this.estimates_deleteEstimate(id);
+                    break;
+                case 'batch-mark-sent':
+                    this.estimates_batchMarkSent();
+                    break;
+                case 'batch-mark-accepted':
+                    this.estimates_batchMarkAccepted();
+                    break;
+                case 'batch-delete':
+                    this.estimates_batchDelete();
                     break;
             }
         };
@@ -3255,7 +3441,208 @@ window.EstimatesModule = {
     /**
      * Toggle batch selection mode (LIGHTWEIGHT - like Goals)
      */
+    /**
+     * Toggle batch selection mode
+     */
     estimates_toggleBatchMode() {
+        this.state.batchMode = !this.state.batchMode;
+
+        if (!this.state.batchMode) {
+            // Clear selections when exiting batch mode
+            this.state.selectedEstimateIds = [];
+        }
+
+        // Re-render to show/hide checkboxes
+        this.estimates_render();
+    },
+
+    /**
+     * Toggle selection of an estimate in batch mode
+     */
+    estimates_toggleSelection(estimateId) {
+        const index = this.state.selectedEstimateIds.indexOf(estimateId);
+
+        if (index > -1) {
+            // Deselect
+            this.state.selectedEstimateIds.splice(index, 1);
+        } else {
+            // Select
+            this.state.selectedEstimateIds.push(estimateId);
+        }
+
+        // Update the card visually
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const card = container.querySelector(`.estimate-card[data-id="${estimateId}"]`);
+        if (!card) return;
+
+        const isSelected = this.state.selectedEstimateIds.includes(estimateId);
+
+        if (isSelected) {
+            card.classList.add('selected');
+            const checkbox = card.querySelector('.estimate-checkbox-input');
+            if (checkbox) checkbox.checked = true;
+        } else {
+            card.classList.remove('selected');
+            const checkbox = card.querySelector('.estimate-checkbox-input');
+            if (checkbox) checkbox.checked = false;
+        }
+
+        // Update batch button text
+        const selectedCount = this.state.selectedEstimateIds.length;
+        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+        if (batchBtn) {
+            batchBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cancel (${selectedCount} selected)
+            `;
+        }
+    },
+
+    /**
+     * Batch mark estimates as sent
+     */
+    async estimates_batchMarkSent() {
+        const count = this.state.selectedEstimateIds.length;
+        if (count === 0) return;
+
+        const confirmed = await this.estimates_showConfirmation(
+            'Mark as Sent',
+            `Mark ${count} estimate${count > 1 ? 's' : ''} as sent?`,
+            'Confirm',
+            'primary'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
+                status: 'sent',
+                sent_at: new Date().toISOString()
+            });
+
+            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as sent`, 'success');
+
+            // Reload data and exit batch mode
+            await this.init(this.state.container);
+        } catch (error) {
+            console.error('Batch mark sent error:', error);
+            window.SteadyUtils.showToast('Failed to update estimates', 'error');
+        }
+    },
+
+    /**
+     * Batch mark estimates as accepted
+     */
+    async estimates_batchMarkAccepted() {
+        const count = this.state.selectedEstimateIds.length;
+        if (count === 0) return;
+
+        const confirmed = await this.estimates_showConfirmation(
+            'Mark as Accepted',
+            `Mark ${count} estimate${count > 1 ? 's' : ''} as accepted?`,
+            'Confirm',
+            'success'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
+                status: 'accepted',
+                accepted_at: new Date().toISOString()
+            });
+
+            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as accepted`, 'success');
+
+            // Reload data and exit batch mode
+            await this.init(this.state.container);
+        } catch (error) {
+            console.error('Batch mark accepted error:', error);
+            window.SteadyUtils.showToast('Failed to update estimates', 'error');
+        }
+    },
+
+    /**
+     * Batch delete estimates
+     */
+    async estimates_batchDelete() {
+        const count = this.state.selectedEstimateIds.length;
+        if (count === 0) return;
+
+        const confirmed = await this.estimates_showConfirmation(
+            'Delete Estimates',
+            `Permanently delete ${count} estimate${count > 1 ? 's' : ''}? This cannot be undone.`,
+            'Delete',
+            'danger'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await API.batchDeleteEstimates(this.state.selectedEstimateIds);
+
+            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
+
+            // Reload data and exit batch mode
+            await this.init(this.state.container);
+        } catch (error) {
+            console.error('Batch delete error:', error);
+            window.SteadyUtils.showToast('Failed to delete estimates', 'error');
+        }
+    },
+
+    /**
+     * Show confirmation modal
+     */
+    estimates_showConfirmation(title, message, confirmText = 'Confirm', type = 'primary') {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'estimate-confirm-overlay';
+            overlay.innerHTML = `
+                <div class="estimate-confirm-modal">
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <div class="estimate-confirm-actions">
+                        <button class="estimate-confirm-btn cancel" data-action="cancel">Cancel</button>
+                        <button class="estimate-confirm-btn confirm ${type}" data-action="confirm">${confirmText}</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Fade in
+            setTimeout(() => overlay.style.opacity = '1', 10);
+
+            // Handle clicks
+            overlay.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-action]');
+                if (!target) {
+                    // Click outside
+                    if (e.target === overlay) {
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.remove(), 300);
+                        resolve(false);
+                    }
+                    return;
+                }
+
+                const action = target.dataset.action;
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+                resolve(action === 'confirm');
+            });
+        });
+    },
+
+    /**
+     * OLD toggleBatchMode - keeping for reference, will be removed
+     */
+    estimates_toggleBatchMode_OLD() {
         this.state.batchMode = !this.state.batchMode;
 
         if (!this.state.batchMode) {
