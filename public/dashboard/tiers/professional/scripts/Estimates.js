@@ -93,12 +93,14 @@ window.EstimatesModule = {
     },
 
     /**
-     * Instant filter change (no full re-render)
+     * Instant filter/search change (no full re-render)
      */
     estimates_instantFilterChange(newFilter) {
-        if (this.state.activeFilter === newFilter) return;
+        // Allow same filter to trigger re-render (for search)
+        if (newFilter !== undefined) {
+            this.state.activeFilter = newFilter;
+        }
 
-        this.state.activeFilter = newFilter;
         this.estimates_applyFilters();
 
         const container = document.getElementById(this.state.container);
@@ -107,7 +109,7 @@ window.EstimatesModule = {
         // Update stats active state
         const statCards = container.querySelectorAll('.estimates-stat-card');
         statCards.forEach(card => {
-            if (card.dataset.filter === newFilter) {
+            if (card.dataset.filter === this.state.activeFilter) {
                 card.classList.add('active');
             } else {
                 card.classList.remove('active');
@@ -126,6 +128,8 @@ window.EstimatesModule = {
                 this.estimates_applyBatchMode();
             }
         }
+
+        console.log(`[Estimates] Filtered: ${this.state.filteredEstimates.length} results (search: "${this.state.searchQuery}")`);
     },
 
     /**
@@ -296,7 +300,7 @@ window.EstimatesModule = {
                             <circle cx="11" cy="11" r="8" stroke-width="2"/>
                             <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
                         </svg>
-                        <input type="text" id="estimatesSearchInput" placeholder="Search estimates..." 
+                        <input type="search" id="estimatesSearchInput" placeholder="Search by title, number, or client..."
                                value="${this.state.searchQuery}" autocomplete="off">
                     </div>
                 </div>
@@ -483,13 +487,16 @@ window.EstimatesModule = {
 },
 
 estimates_showCreateModal() {
+    console.log('[Estimates] Opening create modal...');
+    console.log('[Estimates] Available leads:', this.state.leads.length);
+
     const modal = document.createElement('div');
-    modal.className = 'estimates-modal-overlay';
+    modal.className = 'goals-modal-overlay'; // Using goals-modal styles
     modal.innerHTML = `
-        <div class="estimates-modal estimates-modal-create-v2">
-            <div class="estimates-modal-header-v2">
-                <h2 class="estimates-modal-title-v2">Create New Estimate</h2>
-                <button class="estimates-modal-close">
+        <div class="goals-modal goals-modal-create-v2">
+            <div class="goals-modal-header-v2">
+                <h2 class="goals-modal-title-v2">Create New Estimate</h2>
+                <button class="goals-modal-close">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
                         <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
@@ -497,27 +504,27 @@ estimates_showCreateModal() {
                 </button>
             </div>
 
-            <div class="estimates-modal-body-v2">
-                <form id="estimateForm" class="estimates-form-v2">
+            <div class="goals-modal-body-v2">
+                <form id="estimateForm" class="goals-form-v2">
                     <!-- TITLE -->
-                    <div class="estimates-form-group-v2">
-                        <label class="estimates-form-label-v2">Estimate Title</label>
-                        <input type="text" 
-                               id="estimateTitle" 
-                               class="estimates-form-input-v2 estimates-form-input-large"
-                               placeholder="Kitchen Remodel - Smith Residence" 
-                               autocomplete="off" 
+                    <div class="goals-form-group-v2">
+                        <label class="goals-form-label-v2">Estimate Title</label>
+                        <input type="text"
+                               id="estimateTitle"
+                               class="goals-form-input-v2 goals-form-input-large"
+                               placeholder="Kitchen Remodel - Smith Residence"
+                               autocomplete="off"
                                maxlength="100"
                                required>
-                        <span class="estimates-input-hint" id="titleCounter">100 characters remaining</span>
+                        <span class="goals-input-hint" id="titleCounter">100 characters remaining</span>
                     </div>
 
-                    <div class="estimates-divider"></div>
+                    <div class="goals-divider"></div>
 
                     <!-- LEAD SELECTION -->
-                    <div class="estimates-form-group-v2">
-                        <label class="estimates-form-label-v2">Client / Lead</label>
-                        <select id="estimateLead" class="estimates-form-select-v2" required>
+                    <div class="goals-form-group-v2">
+                        <label class="goals-form-label-v2">Client / Lead</label>
+                        <select id="estimateLead" class="goals-form-select-v2" required>
                             <option value="">Select a lead...</option>
                             ${this.state.leads.map(lead => `
                                 <option value="${lead.id}">${API.escapeHtml(lead.name)}</option>
@@ -526,56 +533,56 @@ estimates_showCreateModal() {
                     </div>
 
                     <!-- PRICE & EXPIRY -->
-                    <div class="estimates-form-row-v2">
-                        <div class="estimates-form-group-v2">
-                            <label class="estimates-form-label-v2">Total Price</label>
-                            <input type="number" 
-                                   id="estimatePrice" 
-                                   class="estimates-form-input-v2"
-                                   placeholder="5000.00" 
-                                   step="0.01" 
+                    <div class="goals-form-row-v2">
+                        <div class="goals-form-group-v2">
+                            <label class="goals-form-label-v2">Total Price</label>
+                            <input type="number"
+                                   id="estimatePrice"
+                                   class="goals-form-input-v2"
+                                   placeholder="5000.00"
+                                   step="0.01"
                                    min="0"
                                    required>
-                            <span class="estimates-input-hint">Enter amount in dollars</span>
+                            <span class="goals-input-hint">Enter amount in dollars</span>
                         </div>
-                        <div class="estimates-form-group-v2">
-                            <label class="estimates-form-label-v2">Expires On (Optional)</label>
-                            <input type="date" 
-                                   id="estimateExpiry" 
-                                   class="estimates-form-input-v2">
+                        <div class="goals-form-group-v2">
+                            <label class="goals-form-label-v2">Expires On (Optional)</label>
+                            <input type="date"
+                                   id="estimateExpiry"
+                                   class="goals-form-input-v2">
                         </div>
                     </div>
 
-                    <div class="estimates-divider"></div>
+                    <div class="goals-divider"></div>
 
                     <!-- DESCRIPTION -->
-                    <div class="estimates-form-group-v2">
-                        <label class="estimates-form-label-v2">Description / Details (Optional)</label>
-                        <textarea id="estimateDescription" 
-                                  class="estimates-form-textarea-v2"
+                    <div class="goals-form-group-v2">
+                        <label class="goals-form-label-v2">Description / Details (Optional)</label>
+                        <textarea id="estimateDescription"
+                                  class="goals-form-textarea-v2"
                                   placeholder="Add project details, scope of work, materials, etc..."
                                   maxlength="2000"
                                   rows="5"></textarea>
-                        <span class="estimates-input-hint" id="descriptionCounter">2000 characters remaining</span>
+                        <span class="goals-input-hint" id="descriptionCounter">2000 characters remaining</span>
                     </div>
 
-                    <div class="estimates-divider"></div>
+                    <div class="goals-divider"></div>
 
                     <!-- STATUS -->
-                    <div class="estimates-form-group-v2">
-                        <label class="estimates-form-label-v2">Initial Status</label>
-                        <select id="estimateStatus" class="estimates-form-select-v2" required>
+                    <div class="goals-form-group-v2">
+                        <label class="goals-form-label-v2">Initial Status</label>
+                        <select id="estimateStatus" class="goals-form-select-v2" required>
                             <option value="draft">Draft (not sent yet)</option>
                             <option value="sent">Sent to client</option>
                         </select>
                     </div>
 
                     <!-- ACTIONS -->
-                    <div class="estimates-modal-actions-v2">
-                        <button type="button" class="estimates-btn-secondary" data-action="close-modal">
+                    <div class="goals-modal-actions-v2">
+                        <button type="button" class="goals-btn-secondary" data-action="close-modal">
                             Cancel
                         </button>
-                        <button type="submit" class="estimates-btn-primary">
+                        <button type="submit" class="goals-btn-primary">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -607,7 +614,7 @@ estimates_showCreateModal() {
         submitBtn.disabled = true;
         const originalHTML = submitBtn.innerHTML;
         submitBtn.innerHTML = `
-            <svg class="estimates-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
                 <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -673,10 +680,10 @@ estimates_setupFormCounters(modal) {
     }
 },
 
-// 4. ADD MODAL EVENT SETUP
+// Modal event setup
 estimates_setupModalEvents(modal) {
     // Close button
-    const closeBtn = modal.querySelector('.estimates-modal-close');
+    const closeBtn = modal.querySelector('.goals-modal-close');
     if (closeBtn) {
         closeBtn.onclick = () => {
             modal.classList.remove('show');
@@ -720,15 +727,31 @@ estimates_setupModalEvents(modal) {
 
 async estimates_createEstimate() {
     try {
-        const title = document.getElementById('estimateTitle').value.trim();
-        const leadId = document.getElementById('estimateLead').value;
-        const price = parseFloat(document.getElementById('estimatePrice').value);
-        const expiry = document.getElementById('estimateExpiry').value || null;
-        const description = document.getElementById('estimateDescription').value.trim() || null;
-        const status = document.getElementById('estimateStatus').value;
+        console.log('[Estimates] Creating estimate...');
 
-        if (!title || !leadId || !price || isNaN(price)) {
-            window.SteadyUtils.showToast('Please fill in all required fields', 'error');
+        const title = document.getElementById('estimateTitle')?.value.trim();
+        const leadId = document.getElementById('estimateLead')?.value;
+        const priceInput = document.getElementById('estimatePrice')?.value;
+        const price = parseFloat(priceInput);
+        const expiry = document.getElementById('estimateExpiry')?.value || null;
+        const description = document.getElementById('estimateDescription')?.value.trim() || null;
+        const status = document.getElementById('estimateStatus')?.value || 'draft';
+
+        console.log('[Estimates] Form data:', { title, leadId, price, expiry, status });
+
+        // Validation
+        if (!title) {
+            alert('Please enter an estimate title');
+            return;
+        }
+
+        if (!leadId) {
+            alert('Please select a client/lead');
+            return;
+        }
+
+        if (!priceInput || isNaN(price) || price <= 0) {
+            alert('Please enter a valid price');
             return;
         }
 
@@ -741,16 +764,32 @@ async estimates_createEstimate() {
             status: status
         };
 
-        await API.createEstimate(estimateData);
+        console.log('[Estimates] Sending to API:', estimateData);
 
-        window.SteadyUtils.showToast('Estimate created successfully!', 'success');
+        const result = await API.createEstimate(estimateData);
 
-        // Reload
+        console.log('[Estimates] API response:', result);
+
+        if (window.SteadyUtils && window.SteadyUtils.showToast) {
+            window.SteadyUtils.showToast('Estimate created successfully! 🎉', 'success');
+        } else {
+            alert('Estimate created successfully! 🎉');
+        }
+
+        // Reload estimates
         await this.init(this.state.container);
 
     } catch (error) {
-        console.error('Create estimate error:', error);
-        window.SteadyUtils.showToast('Failed to create estimate', 'error');
+        console.error('[Estimates] Create error:', error);
+
+        const errorMsg = error.message || 'Failed to create estimate';
+
+        if (window.SteadyUtils && window.SteadyUtils.showToast) {
+            window.SteadyUtils.showToast(errorMsg, 'error');
+        } else {
+            alert('Error: ' + errorMsg);
+        }
+
         throw error;
     }
 },
@@ -800,22 +839,31 @@ async estimates_createEstimate() {
             }
         };
 
-        // Search
+        // Search - use input event for real-time filtering
         const searchInput = container.querySelector('#estimatesSearchInput');
         if (searchInput) {
-            searchInput.oninput = (e) => {
+            searchInput.addEventListener('input', (e) => {
+                const oldQuery = this.state.searchQuery;
                 this.state.searchQuery = e.target.value;
-                this.estimates_instantFilterChange(this.state.activeFilter);
-            };
+                console.log(`[Estimates] Search: "${oldQuery}" → "${this.state.searchQuery}"`);
+                this.estimates_instantFilterChange(); // No filter param = keep current filter
+            });
+
+            // Also handle clearing
+            searchInput.addEventListener('search', (e) => {
+                this.state.searchQuery = '';
+                this.estimates_instantFilterChange();
+            });
         }
 
         // Sort
         const sortSelect = container.querySelector('#estimatesSortSelect');
         if (sortSelect) {
-            sortSelect.onchange = (e) => {
+            sortSelect.addEventListener('change', (e) => {
                 this.state.sortBy = e.target.value;
-                this.estimates_instantFilterChange(this.state.activeFilter);
-            };
+                console.log(`[Estimates] Sort changed: ${this.state.sortBy}`);
+                this.estimates_instantFilterChange();
+            });
         }
     },
 
