@@ -1835,6 +1835,16 @@ estimates_showViewModal(estimateId) {
                 transform: translateY(-1px);
             }
 
+            .estimate-view-btn-download {
+                background: #10b981;
+                color: white;
+            }
+
+            .estimate-view-btn-download:hover {
+                background: #059669;
+                transform: translateY(-1px);
+            }
+
             .estimate-view-btn-delete {
                 background: transparent;
                 border: 1px solid #ef4444;
@@ -1982,6 +1992,13 @@ estimates_showViewModal(estimateId) {
                     Edit
                 </button>
 
+                <button class="estimate-view-btn estimate-view-btn-download" data-action="download-client-copy" data-id="${estimate.id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Download Client Copy
+                </button>
+
                 <div class="estimate-view-actions">
                     <select class="estimate-view-status-dropdown" data-action="update-status" data-id="${estimate.id}">
                         ${this.STATUSES.map(status => `
@@ -2017,6 +2034,11 @@ estimates_showViewModal(estimateId) {
             overlay.remove();
             this.estimates_showCreateModal(estimate.id);
         }, 200);
+    });
+
+    // Download client copy
+    overlay.querySelector('[data-action="download-client-copy"]').addEventListener('click', () => {
+        this.estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice);
     });
 
     // Delete estimate
@@ -2107,6 +2129,233 @@ estimates_showViewModal(estimateId) {
             setTimeout(() => overlay.remove(), 200);
         }
     });
+},
+
+/**
+ * Download professional client copy PDF
+ */
+estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
+    // Create print window with professional styling
+    const printWindow = window.open('', '_blank');
+    const doc = printWindow.document;
+
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Estimate - ${estimate.title}</title>
+            <style>
+                @page {
+                    margin: 0.75in;
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.6;
+                    color: #1a1a1a;
+                }
+                .header {
+                    border-bottom: 3px solid #667eea;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+                .header h1 {
+                    font-size: 28pt;
+                    color: #667eea;
+                    margin-bottom: 8px;
+                }
+                .meta {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 30px;
+                    font-size: 10pt;
+                }
+                .meta-item {
+                    margin-bottom: 4px;
+                }
+                .meta-label {
+                    font-weight: 600;
+                    color: #666;
+                }
+                .description {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 6px;
+                    margin-bottom: 30px;
+                    white-space: pre-wrap;
+                }
+                .section-title {
+                    font-size: 14pt;
+                    font-weight: 600;
+                    margin: 30px 0 15px 0;
+                    color: #333;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                thead {
+                    background: #667eea;
+                    color: white;
+                }
+                th {
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: 600;
+                    font-size: 10pt;
+                }
+                td {
+                    padding: 10px 12px;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                tr:hover {
+                    background: #f9fafb;
+                }
+                .text-right {
+                    text-align: right;
+                }
+                .total-box {
+                    background: #667eea10;
+                    border: 2px solid #667eea;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                    text-align: left;
+                }
+                .total-label {
+                    font-size: 12pt;
+                    color: #666;
+                    margin-bottom: 8px;
+                }
+                .total-value {
+                    font-size: 32pt;
+                    font-weight: 700;
+                    color: #667eea;
+                }
+                .photos {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 15px;
+                    margin: 20px 0;
+                }
+                .photo {
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                .photo img {
+                    width: 100%;
+                    height: auto;
+                    display: block;
+                }
+                .terms {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-left: 4px solid #667eea;
+                    margin-top: 30px;
+                    white-space: pre-wrap;
+                    font-size: 9pt;
+                    color: #666;
+                }
+                @media print {
+                    body {
+                        print-color-adjust: exact;
+                        -webkit-print-color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>${estimate.title}</h1>
+                <div style="font-size: 10pt; color: #666;">
+                    Estimate #${estimate.estimate_number || 'N/A'}
+                </div>
+            </div>
+
+            <div class="meta">
+                <div>
+                    ${lead ? `
+                        <div class="meta-item"><span class="meta-label">Client:</span> ${lead.name}</div>
+                        ${lead.email ? `<div class="meta-item"><span class="meta-label">Email:</span> ${lead.email}</div>` : ''}
+                        ${lead.phone ? `<div class="meta-item"><span class="meta-label">Phone:</span> ${lead.phone}</div>` : ''}
+                    ` : ''}
+                </div>
+                <div style="text-align: right;">
+                    <div class="meta-item"><span class="meta-label">Date:</span> ${new Date(estimate.created_at).toLocaleDateString()}</div>
+                    ${estimate.expires_at ? `<div class="meta-item"><span class="meta-label">Expires:</span> ${new Date(estimate.expires_at).toLocaleDateString()}</div>` : ''}
+                    <div class="meta-item"><span class="meta-label">Status:</span> ${this.estimates_formatStatus(estimate.status)}</div>
+                </div>
+            </div>
+
+            ${estimate.description ? `
+                <div class="description">${estimate.description}</div>
+            ` : ''}
+
+            ${lineItems.length > 0 ? `
+                <div class="section-title">Line Items</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th style="width: 100px;">Quantity</th>
+                            <th style="width: 120px;">Rate</th>
+                            <th style="width: 120px;" class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${lineItems.map(item => `
+                            <tr>
+                                <td>${item.description || '-'}</td>
+                                <td>${item.quantity}</td>
+                                <td>${formatCurrency(item.rate)}</td>
+                                <td class="text-right">${formatCurrency(item.quantity * item.rate)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div class="total-box">
+                    <div class="total-label">Total Estimate</div>
+                    <div class="total-value">${formatCurrency(totalPrice)}</div>
+                </div>
+            ` : ''}
+
+            ${photos.length > 0 ? `
+                <div class="section-title">Photos</div>
+                <div class="photos">
+                    ${photos.map(photo => `
+                        <div class="photo">
+                            <img src="${photo.url}" alt="${photo.caption || 'Photo'}">
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+
+            ${estimate.terms ? `
+                <div class="section-title">Terms & Conditions</div>
+                <div class="terms">${estimate.terms}</div>
+            ` : ''}
+        </body>
+        </html>
+    `);
+
+    doc.close();
+
+    // Wait for images to load, then print
+    printWindow.onload = () => {
+        setTimeout(() => {
+            printWindow.print();
+            setTimeout(() => printWindow.close(), 500);
+        }, 500);
+    };
 },
 
 /**
