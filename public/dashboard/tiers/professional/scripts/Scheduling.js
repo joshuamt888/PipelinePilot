@@ -209,7 +209,15 @@ window.SchedulingModule = {
                     </div>
                     <div class="scheduling-table-header-right">
                         <button class="scheduling-refresh-table-btn" onclick="SchedulingModule.scheduling_refreshTable()">
-                            🔄 Refresh
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                            Refresh
+                        </button>
+                        <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
+                                onclick="SchedulingModule.scheduling_toggleBatchMode()">
+                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
+                            ${this.scheduling_state.batchEditMode ?
+                                `Cancel (${this.scheduling_state.selectedTaskIds.length} selected)` :
+                                'Edit Multiple'}
                         </button>
                         <div class="scheduling-search-box">
                             <i data-lucide="search" class="scheduling-search-icon" style="width: 18px; height: 18px;"></i>
@@ -219,13 +227,6 @@ window.SchedulingModule = {
                                    id="scheduling_searchInput"
                                    value="${API.escapeHtml(this.scheduling_state.searchTerm)}">
                         </div>
-                        <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
-                                onclick="SchedulingModule.scheduling_toggleBatchMode()">
-                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
-                            ${this.scheduling_state.batchEditMode ?
-                                `Cancel (${this.scheduling_state.selectedTaskIds.length} selected)` :
-                                'Edit Multiple'}
-                        </button>
                         <button class="scheduling-add-task-btn" onclick="SchedulingModule.scheduling_showAddTaskModal()">
                             + Add Task
                         </button>
@@ -5004,7 +5005,7 @@ modal.addEventListener('mouseup', (e) => {
 /* Batch Operations Styles */
 .scheduling-btn-batch-edit {
     padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #6b7280;
     color: white;
     border: none;
     border-radius: 8px;
@@ -5017,12 +5018,16 @@ modal.addEventListener('mouseup', (e) => {
 }
 
 .scheduling-btn-batch-edit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    background: #4b5563;
+    transform: translateY(-1px);
 }
 
 .scheduling-btn-batch-edit.active {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    background: #ef4444;
+}
+
+.scheduling-btn-batch-edit.active:hover {
+    background: #dc2626;
 }
 
 .scheduling-batch-actions-bar {

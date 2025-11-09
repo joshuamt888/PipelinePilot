@@ -13,7 +13,9 @@ window.AddLeadModule = {
             statuses: [],
             sources: [],
             value: ''
-        }
+        },
+        batchEditMode: false,
+        selectedLeadIds: []
     },
 
     // Init with fade-in
@@ -194,10 +196,17 @@ window.AddLeadModule = {
                         <h2 class="addlead-table-title">All Leads (${filteredLeads.length})</h2>
                     </div>
                     <div class="addlead-table-header-right">
+                        <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
+                                onclick="AddLeadModule.addlead_toggleBatchMode()">
+                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
+                            ${this.addlead_state.batchEditMode ?
+                                `Cancel (${this.addlead_state.selectedLeadIds.length} selected)` :
+                                'Edit Multiple'}
+                        </button>
                         <div class="addlead-search-box">
-                            <input type="text" 
-                                   class="addlead-search-input" 
-                                   placeholder="Search leads..." 
+                            <input type="text"
+                                   class="addlead-search-input"
+                                   placeholder="Search leads..."
                                    value="${API.escapeHtml(this.addlead_state.searchTerm)}"
                                    id="addlead_searchInput">
                             <i data-lucide="search" class="addlead-search-icon" style="width: 18px; height: 18px;"></i>
@@ -207,7 +216,10 @@ window.AddLeadModule = {
                         </button>
                     </div>
                 </div>
-                
+
+                ${this.addlead_state.batchEditMode && this.addlead_state.selectedLeadIds.length > 0 ?
+                    this.addlead_renderBatchActionsBar() : ''}
+
                 <div class="addlead-table-container">
                     ${filteredLeads.length > 0 ? 
                         this.addlead_renderTable(filteredLeads) : 
@@ -224,6 +236,7 @@ window.AddLeadModule = {
                 <table class="addlead-leads-table">
                     <thead>
                         <tr>
+                            ${this.addlead_state.batchEditMode ? '<th class="addlead-checkbox-col">☑</th>' : ''}
                             <th>Lead</th>
                             <th>Contact</th>
                             <th>
@@ -257,7 +270,8 @@ window.AddLeadModule = {
         const timeAgo = this.addlead_formatTimeAgo(lead.created_at);
         const initials = this.addlead_getInitials(lead.name);
         const statusClass = this.addlead_getStatusClass(lead.status);
-        
+        const isSelected = this.addlead_state.selectedLeadIds.includes(lead.id);
+
         const safeName = API.escapeHtml(lead.name);
         const safeCompany = API.escapeHtml(lead.company || 'No company');
         const safeEmail = API.escapeHtml(lead.email || '');
@@ -266,7 +280,17 @@ window.AddLeadModule = {
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
 
         return `
-            <tr class="addlead-table-row addlead-clickable-row" onclick="AddLeadModule.addlead_showLeadView('${lead.id}')">
+            <tr class="addlead-table-row ${this.addlead_state.batchEditMode ? 'batch-mode' : 'addlead-clickable-row'} ${isSelected ? 'selected' : ''}"
+                data-lead-id="${lead.id}"
+                onclick="${this.addlead_state.batchEditMode ? `AddLeadModule.addlead_toggleLeadSelection('${lead.id}')` : `AddLeadModule.addlead_showLeadView('${lead.id}')`}">
+                ${this.addlead_state.batchEditMode ? `
+                    <td class="addlead-checkbox-col" onclick="event.stopPropagation()">
+                        <input type="checkbox"
+                               class="addlead-batch-checkbox"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="AddLeadModule.addlead_toggleLeadSelection('${lead.id}')">
+                    </td>
+                ` : ''}
                 <td class="addlead-lead-cell">
                     <div class="addlead-lead-info">
                         <div class="addlead-lead-avatar">
@@ -2615,6 +2639,63 @@ addlead_showCustomSourceInput(targetInput) {
         document.head.appendChild(style);
     },
 
+    // Batch Operations
+    addlead_toggleBatchMode() {
+        this.addlead_state.batchEditMode = !this.addlead_state.batchEditMode;
+        if (!this.addlead_state.batchEditMode) {
+            this.addlead_state.selectedLeadIds = [];
+        }
+        this.addlead_render();
+    },
+
+    addlead_toggleLeadSelection(leadId) {
+        const index = this.addlead_state.selectedLeadIds.indexOf(leadId);
+        if (index > -1) {
+            this.addlead_state.selectedLeadIds.splice(index, 1);
+        } else {
+            this.addlead_state.selectedLeadIds.push(leadId);
+        }
+        this.addlead_render();
+    },
+
+    addlead_renderBatchActionsBar() {
+        const count = this.addlead_state.selectedLeadIds.length;
+        return `
+            <div class="addlead-batch-actions-bar">
+                <div class="addlead-batch-actions-content">
+                    <span class="addlead-batch-count">${count} lead${count !== 1 ? 's' : ''} selected</span>
+                    <div class="addlead-batch-buttons">
+                        <button class="addlead-batch-btn addlead-batch-delete"
+                                onclick="AddLeadModule.addlead_batchDelete()">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    async addlead_batchDelete() {
+        if (this.addlead_state.selectedLeadIds.length === 0) return;
+
+        const confirmed = confirm(`Delete ${this.addlead_state.selectedLeadIds.length} lead(s)? This will also delete any associated tasks. This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            await API.batchDeleteLeads(this.addlead_state.selectedLeadIds);
+            this.addlead_showNotification(`Deleted ${this.addlead_state.selectedLeadIds.length} lead(s)`, 'success');
+
+            this.addlead_state.selectedLeadIds = [];
+            this.addlead_state.batchEditMode = false;
+            await this.addlead_loadLeads();
+            this.addlead_render();
+        } catch (error) {
+            console.error('Batch delete error:', error);
+            this.addlead_showNotification('Failed to delete leads', 'error');
+        }
+    },
+
     // Styles (KEEPING ALL EXISTING CSS)
     addlead_renderStyles() {
         return `
@@ -4340,6 +4421,107 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-retry-btn:hover {
                 background: var(--primary-dark);
                 transform: translateY(-2px);
+            }
+
+            /* Batch Operations Styles */
+            .addlead-btn-batch-edit {
+                padding: 0.75rem 1.25rem;
+                background: #6b7280;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                transition: all 0.2s ease;
+            }
+
+            .addlead-btn-batch-edit:hover {
+                background: #4b5563;
+                transform: translateY(-1px);
+            }
+
+            .addlead-btn-batch-edit.active {
+                background: #ef4444;
+            }
+
+            .addlead-btn-batch-edit.active:hover {
+                background: #dc2626;
+            }
+
+            .addlead-batch-actions-bar {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 1rem;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            }
+
+            .addlead-batch-actions-content {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .addlead-batch-count {
+                color: white;
+                font-weight: 700;
+                font-size: 1rem;
+            }
+
+            .addlead-batch-buttons {
+                display: flex;
+                gap: 0.75rem;
+            }
+
+            .addlead-batch-btn {
+                padding: 0.75rem 1.25rem;
+                border: 2px solid white;
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                transition: all 0.2s ease;
+                backdrop-filter: blur(10px);
+            }
+
+            .addlead-batch-btn:hover {
+                background: white;
+                color: #667eea;
+            }
+
+            .addlead-batch-btn.addlead-batch-delete:hover {
+                background: #ef4444;
+                border-color: #ef4444;
+                color: white;
+            }
+
+            .addlead-table-row.batch-mode {
+                cursor: pointer;
+            }
+
+            .addlead-table-row.selected {
+                background: rgba(102, 126, 234, 0.1);
+                border-left: 4px solid #667eea;
+            }
+
+            .addlead-checkbox-col {
+                width: 50px;
+                text-align: center;
+            }
+
+            .addlead-batch-checkbox {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
             }
 
             /* Responsive */
