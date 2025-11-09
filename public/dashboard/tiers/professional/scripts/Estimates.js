@@ -21,6 +21,9 @@ window.EstimatesModule = {
         // Modal state
         editingEstimateId: null,
 
+        // Render state
+        hasRendered: false, // Track if initial render has happened
+
         // Stats
         stats: {
             totalQuoted: 0,
@@ -38,6 +41,7 @@ window.EstimatesModule = {
      */
     async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
+        this.state.hasRendered = false; // Reset on each init for fade-in
         // No loading message - direct load like Goals
 
         try {
@@ -87,13 +91,20 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Smooth fade-in (only on initial load)
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
+        // Smooth fade-in ONLY on first render (when clicking Estimates in nav)
+        // Filter changes won't trigger fade since hasRendered stays true
+        if (!this.state.hasRendered) {
+            container.style.opacity = '0';
+            container.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                container.style.opacity = '1';
+                this.estimates_attachEvents();
+            }, 50);
+            this.state.hasRendered = true;
+        } else {
+            // Subsequent renders (filter changes) - instant, no fade
             this.estimates_attachEvents();
-        }, 50);
+        }
     },
 
     /**
