@@ -15,7 +15,8 @@ window.AddLeadModule = {
             value: ''
         },
         batchEditMode: false,
-        selectedLeadIds: []
+        selectedLeadIds: [],
+        leadLimit: 5000
     },
 
     // Init with fade-in
@@ -185,7 +186,9 @@ window.AddLeadModule = {
     // Table view
     addlead_renderTableView() {
         const filteredLeads = this.addlead_getFilteredLeads();
-        
+        const totalLeads = this.addlead_state.leads.length;
+        const selectedCount = this.addlead_state.selectedLeadIds.length;
+
         return `
             <div class="addlead-table-view">
                 <div class="addlead-table-header">
@@ -196,13 +199,6 @@ window.AddLeadModule = {
                         <h2 class="addlead-table-title">All Leads (${filteredLeads.length})</h2>
                     </div>
                     <div class="addlead-table-header-right">
-                        <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
-                                onclick="AddLeadModule.addlead_toggleBatchMode()">
-                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
-                            ${this.addlead_state.batchEditMode ?
-                                `Cancel (${this.addlead_state.selectedLeadIds.length} selected)` :
-                                'Edit Multiple'}
-                        </button>
                         <div class="addlead-search-box">
                             <input type="text"
                                    class="addlead-search-input"
@@ -217,14 +213,30 @@ window.AddLeadModule = {
                     </div>
                 </div>
 
-                ${this.addlead_state.batchEditMode && this.addlead_state.selectedLeadIds.length > 0 ?
-                    this.addlead_renderBatchActionsBar() : ''}
+                ${totalLeads > 0 ? `
+                    <div class="addlead-limit-bar">
+                        <div class="addlead-limit-counter">
+                            <i data-lucide="users" style="width: 1.125rem; height: 1.125rem;"></i>
+                            <span>${totalLeads} / ${this.addlead_state.leadLimit} leads</span>
+                        </div>
+                        <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
+                                onclick="AddLeadModule.addlead_toggleBatchMode()">
+                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
+                            ${this.addlead_state.batchEditMode ?
+                                `Cancel (${selectedCount} selected)` :
+                                'Edit Multiple'}
+                        </button>
+                    </div>
+                ` : ''}
 
                 <div class="addlead-table-container">
-                    ${filteredLeads.length > 0 ? 
-                        this.addlead_renderTable(filteredLeads) : 
+                    ${filteredLeads.length > 0 ?
+                        this.addlead_renderTable(filteredLeads) :
                         this.addlead_renderEmptyState()}
                 </div>
+
+                ${this.addlead_state.batchEditMode && selectedCount > 0 ?
+                    this.addlead_renderBatchActionsBar() : ''}
             </div>
         `;
     },
@@ -2661,38 +2673,44 @@ addlead_showCustomSourceInput(targetInput) {
     addlead_renderBatchActionsBar() {
         const count = this.addlead_state.selectedLeadIds.length;
         return `
-            <div class="addlead-batch-actions-bar">
-                <div class="addlead-batch-actions-content">
-                    <span class="addlead-batch-count">${count} lead${count !== 1 ? 's' : ''} selected</span>
-                    <div class="addlead-batch-buttons">
-                        <button class="addlead-batch-btn addlead-batch-delete"
-                                onclick="AddLeadModule.addlead_showBatchDeleteModal()">
-                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-                            Delete Selected
-                        </button>
-                    </div>
-                </div>
+            <div class="addlead-batch-actions">
+                <button class="addlead-batch-btn addlead-batch-btn-delete"
+                        onclick="AddLeadModule.addlead_showBatchDeleteModal()">
+                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    Delete Selected (${count})
+                </button>
             </div>
         `;
     },
 
     addlead_showBatchDeleteModal() {
         const count = this.addlead_state.selectedLeadIds.length;
+        if (count === 0) return;
+
         const modal = document.createElement('div');
-        modal.className = 'addlead-batch-delete-modal';
+        modal.className = 'addlead-modal-overlay show';
         modal.innerHTML = `
-            <div class="addlead-batch-delete-overlay" onclick="this.parentElement.remove()"></div>
-            <div class="addlead-batch-delete-content">
-                <h3 class="addlead-batch-delete-title">Delete ${count} Lead${count !== 1 ? 's' : ''}?</h3>
-                <p class="addlead-batch-delete-message">
-                    This will permanently delete ${count} lead${count !== 1 ? 's' : ''} and any associated tasks. This action cannot be undone.
-                </p>
-                <div class="addlead-batch-delete-actions">
-                    <button class="addlead-btn-cancel-batch-delete" onclick="this.closest('.addlead-batch-delete-modal').remove()">
+            <div class="addlead-modal addlead-modal-delete">
+                <div class="addlead-modal-header-v2">
+                    <h2 class="addlead-modal-title-v2">Delete ${count} Lead${count > 1 ? 's' : ''}?</h2>
+                    <button class="addlead-modal-close" onclick="this.closest('.addlead-modal-overlay').remove()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="addlead-modal-body-v2">
+                    <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6;">
+                        Are you sure you want to delete ${count} lead${count > 1 ? 's' : ''}? This will also delete any associated tasks. This action cannot be undone.
+                    </p>
+                </div>
+                <div class="addlead-modal-footer-v2">
+                    <button class="addlead-btn-modal-secondary" onclick="this.closest('.addlead-modal-overlay').remove()">
                         Cancel
                     </button>
-                    <button class="addlead-btn-confirm-batch-delete" onclick="AddLeadModule.addlead_confirmBatchDelete()">
-                        Delete ${count} Lead${count !== 1 ? 's' : ''}
+                    <button class="addlead-btn-modal-danger" onclick="AddLeadModule.addlead_confirmBatchDelete()">
+                        Delete Lead${count > 1 ? 's' : ''}
                     </button>
                 </div>
             </div>
@@ -2702,7 +2720,7 @@ addlead_showCustomSourceInput(targetInput) {
 
     async addlead_confirmBatchDelete() {
         // Close modal
-        document.querySelector('.addlead-batch-delete-modal')?.remove();
+        document.querySelector('.addlead-modal-overlay')?.remove();
         if (this.addlead_state.selectedLeadIds.length === 0) return;
 
         try {
@@ -4446,184 +4464,215 @@ addlead_showCustomSourceInput(targetInput) {
                 transform: translateY(-2px);
             }
 
-            /* Batch Operations Styles */
-            .addlead-btn-batch-edit {
-                padding: 0.75rem 1.25rem;
-                background: #6b7280;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
+            /* Batch Operations Styles - Match Goals */
+            .addlead-limit-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1rem 1.5rem;
+                background: var(--surface);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                margin-bottom: 1.5rem;
+            }
+
+            .addlead-limit-counter {
                 display: flex;
                 align-items: center;
+                gap: 0.75rem;
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+
+            .addlead-limit-counter svg,
+            .addlead-limit-counter i {
+                color: var(--primary);
+            }
+
+            .addlead-btn-batch-edit {
+                display: inline-flex;
+                align-items: center;
                 gap: 0.5rem;
+                padding: 0.75rem 1.25rem;
+                background: var(--background);
+                color: var(--text-primary);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                font-weight: 600;
+                cursor: pointer;
                 transition: all 0.2s ease;
             }
 
             .addlead-btn-batch-edit:hover {
-                background: #4b5563;
-                transform: translateY(-1px);
+                background: var(--surface);
+                border-color: var(--primary);
+                color: var(--primary);
             }
 
             .addlead-btn-batch-edit.active {
-                background: #ef4444;
+                background: var(--danger);
+                color: white;
+                border-color: var(--danger);
             }
 
             .addlead-btn-batch-edit.active:hover {
-                background: #dc2626;
+                background: var(--danger-dark);
             }
 
-            .addlead-batch-actions-bar {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 1rem;
-                border-radius: 12px;
-                margin-bottom: 1rem;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-            }
-
-            .addlead-batch-actions-content {
+            .addlead-batch-actions {
+                position: sticky;
+                bottom: 2rem;
                 display: flex;
-                align-items: center;
-                justify-content: space-between;
-                flex-wrap: wrap;
                 gap: 1rem;
-            }
-
-            .addlead-batch-count {
-                color: white;
-                font-weight: 700;
-                font-size: 1rem;
-            }
-
-            .addlead-batch-buttons {
-                display: flex;
-                gap: 0.75rem;
+                justify-content: center;
+                padding: 1.5rem;
+                background: var(--surface);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                margin-top: 2rem;
+                z-index: 100;
             }
 
             .addlead-batch-btn {
-                padding: 0.75rem 1.5rem;
-                border: 2px solid white;
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                border-radius: 8px;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.625rem;
+                padding: 1rem 1.75rem;
+                border: none;
+                border-radius: var(--radius-lg);
+                font-size: 1rem;
                 font-weight: 600;
                 cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.5rem;
                 transition: all 0.2s ease;
-                backdrop-filter: blur(10px);
-                min-width: 140px;
             }
 
-            .addlead-batch-btn:hover {
-                background: white;
-                color: #667eea;
-            }
-
-            .addlead-batch-btn.addlead-batch-delete:hover {
-                background: #ef4444;
-                border-color: #ef4444;
+            .addlead-batch-btn-delete {
+                background: var(--danger);
                 color: white;
             }
 
-            /* Batch Delete Modal */
-            .addlead-batch-delete-modal {
+            .addlead-batch-btn-delete:hover {
+                background: var(--danger-dark);
+                transform: translateY(-2px);
+            }
+
+            /* Batch Delete Modal - Match Goals */
+            .addlead-modal-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 10000;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                z-index: 10000;
+                opacity: 0;
+                transition: opacity 0.2s ease;
             }
 
-            .addlead-batch-delete-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                backdrop-filter: blur(4px);
+            .addlead-modal-overlay.show {
+                opacity: 1;
             }
 
-            .addlead-batch-delete-content {
-                position: relative;
+            .addlead-modal {
                 background: white;
-                border-radius: 12px;
-                padding: 2rem;
-                max-width: 450px;
+                border-radius: var(--radius-lg);
                 width: 90%;
+                max-width: 500px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                animation: addlead-batch-modal-in 0.2s ease;
+                transform: scale(0.95);
+                transition: transform 0.2s ease;
             }
 
-            @keyframes addlead-batch-modal-in {
-                from {
-                    opacity: 0;
-                    transform: scale(0.95);
-                }
-                to {
-                    opacity: 1;
-                    transform: scale(1);
-                }
+            .addlead-modal-overlay.show .addlead-modal {
+                transform: scale(1);
             }
 
-            .addlead-batch-delete-title {
-                margin: 0 0 1rem 0;
+            .addlead-modal-header-v2 {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1.5rem 1.5rem 1rem;
+                border-bottom: 2px solid var(--border);
+            }
+
+            .addlead-modal-title-v2 {
                 font-size: 1.5rem;
                 font-weight: 700;
-                color: #1f2937;
-                text-align: center;
+                color: var(--text-primary);
+                margin: 0;
             }
 
-            .addlead-batch-delete-message {
-                margin: 0 0 2rem 0;
-                color: #6b7280;
-                font-size: 1rem;
-                line-height: 1.6;
-                text-align: center;
+            .addlead-modal-close {
+                width: 2rem;
+                height: 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: none;
+                background: none;
+                color: var(--text-secondary);
+                cursor: pointer;
+                border-radius: var(--radius);
+                transition: all 0.2s ease;
             }
 
-            .addlead-batch-delete-actions {
+            .addlead-modal-close:hover {
+                background: var(--surface);
+                color: var(--text-primary);
+            }
+
+            .addlead-modal-close svg {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+
+            .addlead-modal-body-v2 {
+                padding: 1.5rem;
+            }
+
+            .addlead-modal-footer-v2 {
                 display: flex;
                 gap: 1rem;
-                justify-content: center;
+                justify-content: flex-end;
+                padding: 1rem 1.5rem 1.5rem;
+                border-top: 2px solid var(--border);
             }
 
-            .addlead-btn-cancel-batch-delete,
-            .addlead-btn-confirm-batch-delete {
+            .addlead-btn-modal-secondary {
                 padding: 0.75rem 1.5rem;
-                border: none;
-                border-radius: 8px;
+                background: var(--surface);
+                color: var(--text-primary);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.2s ease;
-                font-size: 1rem;
-                min-width: 120px;
             }
 
-            .addlead-btn-cancel-batch-delete {
-                background: #e5e7eb;
-                color: #374151;
+            .addlead-btn-modal-secondary:hover {
+                background: var(--background);
+                border-color: var(--text-secondary);
             }
 
-            .addlead-btn-cancel-batch-delete:hover {
-                background: #d1d5db;
-            }
-
-            .addlead-btn-confirm-batch-delete {
-                background: #ef4444;
+            .addlead-btn-modal-danger {
+                padding: 0.75rem 1.5rem;
+                background: var(--danger);
                 color: white;
+                border: none;
+                border-radius: var(--radius-lg);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
             }
 
-            .addlead-btn-confirm-batch-delete:hover {
-                background: #dc2626;
+            .addlead-btn-modal-danger:hover {
+                background: var(--danger-dark);
             }
 
             .addlead-table-row.batch-mode {
