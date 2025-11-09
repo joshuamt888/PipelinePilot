@@ -91,20 +91,10 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Smooth fade-in ONLY on first render (when clicking Estimates in nav)
-        // Filter changes won't trigger fade since hasRendered stays true
-        if (!this.state.hasRendered) {
-            container.style.opacity = '0';
-            container.style.transition = 'opacity 0.3s ease';
-            setTimeout(() => {
-                container.style.opacity = '1';
-                this.estimates_attachEvents();
-            }, 50);
-            this.state.hasRendered = true;
-        } else {
-            // Subsequent renders (filter changes) - instant, no fade
+        // Attach events - CSS handles fade-in via .page-content transition
+        setTimeout(() => {
             this.estimates_attachEvents();
-        }
+        }, 50);
     },
 
     /**
