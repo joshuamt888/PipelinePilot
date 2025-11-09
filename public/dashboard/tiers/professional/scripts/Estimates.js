@@ -1956,7 +1956,7 @@ window.EstimatesModule = {
     estimates_renderLineItemRow(item, index) {
         return `
             <div class="estimate-line-item" data-index="${index}">
-                <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="25">
+                <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35">
                 <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" max="99999999.99" step="0.01" data-field="quantity">
                 <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" max="99999999.99" step="0.01" data-field="rate">
                 <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}">
