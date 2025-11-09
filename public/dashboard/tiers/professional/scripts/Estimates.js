@@ -1527,6 +1527,7 @@ window.EstimatesModule = {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 16px;
+                    margin-top: 12px;
                     margin-bottom: 16px;
                 }
 
