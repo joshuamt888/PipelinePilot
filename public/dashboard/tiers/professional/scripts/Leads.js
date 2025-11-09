@@ -199,6 +199,14 @@ window.AddLeadModule = {
                         <h2 class="addlead-table-title">All Leads (${filteredLeads.length})</h2>
                     </div>
                     <div class="addlead-table-header-right">
+                        ${totalLeads > 0 ? `
+                            <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
+                                    onclick="AddLeadModule.addlead_toggleBatchMode()">
+                                ${this.addlead_state.batchEditMode ?
+                                    `Cancel (${selectedCount} selected)` :
+                                    'Edit Multiple'}
+                            </button>
+                        ` : ''}
                         <div class="addlead-search-box">
                             <input type="text"
                                    class="addlead-search-input"
@@ -213,30 +221,14 @@ window.AddLeadModule = {
                     </div>
                 </div>
 
-                ${totalLeads > 0 ? `
-                    <div class="addlead-limit-bar">
-                        <div class="addlead-limit-counter">
-                            <i data-lucide="users" style="width: 1.125rem; height: 1.125rem;"></i>
-                            <span>${totalLeads} / ${this.addlead_state.leadLimit} leads</span>
-                        </div>
-                        <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
-                                onclick="AddLeadModule.addlead_toggleBatchMode()">
-                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
-                            ${this.addlead_state.batchEditMode ?
-                                `Cancel (${selectedCount} selected)` :
-                                'Edit Multiple'}
-                        </button>
-                    </div>
-                ` : ''}
+                ${this.addlead_state.batchEditMode && selectedCount > 0 ?
+                    this.addlead_renderBatchActionsBar() : ''}
 
                 <div class="addlead-table-container">
                     ${filteredLeads.length > 0 ?
                         this.addlead_renderTable(filteredLeads) :
                         this.addlead_renderEmptyState()}
                 </div>
-
-                ${this.addlead_state.batchEditMode && selectedCount > 0 ?
-                    this.addlead_renderBatchActionsBar() : ''}
             </div>
         `;
     },
@@ -2673,12 +2665,16 @@ addlead_showCustomSourceInput(targetInput) {
     addlead_renderBatchActionsBar() {
         const count = this.addlead_state.selectedLeadIds.length;
         return `
-            <div class="addlead-batch-actions">
-                <button class="addlead-batch-btn addlead-batch-btn-delete"
-                        onclick="AddLeadModule.addlead_showBatchDeleteModal()">
-                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-                    Delete Selected (${count})
-                </button>
+            <div class="addlead-batch-actions-bar">
+                <div class="addlead-batch-actions-content">
+                    <span class="addlead-batch-count">${count} lead${count !== 1 ? 's' : ''} selected</span>
+                    <div class="addlead-batch-buttons">
+                        <button class="addlead-batch-btn addlead-batch-delete"
+                                onclick="AddLeadModule.addlead_showBatchDeleteModal()">
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -2688,39 +2684,39 @@ addlead_showCustomSourceInput(targetInput) {
         if (count === 0) return;
 
         const modal = document.createElement('div');
-        modal.className = 'addlead-modal-overlay show';
+        modal.className = 'addlead-delete-modal-overlay';
         modal.innerHTML = `
-            <div class="addlead-modal addlead-modal-delete">
-                <div class="addlead-modal-header-v2">
-                    <h2 class="addlead-modal-title-v2">Delete ${count} Lead${count > 1 ? 's' : ''}?</h2>
-                    <button class="addlead-modal-close" onclick="this.closest('.addlead-modal-overlay').remove()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+            <div class="addlead-delete-modal">
+                <div class="addlead-delete-modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
                 </div>
-                <div class="addlead-modal-body-v2">
-                    <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6;">
-                        Are you sure you want to delete ${count} lead${count > 1 ? 's' : ''}? This will also delete any associated tasks. This action cannot be undone.
-                    </p>
-                </div>
-                <div class="addlead-modal-footer-v2">
-                    <button class="addlead-btn-modal-secondary" onclick="this.closest('.addlead-modal-overlay').remove()">
+                <h2 class="addlead-delete-modal-title">Delete ${count} Lead${count > 1 ? 's' : ''}?</h2>
+                <p class="addlead-delete-modal-text">
+                    This will permanently delete ${count} lead${count > 1 ? 's' : ''} and any associated tasks. This action cannot be undone.
+                </p>
+                <div class="addlead-delete-modal-actions">
+                    <button class="addlead-delete-modal-btn addlead-delete-modal-cancel"
+                            onclick="this.closest('.addlead-delete-modal-overlay').remove()">
                         Cancel
                     </button>
-                    <button class="addlead-btn-modal-danger" onclick="AddLeadModule.addlead_confirmBatchDelete()">
-                        Delete Lead${count > 1 ? 's' : ''}
+                    <button class="addlead-delete-modal-btn addlead-delete-modal-confirm"
+                            onclick="AddLeadModule.addlead_confirmBatchDelete()">
+                        Delete
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
     },
 
     async addlead_confirmBatchDelete() {
         // Close modal
-        document.querySelector('.addlead-modal-overlay')?.remove();
+        document.querySelector('.addlead-delete-modal-overlay')?.remove();
         if (this.addlead_state.selectedLeadIds.length === 0) return;
 
         try {
@@ -4464,215 +4460,221 @@ addlead_showCustomSourceInput(targetInput) {
                 transform: translateY(-2px);
             }
 
-            /* Batch Operations Styles - Match Goals */
-            .addlead-limit-bar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1rem 1.5rem;
-                background: var(--surface);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-lg);
-                margin-bottom: 1.5rem;
-            }
-
-            .addlead-limit-counter {
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-                font-size: 0.95rem;
-                font-weight: 600;
-                color: var(--text-primary);
-            }
-
-            .addlead-limit-counter svg,
-            .addlead-limit-counter i {
-                color: var(--primary);
-            }
-
+            /* Batch Operations Styles */
             .addlead-btn-batch-edit {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
                 padding: 0.75rem 1.25rem;
-                background: var(--background);
-                color: var(--text-primary);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-lg);
+                background: #6b7280;
+                color: white;
+                border: none;
+                border-radius: 8px;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                text-align: center;
             }
 
             .addlead-btn-batch-edit:hover {
-                background: var(--surface);
-                border-color: var(--primary);
-                color: var(--primary);
+                background: #4b5563;
             }
 
             .addlead-btn-batch-edit.active {
-                background: var(--danger);
-                color: white;
-                border-color: var(--danger);
+                background: #ef4444;
             }
 
             .addlead-btn-batch-edit.active:hover {
-                background: var(--danger-dark);
+                background: #dc2626;
             }
 
-            .addlead-batch-actions {
-                position: sticky;
-                bottom: 2rem;
+            .addlead-batch-actions-bar {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 1rem;
+                border-radius: 12px;
+                margin-bottom: 1rem;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            }
+
+            .addlead-batch-actions-content {
                 display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
                 gap: 1rem;
-                justify-content: center;
-                padding: 1.5rem;
-                background: var(--surface);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-lg);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                margin-top: 2rem;
-                z-index: 100;
+            }
+
+            .addlead-batch-count {
+                color: white;
+                font-weight: 700;
+                font-size: 1rem;
+            }
+
+            .addlead-batch-buttons {
+                display: flex;
+                gap: 0.75rem;
             }
 
             .addlead-batch-btn {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.625rem;
-                padding: 1rem 1.75rem;
-                border: none;
-                border-radius: var(--radius-lg);
-                font-size: 1rem;
+                padding: 0.75rem 1.5rem;
+                border: 2px solid white;
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                border-radius: 8px;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                backdrop-filter: blur(10px);
+                text-align: center;
             }
 
-            .addlead-batch-btn-delete {
-                background: var(--danger);
+            .addlead-batch-btn:hover {
+                background: white;
+                color: #667eea;
+            }
+
+            .addlead-batch-btn.addlead-batch-delete:hover {
+                background: #ef4444;
+                border-color: #ef4444;
                 color: white;
             }
 
-            .addlead-batch-btn-delete:hover {
-                background: var(--danger-dark);
-                transform: translateY(-2px);
-            }
-
-            /* Batch Delete Modal - Match Goals */
-            .addlead-modal-overlay {
+            /* Delete Modal - Dark/Light Mode Adaptive */
+            .addlead-delete-modal-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.5);
-                backdrop-filter: blur(4px);
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(8px);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 z-index: 10000;
                 opacity: 0;
-                transition: opacity 0.2s ease;
+                transition: opacity 0.3s ease;
             }
 
-            .addlead-modal-overlay.show {
+            .addlead-delete-modal-overlay.show {
                 opacity: 1;
             }
 
-            .addlead-modal {
-                background: white;
-                border-radius: var(--radius-lg);
+            .addlead-delete-modal {
+                background: var(--surface, #ffffff);
+                border-radius: 16px;
                 width: 90%;
-                max-width: 500px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                transform: scale(0.95);
-                transition: transform 0.2s ease;
+                max-width: 420px;
+                padding: 2rem;
+                box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+                transform: scale(0.9) translateY(20px);
+                transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                text-align: center;
             }
 
-            .addlead-modal-overlay.show .addlead-modal {
-                transform: scale(1);
+            .addlead-delete-modal-overlay.show .addlead-delete-modal {
+                transform: scale(1) translateY(0);
             }
 
-            .addlead-modal-header-v2 {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 1.5rem 1.5rem 1rem;
-                border-bottom: 2px solid var(--border);
-            }
-
-            .addlead-modal-title-v2 {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: var(--text-primary);
-                margin: 0;
-            }
-
-            .addlead-modal-close {
-                width: 2rem;
-                height: 2rem;
+            .addlead-delete-modal-icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 1.5rem;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                border: none;
-                background: none;
-                color: var(--text-secondary);
-                cursor: pointer;
-                border-radius: var(--radius);
-                transition: all 0.2s ease;
             }
 
-            .addlead-modal-close:hover {
-                background: var(--surface);
-                color: var(--text-primary);
+            .addlead-delete-modal-icon svg {
+                width: 32px;
+                height: 32px;
+                color: #ef4444;
             }
 
-            .addlead-modal-close svg {
-                width: 1.25rem;
-                height: 1.25rem;
+            @media (prefers-color-scheme: dark) {
+                .addlead-delete-modal {
+                    background: #1f2937;
+                }
+                .addlead-delete-modal-icon {
+                    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+                }
+                .addlead-delete-modal-icon svg {
+                    color: #fca5a5;
+                }
             }
 
-            .addlead-modal-body-v2 {
-                padding: 1.5rem;
+            .addlead-delete-modal-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--text-primary, #111827);
+                margin: 0 0 1rem 0;
             }
 
-            .addlead-modal-footer-v2 {
+            @media (prefers-color-scheme: dark) {
+                .addlead-delete-modal-title {
+                    color: #f9fafb;
+                }
+            }
+
+            .addlead-delete-modal-text {
+                font-size: 1rem;
+                line-height: 1.6;
+                color: var(--text-secondary, #6b7280);
+                margin: 0 0 2rem 0;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                .addlead-delete-modal-text {
+                    color: #9ca3af;
+                }
+            }
+
+            .addlead-delete-modal-actions {
                 display: flex;
-                gap: 1rem;
-                justify-content: flex-end;
-                padding: 1rem 1.5rem 1.5rem;
-                border-top: 2px solid var(--border);
+                gap: 0.75rem;
+                justify-content: center;
             }
 
-            .addlead-btn-modal-secondary {
-                padding: 0.75rem 1.5rem;
-                background: var(--surface);
-                color: var(--text-primary);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-lg);
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-
-            .addlead-btn-modal-secondary:hover {
-                background: var(--background);
-                border-color: var(--text-secondary);
-            }
-
-            .addlead-btn-modal-danger {
-                padding: 0.75rem 1.5rem;
-                background: var(--danger);
-                color: white;
+            .addlead-delete-modal-btn {
+                flex: 1;
+                padding: 0.875rem 1.5rem;
                 border: none;
-                border-radius: var(--radius-lg);
+                border-radius: 10px;
                 font-weight: 600;
+                font-size: 1rem;
                 cursor: pointer;
                 transition: all 0.2s ease;
+                text-align: center;
             }
 
-            .addlead-btn-modal-danger:hover {
-                background: var(--danger-dark);
+            .addlead-delete-modal-cancel {
+                background: var(--background, #f3f4f6);
+                color: var(--text-primary, #374151);
+            }
+
+            .addlead-delete-modal-cancel:hover {
+                background: var(--surface, #e5e7eb);
+                transform: translateY(-1px);
+            }
+
+            @media (prefers-color-scheme: dark) {
+                .addlead-delete-modal-cancel {
+                    background: #374151;
+                    color: #f9fafb;
+                }
+                .addlead-delete-modal-cancel:hover {
+                    background: #4b5563;
+                }
+            }
+
+            .addlead-delete-modal-confirm {
+                background: #ef4444;
+                color: white;
+            }
+
+            .addlead-delete-modal-confirm:hover {
+                background: #dc2626;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
             }
 
             .addlead-table-row.batch-mode {
