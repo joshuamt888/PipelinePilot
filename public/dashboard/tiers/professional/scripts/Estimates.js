@@ -91,8 +91,11 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Attach events - CSS handles fade-in via .page-content transition
+        // Manual fade-in for smooth appearance (just like Goals)
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
+            container.style.opacity = '1';
             this.estimates_attachEvents();
         }, 50);
     },
