@@ -836,12 +836,941 @@ window.EstimatesModule = {
     },
 
     /**
-     * Open add/edit modal (placeholder for Session 1)
+     * Open add/edit modal
      */
     estimates_openModal(estimateId = null) {
         this.state.editingEstimateId = estimateId;
-        showNotification('Estimate modal coming in next session!', 'info');
-        // TODO: Build in Session 2
+
+        // Get estimate data if editing
+        let estimate = null;
+        if (estimateId) {
+            estimate = this.state.estimates.find(e => e.id === estimateId);
+            if (!estimate) {
+                showNotification('Estimate not found', 'error');
+                return;
+            }
+        }
+
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'estimate-modal-overlay';
+        overlay.innerHTML = this.estimates_renderModal(estimate);
+        document.body.appendChild(overlay);
+
+        // Initialize modal events after render
+        setTimeout(() => {
+            this.estimates_initModalEvents(overlay);
+            this.estimates_updateLineItemsTotal();
+        }, 0);
+    },
+
+    /**
+     * Render modal HTML
+     */
+    estimates_renderModal(estimate) {
+        const isEdit = !!estimate;
+        const lineItems = estimate?.line_items || [{ description: '', quantity: 1, rate: 0 }];
+        const photos = estimate?.photos || [];
+
+        // Default expiry: 30 days from now
+        const defaultExpiry = new Date();
+        defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+        const expiryDate = estimate?.expires_at || defaultExpiry.toISOString().split('T')[0];
+
+        return `
+            <style>
+                .estimate-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.6);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    animation: fadeIn 0.2s ease;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .estimate-modal {
+                    background: var(--card-bg);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                .estimate-modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 24px;
+                    border-bottom: 1px solid var(--border);
+                }
+
+                .estimate-modal-header h2 {
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-close {
+                    background: transparent;
+                    border: none;
+                    font-size: 28px;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+
+                .estimate-modal-close:hover {
+                    background: var(--hover-bg);
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-body {
+                    padding: 24px;
+                }
+
+                .estimate-form-section {
+                    margin-bottom: 32px;
+                }
+
+                .estimate-form-section-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    margin-bottom: 16px;
+                }
+
+                .estimate-form-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 16px;
+                    margin-bottom: 16px;
+                }
+
+                .estimate-form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .estimate-form-group label {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: var(--text-primary);
+                }
+
+                .estimate-form-group input,
+                .estimate-form-group select,
+                .estimate-form-group textarea {
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--bg);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+
+                .estimate-form-group input:focus,
+                .estimate-form-group select:focus,
+                .estimate-form-group textarea:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+                .estimate-form-group textarea {
+                    resize: vertical;
+                    min-height: 80px;
+                }
+
+                /* Line Items Table */
+                .estimate-line-items {
+                    background: var(--bg);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    padding: 16px;
+                }
+
+                .estimate-line-item-header {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                }
+
+                .estimate-line-item {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    align-items: center;
+                }
+
+                .estimate-line-item input {
+                    padding: 8px 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background: var(--card-bg);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                }
+
+                .estimate-line-item-total {
+                    font-weight: 500;
+                    color: var(--text-primary);
+                }
+
+                .estimate-line-item-remove {
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    color: #ef4444;
+                    cursor: pointer;
+                    padding: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                }
+
+                .estimate-line-item-remove:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-color: #ef4444;
+                }
+
+                .estimate-add-line-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px;
+                    background: transparent;
+                    border: 1px dashed var(--border);
+                    border-radius: 6px;
+                    color: var(--primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    margin-top: 12px;
+                }
+
+                .estimate-add-line-item:hover {
+                    background: rgba(59, 130, 246, 0.05);
+                    border-color: var(--primary);
+                }
+
+                .estimate-total-box {
+                    margin-top: 16px;
+                    padding: 16px;
+                    background: rgba(59, 130, 246, 0.05);
+                    border: 1px solid var(--primary);
+                    border-radius: 6px;
+                    text-align: right;
+                }
+
+                .estimate-total-label {
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                    margin-bottom: 4px;
+                }
+
+                .estimate-total-value {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: var(--primary);
+                }
+
+                /* Photo Upload */
+                .estimate-photo-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    gap: 12px;
+                }
+
+                .estimate-photo-item {
+                    position: relative;
+                    aspect-ratio: 1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 1px solid var(--border);
+                }
+
+                .estimate-photo-item img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .estimate-photo-remove {
+                    position: absolute;
+                    top: 4px;
+                    right: 4px;
+                    background: rgba(0, 0, 0, 0.7);
+                    border: none;
+                    color: white;
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .estimate-photo-remove:hover {
+                    background: #ef4444;
+                }
+
+                .estimate-photo-upload {
+                    aspect-ratio: 1;
+                    border: 2px dashed var(--border);
+                    border-radius: 8px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    background: var(--bg);
+                }
+
+                .estimate-photo-upload:hover {
+                    border-color: var(--primary);
+                    background: rgba(59, 130, 246, 0.05);
+                }
+
+                .estimate-photo-upload svg {
+                    width: 32px;
+                    height: 32px;
+                    color: var(--text-secondary);
+                    margin-bottom: 8px;
+                }
+
+                .estimate-photo-upload span {
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                }
+
+                .estimate-photo-counter {
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                    margin-bottom: 12px;
+                }
+
+                /* Modal Footer */
+                .estimate-modal-footer {
+                    padding: 20px 24px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                }
+
+                .estimate-modal-btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .estimate-modal-btn-cancel {
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-btn-cancel:hover {
+                    background: var(--hover-bg);
+                }
+
+                .estimate-modal-btn-save {
+                    background: var(--primary);
+                    border: none;
+                    color: white;
+                }
+
+                .estimate-modal-btn-save:hover {
+                    background: var(--primary-dark);
+                }
+            </style>
+
+            <div class="estimate-modal">
+                <div class="estimate-modal-header">
+                    <h2>${isEdit ? 'Edit Estimate' : 'New Estimate'}</h2>
+                    <button class="estimate-modal-close" data-action="close-modal">×</button>
+                </div>
+
+                <div class="estimate-modal-body">
+                    <!-- Basic Info -->
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Basic Information</div>
+
+                        <div class="estimate-form-group">
+                            <label>Title *</label>
+                            <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" required>
+                        </div>
+
+                        <div class="estimate-form-row">
+                            <div class="estimate-form-group">
+                                <label>Lead *</label>
+                                ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
+                            </div>
+
+                            <div class="estimate-form-group">
+                                <label>Status</label>
+                                <select id="estimateStatus">
+                                    ${this.STATUSES.map(status => `
+                                        <option value="${status}" ${estimate?.status === status ? 'selected' : ''}>
+                                            ${this.estimates_formatStatus(status)}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="estimate-form-row">
+                            <div class="estimate-form-group">
+                                <label>Expires On</label>
+                                <input type="date" id="estimateExpiry" value="${expiryDate}">
+                            </div>
+                        </div>
+
+                        <div class="estimate-form-group">
+                            <label>Description</label>
+                            <textarea id="estimateDescription" placeholder="Brief description of the work...">${estimate?.description || ''}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Line Items -->
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Line Items</div>
+                        <div class="estimate-line-items">
+                            <div class="estimate-line-item-header">
+                                <div>Description</div>
+                                <div>Quantity</div>
+                                <div>Rate</div>
+                                <div>Total</div>
+                                <div></div>
+                            </div>
+                            <div id="lineItemsContainer">
+                                ${lineItems.map((item, i) => this.estimates_renderLineItemRow(item, i)).join('')}
+                            </div>
+                            <button class="estimate-add-line-item" data-action="add-line-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                Add Line Item
+                            </button>
+
+                            <div class="estimate-total-box">
+                                <div class="estimate-total-label">Total Estimate</div>
+                                <div class="estimate-total-value" id="estimateTotalDisplay">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Photos -->
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Photos</div>
+                        <div class="estimate-photo-counter" id="photoCounter">${photos.length}/3 photos</div>
+                        <div class="estimate-photo-grid" id="photoGrid">
+                            ${photos.map((photo, i) => this.estimates_renderPhotoItem(photo, i)).join('')}
+                            ${photos.length < 3 ? this.estimates_renderPhotoUploadButton() : ''}
+                        </div>
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Terms & Conditions</div>
+                        <div class="estimate-form-group">
+                            <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc...">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Internal Notes</div>
+                        <div class="estimate-form-group">
+                            <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)...">${estimate?.notes || ''}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="estimate-modal-footer">
+                    <button class="estimate-modal-btn estimate-modal-btn-cancel" data-action="close-modal">Cancel</button>
+                    <button class="estimate-modal-btn estimate-modal-btn-save" data-action="save-estimate">Save Estimate</button>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Render lead dropdown with quick-create
+     */
+    estimates_renderLeadDropdown(selectedLeadId = null) {
+        return `
+            <select id="estimateLead" required>
+                <option value="">Select lead...</option>
+                <option value="__create__" style="font-weight: bold; color: var(--primary);">+ Create New Lead</option>
+                ${this.state.leads.map(lead => `
+                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    },
+
+    /**
+     * Render line item row
+     */
+    estimates_renderLineItemRow(item, index) {
+        const total = (item.quantity || 0) * (item.rate || 0);
+        return `
+            <div class="estimate-line-item" data-index="${index}">
+                <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description">
+                <input type="number" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" min="0" step="0.01" data-field="quantity">
+                <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" min="0" step="0.01" data-field="rate">
+                <div class="estimate-line-item-total">${formatCurrency(total)}</div>
+                <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Render photo item
+     */
+    estimates_renderPhotoItem(photo, index) {
+        return `
+            <div class="estimate-photo-item" data-index="${index}">
+                <img src="${photo.url}" alt="Estimate photo ${index + 1}">
+                <button class="estimate-photo-remove" data-action="remove-photo" data-index="${index}">×</button>
+            </div>
+        `;
+    },
+
+    /**
+     * Render photo upload button
+     */
+    estimates_renderPhotoUploadButton() {
+        return `
+            <div class="estimate-photo-upload" data-action="upload-photo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Upload</span>
+                <input type="file" accept="image/*" style="display: none;" id="photoUploadInput">
+            </div>
+        `;
+    },
+
+    /**
+     * Initialize modal events
+     */
+    estimates_initModalEvents(overlay) {
+        // Close modal
+        overlay.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
+            btn.addEventListener('click', () => this.estimates_closeModal());
+        });
+
+        // Click outside to close
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.estimates_closeModal();
+            }
+        });
+
+        // Lead dropdown quick-create
+        const leadSelect = overlay.querySelector('#estimateLead');
+        if (leadSelect) {
+            leadSelect.addEventListener('change', async (e) => {
+                if (e.target.value === '__create__') {
+                    const name = prompt('Lead Name:');
+                    if (!name) {
+                        e.target.value = '';
+                        return;
+                    }
+
+                    const phone = prompt('Phone (optional):');
+                    const email = prompt('Email (optional):');
+
+                    try {
+                        const lead = await API.createLead({ name, phone, email, source: 'manual' });
+                        this.state.leads.unshift(lead);
+
+                        // Add new option
+                        const option = document.createElement('option');
+                        option.value = lead.id;
+                        option.textContent = lead.name;
+                        option.selected = true;
+
+                        // Insert after the "Create New Lead" option
+                        leadSelect.insertBefore(option, leadSelect.children[2]);
+
+                        showNotification(`Lead "${lead.name}" created!`, 'success');
+                    } catch (err) {
+                        console.error('Failed to create lead:', err);
+                        showNotification('Failed to create lead', 'error');
+                        e.target.value = '';
+                    }
+                }
+            });
+        }
+
+        // Line item changes
+        overlay.addEventListener('input', (e) => {
+            if (e.target.classList.contains('line-item-quantity') ||
+                e.target.classList.contains('line-item-rate')) {
+                this.estimates_updateLineItemsTotal();
+            }
+        });
+
+        // Add line item
+        overlay.querySelectorAll('[data-action="add-line-item"]').forEach(btn => {
+            btn.addEventListener('click', () => this.estimates_addLineItem(overlay));
+        });
+
+        // Remove line item (delegated)
+        overlay.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('[data-action="remove-line-item"]');
+            if (removeBtn) {
+                const index = parseInt(removeBtn.dataset.index);
+                this.estimates_removeLineItem(overlay, index);
+            }
+        });
+
+        // Photo upload
+        const uploadBtn = overlay.querySelector('[data-action="upload-photo"]');
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', () => {
+                overlay.querySelector('#photoUploadInput').click();
+            });
+
+            overlay.querySelector('#photoUploadInput').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.estimates_handlePhotoUpload(overlay, e.target.files[0]);
+                }
+            });
+        }
+
+        // Remove photo (delegated)
+        overlay.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('[data-action="remove-photo"]');
+            if (removeBtn) {
+                const index = parseInt(removeBtn.dataset.index);
+                this.estimates_removePhoto(overlay, index);
+            }
+        });
+
+        // Save estimate
+        overlay.querySelectorAll('[data-action="save-estimate"]').forEach(btn => {
+            btn.addEventListener('click', () => this.estimates_handleSave(overlay));
+        });
+    },
+
+    /**
+     * Add line item
+     */
+    estimates_addLineItem(overlay) {
+        const container = overlay.querySelector('#lineItemsContainer');
+        const currentItems = container.querySelectorAll('.estimate-line-item').length;
+
+        const newItem = { description: '', quantity: 1, rate: 0 };
+        const html = this.estimates_renderLineItemRow(newItem, currentItems);
+
+        container.insertAdjacentHTML('beforeend', html);
+        this.estimates_updateLineItemsTotal();
+    },
+
+    /**
+     * Remove line item
+     */
+    estimates_removeLineItem(overlay, index) {
+        const container = overlay.querySelector('#lineItemsContainer');
+        const items = container.querySelectorAll('.estimate-line-item');
+
+        if (items.length <= 1) {
+            showNotification('At least one line item required', 'warning');
+            return;
+        }
+
+        items[index].remove();
+
+        // Re-index remaining items
+        container.querySelectorAll('.estimate-line-item').forEach((item, newIndex) => {
+            item.dataset.index = newIndex;
+            item.querySelector('[data-action="remove-line-item"]').dataset.index = newIndex;
+        });
+
+        this.estimates_updateLineItemsTotal();
+    },
+
+    /**
+     * Update line items total
+     */
+    estimates_updateLineItemsTotal() {
+        const container = document.querySelector('#lineItemsContainer');
+        if (!container) return;
+
+        let total = 0;
+        container.querySelectorAll('.estimate-line-item').forEach(row => {
+            const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
+            const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
+            const lineTotal = qty * rate;
+
+            row.querySelector('.estimate-line-item-total').textContent = formatCurrency(lineTotal);
+            total += lineTotal;
+        });
+
+        const displayEl = document.querySelector('#estimateTotalDisplay');
+        if (displayEl) {
+            displayEl.textContent = formatCurrency(total);
+        }
+    },
+
+    /**
+     * Handle photo upload
+     */
+    async estimates_handlePhotoUpload(overlay, file) {
+        try {
+            const photoGrid = overlay.querySelector('#photoGrid');
+            const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
+
+            if (currentPhotos >= 3) {
+                showNotification('Maximum 3 photos allowed', 'warning');
+                return;
+            }
+
+            showNotification('Compressing photo...', 'info');
+
+            // Compress image
+            const compressedFile = await API.compressImage(file);
+
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const photoData = {
+                    url: e.target.result,
+                    file: compressedFile,
+                    caption: file.name
+                };
+
+                // Add photo to grid
+                const uploadBtn = photoGrid.querySelector('.estimate-photo-upload');
+                const photoHtml = this.estimates_renderPhotoItem(photoData, currentPhotos);
+
+                if (uploadBtn) {
+                    uploadBtn.insertAdjacentHTML('beforebegin', photoHtml);
+
+                    // Remove upload button if at max
+                    if (currentPhotos + 1 >= 3) {
+                        uploadBtn.remove();
+                    }
+                } else {
+                    photoGrid.insertAdjacentHTML('beforeend', photoHtml);
+                }
+
+                // Update counter
+                this.estimates_updatePhotoCounter(overlay);
+                showNotification('Photo added', 'success');
+            };
+            reader.readAsDataURL(compressedFile);
+
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            showNotification('Failed to upload photo', 'error');
+        }
+    },
+
+    /**
+     * Remove photo
+     */
+    estimates_removePhoto(overlay, index) {
+        const photoGrid = overlay.querySelector('#photoGrid');
+        const photos = photoGrid.querySelectorAll('.estimate-photo-item');
+
+        photos[index].remove();
+
+        // Re-index remaining photos
+        photoGrid.querySelectorAll('.estimate-photo-item').forEach((photo, newIndex) => {
+            photo.dataset.index = newIndex;
+            photo.querySelector('[data-action="remove-photo"]').dataset.index = newIndex;
+        });
+
+        // Add upload button if under max
+        const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
+        if (currentPhotos < 3 && !photoGrid.querySelector('.estimate-photo-upload')) {
+            photoGrid.insertAdjacentHTML('beforeend', this.estimates_renderPhotoUploadButton());
+
+            // Re-attach upload event
+            const uploadBtn = photoGrid.querySelector('[data-action="upload-photo"]');
+            uploadBtn.addEventListener('click', () => {
+                photoGrid.querySelector('#photoUploadInput').click();
+            });
+
+            photoGrid.querySelector('#photoUploadInput').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.estimates_handlePhotoUpload(overlay, e.target.files[0]);
+                }
+            });
+        }
+
+        this.estimates_updatePhotoCounter(overlay);
+        showNotification('Photo removed', 'success');
+    },
+
+    /**
+     * Update photo counter
+     */
+    estimates_updatePhotoCounter(overlay) {
+        const photoGrid = overlay.querySelector('#photoGrid');
+        const counter = overlay.querySelector('#photoCounter');
+        const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
+
+        if (counter) {
+            counter.textContent = `${currentPhotos}/3 photos`;
+        }
+    },
+
+    /**
+     * Handle estimate save
+     */
+    async estimates_handleSave(overlay) {
+        try {
+            // Gather form data
+            const title = overlay.querySelector('#estimateTitle').value.trim();
+            const leadId = overlay.querySelector('#estimateLead').value;
+            const status = overlay.querySelector('#estimateStatus').value;
+            const expiresAt = overlay.querySelector('#estimateExpiry').value;
+            const description = overlay.querySelector('#estimateDescription').value.trim();
+            const terms = overlay.querySelector('#estimateTerms').value.trim();
+            const notes = overlay.querySelector('#estimateNotes').value.trim();
+
+            // Validation
+            if (!title) {
+                showNotification('Title is required', 'error');
+                return;
+            }
+
+            if (!leadId || leadId === '__create__') {
+                showNotification('Please select a lead', 'error');
+                return;
+            }
+
+            // Gather line items
+            const lineItems = [];
+            overlay.querySelectorAll('.estimate-line-item').forEach(row => {
+                const desc = row.querySelector('.line-item-description').value.trim();
+                const qty = parseFloat(row.querySelector('.line-item-quantity').value) || 0;
+                const rate = parseFloat(row.querySelector('.line-item-rate').value) || 0;
+
+                if (desc || qty > 0 || rate > 0) {
+                    lineItems.push({ description: desc, quantity: qty, rate: rate });
+                }
+            });
+
+            // Calculate total
+            const totalPrice = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+
+            // Gather photos
+            const photoElements = overlay.querySelectorAll('.estimate-photo-item img');
+            const photos = Array.from(photoElements).map((img, i) => ({
+                url: img.src,
+                caption: `Photo ${i + 1}`
+            }));
+
+            const estimateData = {
+                title,
+                lead_id: leadId,
+                status,
+                expires_at: expiresAt || null,
+                description,
+                terms,
+                notes,
+                line_items: lineItems,
+                total_price: totalPrice,
+                photos
+            };
+
+            // Create or update
+            let savedEstimate;
+            if (this.state.editingEstimateId) {
+                savedEstimate = await API.updateEstimate(this.state.editingEstimateId, estimateData);
+
+                // Update in state
+                const index = this.state.estimates.findIndex(e => e.id === this.state.editingEstimateId);
+                if (index !== -1) {
+                    this.state.estimates[index] = savedEstimate;
+                }
+
+                showNotification('Estimate updated successfully', 'success');
+            } else {
+                // Generate estimate number before creating
+                const estimateNumber = await API.generateEstimateNumber();
+                savedEstimate = await API.createEstimate({ ...estimateData, estimate_number: estimateNumber });
+
+                this.state.estimates.unshift(savedEstimate);
+                showNotification('Estimate created successfully', 'success');
+            }
+
+            this.estimates_closeModal();
+            this.estimates_calculateStats();
+            this.estimates_render();
+
+        } catch (error) {
+            console.error('Error saving estimate:', error);
+            showNotification('Failed to save estimate', 'error');
+        }
+    },
+
+    /**
+     * Close modal
+     */
+    estimates_closeModal() {
+        const overlay = document.querySelector('.estimate-modal-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        }
+        this.state.editingEstimateId = null;
     },
 
     /**
