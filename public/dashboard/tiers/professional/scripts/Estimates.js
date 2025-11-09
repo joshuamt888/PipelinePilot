@@ -1115,7 +1115,7 @@ window.EstimatesModule = {
                 <div class="estimate-card-header">
                     <div>
                         <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
-                        <h3 class="estimate-title">${estimate.title || 'Untitled'}</h3>
+                        <h3 class="estimate-title">${this.estimates_truncateText(estimate.title || 'Untitled', 60)}</h3>
                     </div>
                     ${this.estimates_renderStatusBadge(estimate.status)}
                 </div>
@@ -1125,7 +1125,7 @@ window.EstimatesModule = {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        ${lead.name}
+                        ${this.estimates_truncateText(lead.name, 50)}
                     </div>
                 ` : ''}
 
@@ -1278,6 +1278,15 @@ window.EstimatesModule = {
     },
 
     /**
+     * Truncate text with ellipsis
+     */
+    estimates_truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    },
+
+    /**
      * Attach event listeners - using event delegation to avoid losing listeners
      */
     estimates_attachEvents() {
@@ -1373,7 +1382,7 @@ window.EstimatesModule = {
         if (estimateId) {
             estimate = this.state.estimates.find(e => e.id === estimateId);
             if (!estimate) {
-                showNotification('Estimate not found', 'error');
+                window.SteadyUtils.showToast('Estimate not found', 'error');
                 return;
             }
         }
@@ -1535,6 +1544,56 @@ window.EstimatesModule = {
                 .estimate-form-group textarea {
                     resize: vertical;
                     min-height: 80px;
+                }
+
+                /* Character Counter */
+                .estimate-input-hint {
+                    font-size: 12px;
+                    color: var(--text-tertiary);
+                    font-weight: 500;
+                }
+
+                /* Custom Select Styling */
+                .estimate-select-custom {
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px !important;
+                }
+
+                /* Lead Dropdown with Search */
+                .estimate-lead-dropdown-wrapper {
+                    display: flex;
+                    gap: 8px;
+                    align-items: stretch;
+                }
+
+                .estimate-lead-dropdown-wrapper select {
+                    flex: 1;
+                }
+
+                .estimate-lead-search-btn {
+                    padding: 8px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                }
+
+                .estimate-lead-search-btn:hover {
+                    border-color: var(--primary);
+                    background: rgba(102, 126, 234, 0.05);
+                    color: var(--primary);
                 }
 
                 /* Line Items Table */
@@ -1766,18 +1825,19 @@ window.EstimatesModule = {
 
                         <div class="estimate-form-group">
                             <label>Title *</label>
-                            <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" required>
+                            <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="100" required>
+                            <span class="estimate-input-hint" id="titleCounter">100 characters remaining</span>
                         </div>
 
                         <div class="estimate-form-row">
                             <div class="estimate-form-group">
-                                <label>Lead *</label>
+                                <label>Lead</label>
                                 ${this.estimates_renderLeadDropdown(estimate?.lead_id)}
                             </div>
 
                             <div class="estimate-form-group">
                                 <label>Status</label>
-                                <select id="estimateStatus">
+                                <select id="estimateStatus" class="estimate-select-custom">
                                     ${this.STATUSES.map(status => `
                                         <option value="${status}" ${estimate?.status === status ? 'selected' : ''}>
                                             ${this.estimates_formatStatus(status)}
@@ -1796,7 +1856,8 @@ window.EstimatesModule = {
 
                         <div class="estimate-form-group">
                             <label>Description</label>
-                            <textarea id="estimateDescription" placeholder="Brief description of the work...">${estimate?.description || ''}</textarea>
+                            <textarea id="estimateDescription" placeholder="Brief description of the work..." maxlength="500">${estimate?.description || ''}</textarea>
+                            <span class="estimate-input-hint" id="descriptionCounter">500 characters remaining</span>
                         </div>
                     </div>
 
@@ -1842,7 +1903,8 @@ window.EstimatesModule = {
                     <div class="estimate-form-section">
                         <div class="estimate-form-section-title">Terms & Conditions</div>
                         <div class="estimate-form-group">
-                            <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc...">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                            <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc..." maxlength="1000">${estimate?.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.'}</textarea>
+                            <span class="estimate-input-hint" id="termsCounter">1000 characters remaining</span>
                         </div>
                     </div>
 
@@ -1850,7 +1912,8 @@ window.EstimatesModule = {
                     <div class="estimate-form-section">
                         <div class="estimate-form-section-title">Internal Notes</div>
                         <div class="estimate-form-group">
-                            <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)...">${estimate?.notes || ''}</textarea>
+                            <textarea id="estimateNotes" placeholder="Internal notes (not visible to client)..." maxlength="500">${estimate?.notes || ''}</textarea>
+                            <span class="estimate-input-hint" id="notesCounter">500 characters remaining</span>
                         </div>
                     </div>
                 </div>
@@ -1868,15 +1931,23 @@ window.EstimatesModule = {
      */
     estimates_renderLeadDropdown(selectedLeadId = null) {
         return `
-            <select id="estimateLead" required>
-                <option value="">Select lead...</option>
-                <option value="__create__" style="font-weight: bold; color: var(--primary);">+ Create New Lead</option>
-                ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
-                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
-                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
-                    </option>
-                `).join('')}
-            </select>
+            <div class="estimate-lead-dropdown-wrapper">
+                <select id="estimateLead" class="estimate-select-custom">
+                    <option value="">Select lead (optional)</option>
+                    ${(Array.isArray(this.state.leads) ? this.state.leads : []).map(lead => `
+                        <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                            ${this.estimates_truncateText(lead.name, 50)}${lead.company ? ` (${this.estimates_truncateText(lead.company, 30)})` : ''}
+                        </option>
+                    `).join('')}
+                </select>
+                <button type="button" class="estimate-lead-search-btn" data-action="search-lead">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Search
+                </button>
+            </div>
         `;
     },
 
@@ -1973,10 +2044,10 @@ window.EstimatesModule = {
                         // Insert after the "Create New Lead" option
                         leadSelect.insertBefore(option, leadSelect.children[2]);
 
-                        showNotification(`Lead "${lead.name}" created!`, 'success');
+                        window.SteadyUtils.showToast(`Lead "${lead.name}" created!`, 'success');
                     } catch (err) {
                         console.error('Failed to create lead:', err);
-                        showNotification('Failed to create lead', 'error');
+                        window.SteadyUtils.showToast('Failed to create lead', 'error');
                         e.target.value = '';
                     }
                 }
@@ -1990,6 +2061,37 @@ window.EstimatesModule = {
                 this.estimates_updateLineItemsTotal();
             }
         });
+
+        // Character counters
+        const titleInput = overlay.querySelector('#estimateTitle');
+        const descInput = overlay.querySelector('#estimateDescription');
+        const termsInput = overlay.querySelector('#estimateTerms');
+        const notesInput = overlay.querySelector('#estimateNotes');
+
+        const updateCounter = (input, counterId, maxLength) => {
+            const counter = overlay.querySelector(`#${counterId}`);
+            if (!counter || !input) return;
+            const remaining = maxLength - input.value.length;
+            counter.textContent = `${remaining} character${remaining === 1 ? '' : 's'} remaining`;
+            counter.style.color = remaining < 20 ? 'var(--danger)' : 'var(--text-tertiary)';
+        };
+
+        if (titleInput) {
+            updateCounter(titleInput, 'titleCounter', 100);
+            titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 100));
+        }
+        if (descInput) {
+            updateCounter(descInput, 'descriptionCounter', 500);
+            descInput.addEventListener('input', () => updateCounter(descInput, 'descriptionCounter', 500));
+        }
+        if (termsInput) {
+            updateCounter(termsInput, 'termsCounter', 1000);
+            termsInput.addEventListener('input', () => updateCounter(termsInput, 'termsCounter', 1000));
+        }
+        if (notesInput) {
+            updateCounter(notesInput, 'notesCounter', 500);
+            notesInput.addEventListener('input', () => updateCounter(notesInput, 'notesCounter', 500));
+        }
 
         // Add line item
         overlay.querySelectorAll('[data-action="add-line-item"]').forEach(btn => {
@@ -2032,6 +2134,218 @@ window.EstimatesModule = {
         overlay.querySelectorAll('[data-action="save-estimate"]').forEach(btn => {
             btn.addEventListener('click', () => this.estimates_handleSave(overlay));
         });
+
+        // Lead search button
+        const searchLeadBtn = overlay.querySelector('[data-action="search-lead"]');
+        if (searchLeadBtn) {
+            searchLeadBtn.addEventListener('click', () => this.estimates_openLeadSearch(overlay));
+        }
+    },
+
+    /**
+     * Open lead search modal
+     */
+    estimates_openLeadSearch(parentOverlay) {
+        const searchModalHtml = `
+            <div class="estimate-search-modal-overlay" id="leadSearchModal">
+                <div class="estimate-search-modal">
+                    <div class="estimate-search-modal-header">
+                        <h3>Search Leads</h3>
+                        <button class="estimate-modal-close" onclick="document.getElementById('leadSearchModal').remove()">×</button>
+                    </div>
+                    <div class="estimate-search-modal-body">
+                        <div class="estimate-search-input-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input type="text" id="leadSearchInput" placeholder="Type to search leads..." autofocus>
+                        </div>
+                        <div class="estimate-lead-results" id="leadSearchResults">
+                            ${this.estimates_renderLeadSearchResults('')}
+                        </div>
+                    </div>
+                </div>
+                <style>
+                    .estimate-search-modal-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.7);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10000;
+                        animation: fadeIn 0.2s ease;
+                    }
+
+                    .estimate-search-modal {
+                        background: var(--surface);
+                        border-radius: 12px;
+                        width: 90%;
+                        max-width: 600px;
+                        max-height: 70vh;
+                        display: flex;
+                        flex-direction: column;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+                        animation: slideUp 0.3s ease;
+                    }
+
+                    .estimate-search-modal-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 20px 24px;
+                        border-bottom: 1px solid var(--border);
+                    }
+
+                    .estimate-search-modal-header h3 {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: var(--text-primary);
+                    }
+
+                    .estimate-search-modal-body {
+                        padding: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 16px;
+                        flex: 1;
+                        min-height: 0;
+                    }
+
+                    .estimate-search-input-wrapper {
+                        position: relative;
+                    }
+
+                    .estimate-search-input-wrapper svg {
+                        position: absolute;
+                        left: 14px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        width: 18px;
+                        height: 18px;
+                        color: var(--text-tertiary);
+                        pointer-events: none;
+                    }
+
+                    .estimate-search-input-wrapper input {
+                        width: 100%;
+                        padding: 12px 16px 12px 44px;
+                        border: 2px solid var(--border);
+                        border-radius: 8px;
+                        background: var(--background);
+                        color: var(--text-primary);
+                        font-size: 15px;
+                        transition: all 0.2s;
+                    }
+
+                    .estimate-search-input-wrapper input:focus {
+                        outline: none;
+                        border-color: var(--primary);
+                        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                    }
+
+                    .estimate-lead-results {
+                        overflow-y: auto;
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+
+                    .estimate-lead-result-item {
+                        padding: 14px 16px;
+                        border: 1px solid var(--border);
+                        border-radius: 8px;
+                        background: var(--surface);
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 4px;
+                    }
+
+                    .estimate-lead-result-item:hover {
+                        border-color: var(--primary);
+                        background: rgba(102, 126, 234, 0.05);
+                        transform: translateX(4px);
+                    }
+
+                    .estimate-lead-result-name {
+                        font-size: 15px;
+                        font-weight: 600;
+                        color: var(--text-primary);
+                    }
+
+                    .estimate-lead-result-details {
+                        font-size: 13px;
+                        color: var(--text-secondary);
+                    }
+
+                    .estimate-lead-no-results {
+                        text-align: center;
+                        padding: 40px 20px;
+                        color: var(--text-secondary);
+                        font-size: 14px;
+                    }
+                </style>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', searchModalHtml);
+
+        // Attach search events
+        const searchInput = document.getElementById('leadSearchInput');
+        const resultsContainer = document.getElementById('leadSearchResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            resultsContainer.innerHTML = this.estimates_renderLeadSearchResults(query);
+        });
+
+        // Handle lead selection
+        document.getElementById('leadSearchModal').addEventListener('click', (e) => {
+            const leadItem = e.target.closest('.estimate-lead-result-item');
+            if (leadItem) {
+                const leadId = leadItem.dataset.leadId;
+                const leadSelect = parentOverlay.querySelector('#estimateLead');
+                if (leadSelect) {
+                    leadSelect.value = leadId;
+                }
+                document.getElementById('leadSearchModal').remove();
+            }
+        });
+    },
+
+    /**
+     * Render lead search results
+     */
+    estimates_renderLeadSearchResults(query) {
+        const leads = Array.isArray(this.state.leads) ? this.state.leads : [];
+
+        const filtered = query ? leads.filter(lead => {
+            const searchText = `${lead.name} ${lead.company || ''} ${lead.email || ''} ${lead.phone || ''}`.toLowerCase();
+            return searchText.includes(query);
+        }) : leads;
+
+        if (filtered.length === 0) {
+            return `<div class="estimate-lead-no-results">No leads found${query ? ` for "${query}"` : ''}</div>`;
+        }
+
+        return filtered.map(lead => `
+            <div class="estimate-lead-result-item" data-lead-id="${lead.id}">
+                <div class="estimate-lead-result-name">${this.estimates_truncateText(lead.name, 60)}</div>
+                <div class="estimate-lead-result-details">
+                    ${lead.company ? this.estimates_truncateText(lead.company, 50) : 'No company'}
+                    ${lead.phone ? ` • ${lead.phone}` : ''}
+                    ${lead.email ? ` • ${this.estimates_truncateText(lead.email, 40)}` : ''}
+                </div>
+            </div>
+        `).join('');
     },
 
     /**
@@ -2056,7 +2370,7 @@ window.EstimatesModule = {
         const items = container.querySelectorAll('.estimate-line-item');
 
         if (items.length <= 1) {
-            showNotification('At least one line item required', 'warning');
+            window.SteadyUtils.showToast('At least one line item required', 'warning');
             return;
         }
 
@@ -2103,11 +2417,11 @@ window.EstimatesModule = {
             const currentPhotos = photoGrid.querySelectorAll('.estimate-photo-item').length;
 
             if (currentPhotos >= 3) {
-                showNotification('Maximum 3 photos allowed', 'warning');
+                window.SteadyUtils.showToast('Maximum 3 photos allowed', 'warning');
                 return;
             }
 
-            showNotification('Compressing photo...', 'info');
+            window.SteadyUtils.showToast('Compressing photo...', 'info');
 
             // Compress image
             const compressedFile = await API.compressImage(file);
@@ -2138,13 +2452,13 @@ window.EstimatesModule = {
 
                 // Update counter
                 this.estimates_updatePhotoCounter(overlay);
-                showNotification('Photo added', 'success');
+                window.SteadyUtils.showToast('Photo added', 'success');
             };
             reader.readAsDataURL(compressedFile);
 
         } catch (error) {
             console.error('Error uploading photo:', error);
-            showNotification('Failed to upload photo', 'error');
+            window.SteadyUtils.showToast('Failed to upload photo', 'error');
         }
     },
 
@@ -2182,7 +2496,7 @@ window.EstimatesModule = {
         }
 
         this.estimates_updatePhotoCounter(overlay);
-        showNotification('Photo removed', 'success');
+        window.SteadyUtils.showToast('Photo removed', 'success');
     },
 
     /**
@@ -2214,12 +2528,7 @@ window.EstimatesModule = {
 
             // Validation
             if (!title) {
-                showNotification('Title is required', 'error');
-                return;
-            }
-
-            if (!leadId || leadId === '__create__') {
-                showNotification('Please select a lead', 'error');
+                window.SteadyUtils.showToast('Title is required', 'error');
                 return;
             }
 
@@ -2247,7 +2556,7 @@ window.EstimatesModule = {
 
             const estimateData = {
                 title,
-                lead_id: leadId,
+                lead_id: leadId || null,
                 status,
                 expires_at: expiresAt || null,
                 description,
@@ -2269,14 +2578,14 @@ window.EstimatesModule = {
                     this.state.estimates[index] = savedEstimate;
                 }
 
-                showNotification('Estimate updated successfully', 'success');
+                window.SteadyUtils.showToast('Estimate updated successfully', 'success');
             } else {
                 // Generate estimate number before creating
                 const estimateNumber = await API.generateEstimateNumber();
                 savedEstimate = await API.createEstimate({ ...estimateData, estimate_number: estimateNumber });
 
                 this.state.estimates.unshift(savedEstimate);
-                showNotification('Estimate created successfully', 'success');
+                window.SteadyUtils.showToast('Estimate created successfully', 'success');
             }
 
             this.estimates_closeModal();
@@ -2285,7 +2594,7 @@ window.EstimatesModule = {
 
         } catch (error) {
             console.error('Error saving estimate:', error);
-            showNotification('Failed to save estimate', 'error');
+            window.SteadyUtils.showToast('Failed to save estimate', 'error');
         }
     },
 
@@ -2307,7 +2616,7 @@ window.EstimatesModule = {
     estimates_openDetailView(estimateId) {
         const estimate = this.state.estimates.find(e => e.id === estimateId);
         if (!estimate) {
-            showNotification('Estimate not found', 'error');
+            window.SteadyUtils.showToast('Estimate not found', 'error');
             return;
         }
 
@@ -2749,10 +3058,10 @@ window.EstimatesModule = {
 
             this.estimates_calculateStats();
             this.estimates_render();
-            showNotification(`Estimate marked as ${statusLabel}`, 'success');
+            window.SteadyUtils.showToast(`Estimate marked as ${statusLabel}`, 'success');
         } catch (error) {
             console.error('Error updating status:', error);
-            showNotification('Failed to update status', 'error');
+            window.SteadyUtils.showToast('Failed to update status', 'error');
         }
     },
 
@@ -2763,12 +3072,12 @@ window.EstimatesModule = {
         try {
             const estimate = this.state.estimates.find(e => e.id === estimateId);
             if (!estimate) {
-                showNotification('Estimate not found', 'error');
+                window.SteadyUtils.showToast('Estimate not found', 'error');
                 return;
             }
 
             if (estimate.status !== 'accepted') {
-                showNotification('Only accepted estimates can be converted to jobs', 'warning');
+                window.SteadyUtils.showToast('Only accepted estimates can be converted to jobs', 'warning');
                 return;
             }
 
@@ -2783,11 +3092,11 @@ window.EstimatesModule = {
 
             if (!confirmed) return;
 
-            showNotification('Converting to job...', 'info');
+            window.SteadyUtils.showToast('Converting to job...', 'info');
 
             const newJob = await API.convertEstimateToJob(estimateId);
 
-            showNotification('Job created successfully! Redirecting...', 'success');
+            window.SteadyUtils.showToast('Job created successfully! Redirecting...', 'success');
 
             // Redirect to Jobs page after short delay
             setTimeout(() => {
@@ -2796,7 +3105,7 @@ window.EstimatesModule = {
 
         } catch (error) {
             console.error('Error converting to job:', error);
-            showNotification('Failed to convert to job', 'error');
+            window.SteadyUtils.showToast('Failed to convert to job', 'error');
         }
     },
 
@@ -2997,10 +3306,10 @@ window.EstimatesModule = {
             this.state.batchMode = false;
             this.estimates_calculateStats();
             this.estimates_render();
-            showNotification('Estimates marked as Sent', 'success');
+            window.SteadyUtils.showToast('Estimates marked as Sent', 'success');
         } catch (error) {
             console.error('Batch mark sent error:', error);
-            showNotification('Failed to update estimates', 'error');
+            window.SteadyUtils.showToast('Failed to update estimates', 'error');
         }
     },
 
@@ -3026,10 +3335,10 @@ window.EstimatesModule = {
             this.state.batchMode = false;
             this.estimates_calculateStats();
             this.estimates_render();
-            showNotification('Estimates marked as Accepted', 'success');
+            window.SteadyUtils.showToast('Estimates marked as Accepted', 'success');
         } catch (error) {
             console.error('Batch mark accepted error:', error);
-            showNotification('Failed to update estimates', 'error');
+            window.SteadyUtils.showToast('Failed to update estimates', 'error');
         }
     },
 
@@ -3052,10 +3361,10 @@ window.EstimatesModule = {
             this.state.batchMode = false;
             this.estimates_calculateStats();
             this.estimates_render();
-            showNotification('Estimates deleted successfully', 'success');
+            window.SteadyUtils.showToast('Estimates deleted successfully', 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
-            showNotification('Failed to delete estimates', 'error');
+            window.SteadyUtils.showToast('Failed to delete estimates', 'error');
         }
     },
 
@@ -3074,10 +3383,10 @@ window.EstimatesModule = {
             this.state.estimates = this.state.estimates.filter(e => e.id !== estimateId);
             this.estimates_calculateStats();
             this.estimates_render();
-            showNotification('Estimate deleted successfully', 'success');
+            window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
         } catch (error) {
             console.error('Error deleting estimate:', error);
-            showNotification('Failed to delete estimate', 'error');
+            window.SteadyUtils.showToast('Failed to delete estimate', 'error');
         }
     },
 
