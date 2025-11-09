@@ -254,3 +254,4 @@ class SteadyUtils {
 const SteadyUtilsInstance = new SteadyUtils();
 window.SteadyUtils = SteadyUtilsInstance;
 window.toast = SteadyUtilsInstance.showToast.bind(SteadyUtilsInstance);
+window.formatCurrency = SteadyUtilsInstance.formatCurrency.bind(SteadyUtilsInstance);
