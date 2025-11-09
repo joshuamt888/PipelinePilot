@@ -2037,13 +2037,13 @@ estimates_showViewModal(estimateId) {
                 this.state.estimates.splice(index, 1);
             }
 
-            // Close modal and update UI
+            // Close modal immediately
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 200);
+
+            // Update UI silently
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
-
-            window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
         } catch (error) {
             console.error('Delete estimate error:', error);
             window.SteadyUtils.showToast('Failed to delete estimate', 'error');
@@ -2054,6 +2054,11 @@ estimates_showViewModal(estimateId) {
     overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
         const newStatus = e.target.value;
 
+        // Close modal immediately
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+
+        // Update in background
         try {
             await API.updateEstimate(estimate.id, { status: newStatus });
 
@@ -2063,13 +2068,10 @@ estimates_showViewModal(estimateId) {
                 est.status = newStatus;
             }
 
-            // Close modal and update UI
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
+            // Update UI silently
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
-            window.SteadyUtils.showToast(`Status updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
         } catch (error) {
             console.error('Update status error:', error);
             window.SteadyUtils.showToast('Failed to update status', 'error');
@@ -2335,32 +2337,37 @@ async estimates_handleSave(overlay) {
 
         console.log('[Estimates] Saving estimate:', estimateData);
 
-        // Create or update
-        let savedEstimate;
-        if (this.state.editingEstimateId) {
-            savedEstimate = await API.updateEstimate(this.state.editingEstimateId, estimateData);
+        // Close modal immediately for instant feedback
+        this.estimates_closeModal();
 
-            // Update in state
-            const index = this.state.estimates.findIndex(e => e.id === this.state.editingEstimateId);
-            if (index !== -1) {
-                this.state.estimates[index] = savedEstimate;
+        // Save in background
+        try {
+            let savedEstimate;
+            if (this.state.editingEstimateId) {
+                savedEstimate = await API.updateEstimate(this.state.editingEstimateId, estimateData);
+
+                // Update in state
+                const index = this.state.estimates.findIndex(e => e.id === this.state.editingEstimateId);
+                if (index !== -1) {
+                    this.state.estimates[index] = savedEstimate;
+                }
+            } else {
+                savedEstimate = await API.createEstimate(estimateData);
+                this.state.estimates.unshift(savedEstimate);
             }
 
-            alert('Estimate updated successfully!');
-        } else {
-            savedEstimate = await API.createEstimate(estimateData);
+            // Silently update UI
+            this.estimates_calculateStats();
+            this.estimates_render();
 
-            this.state.estimates.unshift(savedEstimate);
-            alert('Estimate created successfully! 🎉');
+        } catch (error) {
+            console.error('[Estimates] Save error:', error);
+            window.SteadyUtils.showToast('Failed to save estimate', 'error');
         }
 
-        this.estimates_closeModal();
-        this.estimates_calculateStats();
-        this.estimates_render();
-
     } catch (error) {
-        console.error('[Estimates] Save error:', error);
-        alert('Failed to save estimate: ' + (error.message || 'Unknown error'));
+        // Validation errors (before modal closes)
+        console.error('[Estimates] Validation error:', error);
     }
 },
 
