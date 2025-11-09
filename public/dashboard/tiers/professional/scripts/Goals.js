@@ -655,7 +655,7 @@ async goals_loadAvailableTasks() {
                                 <div class="goals-form-group-v2">
                                     <label class="goals-form-label-v2">Target Value</label>
                                     <input type="number" id="goalTarget" class="goals-form-input-v2"
-                                           placeholder="10000" step="any" min="0">
+                                           placeholder="10000" step="0.01" min="0" max="99999999.99">
                                     <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                 </div>
                                 <div class="goals-form-group-v2">
@@ -1054,7 +1054,7 @@ async goals_loadAvailableTasks() {
                                     <div class="goals-form-group-v2">
                                         <label class="goals-form-label-v2">Target Value</label>
                                         <input type="number" id="goalTarget" class="goals-form-input-v2"
-                                               placeholder="10000" value="${goal.target_value}" step="any" min="0">
+                                               placeholder="10000" value="${goal.target_value}" step="0.01" min="0" max="99999999.99">
                                         <span class="goals-input-hint" id="targetCounter">Max 99,999,999.99</span>
                                     </div>
                                     <div class="goals-form-group-v2">

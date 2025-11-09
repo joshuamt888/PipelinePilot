@@ -1129,6 +1129,161 @@ window.JobsModule = {
                     text-align: right;
                 }
 
+                /* Lead Dropdown with Search */
+                .job-lead-dropdown-wrapper {
+                    display: flex;
+                    gap: 8px;
+                    align-items: stretch;
+                }
+
+                .job-lead-dropdown-wrapper select {
+                    flex: 1;
+                }
+
+                .job-lead-search-btn {
+                    padding: 8px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-secondary);
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                }
+
+                .job-lead-search-btn:hover {
+                    border-color: var(--primary);
+                    background: rgba(102, 126, 234, 0.05);
+                    color: var(--primary);
+                }
+
+                /* Lead Search Modal */
+                .job-search-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.2s ease;
+                }
+
+                .job-search-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 600px;
+                    max-height: 80vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                .job-search-modal-header {
+                    padding: 1.5rem 2rem;
+                    border-bottom: 2px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .job-search-modal-header h3 {
+                    margin: 0;
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .job-search-modal-body {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 1.5rem 2rem;
+                }
+
+                .job-search-input-wrapper {
+                    position: relative;
+                    margin-bottom: 1.5rem;
+                }
+
+                .job-search-input-wrapper svg {
+                    position: absolute;
+                    left: 12px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 18px;
+                    height: 18px;
+                    color: var(--text-tertiary);
+                    pointer-events: none;
+                }
+
+                .job-search-input-wrapper input {
+                    width: 100%;
+                    padding: 12px 12px 12px 42px;
+                    border: 2px solid var(--border);
+                    border-radius: 8px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+
+                .job-search-input-wrapper input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                }
+
+                .job-lead-results {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    max-height: 400px;
+                    overflow-y: auto;
+                }
+
+                .job-lead-result-item {
+                    padding: 12px 16px;
+                    background: var(--background);
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .job-lead-result-item:hover {
+                    border-color: var(--primary);
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .job-lead-result-name {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 4px;
+                }
+
+                .job-lead-result-details {
+                    font-size: 12px;
+                    color: var(--text-secondary);
+                }
+
+                .job-lead-no-results {
+                    text-align: center;
+                    padding: 3rem 1rem;
+                    color: var(--text-tertiary);
+                    font-size: 14px;
+                }
+
                 /* Materials/Crew Table */
                 .job-dynamic-table {
                     width: 100%;
@@ -1633,7 +1788,7 @@ window.JobsModule = {
                                 <div class="job-form-group">
                                     <label>Duration (hours)</label>
                                     <input type="number" name="duration_hours" value="${job?.duration_hours || ''}"
-                                           step="0.5" min="0" placeholder="8">
+                                           step="0.5" min="0" max="99999999.99" placeholder="8">
                                 </div>
                             </div>
 
@@ -1656,12 +1811,12 @@ window.JobsModule = {
                                 <div class="job-form-group">
                                     <label>Material Cost ($)</label>
                                     <input type="number" name="material_cost" value="${job?.material_cost || ''}"
-                                           step="0.01" min="0" placeholder="0.00" data-calc-trigger>
+                                           step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Labor Rate ($/hr)</label>
                                     <input type="number" name="labor_rate" value="${job?.labor_rate || ''}"
-                                           step="0.01" min="0" placeholder="50.00" data-calc-trigger>
+                                           step="0.01" min="0" max="99999999.99" placeholder="50.00" data-calc-trigger>
                                 </div>
                             </div>
 
@@ -1669,12 +1824,12 @@ window.JobsModule = {
                                 <div class="job-form-group">
                                     <label>Estimated Hours</label>
                                     <input type="number" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}"
-                                           step="0.5" min="0" placeholder="8" data-calc-trigger>
+                                           step="0.5" min="0" max="99999999.99" placeholder="8" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Other Expenses ($)</label>
                                     <input type="number" name="other_expenses" value="${job?.other_expenses || ''}"
-                                           step="0.01" min="0" placeholder="0.00" data-calc-trigger>
+                                           step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                             </div>
 
@@ -1682,12 +1837,12 @@ window.JobsModule = {
                                 <div class="job-form-group">
                                     <label>Quoted Price ($) <span class="required">*</span></label>
                                     <input type="number" name="quoted_price" value="${job?.quoted_price || ''}"
-                                           step="0.01" min="0" placeholder="1000.00" required data-calc-trigger>
+                                           step="0.01" min="0" max="99999999.99" placeholder="1000.00" required data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Deposit Amount ($)</label>
                                     <input type="number" name="deposit_amount" value="${job?.deposit_amount || ''}"
-                                           step="0.01" min="0" placeholder="0.00">
+                                           step="0.01" min="0" max="99999999.99" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -1795,15 +1950,97 @@ window.JobsModule = {
 
     jobs_renderLeadSelect(selectedLeadId = null) {
         return `
-            <select name="lead_id">
-                <option value="">No Lead</option>
-                ${this.state.leads.map(lead => `
-                    <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
-                        ${lead.name}${lead.company ? ` (${lead.company})` : ''}
-                    </option>
-                `).join('')}
-            </select>
+            <div class="job-lead-dropdown-wrapper">
+                <select name="lead_id" id="jobLeadSelect">
+                    <option value="">No Lead</option>
+                    ${this.state.leads.map(lead => `
+                        <option value="${lead.id}" ${selectedLeadId === lead.id ? 'selected' : ''}>
+                            ${lead.name}${lead.company ? ` (${lead.company})` : ''}
+                        </option>
+                    `).join('')}
+                </select>
+                <button type="button" class="job-lead-search-btn" data-action="search-lead">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    Search
+                </button>
+            </div>
         `;
+    },
+
+    jobs_openLeadSearch(parentOverlay) {
+        const searchModalHtml = `
+            <div class="job-search-modal-overlay" id="leadSearchModal">
+                <div class="job-search-modal">
+                    <div class="job-search-modal-header">
+                        <h3>Search Leads</h3>
+                        <button class="job-modal-close" onclick="document.getElementById('leadSearchModal').remove()">×</button>
+                    </div>
+                    <div class="job-search-modal-body">
+                        <div class="job-search-input-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                            <input type="text" id="leadSearchInput" placeholder="Type to search leads..." autofocus>
+                        </div>
+                        <div class="job-lead-results" id="leadSearchResults">
+                            ${this.jobs_renderLeadSearchResults('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', searchModalHtml);
+
+        // Attach search events
+        const searchInput = document.getElementById('leadSearchInput');
+        const resultsContainer = document.getElementById('leadSearchResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            resultsContainer.innerHTML = this.jobs_renderLeadSearchResults(query);
+        });
+
+        // Handle lead selection
+        document.getElementById('leadSearchModal').addEventListener('click', (e) => {
+            const leadItem = e.target.closest('.job-lead-result-item');
+            if (leadItem) {
+                const leadId = leadItem.dataset.leadId;
+                const leadSelect = parentOverlay.querySelector('#jobLeadSelect');
+                if (leadSelect) {
+                    leadSelect.value = leadId;
+                }
+                document.getElementById('leadSearchModal').remove();
+            }
+        });
+    },
+
+    jobs_renderLeadSearchResults(query) {
+        const leads = Array.isArray(this.state.leads) ? this.state.leads : [];
+
+        const filtered = query ? leads.filter(lead => {
+            const searchText = `${lead.name} ${lead.company || ''} ${lead.email || ''} ${lead.phone || ''}`.toLowerCase();
+            return searchText.includes(query);
+        }) : leads;
+
+        if (filtered.length === 0) {
+            return `<div class="job-lead-no-results">No leads found${query ? ` for "${query}"` : ''}</div>`;
+        }
+
+        return filtered.map(lead => `
+            <div class="job-lead-result-item" data-lead-id="${lead.id}">
+                <div class="job-lead-result-name">${this.jobs_truncate(lead.name, 60)}</div>
+                <div class="job-lead-result-details">
+                    ${lead.company ? this.jobs_truncate(lead.company, 50) : 'No company'}
+                    ${lead.phone ? ` • ${lead.phone}` : ''}
+                    ${lead.email ? ` • ${this.jobs_truncate(lead.email, 40)}` : ''}
+                </div>
+            </div>
+        `).join('');
     },
 
     jobs_renderMaterialsTable() {
@@ -1856,9 +2093,9 @@ window.JobsModule = {
         return `
             <div class="job-dynamic-row job-materials-row">
                 <input type="text" placeholder="Name" value="${material.name || ''}" data-material="${index}" data-field="name">
-                <input type="number" placeholder="0" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0">
+                <input type="number" placeholder="0" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0" max="99999999.99">
                 <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit">
-                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0">
+                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0" max="99999999.99">
                 <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier">
                 <div class="job-row-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-row-delete" data-action="delete-material" data-index="${index}">
@@ -1920,8 +2157,8 @@ window.JobsModule = {
             <div class="job-dynamic-row job-crew-row">
                 <input type="text" placeholder="Name" value="${member.name || ''}" data-crew="${index}" data-field="name">
                 <input type="text" placeholder="Role" value="${member.role || ''}" data-crew="${index}" data-field="role">
-                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0">
-                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0">
+                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0" max="99999999.99">
+                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0" max="99999999.99">
                 <div class="job-row-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-row-delete" data-action="delete-crew" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2245,6 +2482,11 @@ window.JobsModule = {
                 this.state.modalState.photos.splice(index, 1);
                 this.jobs_refreshPhotos();
             }
+        });
+
+        // Lead search button
+        overlay.querySelector('[data-action="search-lead"]')?.addEventListener('click', () => {
+            this.jobs_openLeadSearch(overlay);
         });
 
         // Save job
