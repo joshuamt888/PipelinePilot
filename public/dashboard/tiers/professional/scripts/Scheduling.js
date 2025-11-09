@@ -3169,7 +3169,6 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-task-title.scheduling-completed-text {
-                    text-decoration: line-through;
                     opacity: 0.7;
                     color: #777;
                 }
@@ -5028,11 +5027,12 @@ modal.addEventListener('mouseup', (e) => {
 /* Batch Operations Styles */
 .scheduling-task-counter {
     padding: 0.5rem 1rem;
-    background: #f3f4f6;
+    background: var(--background);
+    border: 1px solid var(--border);
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     white-space: nowrap;
 }
 

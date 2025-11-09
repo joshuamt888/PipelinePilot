@@ -4466,18 +4466,12 @@ addlead_showCustomSourceInput(targetInput) {
             /* Batch Operations Styles */
             .addlead-lead-counter {
                 padding: 0.5rem 1rem;
-                background: #f3f4f6;
+                background: var(--background);
+                border: 1px solid var(--border);
                 border-radius: 8px;
                 font-weight: 600;
                 font-size: 0.875rem;
-                color: #6b7280;
-            }
-
-            @media (prefers-color-scheme: dark) {
-                .addlead-lead-counter {
-                    background: #374151;
-                    color: #9ca3af;
-                }
+                color: var(--text-secondary);
             }
 
             .addlead-btn-batch-edit {
