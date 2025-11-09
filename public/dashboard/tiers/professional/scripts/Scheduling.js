@@ -211,6 +211,17 @@ window.SchedulingModule = {
                         <h2 class="scheduling-table-title">All Tasks (${filteredTasks.length})</h2>
                     </div>
                     <div class="scheduling-table-header-right">
+                        ${totalTasks > 0 ? `
+                            <div class="scheduling-task-counter">
+                                ${totalTasks} / ${this.scheduling_state.taskLimit}
+                            </div>
+                            <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
+                                    onclick="SchedulingModule.scheduling_toggleBatchMode()">
+                                ${this.scheduling_state.batchEditMode ?
+                                    `Cancel (${selectedCount} selected)` :
+                                    'Edit Multiple'}
+                            </button>
+                        ` : ''}
                         <button class="scheduling-refresh-table-btn" onclick="SchedulingModule.scheduling_refreshTable()">
                             <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
                             Refresh
@@ -229,21 +240,8 @@ window.SchedulingModule = {
                     </div>
                 </div>
 
-                ${totalTasks > 0 ? `
-                    <div class="scheduling-limit-bar">
-                        <div class="scheduling-limit-counter">
-                            <i data-lucide="list-checks" style="width: 1.125rem; height: 1.125rem;"></i>
-                            <span>${totalTasks} / ${this.scheduling_state.taskLimit} tasks</span>
-                        </div>
-                        <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
-                                onclick="SchedulingModule.scheduling_toggleBatchMode()">
-                            <i data-lucide="check-square" style="width: 16px; height: 16px;"></i>
-                            ${this.scheduling_state.batchEditMode ?
-                                `Cancel (${selectedCount} selected)` :
-                                'Edit Multiple'}
-                        </button>
-                    </div>
-                ` : ''}
+                ${this.scheduling_state.batchEditMode && selectedCount > 0 ?
+                    this.scheduling_renderBatchActionsBar() : ''}
 
                 ${this.scheduling_renderActiveFiltersPanel()}
 
@@ -252,9 +250,6 @@ window.SchedulingModule = {
                         this.scheduling_renderTasksTable(filteredTasks) :
                         this.scheduling_renderEmptyState()}
                 </div>
-
-                ${this.scheduling_state.batchEditMode && selectedCount > 0 ?
-                    this.scheduling_renderBatchActionsBar() : ''}
             </div>
         `;
     },
@@ -2483,17 +2478,20 @@ modal.addEventListener('mouseup', (e) => {
     scheduling_renderBatchActionsBar() {
         const count = this.scheduling_state.selectedTaskIds.length;
         return `
-            <div class="scheduling-batch-actions">
-                <button class="scheduling-batch-btn scheduling-batch-btn-complete"
-                        onclick="SchedulingModule.scheduling_batchComplete()">
-                    <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                    Complete Selected (${count})
-                </button>
-                <button class="scheduling-batch-btn scheduling-batch-btn-delete"
-                        onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
-                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
-                    Delete Selected (${count})
-                </button>
+            <div class="scheduling-batch-actions-bar">
+                <div class="scheduling-batch-actions-content">
+                    <span class="scheduling-batch-count">${count} task${count !== 1 ? 's' : ''} selected</span>
+                    <div class="scheduling-batch-buttons">
+                        <button class="scheduling-batch-btn scheduling-batch-complete"
+                                onclick="SchedulingModule.scheduling_batchComplete()">
+                            Complete Selected
+                        </button>
+                        <button class="scheduling-batch-btn scheduling-batch-delete"
+                                onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
+                            Delete Selected
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -2503,39 +2501,39 @@ modal.addEventListener('mouseup', (e) => {
         if (count === 0) return;
 
         const modal = document.createElement('div');
-        modal.className = 'scheduling-modal-overlay show';
+        modal.className = 'scheduling-delete-modal-overlay';
         modal.innerHTML = `
-            <div class="scheduling-modal scheduling-modal-delete">
-                <div class="scheduling-modal-header-v2">
-                    <h2 class="scheduling-modal-title-v2">Delete ${count} Task${count > 1 ? 's' : ''}?</h2>
-                    <button class="scheduling-modal-close" onclick="this.closest('.scheduling-modal-overlay').remove()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <line x1="18" y1="6" x2="6" y2="18" stroke-width="2" stroke-linecap="round"/>
-                            <line x1="6" y1="6" x2="18" y2="18" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+            <div class="scheduling-delete-modal">
+                <div class="scheduling-delete-modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
                 </div>
-                <div class="scheduling-modal-body-v2">
-                    <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6;">
-                        Are you sure you want to delete ${count} task${count > 1 ? 's' : ''}? This action cannot be undone.
-                    </p>
-                </div>
-                <div class="scheduling-modal-footer-v2">
-                    <button class="scheduling-btn-modal-secondary" onclick="this.closest('.scheduling-modal-overlay').remove()">
+                <h2 class="scheduling-delete-modal-title">Delete ${count} Task${count > 1 ? 's' : ''}?</h2>
+                <p class="scheduling-delete-modal-text">
+                    This will permanently delete ${count} task${count > 1 ? 's' : ''}. This action cannot be undone.
+                </p>
+                <div class="scheduling-delete-modal-actions">
+                    <button class="scheduling-delete-modal-btn scheduling-delete-modal-cancel"
+                            onclick="this.closest('.scheduling-delete-modal-overlay').remove()">
                         Cancel
                     </button>
-                    <button class="scheduling-btn-modal-danger" onclick="SchedulingModule.scheduling_confirmBatchDelete()">
-                        Delete Task${count > 1 ? 's' : ''}
+                    <button class="scheduling-delete-modal-btn scheduling-delete-modal-confirm"
+                            onclick="SchedulingModule.scheduling_confirmBatchDelete()">
+                        Delete
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
     },
 
     async scheduling_confirmBatchDelete() {
         // Close modal
-        document.querySelector('.scheduling-modal-overlay')?.remove();
+        document.querySelector('.scheduling-delete-modal-overlay')?.remove();
         if (this.scheduling_state.selectedTaskIds.length === 0) return;
 
         try {
@@ -5027,225 +5025,231 @@ modal.addEventListener('mouseup', (e) => {
     }
 }
 
-/* Batch Operations Styles - Match Goals */
-.scheduling-limit-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    margin-bottom: 1.5rem;
-}
-
-.scheduling-limit-counter {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.95rem;
+/* Batch Operations Styles */
+.scheduling-task-counter {
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border-radius: 8px;
     font-weight: 600;
-    color: var(--text-primary);
-}
-
-.scheduling-limit-counter svg,
-.scheduling-limit-counter i {
-    color: var(--primary);
+    font-size: 0.875rem;
+    color: #6b7280;
+    white-space: nowrap;
 }
 
 .scheduling-btn-batch-edit {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
     padding: 0.75rem 1.25rem;
-    background: var(--background);
-    color: var(--text-primary);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-align: center;
 }
 
 .scheduling-btn-batch-edit:hover {
-    background: var(--surface);
-    border-color: var(--primary);
-    color: var(--primary);
+    background: #4b5563;
 }
 
 .scheduling-btn-batch-edit.active {
-    background: var(--danger);
-    color: white;
-    border-color: var(--danger);
+    background: #ef4444;
 }
 
 .scheduling-btn-batch-edit.active:hover {
-    background: var(--danger-dark);
+    background: #dc2626;
 }
 
-.scheduling-batch-actions {
-    position: sticky;
-    bottom: 2rem;
+.scheduling-batch-actions-bar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.scheduling-batch-actions-content {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 1rem;
-    justify-content: center;
-    padding: 1.5rem;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    margin-top: 2rem;
-    z-index: 100;
+}
+
+.scheduling-batch-count {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.scheduling-batch-buttons {
+    display: flex;
+    gap: 0.75rem;
 }
 
 .scheduling-batch-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 1rem 1.75rem;
-    border: none;
-    border-radius: var(--radius-lg);
-    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid white;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    text-align: center;
 }
 
-.scheduling-batch-btn-complete {
-    background: var(--primary);
+.scheduling-batch-btn:hover {
+    background: white;
+    color: #667eea;
+}
+
+.scheduling-batch-btn.scheduling-batch-delete:hover {
+    background: #ef4444;
+    border-color: #ef4444;
     color: white;
 }
 
-.scheduling-batch-btn-complete:hover {
-    background: var(--primary-dark);
-    transform: translateY(-2px);
-}
-
-.scheduling-batch-btn-delete {
-    background: var(--danger);
-    color: white;
-}
-
-.scheduling-batch-btn-delete:hover {
-    background: var(--danger-dark);
-    transform: translateY(-2px);
-}
-
-/* Batch Delete Modal - Match Goals */
-.scheduling-modal-overlay {
+/* Delete Modal - Dark/Light Mode Adaptive */
+.scheduling-delete-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.3s ease;
 }
 
-.scheduling-modal-overlay.show {
+.scheduling-delete-modal-overlay.show {
     opacity: 1;
 }
 
-.scheduling-modal {
-    background: white;
-    border-radius: var(--radius-lg);
+.scheduling-delete-modal {
+    background: var(--surface, #ffffff);
+    border-radius: 16px;
     width: 90%;
-    max-width: 500px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    transform: scale(0.95);
-    transition: transform 0.2s ease;
+    max-width: 420px;
+    padding: 2rem;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
 }
 
-.scheduling-modal-overlay.show .scheduling-modal {
-    transform: scale(1);
+.scheduling-delete-modal-overlay.show .scheduling-delete-modal {
+    transform: scale(1) translateY(0);
 }
 
-.scheduling-modal-header-v2 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 2px solid var(--border);
-}
-
-.scheduling-modal-title-v2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.scheduling-modal-close {
-    width: 2rem;
-    height: 2rem;
+.scheduling-delete-modal-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    background: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    border-radius: var(--radius);
-    transition: all 0.2s ease;
 }
 
-.scheduling-modal-close:hover {
-    background: var(--surface);
-    color: var(--text-primary);
+.scheduling-delete-modal-icon svg {
+    width: 32px;
+    height: 32px;
+    color: #ef4444;
 }
 
-.scheduling-modal-close svg {
-    width: 1.25rem;
-    height: 1.25rem;
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal {
+        background: #1f2937;
+    }
+    .scheduling-delete-modal-icon {
+        background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    }
+    .scheduling-delete-modal-icon svg {
+        color: #fca5a5;
+    }
 }
 
-.scheduling-modal-body-v2 {
-    padding: 1.5rem;
+.scheduling-delete-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #111827);
+    margin: 0 0 1rem 0;
 }
 
-.scheduling-modal-footer-v2 {
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-title {
+        color: #f9fafb;
+    }
+}
+
+.scheduling-delete-modal-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #6b7280);
+    margin: 0 0 2rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-text {
+        color: #9ca3af;
+    }
+}
+
+.scheduling-delete-modal-actions {
     display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    padding: 1rem 1.5rem 1.5rem;
-    border-top: 2px solid var(--border);
+    gap: 0.75rem;
+    justify-content: center;
 }
 
-.scheduling-btn-modal-secondary {
-    padding: 0.75rem 1.5rem;
-    background: var(--surface);
-    color: var(--text-primary);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.scheduling-btn-modal-secondary:hover {
-    background: var(--background);
-    border-color: var(--text-secondary);
-}
-
-.scheduling-btn-modal-danger {
-    padding: 0.75rem 1.5rem;
-    background: var(--danger);
-    color: white;
+.scheduling-delete-modal-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
     border: none;
-    border-radius: var(--radius-lg);
+    border-radius: 10px;
     font-weight: 600;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-align: center;
 }
 
-.scheduling-btn-modal-danger:hover {
-    background: var(--danger-dark);
+.scheduling-delete-modal-cancel {
+    background: var(--background, #f3f4f6);
+    color: var(--text-primary, #374151);
+}
+
+.scheduling-delete-modal-cancel:hover {
+    background: var(--surface, #e5e7eb);
+    transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-cancel {
+        background: #374151;
+        color: #f9fafb;
+    }
+    .scheduling-delete-modal-cancel:hover {
+        background: #4b5563;
+    }
+}
+
+.scheduling-delete-modal-confirm {
+    background: #ef4444;
+    color: white;
+}
+
+.scheduling-delete-modal-confirm:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .scheduling-task-row.batch-mode {
