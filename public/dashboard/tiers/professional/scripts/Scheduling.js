@@ -1698,9 +1698,17 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_showMultiFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.scheduling-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('scheduling-active')) {
+            this.scheduling_hideAllFilterDropdowns();
+            return;
+        }
+
         this.scheduling_hideAllFilterDropdowns();
-        
-        event.target.closest('.scheduling-header-filter').classList.add('scheduling-active');
+        filterElement.classList.add('scheduling-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'scheduling-filter-dropdown scheduling-multi-select scheduling-show';
@@ -1751,9 +1759,17 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_showSingleFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.scheduling-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('scheduling-active')) {
+            this.scheduling_hideAllFilterDropdowns();
+            return;
+        }
+
         this.scheduling_hideAllFilterDropdowns();
-        
-        event.target.closest('.scheduling-header-filter').classList.add('scheduling-active');
+        filterElement.classList.add('scheduling-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'scheduling-filter-dropdown scheduling-multi-select scheduling-show';

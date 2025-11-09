@@ -1936,9 +1936,17 @@ addlead_showCustomSourceInput(targetInput) {
 
     addlead_showMultiFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.addlead-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('addlead-active')) {
+            this.addlead_hideAllFilterDropdowns();
+            return;
+        }
+
         this.addlead_hideAllFilterDropdowns();
-        
-        event.target.closest('.addlead-header-filter').classList.add('addlead-active');
+        filterElement.classList.add('addlead-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'addlead-filter-dropdown addlead-multi-select addlead-active';
@@ -1990,9 +1998,17 @@ addlead_showCustomSourceInput(targetInput) {
 
     addlead_showSingleFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.addlead-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('addlead-active')) {
+            this.addlead_hideAllFilterDropdowns();
+            return;
+        }
+
         this.addlead_hideAllFilterDropdowns();
-        
-        event.target.closest('.addlead-header-filter').classList.add('addlead-active');
+        filterElement.classList.add('addlead-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'addlead-filter-dropdown addlead-single-select addlead-active';
