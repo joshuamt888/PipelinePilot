@@ -319,12 +319,36 @@ class TierScalingAPI {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        const { error } = await supabase.rpc('delete_lead_with_decrement', {
-            p_lead_id: leadId,
-            p_user_id: user.id
-        });
+        // Step 1: Orphan any estimates linked to this lead (preserve them)
+        await supabase
+            .from('estimates')
+            .update({ lead_id: null })
+            .eq('lead_id', leadId)
+            .eq('user_id', user.id);
 
-        if (error) throw error;
+        // Step 2: Delete the lead (tasks cascade automatically)
+        const { error: deleteError } = await supabase
+            .from('leads')
+            .delete()
+            .eq('id', leadId)
+            .eq('user_id', user.id);
+
+        if (deleteError) throw deleteError;
+
+        // Step 3: Decrement the user's current_leads counter
+        const { data: userData } = await supabase
+            .from('users')
+            .select('current_leads')
+            .eq('id', user.id)
+            .single();
+
+        if (userData) {
+            await supabase
+                .from('users')
+                .update({ current_leads: Math.max(0, (userData.current_leads || 0) - 1) })
+                .eq('id', user.id);
+        }
+
         return { success: true };
 
     } catch (error) {
@@ -425,14 +449,40 @@ class TierScalingAPI {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Call the batch delete function (requires DB function)
-    const { data, error } = await supabase.rpc('batch_delete_leads', {
-      p_lead_ids: leadIds,
-      p_user_id: user.id
-    });
+    // Step 1: Orphan any estimates linked to these leads
+    await supabase
+        .from('estimates')
+        .update({ lead_id: null })
+        .in('lead_id', leadIds)
+        .eq('user_id', user.id);
 
-    if (error) throw error;
-    return { success: true, deleted: data };
+    // Step 2: Delete all leads
+    const { error: deleteError, count } = await supabase
+        .from('leads')
+        .delete({ count: 'exact' })
+        .in('id', leadIds)
+        .eq('user_id', user.id);
+
+    if (deleteError) throw deleteError;
+
+    // Step 3: Decrement counter by the number deleted
+    const deletedCount = count || 0;
+    if (deletedCount > 0) {
+        const { data: userData } = await supabase
+            .from('users')
+            .select('current_leads')
+            .eq('id', user.id)
+            .single();
+
+        if (userData) {
+            await supabase
+                .from('users')
+                .update({ current_leads: Math.max(0, (userData.current_leads || 0) - deletedCount) })
+                .eq('id', user.id);
+        }
+    }
+
+    return { success: true, deleted: deletedCount };
   }
 
   /**
