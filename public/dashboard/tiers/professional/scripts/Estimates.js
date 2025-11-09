@@ -21,6 +21,9 @@ window.EstimatesModule = {
         // Modal state
         editingEstimateId: null,
 
+        // Limits
+        estimateLimit: 1000,
+
         // Stats
         stats: {
             totalQuoted: 0,
@@ -81,6 +84,7 @@ window.EstimatesModule = {
             ${this.estimates_renderStyles()}
             <div class="estimates-container">
                 ${this.estimates_renderHeader()}
+                ${this.estimates_renderLimitBar()}
                 ${this.estimates_renderStats()}
                 ${this.estimates_renderToolbar()}
                 ${this.estimates_renderGrid()}
@@ -1071,6 +1075,31 @@ window.EstimatesModule = {
                 .estimate-confirm-btn.confirm.danger:hover {
                     background: #dc2626;
                 }
+
+                /* LIMIT COUNTER BAR */
+                .estimates-limit-bar {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1rem 1.5rem;
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
+                    margin-bottom: 1.5rem;
+                }
+
+                .estimates-limit-counter {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .estimates-limit-counter svg {
+                    color: #667eea;
+                }
             </style>
         `;
     },
@@ -1096,6 +1125,25 @@ window.EstimatesModule = {
                     </svg>
                     New Estimate
                 </button>
+            </div>
+        `;
+    },
+
+    /**
+     * Render limit counter bar
+     */
+    estimates_renderLimitBar() {
+        const totalEstimates = this.state.estimates.length;
+        const selectedCount = this.state.selectedEstimateIds.length;
+
+        return `
+            <div class="estimates-limit-bar">
+                <div class="estimates-limit-counter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.125rem; height: 1.125rem;">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>${totalEstimates} / ${this.state.estimateLimit} estimates</span>
+                </div>
             </div>
         `;
     },
