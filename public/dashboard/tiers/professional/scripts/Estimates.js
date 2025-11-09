@@ -1194,7 +1194,13 @@ estimates_renderModal(estimate) {
                     <div class="estimate-form-row">
                         <div class="estimate-form-group">
                             <label>Expires On</label>
-                            <input type="date" id="estimateExpiry" value="${expiryDate}">
+                            <input type="date" id="estimateExpiry" value="${expiryDate}" ${!estimate?.expires_at ? 'disabled' : ''}>
+                            <div style="margin-top: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                                    <input type="checkbox" id="estimateNoExpiry" ${!estimate?.expires_at ? 'checked' : ''} style="cursor: pointer;">
+                                    No expiration date (indefinite)
+                                </label>
+                            </div>
                         </div>
 
                         <div class="estimate-form-group">
@@ -1424,6 +1430,26 @@ estimates_initModalEvents(overlay) {
     if (notesInput) {
         updateCounter(notesInput, 'notesCounter', 500);
         notesInput.addEventListener('input', () => updateCounter(notesInput, 'notesCounter', 500));
+    }
+
+    // No expiration checkbox toggle
+    const noExpiryCheckbox = overlay.querySelector('#estimateNoExpiry');
+    const expiryInput = overlay.querySelector('#estimateExpiry');
+    if (noExpiryCheckbox && expiryInput) {
+        noExpiryCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                expiryInput.disabled = true;
+                expiryInput.value = '';
+            } else {
+                expiryInput.disabled = false;
+                // Set default 30 days from now if no value
+                if (!expiryInput.value) {
+                    const defaultExpiry = new Date();
+                    defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+                    expiryInput.value = defaultExpiry.toISOString().split('T')[0];
+                }
+            }
+        });
     }
 
     // Add line item
@@ -1899,17 +1925,15 @@ estimates_showViewModal(estimateId) {
                                 ${lead.name}
                             </div>
                         ` : ''}
-                        ${estimate.expires_at ? `
-                            <div class="estimate-view-meta-item">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                                </svg>
-                                Expires ${new Date(estimate.expires_at).toLocaleDateString()}
-                            </div>
-                        ` : ''}
+                        <div class="estimate-view-meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            ${estimate.expires_at ? `Expires ${new Date(estimate.expires_at).toLocaleDateString()}` : 'No expiration'}
+                        </div>
                     </div>
                 </div>
                 <button class="estimate-view-close" data-action="close-view-modal">×</button>
@@ -2830,7 +2854,8 @@ async estimates_handleSave(overlay) {
         const title = overlay.querySelector('#estimateTitle').value.trim();
         const leadId = overlay.querySelector('#estimateLead').value;
         const status = overlay.querySelector('#estimateStatus').value;
-        const expiresAt = overlay.querySelector('#estimateExpiry').value;
+        const noExpiry = overlay.querySelector('#estimateNoExpiry')?.checked;
+        const expiresAt = noExpiry ? null : overlay.querySelector('#estimateExpiry').value;
         const description = overlay.querySelector('#estimateDescription').value.trim();
         const terms = overlay.querySelector('#estimateTerms').value.trim();
         const notes = overlay.querySelector('#estimateNotes').value.trim();
@@ -3576,7 +3601,7 @@ estimates_formatStatus(status) {
      * UTILITIES
      */
     estimates_getExpiryInfo(estimate) {
-        if (!estimate.expires_at) return null;
+        if (!estimate.expires_at) return { text: 'No expiration', warning: false };
 
         const now = new Date();
         const expires = new Date(estimate.expires_at);
