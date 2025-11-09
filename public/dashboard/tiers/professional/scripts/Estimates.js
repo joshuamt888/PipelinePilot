@@ -1197,12 +1197,9 @@ window.EstimatesModule = {
      * Render toolbar with search, sort, and batch mode
      */
     estimates_renderToolbar() {
-        const count = this.state.filteredEstimates.length;
-
         return `
             <div class="estimates-toolbar">
                 <div class="estimates-toolbar-left">
-                    <div class="estimates-count">${count} estimate${count !== 1 ? 's' : ''}</div>
                     <div class="estimates-search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <circle cx="11" cy="11" r="8" stroke-width="2"/>
