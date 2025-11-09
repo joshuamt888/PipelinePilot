@@ -1181,8 +1181,8 @@ estimates_renderModal(estimate) {
 
                     <div class="estimate-form-group">
                         <label>Title *</label>
-                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="100" required>
-                        <span class="estimate-input-hint" id="titleCounter">100 characters remaining</span>
+                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="50" required>
+                        <span class="estimate-input-hint" id="titleCounter">50 characters remaining</span>
                     </div>
 
                     <div class="estimate-form-group">
@@ -1411,8 +1411,8 @@ estimates_initModalEvents(overlay) {
     };
 
     if (titleInput) {
-        updateCounter(titleInput, 'titleCounter', 100);
-        titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 100));
+        updateCounter(titleInput, 'titleCounter', 50);
+        titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 50));
     }
     if (descInput) {
         updateCounter(descInput, 'descriptionCounter', 500);
