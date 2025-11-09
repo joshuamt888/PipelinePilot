@@ -1366,18 +1366,8 @@ estimates_initModalEvents(overlay) {
             // Update the input value
             e.target.value = value;
 
-            // Visual feedback if at max
-            const numValue = parseFloat(value || '0');
-            if (!isNaN(numValue) && numValue >= 99999999.99) {
-                e.target.style.borderColor = '#ef4444';
-                e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.05)';
-            } else {
-                e.target.style.borderColor = '';
-                e.target.style.backgroundColor = '';
-            }
-
-            // Update total with small delay to ensure DOM updates
-            setTimeout(() => this.estimates_updateLineItemsTotal(), 10);
+            // Update total immediately
+            this.estimates_updateLineItemsTotal();
         }
     });
 
@@ -1400,12 +1390,8 @@ estimates_initModalEvents(overlay) {
                 }
             }
 
-            // Clear any visual feedback
-            e.target.style.borderColor = '';
-            e.target.style.backgroundColor = '';
-
             // Update total after formatting
-            setTimeout(() => this.estimates_updateLineItemsTotal(), 10);
+            this.estimates_updateLineItemsTotal();
         }
     }, true);
 
@@ -2644,12 +2630,8 @@ estimates_addLineItem(overlay) {
     const html = this.estimates_renderLineItemRow(newItem, currentItems);
 
     container.insertAdjacentHTML('beforeend', html);
-
-    // Update total and counter after DOM updates
-    setTimeout(() => {
-        this.estimates_updateLineItemsTotal();
-        this.estimates_updateLineItemCounter(overlay);
-    }, 10);
+    this.estimates_updateLineItemsTotal();
+    this.estimates_updateLineItemCounter(overlay);
 },
 
 /**
@@ -2672,11 +2654,8 @@ estimates_removeLineItem(overlay, index) {
         item.querySelector('[data-action="remove-line-item"]').dataset.index = newIndex;
     });
 
-    // Update total and counter after DOM updates
-    setTimeout(() => {
-        this.estimates_updateLineItemsTotal();
-        this.estimates_updateLineItemCounter(overlay);
-    }, 10);
+    this.estimates_updateLineItemsTotal();
+    this.estimates_updateLineItemCounter(overlay);
 },
 
 /**
@@ -2684,35 +2663,54 @@ estimates_removeLineItem(overlay, index) {
  */
 estimates_updateLineItemsTotal() {
     const container = document.querySelector('#lineItemsContainer');
-    if (!container) return;
+    if (!container) {
+        console.warn('Line items container not found');
+        return;
+    }
 
     let total = 0;
-    container.querySelectorAll('.estimate-line-item').forEach(row => {
+    const rows = container.querySelectorAll('.estimate-line-item');
+
+    console.log(`Calculating total for ${rows.length} line items`);
+
+    rows.forEach((row, index) => {
         const qtyInput = row.querySelector('.line-item-quantity');
         const rateInput = row.querySelector('.line-item-rate');
 
-        if (!qtyInput || !rateInput) return;
+        if (!qtyInput || !rateInput) {
+            console.warn(`Row ${index}: Missing inputs`);
+            return;
+        }
 
-        // Parse values carefully - handle empty strings and invalid inputs
-        let qty = parseFloat(qtyInput.value);
-        let rate = parseFloat(rateInput.value);
+        // Get raw values
+        const qtyValue = qtyInput.value.trim();
+        const rateValue = rateInput.value.trim();
 
-        // Default to 0 if invalid
-        if (isNaN(qty) || !isFinite(qty)) qty = 0;
-        if (isNaN(rate) || !isFinite(rate)) rate = 0;
+        console.log(`Row ${index}: qty="${qtyValue}" rate="${rateValue}"`);
 
-        // Calculate line total with proper decimal handling
-        const lineTotal = Math.round((qty * rate) * 100) / 100;
+        // Parse to numbers, default to 0 if empty or invalid
+        let qty = qtyValue === '' ? 0 : parseFloat(qtyValue);
+        let rate = rateValue === '' ? 0 : parseFloat(rateValue);
+
+        if (isNaN(qty)) qty = 0;
+        if (isNaN(rate)) rate = 0;
+
+        const lineTotal = qty * rate;
+        console.log(`Row ${index}: ${qty} × ${rate} = ${lineTotal}`);
+
         total += lineTotal;
     });
 
-    // Round total to 2 decimal places
+    console.log(`TOTAL: ${total}`);
+
+    // Round to 2 decimal places
     total = Math.round(total * 100) / 100;
 
     const displayEl = document.querySelector('#estimateTotalDisplay');
     if (displayEl) {
-        // Format with 2 decimal places for display
         displayEl.textContent = '$' + total.toFixed(2);
+    } else {
+        console.warn('Total display element not found');
     }
 },
 
