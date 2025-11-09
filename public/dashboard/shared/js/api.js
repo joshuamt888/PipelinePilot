@@ -1487,6 +1487,46 @@ class TierScalingAPI {
     return `EST-${year}-${String(nextNumber).padStart(3, '0')}`;
   }
 
+  /**
+   * Batch update multiple estimates at once
+   * @param {string[]} estimateIds - Array of estimate IDs
+   * @param {object} updates - Updates to apply to all estimates
+   * @returns {Promise<object>} Success status and updated count
+   */
+  static async batchUpdateEstimates(estimateIds, updates) {
+    if (!Array.isArray(estimateIds) || estimateIds.length === 0) {
+      throw new Error('estimateIds must be a non-empty array');
+    }
+
+    const { data, error } = await supabase
+      .from('estimates')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .in('id', estimateIds)
+      .select();
+
+    if (error) throw error;
+    return { success: true, updated: data.length, estimates: data };
+  }
+
+  /**
+   * Batch delete multiple estimates at once
+   * @param {string[]} estimateIds - Array of estimate IDs to delete
+   * @returns {Promise<object>} Success status
+   */
+  static async batchDeleteEstimates(estimateIds) {
+    if (!Array.isArray(estimateIds) || estimateIds.length === 0) {
+      throw new Error('estimateIds must be a non-empty array');
+    }
+
+    const { error} = await supabase
+      .from('estimates')
+      .delete()
+      .in('id', estimateIds);
+
+    if (error) throw error;
+    return { success: true, deleted: estimateIds.length };
+  }
+
   // ─────────────────────────────────────────────────────────────
   // ESTIMATE PHOTOS
   // ─────────────────────────────────────────────────────────────
