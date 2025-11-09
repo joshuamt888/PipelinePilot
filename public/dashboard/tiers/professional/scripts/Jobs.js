@@ -1217,6 +1217,32 @@ window.JobsModule = {
                     color: var(--text-primary);
                 }
 
+                .job-modal-close-btn {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 8px;
+                    width: 36px;
+                    height: 36px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+
+                .job-modal-close-btn svg {
+                    width: 20px;
+                    height: 20px;
+                    stroke-width: 2;
+                }
+
+                .job-modal-close-btn:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: var(--text-primary);
+                }
+
                 .job-search-modal-body {
                     flex: 1;
                     overflow-y: auto;
@@ -2064,7 +2090,11 @@ window.JobsModule = {
                 <div class="job-search-modal">
                     <div class="job-search-modal-header">
                         <h3>Search Leads</h3>
-                        <button class="job-modal-close" onclick="document.getElementById('leadSearchModal').remove()">×</button>
+                        <button class="job-modal-close-btn" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"></path>
+                            </svg>
+                        </button>
                     </div>
                     <div class="job-search-modal-body">
                         <div class="job-search-input-wrapper">
@@ -2084,17 +2114,30 @@ window.JobsModule = {
 
         document.body.insertAdjacentHTML('beforeend', searchModalHtml);
 
-        // Attach search events
+        const modal = document.getElementById('leadSearchModal');
         const searchInput = document.getElementById('leadSearchInput');
         const resultsContainer = document.getElementById('leadSearchResults');
 
+        // Search functionality
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
             resultsContainer.innerHTML = this.jobs_renderLeadSearchResults(query);
         });
 
+        // Close button
+        modal.querySelector('.job-modal-close-btn').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        // Backdrop click to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
         // Handle lead selection
-        document.getElementById('leadSearchModal').addEventListener('click', (e) => {
+        modal.addEventListener('click', (e) => {
             const leadItem = e.target.closest('.job-lead-result-item');
             if (leadItem) {
                 const leadId = leadItem.dataset.leadId;
@@ -2102,7 +2145,7 @@ window.JobsModule = {
                 if (leadSelect) {
                     leadSelect.value = leadId;
                 }
-                document.getElementById('leadSearchModal').remove();
+                modal.remove();
             }
         });
     },

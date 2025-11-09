@@ -946,6 +946,32 @@ estimates_renderModalStyles() {
             color: var(--text-primary);
         }
 
+        .estimate-modal-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .estimate-modal-close-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        .estimate-modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
         .estimate-search-modal-body {
             padding: 20px;
             display: flex;
@@ -3024,7 +3050,11 @@ estimates_openLeadSearch(parentOverlay) {
             <div class="estimate-search-modal">
                 <div class="estimate-search-modal-header">
                     <h3>Search Leads</h3>
-                    <button class="estimate-modal-close" onclick="document.getElementById('leadSearchModal').remove()">×</button>
+                    <button class="estimate-modal-close-btn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div class="estimate-search-modal-body">
                     <div class="estimate-search-input-wrapper">
@@ -3044,17 +3074,30 @@ estimates_openLeadSearch(parentOverlay) {
 
     document.body.insertAdjacentHTML('beforeend', searchModalHtml);
 
-    // Attach search events
+    const modal = document.getElementById('leadSearchModal');
     const searchInput = document.getElementById('leadSearchInput');
     const resultsContainer = document.getElementById('leadSearchResults');
 
+    // Search functionality
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         resultsContainer.innerHTML = this.estimates_renderLeadSearchResults(query);
     });
 
+    // Close button
+    modal.querySelector('.estimate-modal-close-btn').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    // Backdrop click to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
     // Handle lead selection
-    document.getElementById('leadSearchModal').addEventListener('click', (e) => {
+    modal.addEventListener('click', (e) => {
         const leadItem = e.target.closest('.estimate-lead-result-item');
         if (leadItem) {
             const leadId = leadItem.dataset.leadId;
@@ -3062,7 +3105,7 @@ estimates_openLeadSearch(parentOverlay) {
             if (leadSelect) {
                 leadSelect.value = leadId;
             }
-            document.getElementById('leadSearchModal').remove();
+            modal.remove();
         }
     });
 },
@@ -3689,7 +3732,7 @@ estimates_formatStatus(status) {
 }
 
 /* MODAL SYSTEM */
-.goals-modal-overlay {
+.est-modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
@@ -3703,11 +3746,11 @@ estimates_formatStatus(status) {
     transition: opacity 0.3s ease;
 }
 
-.goals-modal-overlay.show {
+.est-modal-overlay.show {
     opacity: 1;
 }
 
-.goals-modal {
+.est-modal {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -3722,16 +3765,16 @@ estimates_formatStatus(status) {
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
 }
 
-.goals-modal-overlay.show .goals-modal {
+.est-modal-overlay.show .est-modal {
     transform: scale(1) translateY(0);
 }
 
-.goals-modal-create-v2 {
+.est-modal-create-v2 {
     max-width: 650px;
 }
 
 /* MODAL HEADER */
-.goals-modal-header-v2 {
+.est-modal-header-v2 {
     padding: 2.5rem 2.5rem 1.5rem 2.5rem;
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -3740,14 +3783,14 @@ estimates_formatStatus(status) {
     flex-shrink: 0;
 }
 
-.goals-modal-title-v2 {
+.est-modal-title-v2 {
     font-size: 1.75rem;
     font-weight: 800;
     color: var(--text-primary);
     margin: 0;
 }
 
-.goals-modal-close {
+.est-modal-close {
     width: 2.5rem;
     height: 2.5rem;
     display: flex;
@@ -3761,68 +3804,68 @@ estimates_formatStatus(status) {
     flex-shrink: 0;
 }
 
-.goals-modal-close svg {
+.est-modal-close svg {
     width: 1.5rem;
     height: 1.5rem;
     stroke: var(--text-secondary);
     stroke-width: 2;
 }
 
-.goals-modal-close:hover {
+.est-modal-close:hover {
     background: var(--surface-hover);
 }
 
-.goals-modal-close:hover svg {
+.est-modal-close:hover svg {
     stroke: var(--text-primary);
 }
 
 /* MODAL BODY */
-.goals-modal-body-v2 {
+.est-modal-body-v2 {
     padding: 2.5rem;
     overflow-y: auto;
     flex: 1;
 }
 
 /* FORM */
-.goals-form-v2 {
+.est-form-v2 {
     display: flex;
     flex-direction: column;
     gap: 2rem;
 }
 
-.goals-form-group-v2 {
+.est-form-group-v2 {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.goals-form-row-v2 {
+.est-form-row-v2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
 }
 
-.goals-form-label-v2 {
+.est-form-label-v2 {
     font-weight: 700;
     color: var(--text-primary);
     font-size: 0.95rem;
 }
 
-.goals-input-hint {
+.est-input-hint {
     font-size: 0.8rem;
     color: var(--text-tertiary);
     font-weight: 500;
 }
 
 /* FORM INPUTS */
-.goals-form-input-large {
+.est-form-input-large {
     font-size: 1.5rem !important;
     font-weight: 700 !important;
     padding: 1.25rem 1.5rem !important;
     text-align: center;
 }
 
-.goals-form-input-v2, .goals-form-select-v2 {
+.est-form-input-v2, .est-form-select-v2 {
     padding: 1rem 1.25rem;
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
@@ -3833,7 +3876,7 @@ estimates_formatStatus(status) {
     font-weight: 500;
 }
 
-.goals-form-input-v2:focus, .goals-form-select-v2:focus {
+.est-form-input-v2:focus, .est-form-select-v2:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
@@ -3841,15 +3884,15 @@ estimates_formatStatus(status) {
 }
 
 /* Autocomplete fix */
-.goals-form-input-v2:-webkit-autofill,
-.goals-form-input-v2:-webkit-autofill:hover,
-.goals-form-input-v2:-webkit-autofill:focus {
+.est-form-input-v2:-webkit-autofill,
+.est-form-input-v2:-webkit-autofill:hover,
+.est-form-input-v2:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px var(--background) inset !important;
     -webkit-text-fill-color: var(--text-primary) !important;
     transition: background-color 5000s ease-in-out 0s;
 }
 
-.goals-form-textarea-v2 {
+.est-form-textarea-v2 {
     width: 100%;
     padding: 1rem 1.25rem;
     border: 2px solid var(--border);
@@ -3863,7 +3906,7 @@ estimates_formatStatus(status) {
     transition: all 0.2s ease;
 }
 
-.goals-form-textarea-v2:focus {
+.est-form-textarea-v2:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
@@ -3899,14 +3942,14 @@ estimates_formatStatus(status) {
 }
 
 /* DIVIDER */
-.goals-divider {
+.est-divider {
     height: 1px;
     background: var(--border);
     margin: 1rem 0;
 }
 
 /* CHECKBOXES */
-.goals-checkbox-v2 {
+.est-checkbox-v2 {
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -3918,25 +3961,25 @@ estimates_formatStatus(status) {
     transition: border-color 0.2s ease;
 }
 
-.goals-checkbox-v2:hover {
+.est-checkbox-v2:hover {
     border-color: var(--primary);
 }
 
-.goals-checkbox-v2 input {
+.est-checkbox-v2 input {
     width: 1.25rem;
     height: 1.25rem;
     cursor: pointer;
     accent-color: var(--primary);
 }
 
-.goals-checkbox-label {
+.est-checkbox-label {
     font-weight: 600;
     color: var(--text-primary);
     cursor: pointer;
 }
 
 /* MODAL ACTIONS */
-.goals-modal-actions-v2 {
+.est-modal-actions-v2 {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
@@ -3944,7 +3987,7 @@ estimates_formatStatus(status) {
 }
 
 /* BUTTONS IN MODAL */
-.goals-btn-secondary {
+.est-btn-secondary {
     background: var(--background);
     color: var(--text-primary);
     border: 2px solid var(--border);
@@ -3956,13 +3999,13 @@ estimates_formatStatus(status) {
     transition: all 0.3s;
 }
 
-.goals-btn-secondary:hover {
+.est-btn-secondary:hover {
     border-color: var(--primary);
     color: var(--primary);
     transform: translateY(-1px);
 }
 
-.goals-btn-primary {
+.est-btn-primary {
     background: var(--gradient-primary);
     color: white;
     border: none;
@@ -3978,44 +4021,44 @@ estimates_formatStatus(status) {
     gap: 0.5rem;
 }
 
-.goals-btn-primary:hover {
+.est-btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
-.goals-btn-primary svg {
+.est-btn-primary svg {
     width: 1.25rem;
     height: 1.25rem;
     stroke-width: 2.5;
 }
 
 /* LOADING SPINNER */
-.goals-spinner {
+.est-spinner {
     width: 1rem;
     height: 1rem;
-    animation: goalsSpin 0.8s linear infinite;
+    animation: estSpin 0.8s linear infinite;
 }
 
-@keyframes goalsSpin {
+@keyframes estSpin {
     to { transform: rotate(360deg); }
 }
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-    .goals-modal-body-v2 {
+    .est-modal-body-v2 {
         padding: 1.5rem;
     }
     
-    .goals-form-row-v2 {
+    .est-form-row-v2 {
         grid-template-columns: 1fr;
     }
     
-    .goals-modal-actions-v2 {
+    .est-modal-actions-v2 {
         flex-direction: column-reverse;
     }
     
-    .goals-btn-primary,
-    .goals-btn-secondary {
+    .est-btn-primary,
+    .est-btn-secondary {
         width: 100%;
         justify-content: center;
     }
