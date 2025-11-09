@@ -2131,7 +2131,121 @@ estimates_showViewModal(estimateId) {
 /**
  * Download professional client copy as printable PDF
  */
-estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
+async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice) {
+    // Load html2pdf library if not already loaded
+    if (!window.html2pdf) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        document.head.appendChild(script);
+
+        // Wait for script to load
+        await new Promise((resolve) => {
+            script.onload = resolve;
+        });
+    }
+
+    // Create the HTML content for PDF
+    const content = `
+        <div style="font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11pt; line-height: 1.5; color: #000; padding: 40px;">
+            <div style="text-align: center; border-bottom: 3px solid #333; padding-bottom: 15px; margin-bottom: 25px;">
+                <h1 style="font-size: 24pt; font-weight: bold; margin-bottom: 5px; color: #333; margin: 0;">${estimate.title}</h1>
+                <div style="font-size: 10pt; color: #666;">Estimate #${estimate.estimate_number || 'N/A'}</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+                <div style="flex: 1;">
+                    ${lead ? `
+                        <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">CLIENT:</span> ${lead.name}</div>
+                        ${lead.email ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">EMAIL:</span> ${lead.email}</div>` : ''}
+                        ${lead.phone ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">PHONE:</span> ${lead.phone}</div>` : ''}
+                    ` : ''}
+                </div>
+                <div style="flex: 1; text-align: right;">
+                    <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">DATE:</span> ${new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    ${estimate.expires_at ? `<div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">VALID UNTIL:</span> ${new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
+                    <div style="margin-bottom: 5px; font-size: 10pt;"><span style="font-weight: bold; color: #333;">STATUS:</span> ${this.estimates_formatStatus(estimate.status)}</div>
+                </div>
+            </div>
+
+            ${estimate.description ? `
+                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">PROJECT DESCRIPTION</div>
+                <div style="background: #f5f5f5; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; font-size: 10pt;">${estimate.description}</div>
+            ` : ''}
+
+            ${lineItems.length > 0 ? `
+                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">SCOPE OF WORK</div>
+                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                    <thead style="background: #333; color: white;">
+                        <tr>
+                            <th style="padding: 10px; text-align: left; font-weight: bold; font-size: 10pt;">Description</th>
+                            <th style="padding: 10px; width: 80px; text-align: center; font-weight: bold; font-size: 10pt;">Qty</th>
+                            <th style="padding: 10px; width: 100px; text-align: right; font-weight: bold; font-size: 10pt;">Rate</th>
+                            <th style="padding: 10px; width: 120px; text-align: right; font-weight: bold; font-size: 10pt;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${lineItems.map(item => `
+                            <tr>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 10pt;">${item.description || '-'}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 10pt;">${item.quantity}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;">${formatCurrency(item.rate)}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #ddd; text-align: right; font-size: 10pt;"><strong>${formatCurrency(item.quantity * item.rate)}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div style="margin: 25px 0; padding: 15px; background: #f5f5f5; border: 2px solid #333; border-radius: 4px;">
+                    <div style="font-size: 12pt; font-weight: bold; color: #333; margin-bottom: 8px;">TOTAL ESTIMATE</div>
+                    <div style="font-size: 28pt; font-weight: bold; color: #000;">${formatCurrency(totalPrice)}</div>
+                </div>
+            ` : ''}
+
+            ${estimate.terms ? `
+                <div style="font-size: 12pt; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #333;">TERMS & CONDITIONS</div>
+                <div style="background: #f9f9f9; padding: 12px; border-left: 4px solid #333; margin-top: 20px; white-space: pre-wrap; font-size: 9pt; color: #333;">${estimate.terms}</div>
+            ` : ''}
+
+            <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #ddd; text-align: center; font-size: 9pt; color: #666;">
+                This estimate is valid for the period specified above. Work will commence upon acceptance and deposit receipt.
+            </div>
+        </div>
+    `;
+
+    // Create temporary container
+    const element = document.createElement('div');
+    element.innerHTML = content;
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    document.body.appendChild(element);
+
+    // Generate and download PDF
+    const filename = `Estimate-${estimate.estimate_number || 'draft'}.pdf`;
+
+    const opt = {
+        margin: 0.75,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        await html2pdf().set(opt).from(element).save();
+        window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        window.SteadyUtils.showToast('Failed to generate PDF', 'error');
+    } finally {
+        // Clean up
+        document.body.removeChild(element);
+    }
+},
+
+/**
+ * DEPRECATED - Old print version
+ */
+estimates_downloadClientCopy_OLD(estimate, lead, lineItems, photos, totalPrice) {
     // Create hidden iframe for clean PDF generation
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
