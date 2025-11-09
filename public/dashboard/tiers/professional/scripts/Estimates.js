@@ -2180,13 +2180,7 @@ async estimates_downloadClientCopy(estimate, lead, lineItems, photos, totalPrice
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.text(estimate.title || 'Estimate', 4.25, y, { align: 'center' });
-    y += 0.3;
-
-    // Estimate Number
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Estimate #${estimate.estimate_number || 'N/A'}`, 4.25, y, { align: 'center' });
-    y += 0.2;
+    y += 0.5;
 
     // Line
     doc.setLineWidth(0.02);
