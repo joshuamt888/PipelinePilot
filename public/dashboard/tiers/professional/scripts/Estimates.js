@@ -1492,8 +1492,13 @@ estimates_closeModal() {
  * Show view estimate modal
  */
 estimates_showViewModal(estimateId) {
+    console.log('[Estimates] Opening view modal for ID:', estimateId);
     const estimate = this.state.estimates.find(e => e.id === estimateId);
-    if (!estimate) return;
+    if (!estimate) {
+        console.error('[Estimates] Estimate not found:', estimateId);
+        return;
+    }
+    console.log('[Estimates] Found estimate:', estimate);
 
     // Clean up any existing modals first
     const existingModals = document.querySelectorAll('.estimate-modal-overlay, .estimate-confirm-overlay');
@@ -2450,6 +2455,7 @@ estimates_formatStatus(status) {
                     console.log('Open new estimate modal');
                     break;
                 case 'view-estimate':
+                    console.log('[Estimates] View estimate clicked:', id);
                     this.estimates_showViewModal(id);
                     break;
                 case 'toggle-batch':
