@@ -1281,14 +1281,60 @@ window.EstimatesModule = {
     },
 
     /**
-     * Attach event listeners
+     * Attach event listeners - using event delegation to avoid losing listeners
      */
     estimates_attachEvents() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        // Clickable stat banners for filtering
-        container.querySelectorAll('.estimates-stat-card[data-filter]').forEach(card => {
+        // Remove any existing delegated listener to avoid duplicates
+        if (this._eventDelegationHandler) {
+            container.removeEventListener('click', this._eventDelegationHandler);
+            container.removeEventListener('change', this._changeHandler);
+            container.removeEventListener('input', this._inputHandler);
+        }
+
+        // EVENT DELEGATION - Single click handler for all buttons
+        this._eventDelegationHandler = (e) => {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+
+            const action = target.dataset.action;
+            const id = target.dataset.id;
+
+            switch (action) {
+                case 'toggle-batch':
+                    e.preventDefault();
+                    this.estimates_toggleBatchMode();
+                    break;
+                case 'new-estimate':
+                    this.estimates_openModal();
+                    break;
+                case 'view-estimate':
+                    e.stopPropagation();
+                    this.estimates_openDetailView(id);
+                    break;
+                case 'edit-estimate':
+                    e.stopPropagation();
+                    this.estimates_openModal(id);
+                    break;
+                case 'convert-to-job':
+                    e.stopPropagation();
+                    this.estimates_convertToJob(id);
+                    break;
+                case 'delete-estimate':
+                    e.stopPropagation();
+                    this.estimates_deleteEstimate(id);
+                    break;
+            }
+        };
+
+        // Attach click event delegation
+        container.addEventListener('click', this._eventDelegationHandler);
+
+        // Stat card filtering (also using delegation)
+        const statsCards = container.querySelectorAll('.estimates-stat-card[data-filter]');
+        statsCards.forEach(card => {
             card.addEventListener('click', (e) => {
                 const filter = e.currentTarget.dataset.filter;
                 this.state.activeFilter = filter;
@@ -1296,74 +1342,27 @@ window.EstimatesModule = {
             });
         });
 
-        // Search input
-        const searchInput = container.querySelector('[data-action="search"]');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.state.searchQuery = e.target.value;
+        // Change event delegation for select/sort
+        this._changeHandler = (e) => {
+            const target = e.target;
+            if (target.dataset.action === 'sort') {
+                this.state.sortBy = target.value;
                 this.estimates_updateFiltered();
-            });
-        }
+            }
+        };
+        container.addEventListener('change', this._changeHandler);
 
-        // Sort dropdown
-        const sortSelect = container.querySelector('[data-action="sort"]');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', (e) => {
-                this.state.sortBy = e.target.value;
+        // Input event delegation for search
+        this._inputHandler = (e) => {
+            const target = e.target;
+            if (target.dataset.action === 'search') {
+                this.state.searchQuery = target.value;
                 this.estimates_updateFiltered();
-            });
-        }
+            }
+        };
+        container.addEventListener('input', this._inputHandler);
 
-        // Batch mode toggle
-        const batchToggle = container.querySelector('[data-action="toggle-batch"]');
-        if (batchToggle) {
-            batchToggle.addEventListener('click', () => {
-                this.estimates_toggleBatchMode();
-            });
-        }
-
-        // Note: Checkbox and batch action events are now handled dynamically in estimates_toggleBatchMode()
-
-        // New estimate button
-        container.querySelectorAll('[data-action="new-estimate"]').forEach(btn => {
-            btn.addEventListener('click', () => this.estimates_openModal());
-        });
-
-        // View estimate
-        container.querySelectorAll('[data-action="view-estimate"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = e.currentTarget.dataset.id;
-                this.estimates_openDetailView(id);
-            });
-        });
-
-        // Edit estimate
-        container.querySelectorAll('[data-action="edit-estimate"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = e.currentTarget.dataset.id;
-                this.estimates_openModal(id);
-            });
-        });
-
-        // Convert to job
-        container.querySelectorAll('[data-action="convert-to-job"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = e.currentTarget.dataset.id;
-                this.estimates_convertToJob(id);
-            });
-        });
-
-        // Delete estimate
-        container.querySelectorAll('[data-action="delete-estimate"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = e.currentTarget.dataset.id;
-                this.estimates_deleteEstimate(id);
-            });
-        });
+        // Note: Checkbox and batch action events are handled dynamically in estimates_toggleBatchMode()
     },
 
     /**
