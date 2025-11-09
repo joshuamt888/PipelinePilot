@@ -2726,16 +2726,19 @@ estimates_formatStatus(status) {
         if (!confirmed) return;
 
         try {
-            // Update in backend
-            for (const id of this.state.selectedEstimateIds) {
-                await API.markEstimateSent(id);
+            // Batch update in backend
+            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
+                status: 'sent',
+                sent_at: new Date().toISOString()
+            });
 
-                // Update local state immediately
+            // Update local state
+            this.state.selectedEstimateIds.forEach(id => {
                 const estimate = this.state.estimates.find(e => e.id === id);
                 if (estimate) {
                     estimate.status = 'sent';
                 }
-            }
+            });
 
             // Clear selections and exit batch mode
             this.state.selectedEstimateIds = [];
@@ -2766,16 +2769,19 @@ estimates_formatStatus(status) {
         if (!confirmed) return;
 
         try {
-            // Update in backend
-            for (const id of this.state.selectedEstimateIds) {
-                await API.markEstimateAccepted(id);
+            // Batch update in backend
+            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
+                status: 'accepted',
+                accepted_at: new Date().toISOString()
+            });
 
-                // Update local state immediately
+            // Update local state
+            this.state.selectedEstimateIds.forEach(id => {
                 const estimate = this.state.estimates.find(e => e.id === id);
                 if (estimate) {
                     estimate.status = 'accepted';
                 }
-            }
+            });
 
             // Clear selections and exit batch mode
             this.state.selectedEstimateIds = [];
@@ -2807,16 +2813,13 @@ estimates_formatStatus(status) {
         if (!confirmed) return;
 
         try {
-            // Update in backend
-            for (const id of this.state.selectedEstimateIds) {
-                await API.deleteEstimate(id);
+            // Batch delete in backend
+            await API.batchDeleteEstimates(this.state.selectedEstimateIds);
 
-                // Remove from local state immediately
-                const index = this.state.estimates.findIndex(e => e.id === id);
-                if (index !== -1) {
-                    this.state.estimates.splice(index, 1);
-                }
-            }
+            // Remove from local state
+            this.state.estimates = this.state.estimates.filter(
+                e => !this.state.selectedEstimateIds.includes(e.id)
+            );
 
             // Clear selections and exit batch mode
             this.state.selectedEstimateIds = [];

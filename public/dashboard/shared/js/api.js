@@ -1858,9 +1858,47 @@ static async deleteGoal(goalId) {
         .from('goals')
         .delete()
         .eq('id', goalId);
-    
+
     if (error) throw error;
     return { success: true };
+}
+
+/**
+ * Batch update multiple goals at once
+ * @param {string[]} goalIds - Array of goal IDs
+ * @param {object} updates - Updates to apply to all goals
+ */
+static async batchUpdateGoals(goalIds, updates) {
+    if (!Array.isArray(goalIds) || goalIds.length === 0) {
+        throw new Error('goalIds must be a non-empty array');
+    }
+
+    const { data, error } = await supabase
+        .from('goals')
+        .update(updates)
+        .in('id', goalIds)
+        .select();
+
+    if (error) throw error;
+    return { success: true, updated: data.length, goals: data };
+}
+
+/**
+ * Batch delete multiple goals at once
+ * @param {string[]} goalIds - Array of goal IDs to delete
+ */
+static async batchDeleteGoals(goalIds) {
+    if (!Array.isArray(goalIds) || goalIds.length === 0) {
+        throw new Error('goalIds must be a non-empty array');
+    }
+
+    const { error } = await supabase
+        .from('goals')
+        .delete()
+        .in('id', goalIds);
+
+    if (error) throw error;
+    return { success: true, deleted: goalIds.length };
 }
 
 /**

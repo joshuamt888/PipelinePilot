@@ -3001,13 +3001,11 @@ goals_formatValueAbbreviated(value, unit) {
         if (this.state.selectedGoalIds.length === 0) return;
 
         try {
-            // Reset all selected goals to active
-            for (const goalId of this.state.selectedGoalIds) {
-                await API.updateGoal(goalId, {
-                    status: 'active',
-                    current_value: 0
-                });
-            }
+            // Batch reset all selected goals to active
+            await API.batchUpdateGoals(this.state.selectedGoalIds, {
+                status: 'active',
+                current_value: 0
+            });
 
             window.SteadyUtils.showToast(`Reset ${this.state.selectedGoalIds.length} goal(s)`, 'success');
 
@@ -3079,10 +3077,8 @@ goals_formatValueAbbreviated(value, unit) {
         try {
             const count = this.state.selectedGoalIds.length;
 
-            // Delete all selected goals
-            for (const goalId of this.state.selectedGoalIds) {
-                await API.deleteGoal(goalId);
-            }
+            // Batch delete all selected goals
+            await API.batchDeleteGoals(this.state.selectedGoalIds);
 
             window.SteadyUtils.showToast(`Deleted ${count} goal(s)`, 'success');
 
