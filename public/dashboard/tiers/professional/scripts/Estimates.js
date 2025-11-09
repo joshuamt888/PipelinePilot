@@ -210,6 +210,61 @@ window.EstimatesModule = {
             gridContainer.outerHTML = tempDiv.firstElementChild.outerHTML;
         }
 
+        // Re-add checkboxes if in batch mode (since grid was re-rendered)
+        if (this.state.batchMode) {
+            const allCards = estimatesContainer.querySelectorAll('.estimate-card');
+            const batchBtn = estimatesContainer.querySelector('[data-action="toggle-batch"]');
+
+            allCards.forEach(card => {
+                card.classList.add('batch-selectable');
+                const estimateId = card.dataset.id;
+                const isSelected = this.state.selectedEstimateIds.includes(estimateId);
+
+                if (isSelected) {
+                    card.classList.add('selected');
+                }
+
+                // Add checkbox
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'estimate-card-checkbox';
+                checkbox.dataset.action = 'toggle-selection';
+                checkbox.dataset.id = estimateId;
+                checkbox.checked = isSelected;
+
+                // Add event listener
+                checkbox.addEventListener('change', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const isChecked = e.currentTarget.checked;
+
+                    if (isChecked) {
+                        if (!this.state.selectedEstimateIds.includes(id)) {
+                            this.state.selectedEstimateIds.push(id);
+                        }
+                        card.classList.add('selected');
+                    } else {
+                        this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
+                        card.classList.remove('selected');
+                    }
+
+                    // Update button text
+                    if (batchBtn) {
+                        batchBtn.innerHTML = `
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Cancel (${this.state.selectedEstimateIds.length} selected)
+                        `;
+                    }
+
+                    // Update batch actions toolbar
+                    this.estimates_updateBatchActionsToolbar();
+                });
+
+                card.insertBefore(checkbox, card.firstChild);
+            });
+        }
+
         // Reattach only the necessary events (no fade animation)
         this.estimates_attachEvents();
     },
@@ -1069,15 +1124,7 @@ window.EstimatesModule = {
         `;
 
         return `
-            <div class="estimate-card ${estimate.status} ${this.state.batchMode ? 'batch-selectable' : ''} ${isSelected ? 'selected' : ''}" data-id="${estimate.id}">
-                ${this.state.batchMode ? `
-                    <input type="checkbox"
-                           class="estimate-card-checkbox"
-                           data-action="toggle-selection"
-                           data-id="${estimate.id}"
-                           ${isSelected ? 'checked' : ''}>
-                ` : ''}
-
+            <div class="estimate-card ${estimate.status}" data-id="${estimate.id}">
                 <div class="estimate-card-header">
                     <div>
                         <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
@@ -1281,47 +1328,11 @@ window.EstimatesModule = {
         const batchToggle = container.querySelector('[data-action="toggle-batch"]');
         if (batchToggle) {
             batchToggle.addEventListener('click', () => {
-                this.state.batchMode = !this.state.batchMode;
-                if (!this.state.batchMode) {
-                    this.state.selectedEstimateIds = [];
-                }
-                this.estimates_updateFiltered();
+                this.estimates_toggleBatchMode();
             });
         }
 
-        // Checkbox selection in batch mode
-        container.querySelectorAll('[data-action="toggle-selection"]').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const id = e.currentTarget.dataset.id;
-                const isChecked = e.currentTarget.checked;
-
-                if (isChecked) {
-                    if (!this.state.selectedEstimateIds.includes(id)) {
-                        this.state.selectedEstimateIds.push(id);
-                    }
-                } else {
-                    this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
-                }
-
-                this.estimates_updateFiltered();
-            });
-        });
-
-        // Batch actions
-        const batchMarkSent = container.querySelector('[data-action="batch-mark-sent"]');
-        if (batchMarkSent) {
-            batchMarkSent.addEventListener('click', () => this.estimates_batchMarkSent());
-        }
-
-        const batchMarkAccepted = container.querySelector('[data-action="batch-mark-accepted"]');
-        if (batchMarkAccepted) {
-            batchMarkAccepted.addEventListener('click', () => this.estimates_batchMarkAccepted());
-        }
-
-        const batchDelete = container.querySelector('[data-action="batch-delete"]');
-        if (batchDelete) {
-            batchDelete.addEventListener('click', () => this.estimates_batchDelete());
-        }
+        // Note: Checkbox and batch action events are now handled dynamically in estimates_toggleBatchMode()
 
         // New estimate button
         container.querySelectorAll('[data-action="new-estimate"]').forEach(btn => {
@@ -2800,6 +2811,181 @@ window.EstimatesModule = {
         } catch (error) {
             console.error('Error converting to job:', error);
             showNotification('Failed to convert to job', 'error');
+        }
+    },
+
+    /**
+     * Toggle batch selection mode (LIGHTWEIGHT - like Goals)
+     */
+    estimates_toggleBatchMode() {
+        this.state.batchMode = !this.state.batchMode;
+
+        if (!this.state.batchMode) {
+            // Clear selections when exiting batch mode
+            this.state.selectedEstimateIds = [];
+        }
+
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const allCards = container.querySelectorAll('.estimate-card');
+        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+
+        if (this.state.batchMode) {
+            // ENTER BATCH MODE - add checkboxes to existing cards
+            allCards.forEach(card => {
+                card.classList.add('batch-selectable');
+                const estimateId = card.dataset.id;
+
+                // Add checkbox
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'estimate-card-checkbox';
+                checkbox.dataset.action = 'toggle-selection';
+                checkbox.dataset.id = estimateId;
+
+                // Add event listener
+                checkbox.addEventListener('change', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const isChecked = e.currentTarget.checked;
+
+                    if (isChecked) {
+                        if (!this.state.selectedEstimateIds.includes(id)) {
+                            this.state.selectedEstimateIds.push(id);
+                        }
+                        card.classList.add('selected');
+                    } else {
+                        this.state.selectedEstimateIds = this.state.selectedEstimateIds.filter(eid => eid !== id);
+                        card.classList.remove('selected');
+                    }
+
+                    // Update button text
+                    if (batchBtn) {
+                        batchBtn.innerHTML = `
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Cancel (${this.state.selectedEstimateIds.length} selected)
+                        `;
+                    }
+
+                    // Update batch actions toolbar
+                    this.estimates_updateBatchActionsToolbar();
+                });
+
+                card.insertBefore(checkbox, card.firstChild);
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.add('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Cancel (0 selected)
+                `;
+            }
+
+        } else {
+            // EXIT BATCH MODE - remove checkboxes and selections
+            allCards.forEach(card => {
+                card.classList.remove('batch-selectable', 'selected');
+
+                // Remove checkbox
+                const checkbox = card.querySelector('.estimate-card-checkbox');
+                if (checkbox) checkbox.remove();
+            });
+
+            // Update button
+            if (batchBtn) {
+                batchBtn.classList.remove('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Select Multiple
+                `;
+            }
+
+            // Remove batch actions toolbar
+            const batchActionsToolbar = container.querySelector('.estimates-batch-actions');
+            if (batchActionsToolbar) {
+                batchActionsToolbar.remove();
+            }
+        }
+    },
+
+    /**
+     * Update batch actions toolbar (lightweight)
+     */
+    estimates_updateBatchActionsToolbar() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const existingBatchActions = container.querySelector('.estimates-batch-actions');
+        const toolbarContainer = container.querySelector('.estimates-toolbar');
+
+        if (this.state.batchMode && this.state.selectedEstimateIds.length > 0) {
+            const batchActionsHTML = `
+                <div class="estimates-batch-actions">
+                    <div class="estimates-batch-actions-left">
+                        <div class="estimates-batch-selected">${this.state.selectedEstimateIds.length} selected</div>
+                    </div>
+                    <div class="estimates-batch-actions-right">
+                        <button class="estimates-batch-btn" data-action="batch-mark-sent">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>
+                            </svg>
+                            Mark Sent
+                        </button>
+                        <button class="estimates-batch-btn" data-action="batch-mark-accepted">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
+                            </svg>
+                            Mark Accepted
+                        </button>
+                        <button class="estimates-batch-btn delete" data-action="batch-delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            if (existingBatchActions) {
+                // Update the selected count
+                const selectedText = existingBatchActions.querySelector('.estimates-batch-selected');
+                if (selectedText) {
+                    selectedText.textContent = `${this.state.selectedEstimateIds.length} selected`;
+                }
+            } else {
+                // Add batch actions after toolbar
+                toolbarContainer.insertAdjacentHTML('afterend', batchActionsHTML);
+
+                // Attach events to batch action buttons
+                const batchMarkSent = container.querySelector('[data-action="batch-mark-sent"]');
+                if (batchMarkSent) {
+                    batchMarkSent.addEventListener('click', () => this.estimates_batchMarkSent());
+                }
+
+                const batchMarkAccepted = container.querySelector('[data-action="batch-mark-accepted"]');
+                if (batchMarkAccepted) {
+                    batchMarkAccepted.addEventListener('click', () => this.estimates_batchMarkAccepted());
+                }
+
+                const batchDelete = container.querySelector('[data-action="batch-delete"]');
+                if (batchDelete) {
+                    batchDelete.addEventListener('click', () => this.estimates_batchDelete());
+                }
+            }
+        } else {
+            // Remove batch actions if present
+            if (existingBatchActions) {
+                existingBatchActions.remove();
+            }
         }
     },
 
