@@ -2075,9 +2075,20 @@ goals_showGoalDetailModal(goalId) {
             closeBtn.onclick = () => modal.remove();
         }
 
-        modal.onclick = (e) => {
-            if (e.target === modal) modal.remove();
-        };
+        // Click outside to close - proper mousedown/mouseup pattern to prevent drag-release issues
+        let mouseDownTarget = null;
+
+        modal.addEventListener('mousedown', (e) => {
+            mouseDownTarget = e.target;
+        });
+
+        modal.addEventListener('mouseup', (e) => {
+            // Only close if both down and up were on the overlay (not modal content)
+            if (mouseDownTarget === modal && e.target === modal) {
+                modal.remove();
+            }
+            mouseDownTarget = null;
+        });
 
         modal.querySelectorAll('[data-action="close-modal"]').forEach(btn => {
             btn.onclick = () => modal.remove();

@@ -2025,11 +2025,19 @@ window.EstimatesModule = {
             btn.addEventListener('click', () => this.estimates_closeModal());
         });
 
-        // Click outside to close
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
+        // Click outside to close - proper mousedown/mouseup pattern to prevent drag-release issues
+        let mouseDownTarget = null;
+
+        overlay.addEventListener('mousedown', (e) => {
+            mouseDownTarget = e.target;
+        });
+
+        overlay.addEventListener('mouseup', (e) => {
+            // Only close if both down and up were on the overlay (not modal content)
+            if (mouseDownTarget === overlay && e.target === overlay) {
                 this.estimates_closeModal();
             }
+            mouseDownTarget = null;
         });
 
         // Lead dropdown quick-create
