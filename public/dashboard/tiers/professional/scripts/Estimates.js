@@ -1485,6 +1485,551 @@ estimates_closeModal() {
 },
 
 /**
+ * Show view estimate modal
+ */
+estimates_showViewModal(estimateId) {
+    const estimate = this.state.estimates.find(e => e.id === estimateId);
+    if (!estimate) return;
+
+    const lead = this.state.leads.find(l => l.id === estimate.lead_id);
+    const lineItems = estimate.line_items || [];
+    const photos = estimate.photos || [];
+    const totalPrice = estimate.total_price || 0;
+
+    const statusIcons = {
+        draft: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/>',
+        sent: '<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>',
+        accepted: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+        rejected: '<path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+        expired: '<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>'
+    };
+
+    const statusColors = {
+        draft: '#6b7280',
+        sent: '#3b82f6',
+        accepted: '#10b981',
+        rejected: '#ef4444',
+        expired: '#f59e0b'
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'estimate-modal-overlay';
+    overlay.innerHTML = `
+        <style>
+            .estimate-view-modal {
+                background: var(--surface);
+                border-radius: 12px;
+                width: 90%;
+                max-width: 900px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                animation: slideUp 0.3s ease;
+            }
+
+            .estimate-view-header {
+                padding: 32px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+
+            .estimate-view-header-left {
+                flex: 1;
+            }
+
+            .estimate-view-title {
+                font-size: 28px;
+                font-weight: 600;
+                color: var(--text-primary);
+                margin: 0 0 12px 0;
+            }
+
+            .estimate-view-meta {
+                display: flex;
+                gap: 24px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .estimate-view-meta-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                color: var(--text-secondary);
+            }
+
+            .estimate-view-meta-item svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .estimate-view-status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 500;
+                background: ${statusColors[estimate.status]}15;
+                color: ${statusColors[estimate.status]};
+            }
+
+            .estimate-view-status-badge svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .estimate-view-close {
+                background: transparent;
+                border: none;
+                font-size: 28px;
+                color: var(--text-secondary);
+                cursor: pointer;
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 6px;
+                transition: all 0.2s;
+            }
+
+            .estimate-view-close:hover {
+                background: var(--surface-hover);
+                color: var(--text-primary);
+            }
+
+            .estimate-view-body {
+                padding: 32px;
+            }
+
+            .estimate-view-section {
+                margin-bottom: 32px;
+            }
+
+            .estimate-view-section:last-child {
+                margin-bottom: 0;
+            }
+
+            .estimate-view-section-title {
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: var(--text-tertiary);
+                margin-bottom: 16px;
+            }
+
+            .estimate-view-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 24px;
+            }
+
+            .estimate-view-field {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .estimate-view-field-label {
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--text-tertiary);
+            }
+
+            .estimate-view-field-value {
+                font-size: 15px;
+                color: var(--text-primary);
+                word-wrap: break-word;
+            }
+
+            .estimate-view-description {
+                padding: 16px;
+                background: var(--background);
+                border-radius: 8px;
+                font-size: 14px;
+                color: var(--text-primary);
+                line-height: 1.6;
+                white-space: pre-wrap;
+            }
+
+            .estimate-view-line-items-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: var(--background);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .estimate-view-line-items-table thead {
+                background: var(--surface-hover);
+            }
+
+            .estimate-view-line-items-table th {
+                padding: 12px 16px;
+                text-align: left;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: var(--text-tertiary);
+            }
+
+            .estimate-view-line-items-table td {
+                padding: 12px 16px;
+                font-size: 14px;
+                color: var(--text-primary);
+                border-top: 1px solid var(--border);
+            }
+
+            .estimate-view-line-items-table td:last-child {
+                text-align: right;
+                font-weight: 500;
+            }
+
+            .estimate-view-total-box {
+                margin-top: 16px;
+                padding: 20px;
+                background: rgba(59, 130, 246, 0.05);
+                border: 1px solid var(--primary);
+                border-radius: 8px;
+                text-align: right;
+            }
+
+            .estimate-view-total-label {
+                font-size: 14px;
+                color: var(--text-secondary);
+                margin-bottom: 4px;
+            }
+
+            .estimate-view-total-value {
+                font-size: 32px;
+                font-weight: 600;
+                color: var(--primary);
+            }
+
+            .estimate-view-photos-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 12px;
+            }
+
+            .estimate-view-photo {
+                aspect-ratio: 1;
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid var(--border);
+                cursor: pointer;
+                transition: transform 0.2s;
+            }
+
+            .estimate-view-photo:hover {
+                transform: scale(1.05);
+            }
+
+            .estimate-view-photo img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .estimate-view-footer {
+                padding: 24px 32px;
+                border-top: 1px solid var(--border);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .estimate-view-actions {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+
+            .estimate-view-btn {
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: none;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .estimate-view-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .estimate-view-btn-edit {
+                background: var(--primary);
+                color: white;
+            }
+
+            .estimate-view-btn-edit:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }
+
+            .estimate-view-btn-delete {
+                background: transparent;
+                border: 1px solid #ef4444;
+                color: #ef4444;
+            }
+
+            .estimate-view-btn-delete:hover {
+                background: rgba(239, 68, 68, 0.1);
+            }
+
+            .estimate-view-status-dropdown {
+                padding: 10px 16px;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                background: var(--background);
+                color: var(--text-primary);
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 12px center;
+                background-size: 16px;
+                padding-right: 40px;
+            }
+
+            .estimate-view-status-dropdown:hover {
+                border-color: var(--primary);
+            }
+
+            .estimate-view-status-dropdown:focus {
+                outline: none;
+                border-color: var(--primary);
+            }
+        </style>
+        <div class="estimate-view-modal">
+            <div class="estimate-view-header">
+                <div class="estimate-view-header-left">
+                    <h2 class="estimate-view-title">${estimate.title}</h2>
+                    <div class="estimate-view-meta">
+                        <div class="estimate-view-status-badge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                ${statusIcons[estimate.status]}
+                            </svg>
+                            ${this.estimates_formatStatus(estimate.status)}
+                        </div>
+                        ${lead ? `
+                            <div class="estimate-view-meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                                ${lead.name}
+                            </div>
+                        ` : ''}
+                        ${estimate.expires_at ? `
+                            <div class="estimate-view-meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                Expires ${new Date(estimate.expires_at).toLocaleDateString()}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <button class="estimate-view-close" data-action="close-view-modal">×</button>
+            </div>
+
+            <div class="estimate-view-body">
+                ${estimate.description ? `
+                    <div class="estimate-view-section">
+                        <div class="estimate-view-section-title">Description</div>
+                        <div class="estimate-view-description">${estimate.description || 'No description provided'}</div>
+                    </div>
+                ` : ''}
+
+                ${lineItems.length > 0 ? `
+                    <div class="estimate-view-section">
+                        <div class="estimate-view-section-title">Line Items</div>
+                        <table class="estimate-view-line-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Rate</th>
+                                    <th style="text-align: right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lineItems.map(item => `
+                                    <tr>
+                                        <td>${item.description || '-'}</td>
+                                        <td>${item.quantity}</td>
+                                        <td>${formatCurrency(item.rate)}</td>
+                                        <td style="text-align: right;">${formatCurrency(item.quantity * item.rate)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div class="estimate-view-total-box">
+                            <div class="estimate-view-total-label">Total Estimate</div>
+                            <div class="estimate-view-total-value">${formatCurrency(totalPrice)}</div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${photos.length > 0 ? `
+                    <div class="estimate-view-section">
+                        <div class="estimate-view-section-title">Photos (${photos.length})</div>
+                        <div class="estimate-view-photos-grid">
+                            ${photos.map(photo => `
+                                <div class="estimate-view-photo">
+                                    <img src="${photo.url}" alt="${photo.caption || 'Photo'}">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${estimate.terms ? `
+                    <div class="estimate-view-section">
+                        <div class="estimate-view-section-title">Terms & Conditions</div>
+                        <div class="estimate-view-description">${estimate.terms}</div>
+                    </div>
+                ` : ''}
+
+                ${estimate.notes ? `
+                    <div class="estimate-view-section">
+                        <div class="estimate-view-section-title">Internal Notes</div>
+                        <div class="estimate-view-description">${estimate.notes}</div>
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="estimate-view-footer">
+                <button class="estimate-view-btn estimate-view-btn-edit" data-action="edit-estimate" data-id="${estimate.id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    Edit
+                </button>
+
+                <div class="estimate-view-actions">
+                    <select class="estimate-view-status-dropdown" data-action="update-status" data-id="${estimate.id}">
+                        ${this.STATUSES.map(status => `
+                            <option value="${status}" ${estimate.status === status ? 'selected' : ''}>
+                                ${this.estimates_formatStatus(status)}
+                            </option>
+                        `).join('')}
+                    </select>
+
+                    <button class="estimate-view-btn estimate-view-btn-delete" data-action="delete-estimate" data-id="${estimate.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close modal
+    overlay.querySelector('[data-action="close-view-modal"]').addEventListener('click', () => {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+    });
+
+    // Edit estimate
+    overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', () => {
+        overlay.remove();
+        this.estimates_showCreateModal(estimate.id);
+    });
+
+    // Delete estimate
+    overlay.querySelector('[data-action="delete-estimate"]').addEventListener('click', async () => {
+        const confirmed = await this.estimates_showConfirmation({
+            title: 'Delete Estimate',
+            message: `Are you sure you want to delete "${estimate.title}"? This action cannot be undone.`,
+            confirmText: 'Delete',
+            type: 'danger'
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await API.deleteEstimate(estimate.id);
+
+            // Remove from local state
+            const index = this.state.estimates.findIndex(e => e.id === estimate.id);
+            if (index !== -1) {
+                this.state.estimates.splice(index, 1);
+            }
+
+            // Close modal and update UI
+            overlay.remove();
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
+
+            window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
+        } catch (error) {
+            console.error('Delete estimate error:', error);
+            window.SteadyUtils.showToast('Failed to delete estimate', 'error');
+        }
+    });
+
+    // Update status
+    overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
+        const newStatus = e.target.value;
+
+        try {
+            await API.updateEstimate(estimate.id, { status: newStatus });
+
+            // Update local state
+            const est = this.state.estimates.find(e => e.id === estimate.id);
+            if (est) {
+                est.status = newStatus;
+            }
+
+            // Close modal and update UI
+            overlay.remove();
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
+
+            window.SteadyUtils.showToast(`Status updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
+        } catch (error) {
+            console.error('Update status error:', error);
+            window.SteadyUtils.showToast('Failed to update status', 'error');
+        }
+    });
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        }
+    });
+},
+
+/**
  * Add line item
  */
 estimates_addLineItem(overlay) {
@@ -1894,7 +2439,7 @@ estimates_formatStatus(status) {
                     console.log('Open new estimate modal');
                     break;
                 case 'view-estimate':
-                    console.log('View estimate:', id);
+                    this.estimates_showViewModal(id);
                     break;
                 case 'toggle-batch':
                     this.estimates_toggleBatchMode();
