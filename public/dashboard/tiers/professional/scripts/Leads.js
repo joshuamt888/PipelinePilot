@@ -885,7 +885,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="addlead-form-actions">
                     <button type="button" class="addlead-btn-danger" onclick="AddLeadModule.addlead_showDeleteConfirmation('${lead.id}')">
-                         <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>Delete
                     </button>
                     <div class="addlead-form-actions-right">
                         <button type="button" class="addlead-btn-secondary" onclick="AddLeadModule.addlead_hideEditLeadModal()">

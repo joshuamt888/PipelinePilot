@@ -358,12 +358,13 @@ modal.addEventListener('mouseup', (e) => {
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
+            this.scheduling_setupCustomTaskTypeToggle('add');
 
             const form = document.getElementById('scheduling_form');
             if (form) {
                 form.onsubmit = (e) => this.scheduling_handleSubmit(e);
             }
-            
+
             const firstInput = modal.querySelector('input[name="title"]');
             if (firstInput) firstInput.focus();
         }, 10);
@@ -424,7 +425,7 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
-                        <select name="task_type" class="scheduling-form-select">
+                        <select name="task_type" class="scheduling-form-select" id="scheduling_taskTypeSelect">
                             <option value="follow_up">Follow-up</option>
                             <option value="call">Call</option>
                             <option value="email">Email</option>
@@ -434,7 +435,16 @@ modal.addEventListener('mouseup', (e) => {
                             <option value="estimate">Proposal</option>
                             <option value="contract">Contract</option>
                             <option value="task">Task</option>
+                            <option value="custom">Custom Task Type</option>
                         </select>
+                    </div>
+
+                    <div class="scheduling-form-group" id="scheduling_customTaskTypeInput" style="display: none;">
+                        <label class="scheduling-form-label">Custom Task Type Name</label>
+                        <input type="text" id="scheduling_customTaskType" class="scheduling-form-input"
+                               placeholder="e.g., Site Visit, Installation, Training..."
+                               maxlength="20">
+                        <span class="scheduling-input-hint" id="scheduling_customTaskTypeCounter">20 characters remaining</span>
                     </div>
                     
                     <div class="scheduling-form-group scheduling-full-width">
@@ -510,6 +520,7 @@ modal.addEventListener('mouseup', (e) => {
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
+            this.scheduling_setupCustomTaskTypeToggle('edit');
 
             const editForm = document.getElementById('scheduling_editForm');
             if (editForm) {
@@ -573,7 +584,7 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
-                        <select name="task_type" class="scheduling-form-select">
+                        <select name="task_type" class="scheduling-form-select" id="scheduling_edit_taskTypeSelect">
                             <option value="follow_up" ${task.task_type === 'follow_up' ? 'selected' : ''}>Follow-up</option>
                             <option value="call" ${task.task_type === 'call' ? 'selected' : ''}>Call</option>
                             <option value="email" ${task.task_type === 'email' ? 'selected' : ''}>Email</option>
@@ -583,7 +594,17 @@ modal.addEventListener('mouseup', (e) => {
                             <option value="estimate" ${task.task_type === 'estimate' ? 'selected' : ''}>Proposal</option>
                             <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>Contract</option>
                             <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>Task</option>
+                            <option value="custom" ${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? 'selected' : ''}>Custom Task Type</option>
                         </select>
+                    </div>
+
+                    <div class="scheduling-form-group" id="scheduling_edit_customTaskTypeInput" style="display: ${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? 'block' : 'none'};">
+                        <label class="scheduling-form-label">Custom Task Type Name</label>
+                        <input type="text" id="scheduling_edit_customTaskType" class="scheduling-form-input"
+                               placeholder="e.g., Site Visit, Installation, Training..."
+                               maxlength="20"
+                               value="${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? API.escapeHtml(task.task_type) : ''}">
+                        <span class="scheduling-input-hint" id="scheduling_edit_customTaskTypeCounter">20 characters remaining</span>
                     </div>
                     
                     <div class="scheduling-form-group scheduling-full-width">
@@ -599,7 +620,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="scheduling-form-actions">
                     <button type="button" class="scheduling-btn-danger" onclick="SchedulingModule.scheduling_showDeleteConfirmation('${task.id}')">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>Delete
                     </button>
                     <div class="scheduling-form-actions-right">
                         <button type="button" class="scheduling-btn-secondary" onclick="SchedulingModule.scheduling_hideEditTaskModal()">
@@ -753,7 +774,7 @@ modal.addEventListener('mouseup', (e) => {
                     dropdown.classList.remove('scheduling-priority-low', 'scheduling-priority-medium', 'scheduling-priority-high', 'scheduling-priority-urgent');
                     dropdown.classList.add(`scheduling-priority-${value}`);
                 }
-                
+
                 dropdown.addEventListener('change', () => {
                     const newValue = dropdown.value;
                     dropdown.classList.remove('scheduling-priority-low', 'scheduling-priority-medium', 'scheduling-priority-high', 'scheduling-priority-urgent');
@@ -763,6 +784,63 @@ modal.addEventListener('mouseup', (e) => {
                 });
             });
         }, 100);
+    },
+
+    // Custom task type toggle and counter
+    scheduling_setupCustomTaskTypeToggle(mode) {
+        const prefix = mode === 'edit' ? 'scheduling_edit_' : 'scheduling_';
+        const selectId = mode === 'edit' ? 'scheduling_edit_taskTypeSelect' : 'scheduling_taskTypeSelect';
+        const customInputId = mode === 'edit' ? 'scheduling_edit_customTaskTypeInput' : 'scheduling_customTaskTypeInput';
+        const customTypeId = mode === 'edit' ? 'scheduling_edit_customTaskType' : 'scheduling_customTaskType';
+        const customCounterId = mode === 'edit' ? 'scheduling_edit_customTaskTypeCounter' : 'scheduling_customTaskTypeCounter';
+
+        const taskTypeSelect = document.getElementById(selectId);
+        const customTaskTypeContainer = document.getElementById(customInputId);
+        const customTaskTypeInput = document.getElementById(customTypeId);
+        const customTaskTypeCounter = document.getElementById(customCounterId);
+
+        if (taskTypeSelect && customTaskTypeInput && customTaskTypeCounter) {
+            // Toggle custom input visibility
+            taskTypeSelect.addEventListener('change', () => {
+                if (taskTypeSelect.value === 'custom') {
+                    customTaskTypeContainer.style.display = 'block';
+                } else {
+                    customTaskTypeContainer.style.display = 'none';
+                }
+            });
+
+            // Character counter
+            const updateCustomTaskTypeCounter = () => {
+                let value = customTaskTypeInput.value;
+                if (value.length > 20) {
+                    value = value.substring(0, 20);
+                    customTaskTypeInput.value = value;
+                }
+
+                const remaining = 20 - value.length;
+                customTaskTypeCounter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
+
+                if (remaining === 0) {
+                    customTaskTypeCounter.textContent = 'Max reached';
+                    customTaskTypeCounter.style.color = 'var(--danger)';
+                    customTaskTypeCounter.style.fontWeight = '700';
+                } else if (remaining <= 5) {
+                    customTaskTypeCounter.style.color = 'var(--danger)';
+                    customTaskTypeCounter.style.fontWeight = '700';
+                } else if (remaining <= 10) {
+                    customTaskTypeCounter.style.color = 'var(--warning)';
+                    customTaskTypeCounter.style.fontWeight = '600';
+                } else {
+                    customTaskTypeCounter.style.color = 'var(--text-tertiary)';
+                    customTaskTypeCounter.style.fontWeight = '500';
+                }
+            };
+
+            customTaskTypeInput.addEventListener('input', updateCustomTaskTypeCounter);
+            if (mode === 'edit') updateCustomTaskTypeCounter();
+        }
     },
 
     // Form Submission
@@ -790,7 +868,30 @@ modal.addEventListener('mouseup', (e) => {
                     taskData[key] = value.trim() || null;
                 }
             }
-            
+
+            // Handle custom task type
+            if (taskData.task_type === 'custom') {
+                const customTaskType = document.getElementById('scheduling_customTaskType').value.trim();
+                if (!customTaskType) {
+                    const customTaskTypeInput = document.getElementById('scheduling_customTaskType');
+                    const customTaskTypeCounter = document.getElementById('scheduling_customTaskTypeCounter');
+
+                    customTaskTypeInput.style.borderColor = 'var(--danger)';
+                    customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    if (customTaskTypeCounter) {
+                        customTaskTypeCounter.textContent = 'Custom task type name is required';
+                        customTaskTypeCounter.style.color = 'var(--danger)';
+                        customTaskTypeCounter.style.fontWeight = '600';
+                    }
+
+                    customTaskTypeInput.focus();
+                    this.scheduling_setLoadingState(false);
+                    return;
+                }
+                taskData.task_type = customTaskType;
+            }
+
             if (!taskData.title) {
                 throw new Error('Title is required');
             }
@@ -837,7 +938,30 @@ modal.addEventListener('mouseup', (e) => {
                     taskData[key] = value.trim() || null;
                 }
             }
-            
+
+            // Handle custom task type
+            if (taskData.task_type === 'custom') {
+                const customTaskType = document.getElementById('scheduling_edit_customTaskType').value.trim();
+                if (!customTaskType) {
+                    const customTaskTypeInput = document.getElementById('scheduling_edit_customTaskType');
+                    const customTaskTypeCounter = document.getElementById('scheduling_edit_customTaskTypeCounter');
+
+                    customTaskTypeInput.style.borderColor = 'var(--danger)';
+                    customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+
+                    if (customTaskTypeCounter) {
+                        customTaskTypeCounter.textContent = 'Custom task type name is required';
+                        customTaskTypeCounter.style.color = 'var(--danger)';
+                        customTaskTypeCounter.style.fontWeight = '600';
+                    }
+
+                    customTaskTypeInput.focus();
+                    this.scheduling_setEditLoadingState(false);
+                    return;
+                }
+                taskData.task_type = customTaskType;
+            }
+
             await API.updateTask(this.scheduling_state.currentEditTask.id, taskData);
             
             await this.scheduling_loadTasks();
@@ -953,7 +1077,6 @@ modal.addEventListener('mouseup', (e) => {
         confirmModal.innerHTML = `
             <div class="scheduling-delete-confirm-modal">
                 <div class="scheduling-confirm-header">
-                    <div class="scheduling-confirm-icon"><i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--warning);"></i></div>
                     <h3 class="scheduling-confirm-title">Delete Task</h3>
                 </div>
                 
@@ -2104,10 +2227,11 @@ modal.addEventListener('mouseup', (e) => {
             'follow_up': '<i data-lucide="clipboard-list" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
             'research': '<i data-lucide="search" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
             'proposal': '<i data-lucide="bar-chart" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'estimate': '<i data-lucide="bar-chart" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
             'contract': '<i data-lucide="file-text" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
             'task': '<i data-lucide="check-square" style="width: 16px; height: 16px; vertical-align: middle;"></i>'
         };
-        return iconMap[type] || '<i data-lucide="clipboard-list" style="width: 16px; height: 16px; vertical-align: middle;"></i>';
+        return iconMap[type] || '<i data-lucide="star" style="width: 16px; height: 16px; vertical-align: middle;"></i>';
     },
 
     scheduling_formatTaskType(type) {
@@ -2118,11 +2242,16 @@ modal.addEventListener('mouseup', (e) => {
             'demo': 'Demo',
             'follow_up': 'Follow-up',
             'research': 'Research',
-            'estimate': 'Estimate',
+            'estimate': 'Proposal',
             'contract': 'Contract',
             'task': 'Task'
         };
-        return typeMap[type] || 'Task';
+        // Return custom task type as-is if not in the map (capitalize first letter)
+        if (typeMap[type]) {
+            return typeMap[type];
+        }
+        // Capitalize first letter of custom types and escape for XSS protection
+        return type ? API.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) : 'Task';
     },
 
     scheduling_getPriorityIcon(priority) {
@@ -4110,21 +4239,6 @@ modal.addEventListener('mouseup', (e) => {
                     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
                     color: white;
                     padding: 2rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 1.5rem;
-                }
-
-                .scheduling-confirm-icon {
-                    width: 50px;
-                    height: 50px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: rgba(255, 255, 255, 0.2);
-                    border-radius: 50%;
-                    flex-shrink: 0;
-                    font-size: 1.5rem;
                 }
 
                 .scheduling-confirm-title {
