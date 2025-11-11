@@ -1944,7 +1944,7 @@ window.JobsManagementModule = {
                                 </div>
                                 <div class="job-form-group">
                                     <label>Duration (hours)</label>
-                                    <input type="number" name="duration_hours" value="${job?.duration_hours !== undefined ? job.duration_hours : '0.00'}"
+                                    <input type="number" name="duration_hours" value="${job?.duration_hours || ''}"
                                            step="0.01" min="0" max="999999.99" placeholder="0.00">
                                 </div>
                             </div>
@@ -1967,12 +1967,12 @@ window.JobsManagementModule = {
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Material Cost ($)</label>
-                                    <input type="number" name="material_cost" value="${job?.material_cost !== undefined ? job.material_cost : '0.00'}"
+                                    <input type="number" name="material_cost" value="${job?.material_cost || ''}"
                                            step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Labor Rate ($/hr)</label>
-                                    <input type="number" name="labor_rate" value="${job?.labor_rate !== undefined ? job.labor_rate : '0.00'}"
+                                    <input type="number" name="labor_rate" value="${job?.labor_rate || ''}"
                                            step="0.01" min="0" max="99999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                             </div>
@@ -1980,12 +1980,12 @@ window.JobsManagementModule = {
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Estimated Hours</label>
-                                    <input type="number" name="estimated_labor_hours" value="${job?.estimated_labor_hours !== undefined ? job.estimated_labor_hours : '0.00'}"
+                                    <input type="number" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}"
                                            step="0.01" min="0" max="99999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Other Expenses ($)</label>
-                                    <input type="number" name="other_expenses" value="${job?.other_expenses !== undefined ? job.other_expenses : '0.00'}"
+                                    <input type="number" name="other_expenses" value="${job?.other_expenses || ''}"
                                            step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
                                 </div>
                             </div>
@@ -1993,12 +1993,12 @@ window.JobsManagementModule = {
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Quoted Price ($) <span class="required">*</span></label>
-                                    <input type="number" name="quoted_price" value="${job?.quoted_price !== undefined ? job.quoted_price : '0.00'}"
+                                    <input type="number" name="quoted_price" value="${job?.quoted_price || ''}"
                                            step="0.01" min="0" max="99999999.99" placeholder="0.00" required data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Deposit Amount ($)</label>
-                                    <input type="number" name="deposit_amount" value="${job?.deposit_amount !== undefined ? job.deposit_amount : '0.00'}"
+                                    <input type="number" name="deposit_amount" value="${job?.deposit_amount || ''}"
                                            step="0.01" min="0" max="9999999.99" placeholder="0.00">
                                 </div>
                             </div>
@@ -2261,9 +2261,9 @@ window.JobsManagementModule = {
         return `
             <div class="job-line-item" data-index="${index}">
                 <input type="text" placeholder="Material name" value="${material.name || ''}" data-material="${index}" data-field="name" maxlength="50" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${material.quantity !== undefined && material.quantity !== '' ? material.quantity : '0.00'}" data-material="${index}" data-field="quantity" step="0.01" min="0" max="9999.99" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0" max="9999.99" style="text-align: left;">
                 <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit" maxlength="10" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${material.unit_price !== undefined && material.unit_price !== '' ? material.unit_price : '0.00'}" data-material="${index}" data-field="unit_price" step="0.01" min="0" max="99999.99" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0" max="99999.99" style="text-align: left;">
                 <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier" maxlength="25" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-material" data-index="${index}">
@@ -2319,8 +2319,8 @@ window.JobsManagementModule = {
             <div class="job-line-item job-crew-row" data-index="${index}">
                 <input type="text" placeholder="Crew member name" value="${member.name || ''}" data-crew="${index}" data-field="name" maxlength="35" style="text-align: left;">
                 <input type="text" placeholder="Role/position" value="${member.role || ''}" data-crew="${index}" data-field="role" maxlength="25" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${member.hours !== undefined && member.hours !== '' ? member.hours : '0.00'}" data-crew="${index}" data-field="hours" step="0.01" min="0" max="99999.99" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${member.rate !== undefined && member.rate !== '' ? member.rate : '0.00'}" data-crew="${index}" data-field="rate" step="0.01" min="0" max="99999.99" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.01" min="0" max="99999.99" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0" max="99999.99" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-crew" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -2525,6 +2525,9 @@ window.JobsManagementModule = {
 
             // Helper function to validate number inputs
             const validateNumberInput = (input, triggerCalc = false) => {
+                // Save cursor position before modification
+                const cursorPos = input.selectionStart;
+                const oldValue = input.value;
                 let value = input.value;
 
                 // Remove any non-numeric characters except decimal point
@@ -2555,7 +2558,13 @@ window.JobsManagementModule = {
                     }
                 }
 
-                input.value = value;
+                // Only update if value changed
+                if (value !== oldValue) {
+                    input.value = value;
+                    // Restore cursor position
+                    const newCursorPos = Math.min(cursorPos, value.length);
+                    input.setSelectionRange(newCursorPos, newCursorPos);
+                }
 
                 if (triggerCalc) {
                     // Debounce profit calculator to prevent scroll issues
