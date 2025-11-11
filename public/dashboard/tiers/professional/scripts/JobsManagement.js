@@ -1443,6 +1443,67 @@ window.JobsManagementModule = {
                     justify-content: flex-end;
                 }
 
+                .job-btn-secondary {
+                    padding: 0.75rem 1.5rem;
+                    background: var(--background);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .job-btn-secondary:hover {
+                    background: var(--border);
+                    border-color: var(--text-tertiary);
+                }
+
+                .job-btn-primary {
+                    padding: 0.75rem 1.5rem;
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: white;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .job-btn-primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                }
+
+                .job-btn-primary:active {
+                    transform: translateY(0);
+                }
+
+                .job-modal-close {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-tertiary);
+                    cursor: pointer;
+                    padding: 0.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+
+                .job-modal-close:hover {
+                    background: var(--border);
+                    color: var(--text-primary);
+                }
+
+                .job-modal-close svg {
+                    width: 20px;
+                    height: 20px;
+                }
+
                 /* Materials/Crew Table */
                 /* Line Items (Materials & Crew) */
                 .job-line-items {
