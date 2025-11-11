@@ -82,17 +82,6 @@ window.JobsModule = {
                     </div>
                 </div>
 
-                ${this.state.activeSection ? `
-                    <div class="jobs-hub-back-button" id="backToHub">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="19" y1="12" x2="5" y2="12"/>
-                            <polyline points="12 19 5 12 12 5"/>
-                        </svg>
-                        Back to Hub
-                    </div>
-                ` : ''}
-
-                <div id="jobs-section-content" class="jobs-section-content"></div>
             </div>
         `;
 
@@ -176,6 +165,12 @@ window.JobsModule = {
                 } else {
                     this.showError('Clients module not loaded');
                 }
+            }
+
+            // Check if user navigated away during loading
+            if (this.state.activeSection !== sectionName) {
+                console.log(`[Jobs Hub] User navigated away from ${sectionName}, aborting render`);
+                return;
             }
         } catch (error) {
             console.error(`Error loading ${sectionName}:`, error);
