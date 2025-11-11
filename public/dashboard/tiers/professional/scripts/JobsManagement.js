@@ -2387,7 +2387,7 @@ window.JobsManagementModule = {
 
         // Always show at least one row for easy entry
         const itemsToRender = materials.length === 0 ?
-            [{ name: '', quantity: '', unit: 'pcs', unit_price: '', supplier: '' }] :
+            [{ name: '', quantity: '', unit: '', unit_price: '', supplier: '' }] :
             materials;
 
         return `
