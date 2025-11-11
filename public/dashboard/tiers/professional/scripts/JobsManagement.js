@@ -2645,6 +2645,10 @@ window.JobsManagementModule = {
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="delete-material"]');
             if (target) {
+                // Silently prevent deletion if only one item remains
+                if (this.state.modalState.materials.length <= 1) {
+                    return;
+                }
                 const index = parseInt(target.dataset.index);
                 this.state.modalState.materials.splice(index, 1);
                 this.jobs_refreshMaterials();
@@ -2685,6 +2689,10 @@ window.JobsManagementModule = {
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="delete-crew"]');
             if (target) {
+                // Silently prevent deletion if only one item remains
+                if (this.state.modalState.crew.length <= 1) {
+                    return;
+                }
                 const index = parseInt(target.dataset.index);
                 this.state.modalState.crew.splice(index, 1);
                 this.jobs_refreshCrew();
