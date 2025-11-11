@@ -2817,7 +2817,7 @@ window.JobsManagementModule = {
                     return;
                 }
 
-                const newMaterial = { name: '', quantity: '', unit: 'pcs', unit_price: '', supplier: '' };
+                const newMaterial = { name: '', quantity: '', unit: '', unit_price: '', supplier: '' };
                 const html = this.jobs_renderMaterialRow(newMaterial, currentCount);
                 container.insertAdjacentHTML('beforeend', html);
                 this.jobs_updateMaterialsCounter(overlay);
@@ -2964,7 +2964,22 @@ window.JobsManagementModule = {
 
     jobs_updateMaterialsCounter(overlay) {
         const container = overlay.querySelector('#materialRows');
-        const count = container ? container.querySelectorAll('.job-line-item').length : 0;
+        if (!container) {
+            const counterSpan = overlay.querySelector('[data-section="materials"] .job-form-section-toggle-info span');
+            if (counterSpan) {
+                counterSpan.textContent = `0/50 materials`;
+            }
+            return;
+        }
+
+        // Count only rows with some data entered
+        let count = 0;
+        container.querySelectorAll('.job-line-item').forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const hasData = Array.from(inputs).some(input => input.value.trim() !== '');
+            if (hasData) count++;
+        });
+
         const counterSpan = overlay.querySelector('[data-section="materials"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/50 materials`;
@@ -2973,7 +2988,22 @@ window.JobsManagementModule = {
 
     jobs_updateCrewCounter(overlay) {
         const container = overlay.querySelector('#crewRows');
-        const count = container ? container.querySelectorAll('.job-line-item').length : 0;
+        if (!container) {
+            const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
+            if (counterSpan) {
+                counterSpan.textContent = `0/20 crew members`;
+            }
+            return;
+        }
+
+        // Count only rows with some data entered
+        let count = 0;
+        container.querySelectorAll('.job-line-item').forEach(row => {
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const hasData = Array.from(inputs).some(input => input.value.trim() !== '');
+            if (hasData) count++;
+        });
+
         const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/20 crew members`;
