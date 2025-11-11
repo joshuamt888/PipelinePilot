@@ -10,11 +10,18 @@ window.JobsModule = {
     },
 
     /**
-     * Initialize - Show the 3 section blocks
+     * Initialize - Resume last section or show hub
      */
     async init(targetContainer = 'jobs-content') {
         this.state.container = targetContainer;
-        this.renderSectionSelector();
+
+        // If user was previously viewing a section, resume it
+        if (this.state.activeSection) {
+            await this.loadSection(this.state.activeSection);
+        } else {
+            // Otherwise show the 3-block selector
+            this.renderSectionSelector();
+        }
     },
 
     /**
