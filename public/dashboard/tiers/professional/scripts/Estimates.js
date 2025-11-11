@@ -1151,9 +1151,9 @@ estimates_renderLeadDropdown(selectedLeadId = null) {
 estimates_renderLineItemRow(item, index) {
     return `
         <div class="estimate-line-item" data-index="${index}">
-            <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35">
-            <input type="text" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" data-field="quantity">
-            <input type="text" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate">
+            <input type="text" class="line-item-description" placeholder="Description" value="${item.description || ''}" data-field="description" maxlength="35" style="text-align: left;">
+            <input type="text" class="line-item-quantity" placeholder="1" value="${item.quantity || 1}" data-field="quantity" style="text-align: left;">
+            <input type="text" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate" style="text-align: left;">
             <button class="estimate-line-item-remove" data-action="remove-line-item" data-index="${index}" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
                     <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>

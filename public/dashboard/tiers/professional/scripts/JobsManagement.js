@@ -2213,11 +2213,11 @@ window.JobsManagementModule = {
         const total = (material.quantity || 0) * (material.unit_price || 0);
         return `
             <div class="job-line-item" data-index="${index}">
-                <input type="text" placeholder="Material name" value="${material.name || ''}" data-material="${index}" data-field="name" maxlength="50">
-                <input type="number" placeholder="1" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0">
-                <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit" maxlength="10">
-                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0">
-                <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier" maxlength="50">
+                <input type="text" placeholder="Material name" value="${material.name || ''}" data-material="${index}" data-field="name" maxlength="50" style="text-align: left;">
+                <input type="number" placeholder="1" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0" style="text-align: left;">
+                <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit" maxlength="10" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0" style="text-align: left;">
+                <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier" maxlength="50" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-material" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -2270,10 +2270,10 @@ window.JobsManagementModule = {
         const total = (member.hours || 0) * (member.rate || 0);
         return `
             <div class="job-line-item job-crew-row" data-index="${index}">
-                <input type="text" placeholder="Crew member name" value="${member.name || ''}" data-crew="${index}" data-field="name" maxlength="50">
-                <input type="text" placeholder="Role/position" value="${member.role || ''}" data-crew="${index}" data-field="role" maxlength="30">
-                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0">
-                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0">
+                <input type="text" placeholder="Crew member name" value="${member.name || ''}" data-crew="${index}" data-field="name" maxlength="50" style="text-align: left;">
+                <input type="text" placeholder="Role/position" value="${member.role || ''}" data-crew="${index}" data-field="role" maxlength="30" style="text-align: left;">
+                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0" style="text-align: left;">
+                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-crew" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
