@@ -1488,6 +1488,8 @@ window.JobsManagementModule = {
                     color: var(--text-primary);
                     font-size: 14px;
                     text-align: left !important;
+                    box-sizing: border-box;
+                    width: 100%;
                 }
 
                 .job-material-qty,

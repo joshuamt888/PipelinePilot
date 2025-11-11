@@ -768,6 +768,8 @@ estimates_renderModalStyles() {
             color: var(--text-primary);
             font-size: 14px;
             text-align: left !important;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .line-item-quantity,
