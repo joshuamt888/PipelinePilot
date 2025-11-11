@@ -2223,7 +2223,7 @@ window.JobsManagementModule = {
 
         // Always show at least one row for easy entry
         const itemsToRender = materials.length === 0 ?
-            [{ name: '', quantity: 1, unit: '', unit_price: 0, supplier: '' }] :
+            [{ name: '', quantity: '', unit: 'pcs', unit_price: '', supplier: '' }] :
             materials;
 
         return `
@@ -2281,7 +2281,7 @@ window.JobsManagementModule = {
 
         // Always show at least one row for easy entry
         const itemsToRender = crew.length === 0 ?
-            [{ name: '', role: '', hours: 0, rate: 0 }] :
+            [{ name: '', role: '', hours: '', rate: '' }] :
             crew;
 
         return `
@@ -2632,9 +2632,9 @@ window.JobsManagementModule = {
             if (target) {
                 this.state.modalState.materials.push({
                     name: '',
-                    quantity: 0,
+                    quantity: '',
                     unit: 'pcs',
-                    unit_price: 0,
+                    unit_price: '',
                     supplier: ''
                 });
                 this.jobs_refreshMaterials();
@@ -2663,7 +2663,8 @@ window.JobsManagementModule = {
                 let value = e.target.value;
 
                 if (field === 'quantity' || field === 'unit_price') {
-                    value = parseFloat(value) || 0;
+                    // Keep empty values as empty strings, don't convert to 0
+                    value = value === '' ? '' : (parseFloat(value) || '');
                 }
 
                 this.state.modalState.materials[index][field] = value;
@@ -2678,8 +2679,8 @@ window.JobsManagementModule = {
                 this.state.modalState.crew.push({
                     name: '',
                     role: '',
-                    hours: 0,
-                    rate: 0
+                    hours: '',
+                    rate: ''
                 });
                 this.jobs_refreshCrew();
             }
@@ -2707,7 +2708,8 @@ window.JobsManagementModule = {
                 let value = e.target.value;
 
                 if (field === 'hours' || field === 'rate') {
-                    value = parseFloat(value) || 0;
+                    // Keep empty values as empty strings, don't convert to 0
+                    value = value === '' ? '' : (parseFloat(value) || '');
                 }
 
                 this.state.modalState.crew[index][field] = value;
