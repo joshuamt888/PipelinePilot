@@ -235,9 +235,17 @@ window.EstimatesModule = {
     estimates_renderStats() {
         const { totalQuoted, totalAccepted, totalPending, acceptanceRate } = this.state.stats;
 
+        // Helper to format stat values - show "..." if > 99,999,999.99
+        const formatStatValue = (amount) => {
+            if (amount > 99999999.99) {
+                return '...';
+            }
+            return formatCurrency(amount);
+        };
+
         return `
             <div class="estimates-stats">
-                <div class="estimates-stat-card ${this.state.activeFilter === 'all' ? 'active' : ''}" 
+                <div class="estimates-stat-card ${this.state.activeFilter === 'all' ? 'active' : ''}"
                      data-filter="all" data-action="filter-stat">
                     <div class="estimates-stat-icon quoted">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -245,12 +253,12 @@ window.EstimatesModule = {
                         </svg>
                     </div>
                     <div class="estimates-stat-content">
-                        <div class="estimates-stat-value">${formatCurrency(totalQuoted)}</div>
+                        <div class="estimates-stat-value">${formatStatValue(totalQuoted)}</div>
                         <div class="estimates-stat-label">Total Quoted</div>
                     </div>
                 </div>
 
-                <div class="estimates-stat-card ${this.state.activeFilter === 'accepted' ? 'active' : ''}" 
+                <div class="estimates-stat-card ${this.state.activeFilter === 'accepted' ? 'active' : ''}"
                      data-filter="accepted" data-action="filter-stat">
                     <div class="estimates-stat-icon accepted">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -258,12 +266,12 @@ window.EstimatesModule = {
                         </svg>
                     </div>
                     <div class="estimates-stat-content">
-                        <div class="estimates-stat-value">${formatCurrency(totalAccepted)}</div>
+                        <div class="estimates-stat-value">${formatStatValue(totalAccepted)}</div>
                         <div class="estimates-stat-label">Accepted (${acceptanceRate}%)</div>
                     </div>
                 </div>
 
-                <div class="estimates-stat-card ${this.state.activeFilter === 'pending' ? 'active' : ''}" 
+                <div class="estimates-stat-card ${this.state.activeFilter === 'pending' ? 'active' : ''}"
                      data-filter="pending" data-action="filter-stat">
                     <div class="estimates-stat-icon pending">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -272,7 +280,7 @@ window.EstimatesModule = {
                         </svg>
                     </div>
                     <div class="estimates-stat-content">
-                        <div class="estimates-stat-value">${formatCurrency(totalPending)}</div>
+                        <div class="estimates-stat-value">${formatStatValue(totalPending)}</div>
                         <div class="estimates-stat-label">Pending</div>
                     </div>
                 </div>
