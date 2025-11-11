@@ -2536,12 +2536,12 @@ window.JobsManagementModule = {
             // Profit calculator debounce timer
             let profitCalcTimeout;
 
-            // Number input validation using event delegation (like Estimates)
+            // Number input validation using event delegation (exactly like Estimates)
             // This works for both static and dynamically added inputs
             overlay.addEventListener('input', (e) => {
                 const input = e.target;
 
-                // Check if this is a number input (either has type="number" or specific classes for materials/crew)
+                // Check if this is a number input
                 const isNumberInput = input.type === 'number' ||
                                      input.dataset.field === 'quantity' ||
                                      input.dataset.field === 'unit_price' ||
@@ -2553,9 +2553,7 @@ window.JobsManagementModule = {
                 // Check if this should trigger profit calculator
                 const triggerCalc = input.hasAttribute('data-calc-trigger');
 
-                // Save the old value and cursor position
-                const oldValue = input.value;
-                const cursorPos = input.selectionStart;
+                // Get the current value
                 let value = input.value;
 
                 // If empty, just allow it and trigger calc if needed
@@ -2597,19 +2595,11 @@ window.JobsManagementModule = {
                     }
                 }
 
-                // Only update if value changed
-                if (value !== oldValue) {
-                    input.value = value;
-
-                    // Restore cursor position
-                    const newCursorPos = Math.min(cursorPos, value.length);
-                    requestAnimationFrame(() => {
-                        input.setSelectionRange(newCursorPos, newCursorPos);
-                    });
-                }
+                // Always update the input value (like Estimates does)
+                input.value = value;
 
                 // Trigger profit calculator if needed
-                if (triggerCalc && value !== oldValue) {
+                if (triggerCalc) {
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
