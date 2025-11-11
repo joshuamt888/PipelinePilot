@@ -1944,8 +1944,7 @@ window.JobsManagementModule = {
                                 </div>
                                 <div class="job-form-group">
                                     <label>Duration (hours)</label>
-                                    <input type="number" name="duration_hours" value="${job?.duration_hours || ''}"
-                                           step="0.01" min="0" max="999999.99" placeholder="0.00">
+                                    <input type="text" class="job-number-input" name="duration_hours" value="${job?.duration_hours || ''}" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -1967,39 +1966,33 @@ window.JobsManagementModule = {
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Material Cost ($)</label>
-                                    <input type="number" name="material_cost" value="${job?.material_cost || ''}"
-                                           step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
+                                    <input type="text" class="job-number-input" name="material_cost" value="${job?.material_cost || ''}" placeholder="0.00" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Labor Rate ($/hr)</label>
-                                    <input type="number" name="labor_rate" value="${job?.labor_rate || ''}"
-                                           step="0.01" min="0" max="99999.99" placeholder="0.00" data-calc-trigger>
+                                    <input type="text" class="job-number-input" name="labor_rate" value="${job?.labor_rate || ''}" placeholder="0.00" data-calc-trigger>
                                 </div>
                             </div>
 
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Estimated Hours</label>
-                                    <input type="number" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}"
-                                           step="0.01" min="0" max="99999.99" placeholder="0.00" data-calc-trigger>
+                                    <input type="text" class="job-number-input" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}" placeholder="0.00" data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Other Expenses ($)</label>
-                                    <input type="number" name="other_expenses" value="${job?.other_expenses || ''}"
-                                           step="0.01" min="0" max="99999999.99" placeholder="0.00" data-calc-trigger>
+                                    <input type="text" class="job-number-input" name="other_expenses" value="${job?.other_expenses || ''}" placeholder="0.00" data-calc-trigger>
                                 </div>
                             </div>
 
                             <div class="job-form-row">
                                 <div class="job-form-group">
                                     <label>Quoted Price ($) <span class="required">*</span></label>
-                                    <input type="number" name="quoted_price" value="${job?.quoted_price || ''}"
-                                           step="0.01" min="0" max="99999999.99" placeholder="0.00" required data-calc-trigger>
+                                    <input type="text" class="job-number-input" name="quoted_price" value="${job?.quoted_price || ''}" placeholder="0.00" required data-calc-trigger>
                                 </div>
                                 <div class="job-form-group">
                                     <label>Deposit Amount ($)</label>
-                                    <input type="number" name="deposit_amount" value="${job?.deposit_amount || ''}"
-                                           step="0.01" min="0" max="9999999.99" placeholder="0.00">
+                                    <input type="text" class="job-number-input" name="deposit_amount" value="${job?.deposit_amount || ''}" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -2562,6 +2555,50 @@ window.JobsManagementModule = {
 
                     // Update the input value
                     e.target.value = value;
+
+                    // Update material/crew row totals on input
+                    const materialIndex = e.target.dataset.material;
+                    const crewIndex = e.target.dataset.crew;
+
+                    if (materialIndex !== undefined) {
+                        // Update material row total
+                        const row = e.target.closest('.job-line-item');
+                        const qtyInput = row.querySelector('[data-field="quantity"]');
+                        const priceInput = row.querySelector('[data-field="unit_price"]');
+                        const totalDiv = row.querySelector('.job-line-item-total');
+                        const qty = parseFloat(qtyInput.value) || 0;
+                        const price = parseFloat(priceInput.value) || 0;
+                        totalDiv.textContent = formatCurrency(qty * price);
+
+                        // Update counter if this is first input
+                        const materialRows = overlay.querySelector('#materialRows');
+                        if (materialRows) {
+                            const count = materialRows.querySelectorAll('.job-line-item').length;
+                            const counterSpan = overlay.querySelector('[data-section="materials"] .job-form-section-toggle-info span');
+                            if (counterSpan) {
+                                counterSpan.textContent = `${count}/50 materials`;
+                            }
+                        }
+                    } else if (crewIndex !== undefined) {
+                        // Update crew row total
+                        const row = e.target.closest('.job-line-item');
+                        const hoursInput = row.querySelector('[data-field="hours"]');
+                        const rateInput = row.querySelector('[data-field="rate"]');
+                        const totalDiv = row.querySelector('.job-line-item-total');
+                        const hours = parseFloat(hoursInput.value) || 0;
+                        const rate = parseFloat(rateInput.value) || 0;
+                        totalDiv.textContent = formatCurrency(hours * rate);
+
+                        // Update counter if this is first input
+                        const crewRows = overlay.querySelector('#crewRows');
+                        if (crewRows) {
+                            const count = crewRows.querySelectorAll('.job-line-item').length;
+                            const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
+                            if (counterSpan) {
+                                counterSpan.textContent = `${count}/20 crew members`;
+                            }
+                        }
+                    }
                 }
 
                 // Trigger profit calculator for main form number inputs
@@ -2573,21 +2610,28 @@ window.JobsManagementModule = {
                 }
             });
 
-            // Blur event to format to 2 decimals - EXACT COPY FROM ESTIMATES
+            // Blur event to format to 2 decimals
             overlay.addEventListener('blur', (e) => {
                 if (e.target.classList.contains('job-number-input')) {
                     let value = e.target.value.trim();
 
-                    // Handle empty or invalid input - default to 0
+                    // For materials/crew rows, leave empty if no value
+                    const isMaterialOrCrew = e.target.dataset.material !== undefined || e.target.dataset.crew !== undefined;
+
+                    // Handle empty or invalid input
                     if (value === '' || value === '.') {
-                        e.target.value = '0.00';
+                        // For materials/crew, leave empty (placeholder will show)
+                        // For main form fields, set to 0.00
+                        if (!isMaterialOrCrew) {
+                            e.target.value = '';
+                        }
                     } else {
                         const numValue = parseFloat(value);
                         if (!isNaN(numValue) && isFinite(numValue)) {
                             // Format to 2 decimal places
                             e.target.value = numValue.toFixed(2);
                         } else {
-                            e.target.value = '0.00';
+                            e.target.value = '';
                         }
                     }
                 }
