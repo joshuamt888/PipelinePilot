@@ -1674,6 +1674,20 @@ window.JobsManagementModule = {
                     height: 1rem;
                 }
 
+                /* Financial Subsections */
+                .job-financial-subsection {
+                    margin-bottom: 2rem;
+                }
+
+                .job-financial-subsection h4 {
+                    margin: 0 0 1rem 0;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #667eea;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
                 /* Profit Calculator */
                 .job-profit-calculator {
                     margin-top: 2rem;
@@ -1681,6 +1695,76 @@ window.JobsManagementModule = {
                     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
                     border: 2px solid rgba(102, 126, 234, 0.3);
                     border-radius: 12px;
+                }
+
+                .job-profit-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    margin-bottom: 1rem;
+                }
+
+                .job-profit-header svg {
+                    color: #667eea;
+                }
+
+                .job-profit-header h4 {
+                    margin: 0;
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-profit-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 0;
+                    font-size: 0.95rem;
+                }
+
+                .job-profit-row span:first-child {
+                    color: var(--text-secondary);
+                    font-weight: 500;
+                }
+
+                .job-profit-row span:last-child {
+                    color: var(--text-primary);
+                    font-weight: 700;
+                }
+
+                .job-profit-result {
+                    font-size: 1.125rem;
+                    padding: 1rem;
+                    background: var(--surface);
+                    border-radius: 8px;
+                    margin-top: 0.5rem;
+                }
+
+                .job-profit-result span:first-child {
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-profit-result span:last-child {
+                    font-size: 1.5rem;
+                    font-weight: 900;
+                }
+
+                .job-profit-result.positive span:last-child {
+                    color: #10b981;
+                }
+
+                .job-profit-result.negative span:last-child {
+                    color: #ef4444;
+                }
+
+                #profitMargin {
+                    font-size: 1rem !important;
+                    font-weight: 600 !important;
+                    opacity: 0.8;
                 }
 
                 .job-profit-calculator-header {
@@ -1963,45 +2047,76 @@ window.JobsManagementModule = {
                                 <h3>Financial</h3>
                             </div>
 
-                            <div class="job-form-row">
-                                <div class="job-form-group">
-                                    <label>Material Cost ($)</label>
-                                    <input type="text" class="job-number-input" name="material_cost" value="${job?.material_cost || ''}" placeholder="0.00" data-calc-trigger>
+                            <!-- EXPENSES -->
+                            <div class="job-financial-subsection">
+                                <h4>Expenses</h4>
+                                <div class="job-form-row">
+                                    <div class="job-form-group">
+                                        <label>Material Cost ($)</label>
+                                        <input type="text" class="job-number-input" name="material_cost" value="${job?.material_cost || ''}" placeholder="0.00" data-calc-trigger>
+                                    </div>
+                                    <div class="job-form-group">
+                                        <label>Labor Rate ($/hr)</label>
+                                        <input type="text" class="job-number-input" name="labor_rate" value="${job?.labor_rate || ''}" placeholder="0.00" data-calc-trigger>
+                                    </div>
                                 </div>
-                                <div class="job-form-group">
-                                    <label>Labor Rate ($/hr)</label>
-                                    <input type="text" class="job-number-input" name="labor_rate" value="${job?.labor_rate || ''}" placeholder="0.00" data-calc-trigger>
+
+                                <div class="job-form-row">
+                                    <div class="job-form-group">
+                                        <label>Estimated Hours</label>
+                                        <input type="text" class="job-number-input" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}" placeholder="0.00" data-calc-trigger>
+                                    </div>
+                                    <div class="job-form-group">
+                                        <label>Other Expenses ($)</label>
+                                        <input type="text" class="job-number-input" name="other_expenses" value="${job?.other_expenses || ''}" placeholder="0.00" data-calc-trigger>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="job-form-row">
-                                <div class="job-form-group">
-                                    <label>Estimated Hours</label>
-                                    <input type="text" class="job-number-input" name="estimated_labor_hours" value="${job?.estimated_labor_hours || ''}" placeholder="0.00" data-calc-trigger>
+                            <!-- REVENUE -->
+                            <div class="job-financial-subsection">
+                                <h4>Revenue</h4>
+                                <div class="job-form-row">
+                                    <div class="job-form-group">
+                                        <label>Quoted Price ($) <span class="required">*</span></label>
+                                        <input type="text" class="job-number-input" name="quoted_price" value="${job?.quoted_price || ''}" placeholder="0.00" required data-calc-trigger>
+                                    </div>
+                                    <div class="job-form-group">
+                                        <label>Deposit Amount ($)</label>
+                                        <input type="text" class="job-number-input" name="deposit_amount" value="${job?.deposit_amount || ''}" placeholder="0.00">
+                                    </div>
                                 </div>
-                                <div class="job-form-group">
-                                    <label>Other Expenses ($)</label>
-                                    <input type="text" class="job-number-input" name="other_expenses" value="${job?.other_expenses || ''}" placeholder="0.00" data-calc-trigger>
+
+                                <div class="job-form-row single">
+                                    <div class="job-form-group">
+                                        <label>
+                                            <input type="checkbox" name="deposit_paid" ${job?.deposit_paid ? 'checked' : ''}>
+                                            Deposit Paid
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="job-form-row">
-                                <div class="job-form-group">
-                                    <label>Quoted Price ($) <span class="required">*</span></label>
-                                    <input type="text" class="job-number-input" name="quoted_price" value="${job?.quoted_price || ''}" placeholder="0.00" required data-calc-trigger>
+                            <!-- PROFIT CALCULATOR -->
+                            <div class="job-profit-calculator" id="jobProfitCalculator">
+                                <div class="job-profit-header">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 1.25rem; height: 1.25rem;">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <h4>Profit Calculator</h4>
                                 </div>
-                                <div class="job-form-group">
-                                    <label>Deposit Amount ($)</label>
-                                    <input type="text" class="job-number-input" name="deposit_amount" value="${job?.deposit_amount || ''}" placeholder="0.00">
+                                <div class="job-profit-row">
+                                    <span>Total Expenses:</span>
+                                    <span id="profitTotalExpenses">$0.00</span>
                                 </div>
-                            </div>
-
-                            <div class="job-form-row single">
-                                <div class="job-form-group">
-                                    <label>
-                                        <input type="checkbox" name="deposit_paid" ${job?.deposit_paid ? 'checked' : ''}>
-                                        Deposit Paid
-                                    </label>
+                                <div class="job-profit-row">
+                                    <span>Quoted Price:</span>
+                                    <span id="profitQuotedPrice">$0.00</span>
+                                </div>
+                                <div class="job-profit-divider"></div>
+                                <div class="job-profit-row job-profit-result">
+                                    <span>Est. Profit:</span>
+                                    <span id="profitAmount">$0.00 <span id="profitMargin">(0%)</span></span>
                                 </div>
                             </div>
                         </div>
@@ -2077,11 +2192,6 @@ window.JobsManagementModule = {
                                     <div class="job-char-counter"><span id="notesCounter">${job?.notes?.length || 0}</span> / 500</div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- PROFIT CALCULATOR (Always visible, at bottom) -->
-                        <div class="job-profit-calculator" id="profitCalculator">
-                            <!-- Will be populated by jobs_updateProfitCalculator() -->
                         </div>
                     </form>
                 </div>
@@ -2798,6 +2908,47 @@ window.JobsManagementModule = {
         const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/20 crew members`;
+        }
+    },
+
+    jobs_updateProfitCalculator() {
+        const overlay = document.getElementById('jobModalOverlay');
+        if (!overlay) return;
+
+        // Get form values
+        const materialCost = parseFloat(overlay.querySelector('[name="material_cost"]')?.value) || 0;
+        const laborRate = parseFloat(overlay.querySelector('[name="labor_rate"]')?.value) || 0;
+        const estimatedHours = parseFloat(overlay.querySelector('[name="estimated_labor_hours"]')?.value) || 0;
+        const otherExpenses = parseFloat(overlay.querySelector('[name="other_expenses"]')?.value) || 0;
+        const quotedPrice = parseFloat(overlay.querySelector('[name="quoted_price"]')?.value) || 0;
+
+        // Calculate totals
+        const laborCost = laborRate * estimatedHours;
+        const totalExpenses = materialCost + laborCost + otherExpenses;
+        const profit = quotedPrice - totalExpenses;
+        const margin = quotedPrice > 0 ? ((profit / quotedPrice) * 100) : 0;
+
+        // Update display
+        const expensesEl = overlay.querySelector('#profitTotalExpenses');
+        const quotedEl = overlay.querySelector('#profitQuotedPrice');
+        const profitEl = overlay.querySelector('#profitAmount');
+        const marginEl = overlay.querySelector('#profitMargin');
+        const resultRow = overlay.querySelector('.job-profit-result');
+
+        if (expensesEl) expensesEl.textContent = formatCurrency(totalExpenses);
+        if (quotedEl) quotedEl.textContent = formatCurrency(quotedPrice);
+        if (profitEl) {
+            profitEl.innerHTML = `${formatCurrency(profit)} <span id="profitMargin">(${margin.toFixed(1)}%)</span>`;
+        }
+
+        // Update styling based on profit
+        if (resultRow) {
+            resultRow.classList.remove('positive', 'negative');
+            if (profit > 0) {
+                resultRow.classList.add('positive');
+            } else if (profit < 0) {
+                resultRow.classList.add('negative');
+            }
         }
     },
 
