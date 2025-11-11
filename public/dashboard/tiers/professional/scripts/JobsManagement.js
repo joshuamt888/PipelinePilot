@@ -1061,24 +1061,29 @@ window.JobsManagementModule = {
                 }
 
                 .job-form-section-toggle {
-                    background: none;
-                    border: none;
-                    color: var(--text-secondary);
                     cursor: pointer;
-                    padding: 0.5rem;
+                    transition: all 0.2s;
+                }
+
+                .job-form-section-toggle:hover h3 {
+                    color: #667eea;
+                }
+
+                .job-form-section-toggle:hover .job-form-section-toggle-info {
+                    color: #667eea;
+                }
+
+                .job-form-section-toggle-info {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
+                    color: var(--text-secondary);
                     font-size: 0.875rem;
                     font-weight: 600;
                     transition: all 0.2s;
                 }
 
-                .job-form-section-toggle:hover {
-                    color: #667eea;
-                }
-
-                .job-form-section-toggle svg {
+                .job-form-section-toggle-info svg {
                     width: 1rem;
                     height: 1rem;
                     transition: transform 0.2s;
@@ -2010,14 +2015,14 @@ window.JobsManagementModule = {
 
                         <!-- MATERIALS (Collapsible) -->
                         <div class="job-form-section">
-                            <div class="job-form-section-header">
-                                <h3>Materials</h3>
-                                <button type="button" class="job-form-section-toggle" data-section="materials">
+                            <div class="job-form-section-header job-form-section-toggle" data-section="materials">
+                                <h3>Materials <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <div class="job-form-section-toggle-info">
                                     <span>${this.state.modalState.materials.length}/50 materials</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
-                                </button>
+                                </div>
                             </div>
                             <div class="job-form-section-content collapsed" id="materialsSection">
                                 <div id="materialsContainer">
@@ -2028,14 +2033,14 @@ window.JobsManagementModule = {
 
                         <!-- CREW (Collapsible) -->
                         <div class="job-form-section">
-                            <div class="job-form-section-header">
-                                <h3>Crew</h3>
-                                <button type="button" class="job-form-section-toggle" data-section="crew">
+                            <div class="job-form-section-header job-form-section-toggle" data-section="crew">
+                                <h3>Crew <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <div class="job-form-section-toggle-info">
                                     <span>${this.state.modalState.crew.length}/20 crew members</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
-                                </button>
+                                </div>
                             </div>
                             <div class="job-form-section-content collapsed" id="crewSection">
                                 <div id="crewContainer">
@@ -2044,16 +2049,16 @@ window.JobsManagementModule = {
                             </div>
                         </div>
 
-                        <!-- PHOTOS (Collapsible, Pro tier) -->
+                        <!-- PHOTOS (Collapsible) -->
                         <div class="job-form-section">
-                            <div class="job-form-section-header">
-                                <h3>Photos (Pro Tier) 🔒</h3>
-                                <button type="button" class="job-form-section-toggle" data-section="photos">
-                                    <span>${this.state.modalState.photos.length} / 3 photos</span>
+                            <div class="job-form-section-header job-form-section-toggle" data-section="photos">
+                                <h3>Photos <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <div class="job-form-section-toggle-info">
+                                    <span>${this.state.modalState.photos.length}/3 photos</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
-                                </button>
+                                </div>
                             </div>
                             <div class="job-form-section-content collapsed" id="photosSection">
                                 <div id="photosContainer">
@@ -2064,13 +2069,13 @@ window.JobsManagementModule = {
 
                         <!-- NOTES (Collapsible) -->
                         <div class="job-form-section">
-                            <div class="job-form-section-header">
-                                <h3>Notes</h3>
-                                <button type="button" class="job-form-section-toggle" data-section="notes">
+                            <div class="job-form-section-header job-form-section-toggle" data-section="notes">
+                                <h3>Notes <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <div class="job-form-section-toggle-info">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
-                                </button>
+                                </div>
                             </div>
                             <div class="job-form-section-content collapsed" id="notesSection">
                                 <div class="job-form-group">
@@ -2374,16 +2379,9 @@ window.JobsManagementModule = {
         const otherExpenses = parseFloat(form.other_expenses?.value) || 0;
         const quotedPrice = parseFloat(form.quoted_price?.value) || 0;
 
-        // Add materials total
-        const materialsTotal = this.state.modalState.materials.reduce((sum, m) =>
-            sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
-
-        // Add crew total
-        const crewTotal = this.state.modalState.crew.reduce((sum, c) =>
-            sum + ((c.hours || 0) * (c.rate || 0)), 0);
-
+        // Materials and Crew tables are for reference only - not included in profit calc
         const laborCost = laborRate * estimatedHours;
-        const totalCost = materialCost + materialsTotal + laborCost + crewTotal + otherExpenses;
+        const totalCost = materialCost + laborCost + otherExpenses;
         const profit = quotedPrice - totalCost;
         const profitMargin = quotedPrice > 0 ? (profit / quotedPrice) * 100 : 0;
 
@@ -2403,25 +2401,13 @@ window.JobsManagementModule = {
                     <div class="job-profit-line-value">${formatCurrency(quotedPrice)}</div>
                 </div>
                 <div class="job-profit-line indent">
-                    <div class="job-profit-line-label">Materials (manual):</div>
+                    <div class="job-profit-line-label">Material Cost:</div>
                     <div class="job-profit-line-value">-${formatCurrency(materialCost)}</div>
                 </div>
-                ${materialsTotal > 0 ? `
-                    <div class="job-profit-line indent">
-                        <div class="job-profit-line-label">Materials (table):</div>
-                        <div class="job-profit-line-value">-${formatCurrency(materialsTotal)}</div>
-                    </div>
-                ` : ''}
                 <div class="job-profit-line indent">
-                    <div class="job-profit-line-label">Labor (manual): ${estimatedHours}h × ${formatCurrency(laborRate)}/h</div>
+                    <div class="job-profit-line-label">Labor Cost: ${estimatedHours}h × ${formatCurrency(laborRate)}/h</div>
                     <div class="job-profit-line-value">-${formatCurrency(laborCost)}</div>
                 </div>
-                ${crewTotal > 0 ? `
-                    <div class="job-profit-line indent">
-                        <div class="job-profit-line-label">Labor (crew table):</div>
-                        <div class="job-profit-line-value">-${formatCurrency(crewTotal)}</div>
-                    </div>
-                ` : ''}
                 <div class="job-profit-line indent">
                     <div class="job-profit-line-label">Other Expenses:</div>
                     <div class="job-profit-line-value">-${formatCurrency(otherExpenses)}</div>
@@ -2537,9 +2523,33 @@ window.JobsManagementModule = {
                 });
             }
 
-            // Financial inputs - trigger profit calculator
+            // Financial inputs - trigger profit calculator with validation
+            let profitCalcTimeout;
             form.querySelectorAll('[data-calc-trigger]').forEach(input => {
-                input.addEventListener('input', () => this.jobs_updateProfitCalculator());
+                input.addEventListener('input', () => {
+                    // Enforce max values
+                    const max = parseFloat(input.getAttribute('max'));
+                    const value = parseFloat(input.value);
+                    if (value > max) {
+                        input.value = max;
+                    }
+
+                    // Debounce profit calculator to prevent scroll issues
+                    clearTimeout(profitCalcTimeout);
+                    profitCalcTimeout = setTimeout(() => {
+                        this.jobs_updateProfitCalculator();
+                    }, 100);
+                });
+            });
+
+            // Add validation to all number inputs in materials/crew
+            form.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('input', () => {
+                    const max = parseFloat(input.getAttribute('max'));
+                    if (max && parseFloat(input.value) > max) {
+                        input.value = max;
+                    }
+                });
             });
         }
 
