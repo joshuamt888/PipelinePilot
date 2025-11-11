@@ -2741,15 +2741,8 @@ window.JobsManagementModule = {
                         const price = parseFloat(priceInput.value) || 0;
                         totalDiv.textContent = formatCurrency(qty * price);
 
-                        // Update counter if this is first input
-                        const materialRows = overlay.querySelector('#materialRows');
-                        if (materialRows) {
-                            const count = materialRows.querySelectorAll('.job-line-item').length;
-                            const counterSpan = overlay.querySelector('[data-section="materials"] .job-form-section-toggle-info span');
-                            if (counterSpan) {
-                                counterSpan.textContent = `${count}/50 materials`;
-                            }
-                        }
+                        // Update table total
+                        this.jobs_updateMaterialsTotal(overlay);
                     } else if (crewIndex !== undefined) {
                         // Update crew row total
                         const row = e.target.closest('.job-line-item');
@@ -2760,16 +2753,19 @@ window.JobsManagementModule = {
                         const rate = parseFloat(rateInput.value) || 0;
                         totalDiv.textContent = formatCurrency(hours * rate);
 
-                        // Update counter if this is first input
-                        const crewRows = overlay.querySelector('#crewRows');
-                        if (crewRows) {
-                            const count = crewRows.querySelectorAll('.job-line-item').length;
-                            const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
-                            if (counterSpan) {
-                                counterSpan.textContent = `${count}/20 crew members`;
-                            }
-                        }
+                        // Update table total
+                        this.jobs_updateCrewTotal(overlay);
                     }
+                }
+
+                // Update counters for ANY input in material/crew rows (including text fields)
+                const materialIndexAny = e.target.dataset.material;
+                const crewIndexAny = e.target.dataset.crew;
+
+                if (materialIndexAny !== undefined) {
+                    this.jobs_updateMaterialsCounter(overlay);
+                } else if (crewIndexAny !== undefined) {
+                    this.jobs_updateCrewCounter(overlay);
                 }
 
                 // Trigger profit calculator for main form number inputs
@@ -2952,6 +2948,18 @@ window.JobsManagementModule = {
         if (container) {
             container.innerHTML = this.jobs_renderPhotosGrid();
         }
+        this.jobs_updatePhotosCounter();
+    },
+
+    jobs_updatePhotosCounter() {
+        const overlay = document.getElementById('jobModalOverlay');
+        if (!overlay) return;
+
+        const count = this.state.modalState.photos.length;
+        const counterSpan = overlay.querySelector('[data-section="photos"] .job-form-section-toggle-info span');
+        if (counterSpan) {
+            counterSpan.textContent = `${count}/3 photos`;
+        }
     },
 
     jobs_updateMaterialsCounter(overlay) {
@@ -2969,6 +2977,44 @@ window.JobsManagementModule = {
         const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/20 crew members`;
+        }
+    },
+
+    jobs_updateMaterialsTotal(overlay) {
+        const container = overlay.querySelector('#materialRows');
+        if (!container) return;
+
+        let total = 0;
+        container.querySelectorAll('.job-line-item').forEach(row => {
+            const qtyInput = row.querySelector('[data-field="quantity"]');
+            const priceInput = row.querySelector('[data-field="unit_price"]');
+            const qty = parseFloat(qtyInput?.value) || 0;
+            const price = parseFloat(priceInput?.value) || 0;
+            total += qty * price;
+        });
+
+        const totalValueEl = overlay.querySelector('#materialsContainer .job-total-value');
+        if (totalValueEl) {
+            totalValueEl.textContent = formatCurrency(total);
+        }
+    },
+
+    jobs_updateCrewTotal(overlay) {
+        const container = overlay.querySelector('#crewRows');
+        if (!container) return;
+
+        let total = 0;
+        container.querySelectorAll('.job-line-item').forEach(row => {
+            const hoursInput = row.querySelector('[data-field="hours"]');
+            const rateInput = row.querySelector('[data-field="rate"]');
+            const hours = parseFloat(hoursInput?.value) || 0;
+            const rate = parseFloat(rateInput?.value) || 0;
+            total += hours * rate;
+        });
+
+        const totalValueEl = overlay.querySelector('#crewContainer .job-total-value');
+        if (totalValueEl) {
+            totalValueEl.textContent = formatCurrency(total);
         }
     },
 
