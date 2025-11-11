@@ -592,6 +592,11 @@ window.JobsManagementModule = {
             this.state.selectedJobIds = [];
         }
 
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+
         // Update limit bar
         const limitBar = document.querySelector('.jobs-limit-bar');
         if (limitBar) {
@@ -603,8 +608,31 @@ window.JobsManagementModule = {
         // Apply or remove batch mode
         if (this.state.batchMode) {
             this.jobs_applyBatchMode();
+
+            // Update button to Cancel mode
+            if (batchBtn) {
+                batchBtn.classList.add('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Cancel (0 selected)
+                `;
+            }
         } else {
             this.jobs_removeBatchMode();
+
+            // Update button to Edit Multiple mode
+            if (batchBtn) {
+                batchBtn.classList.remove('active');
+                batchBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 11l3 3L22 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Edit Multiple
+                `;
+            }
         }
     },
 
@@ -687,6 +715,18 @@ window.JobsManagementModule = {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = this.jobs_renderLimitBar();
             limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+        }
+
+        // Update batch button counter
+        const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+        if (batchBtn && this.state.batchMode) {
+            const selectedCount = this.state.selectedJobIds.length;
+            batchBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cancel (${selectedCount} selected)
+            `;
         }
 
         // Update batch actions
