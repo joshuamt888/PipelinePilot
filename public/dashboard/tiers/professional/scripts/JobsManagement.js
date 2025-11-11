@@ -1866,16 +1866,20 @@ window.JobsManagementModule = {
                                     <label>Job Type</label>
                                     <select name="job_type" id="jobTypeSelect">
                                         <option value="">Select Type</option>
-                                        ${this.JOB_TYPES.map(type => `
-                                            <option value="${type}" ${job?.job_type === type ? 'selected' : ''}>
-                                                ${type.charAt(0).toUpperCase() + type.slice(1)}
-                                            </option>
-                                        `).join('')}
+                                        ${this.JOB_TYPES.map(type => {
+                                            const isSelected = job?.job_type === type ||
+                                                (type === 'custom' && job?.job_type && !this.JOB_TYPES.slice(0, -1).includes(job.job_type));
+                                            return `
+                                                <option value="${type}" ${isSelected ? 'selected' : ''}>
+                                                    ${type.charAt(0).toUpperCase() + type.slice(1)}
+                                                </option>
+                                            `;
+                                        }).join('')}
                                     </select>
-                                    <div class="job-custom-type-input ${job?.job_type === 'custom' ? 'show' : ''}" id="customJobTypeInput">
-                                        <input type="text" name="custom_job_type" value="${job?.custom_job_type || ''}"
+                                    <div class="job-custom-type-input ${job && job.job_type && !this.JOB_TYPES.includes(job.job_type) ? 'show' : ''}" id="customJobTypeInput">
+                                        <input type="text" name="custom_job_type" value="${job && job.job_type && !this.JOB_TYPES.includes(job.job_type) ? job.job_type : ''}"
                                                placeholder="Enter custom job type..." maxlength="25">
-                                        <div class="job-char-counter"><span id="customTypeCounter">${job?.custom_job_type?.length || 0}</span> / 25</div>
+                                        <div class="job-char-counter"><span id="customTypeCounter">${job && job.job_type && !this.JOB_TYPES.includes(job.job_type) ? job.job_type.length : 0}</span> / 25</div>
                                     </div>
                                 </div>
                                 <div class="job-form-group">
@@ -2756,8 +2760,7 @@ window.JobsManagementModule = {
         const jobData = {
             title: formData.get('title'),
             lead_id: formData.get('lead_id') || null,
-            job_type: formData.get('job_type') || null,
-            custom_job_type: formData.get('job_type') === 'custom' ? formData.get('custom_job_type') : null,
+            job_type: formData.get('job_type') === 'custom' ? formData.get('custom_job_type') : formData.get('job_type'),
             status: formData.get('status'),
             priority: formData.get('priority'),
             scheduled_date: formData.get('scheduled_date') || null,
