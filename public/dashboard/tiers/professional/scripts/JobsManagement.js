@@ -2523,9 +2523,33 @@ window.JobsManagementModule = {
                 });
             }
 
-            // Financial inputs - trigger profit calculator
+            // Financial inputs - trigger profit calculator with validation
+            let profitCalcTimeout;
             form.querySelectorAll('[data-calc-trigger]').forEach(input => {
-                input.addEventListener('input', () => this.jobs_updateProfitCalculator());
+                input.addEventListener('input', () => {
+                    // Enforce max values
+                    const max = parseFloat(input.getAttribute('max'));
+                    const value = parseFloat(input.value);
+                    if (value > max) {
+                        input.value = max;
+                    }
+
+                    // Debounce profit calculator to prevent scroll issues
+                    clearTimeout(profitCalcTimeout);
+                    profitCalcTimeout = setTimeout(() => {
+                        this.jobs_updateProfitCalculator();
+                    }, 100);
+                });
+            });
+
+            // Add validation to all number inputs in materials/crew
+            form.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('input', () => {
+                    const max = parseFloat(input.getAttribute('max'));
+                    if (max && parseFloat(input.value) > max) {
+                        input.value = max;
+                    }
+                });
             });
         }
 
