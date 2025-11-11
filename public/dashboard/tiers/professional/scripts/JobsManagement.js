@@ -2441,9 +2441,19 @@ window.JobsManagementModule = {
             btn.addEventListener('click', () => this.jobs_closeModal());
         });
 
-        // Click outside to close
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) this.jobs_closeModal();
+        // Click outside to close - proper mousedown/mouseup pattern to prevent drag-release issues
+        let mouseDownTarget = null;
+
+        overlay.addEventListener('mousedown', (e) => {
+            mouseDownTarget = e.target;
+        });
+
+        overlay.addEventListener('mouseup', (e) => {
+            // Only close if both down and up were on the overlay (not modal content)
+            if (mouseDownTarget === overlay && e.target === overlay) {
+                this.jobs_closeModal();
+            }
+            mouseDownTarget = null;
         });
 
         // ESC to close
@@ -3053,8 +3063,19 @@ window.JobsManagementModule = {
             overlay.querySelector('[data-action="confirm"]').addEventListener('click', handleConfirm);
             overlay.querySelector('[data-action="cancel"]').addEventListener('click', handleCancel);
 
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) handleCancel();
+            // Close on overlay click - proper mousedown/mouseup pattern to prevent drag-release issues
+            let mouseDownTarget = null;
+
+            overlay.addEventListener('mousedown', (e) => {
+                mouseDownTarget = e.target;
+            });
+
+            overlay.addEventListener('mouseup', (e) => {
+                // Only close if both down and up were on the overlay (not modal content)
+                if (mouseDownTarget === overlay && e.target === overlay) {
+                    handleCancel();
+                }
+                mouseDownTarget = null;
             });
 
             const escHandler = (e) => {

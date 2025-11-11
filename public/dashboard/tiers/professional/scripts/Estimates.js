@@ -1346,11 +1346,19 @@ estimates_initModalEvents(overlay) {
         btn.addEventListener('click', () => this.estimates_closeModal());
     });
 
-    // Click outside to close
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
+    // Click outside to close - proper mousedown/mouseup pattern to prevent drag-release issues
+    let mouseDownTarget = null;
+
+    overlay.addEventListener('mousedown', (e) => {
+        mouseDownTarget = e.target;
+    });
+
+    overlay.addEventListener('mouseup', (e) => {
+        // Only close if both down and up were on the overlay (not modal content)
+        if (mouseDownTarget === overlay && e.target === overlay) {
             this.estimates_closeModal();
         }
+        mouseDownTarget = null;
     });
 
     // Lead dropdown quick-create
@@ -2217,12 +2225,20 @@ estimates_showViewModal(estimateId) {
         });
     });
 
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
+    // Close on overlay click - proper mousedown/mouseup pattern to prevent drag-release issues
+    let mouseDownTarget = null;
+
+    overlay.addEventListener('mousedown', (e) => {
+        mouseDownTarget = e.target;
+    });
+
+    overlay.addEventListener('mouseup', (e) => {
+        // Only close if both down and up were on the overlay (not modal content)
+        if (mouseDownTarget === overlay && e.target === overlay) {
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 200);
         }
+        mouseDownTarget = null;
     });
 },
 
@@ -3746,9 +3762,19 @@ estimates_formatStatus(status) {
             overlay.querySelector('[data-action="confirm"]').addEventListener('click', handleConfirm);
             overlay.querySelector('[data-action="cancel"]').addEventListener('click', handleCancel);
 
-            // Close on overlay click
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) handleCancel();
+            // Close on overlay click - proper mousedown/mouseup pattern to prevent drag-release issues
+            let mouseDownTarget = null;
+
+            overlay.addEventListener('mousedown', (e) => {
+                mouseDownTarget = e.target;
+            });
+
+            overlay.addEventListener('mouseup', (e) => {
+                // Only close if both down and up were on the overlay (not modal content)
+                if (mouseDownTarget === overlay && e.target === overlay) {
+                    handleCancel();
+                }
+                mouseDownTarget = null;
             });
 
             // ESC key to cancel
