@@ -1417,7 +1417,10 @@ window.JobsManagementModule = {
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                     color: var(--text-secondary);
-                    align-items: start;
+                }
+
+                .job-line-item-header > div {
+                    text-align: left;
                 }
 
                 .job-line-item-header.job-crew-header {

@@ -745,7 +745,10 @@ estimates_renderModalStyles() {
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-secondary);
-            align-items: start;
+        }
+
+        .estimate-line-item-header > div {
+            text-align: left;
         }
 
         .estimate-line-item {
