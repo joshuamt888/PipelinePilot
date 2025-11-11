@@ -2986,17 +2986,20 @@ async estimates_handleSave(overlay) {
 
         console.log('[Estimates] Saving estimate:', estimateData);
 
+        // Save the editing ID before closing modal (closeModal sets it to null)
+        const editingId = this.state.editingEstimateId;
+
         // Close modal immediately for instant feedback
         this.estimates_closeModal();
 
         // Save in background
         try {
             let savedEstimate;
-            if (this.state.editingEstimateId) {
-                savedEstimate = await API.updateEstimate(this.state.editingEstimateId, estimateData);
+            if (editingId) {
+                savedEstimate = await API.updateEstimate(editingId, estimateData);
 
                 // Update in state
-                const index = this.state.estimates.findIndex(e => e.id === this.state.editingEstimateId);
+                const index = this.state.estimates.findIndex(e => e.id === editingId);
                 if (index !== -1) {
                     this.state.estimates[index] = savedEstimate;
                 }
