@@ -749,6 +749,7 @@ estimates_renderModalStyles() {
 
         .estimate-line-item-header > div {
             text-align: left;
+            padding-left: 10px;
         }
 
         .estimate-line-item {
@@ -766,6 +767,7 @@ estimates_renderModalStyles() {
             background: var(--surface);
             color: var(--text-primary);
             font-size: 14px;
+            text-align: left;
         }
 
         .estimate-line-item-total {
