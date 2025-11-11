@@ -749,7 +749,7 @@ estimates_renderModalStyles() {
 
         .estimate-line-item-header > div {
             text-align: left;
-            padding-left: 10px;
+            padding-left: 11px;
         }
 
         .estimate-line-item {

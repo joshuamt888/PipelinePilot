@@ -1421,7 +1421,7 @@ window.JobsManagementModule = {
 
                 .job-line-item-header > div {
                     text-align: left;
-                    padding-left: 10px;
+                    padding-left: 11px;
                 }
 
                 .job-line-item-header.job-crew-header {
