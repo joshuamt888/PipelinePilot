@@ -2261,9 +2261,9 @@ window.JobsManagementModule = {
         return `
             <div class="job-line-item" data-index="${index}">
                 <input type="text" placeholder="Material name" value="${material.name || ''}" data-material="${index}" data-field="name" maxlength="50" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0" max="9999.99" style="text-align: left;">
+                <input type="text" class="job-number-input" placeholder="0.00" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" style="text-align: left;">
                 <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit" maxlength="10" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0" max="99999.99" style="text-align: left;">
+                <input type="text" class="job-number-input" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" style="text-align: left;">
                 <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier" maxlength="25" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-material" data-index="${index}">
@@ -2319,8 +2319,8 @@ window.JobsManagementModule = {
             <div class="job-line-item job-crew-row" data-index="${index}">
                 <input type="text" placeholder="Crew member name" value="${member.name || ''}" data-crew="${index}" data-field="name" maxlength="35" style="text-align: left;">
                 <input type="text" placeholder="Role/position" value="${member.role || ''}" data-crew="${index}" data-field="role" maxlength="25" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.01" min="0" max="99999.99" style="text-align: left;">
-                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0" max="99999.99" style="text-align: left;">
+                <input type="text" class="job-number-input" placeholder="0.00" value="${member.hours || ''}" data-crew="${index}" data-field="hours" style="text-align: left;">
+                <input type="text" class="job-number-input" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" style="text-align: left;">
                 <div class="job-line-item-total">${formatCurrency(total)}</div>
                 <button type="button" class="job-line-item-remove" data-action="delete-crew" data-index="${index}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
@@ -2533,73 +2533,39 @@ window.JobsManagementModule = {
                 });
             }
 
-            // Profit calculator debounce timer
+            // Number input validation - EXACT COPY FROM ESTIMATES
             let profitCalcTimeout;
 
-            // Number input validation using event delegation (exactly like Estimates)
-            // This works for both static and dynamically added inputs
             overlay.addEventListener('input', (e) => {
-                const input = e.target;
+                if (e.target.classList.contains('job-number-input')) {
+                    // Get the current value
+                    let value = e.target.value;
 
-                // Check if this is a number input
-                const isNumberInput = input.type === 'number' ||
-                                     input.dataset.field === 'quantity' ||
-                                     input.dataset.field === 'unit_price' ||
-                                     input.dataset.field === 'hours' ||
-                                     input.dataset.field === 'rate';
+                    // Remove any non-numeric characters except decimal point
+                    value = value.replace(/[^0-9.]/g, '');
 
-                if (!isNumberInput) return;
-
-                // Check if this should trigger profit calculator
-                const triggerCalc = input.hasAttribute('data-calc-trigger');
-
-                // Get the current value
-                let value = input.value;
-
-                // If empty, just allow it and trigger calc if needed
-                if (value === '') {
-                    if (triggerCalc) {
-                        clearTimeout(profitCalcTimeout);
-                        profitCalcTimeout = setTimeout(() => {
-                            this.jobs_updateProfitCalculator();
-                        }, 300);
+                    // Ensure only one decimal point
+                    const parts = value.split('.');
+                    if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
                     }
-                    return;
-                }
 
-                // Remove any non-numeric characters except decimal point
-                value = value.replace(/[^0-9.]/g, '');
-
-                // Ensure only one decimal point
-                const parts = value.split('.');
-                if (parts.length > 2) {
-                    value = parts[0] + '.' + parts.slice(1).join('');
-                }
-
-                // Limit decimal places to 2
-                if (parts.length === 2 && parts[1].length > 2) {
-                    value = parts[0] + '.' + parts[1].substring(0, 2);
-                }
-
-                // Get max value and calculate max digits allowed
-                const max = parseFloat(input.getAttribute('max'));
-                if (max && value !== '') {
-                    // Calculate max whole digits from max value
-                    const maxWholeDigits = Math.floor(max).toString().length;
-
-                    // If we have a decimal, split and check
-                    const currentParts = value.split('.');
-                    if (currentParts[0] && currentParts[0].length > maxWholeDigits) {
-                        currentParts[0] = currentParts[0].substring(0, maxWholeDigits);
-                        value = currentParts.join('.');
+                    // Limit decimal places to 2
+                    if (parts.length === 2 && parts[1].length > 2) {
+                        value = parts[0] + '.' + parts[1].substring(0, 2);
                     }
+
+                    // Limit to 8 digits before decimal (max 99,999,999.99)
+                    if (parts[0].length > 8) {
+                        value = parts[0].substring(0, 8) + (parts.length > 1 ? '.' + parts[1] : '');
+                    }
+
+                    // Update the input value
+                    e.target.value = value;
                 }
 
-                // Always update the input value (like Estimates does)
-                input.value = value;
-
-                // Trigger profit calculator if needed
-                if (triggerCalc) {
+                // Trigger profit calculator for main form number inputs
+                if (e.target.hasAttribute('data-calc-trigger')) {
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
@@ -2607,38 +2573,23 @@ window.JobsManagementModule = {
                 }
             });
 
-            // Blur event to format to 2 decimals when user leaves field
+            // Blur event to format to 2 decimals - EXACT COPY FROM ESTIMATES
             overlay.addEventListener('blur', (e) => {
-                const input = e.target;
+                if (e.target.classList.contains('job-number-input')) {
+                    let value = e.target.value.trim();
 
-                // Check if this is a number input
-                const isNumberInput = input.type === 'number' ||
-                                     input.dataset.field === 'quantity' ||
-                                     input.dataset.field === 'unit_price' ||
-                                     input.dataset.field === 'hours' ||
-                                     input.dataset.field === 'rate';
-
-                if (!isNumberInput) return;
-
-                let value = input.value.trim();
-
-                // Handle empty or invalid input
-                if (value === '' || value === '.') {
-                    // Leave empty for optional fields
-                    return;
-                }
-
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue) && isFinite(numValue)) {
-                    // Format to 2 decimal places
-                    input.value = numValue.toFixed(2);
-                } else {
-                    input.value = '';
-                }
-
-                // Trigger profit calculator if this is a calc trigger field
-                if (input.hasAttribute('data-calc-trigger')) {
-                    this.jobs_updateProfitCalculator();
+                    // Handle empty or invalid input - default to 0
+                    if (value === '' || value === '.') {
+                        e.target.value = '0.00';
+                    } else {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue) && isFinite(numValue)) {
+                            // Format to 2 decimal places
+                            e.target.value = numValue.toFixed(2);
+                        } else {
+                            e.target.value = '0.00';
+                        }
+                    }
                 }
             }, true);
         }
