@@ -2533,15 +2533,32 @@ window.JobsManagementModule = {
                 });
             }
 
-            // Helper function to validate number inputs
-            const validateNumberInput = (input, triggerCalc = false) => {
-                const oldValue = input.value;
+            // Profit calculator debounce timer
+            let profitCalcTimeout;
+
+            // Number input validation using event delegation (like Estimates)
+            // This works for both static and dynamically added inputs
+            overlay.addEventListener('input', (e) => {
+                const input = e.target;
+
+                // Check if this is a number input (either has type="number" or specific classes for materials/crew)
+                const isNumberInput = input.type === 'number' ||
+                                     input.dataset.field === 'quantity' ||
+                                     input.dataset.field === 'unit_price' ||
+                                     input.dataset.field === 'hours' ||
+                                     input.dataset.field === 'rate';
+
+                if (!isNumberInput) return;
+
+                // Check if this should trigger profit calculator
+                const triggerCalc = input.hasAttribute('data-calc-trigger');
+
+                // Get the current value
                 let value = input.value;
 
-                // If empty, just allow it
+                // If empty, just allow it and trigger calc if needed
                 if (value === '') {
-                    if (triggerCalc && oldValue !== '') {
-                        // Only trigger calc if we're going from a value to empty
+                    if (triggerCalc) {
                         clearTimeout(profitCalcTimeout);
                         profitCalcTimeout = setTimeout(() => {
                             this.jobs_updateProfitCalculator();
@@ -2550,19 +2567,16 @@ window.JobsManagementModule = {
                     return;
                 }
 
-                // Save cursor position
-                const cursorPos = input.selectionStart;
-
                 // Remove any non-numeric characters except decimal point
                 value = value.replace(/[^0-9.]/g, '');
 
-                // Only allow one decimal point
+                // Ensure only one decimal point
                 const parts = value.split('.');
                 if (parts.length > 2) {
                     value = parts[0] + '.' + parts.slice(1).join('');
                 }
 
-                // Limit to 2 decimal places
+                // Limit decimal places to 2
                 if (parts.length === 2 && parts[1].length > 2) {
                     value = parts[0] + '.' + parts[1].substring(0, 2);
                 }
@@ -2581,49 +2595,52 @@ window.JobsManagementModule = {
                     }
                 }
 
-                // Only update if value changed
-                if (value !== oldValue) {
-                    input.value = value;
-                    // Restore cursor position only if we have a value
-                    if (value.length > 0) {
-                        const newCursorPos = Math.min(cursorPos, value.length);
-                        requestAnimationFrame(() => {
-                            input.setSelectionRange(newCursorPos, newCursorPos);
-                        });
-                    }
-                }
+                // Update the input value
+                input.value = value;
 
-                if (triggerCalc && value !== oldValue) {
-                    // Only trigger if value actually changed, longer debounce
+                // Trigger profit calculator if needed
+                if (triggerCalc) {
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
                     }, 300);
                 }
-            };
-
-            // Financial inputs - trigger profit calculator with validation
-            let profitCalcTimeout;
-            form.querySelectorAll('[data-calc-trigger]').forEach(input => {
-                input.addEventListener('input', () => validateNumberInput(input, true));
-                input.addEventListener('keypress', (e) => {
-                    // Allow numbers, decimal, backspace, delete, arrows
-                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-                        e.preventDefault();
-                    }
-                });
             });
 
-            // Add validation to all number inputs (materials/crew) - no calc trigger
-            form.querySelectorAll('input[type="number"]:not([data-calc-trigger])').forEach(input => {
-                input.addEventListener('input', () => validateNumberInput(input, false));
-                input.addEventListener('keypress', (e) => {
-                    // Allow numbers, decimal, backspace, delete, arrows
-                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-                        e.preventDefault();
-                    }
-                });
-            });
+            // Blur event to format to 2 decimals when user leaves field
+            overlay.addEventListener('blur', (e) => {
+                const input = e.target;
+
+                // Check if this is a number input
+                const isNumberInput = input.type === 'number' ||
+                                     input.dataset.field === 'quantity' ||
+                                     input.dataset.field === 'unit_price' ||
+                                     input.dataset.field === 'hours' ||
+                                     input.dataset.field === 'rate';
+
+                if (!isNumberInput) return;
+
+                let value = input.value.trim();
+
+                // Handle empty or invalid input
+                if (value === '' || value === '.') {
+                    // Leave empty for optional fields
+                    return;
+                }
+
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && isFinite(numValue)) {
+                    // Format to 2 decimal places
+                    input.value = numValue.toFixed(2);
+                } else {
+                    input.value = '';
+                }
+
+                // Trigger profit calculator if this is a calc trigger field
+                if (input.hasAttribute('data-calc-trigger')) {
+                    this.jobs_updateProfitCalculator();
+                }
+            }, true);
         }
 
         // Materials: Add row (DOM-based like estimates)
@@ -2774,7 +2791,7 @@ window.JobsManagementModule = {
     jobs_updateMaterialsCounter(overlay) {
         const container = overlay.querySelector('#materialRows');
         const count = container ? container.querySelectorAll('.job-line-item').length : 0;
-        const counterSpan = overlay.querySelector('[data-section="materials"]')?.querySelector('span');
+        const counterSpan = overlay.querySelector('[data-section="materials"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/50 materials`;
         }
@@ -2783,7 +2800,7 @@ window.JobsManagementModule = {
     jobs_updateCrewCounter(overlay) {
         const container = overlay.querySelector('#crewRows');
         const count = container ? container.querySelectorAll('.job-line-item').length : 0;
-        const counterSpan = overlay.querySelector('[data-section="crew"]')?.querySelector('span');
+        const counterSpan = overlay.querySelector('[data-section="crew"] .job-form-section-toggle-info span');
         if (counterSpan) {
             counterSpan.textContent = `${count}/20 crew members`;
         }
