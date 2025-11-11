@@ -2626,94 +2626,97 @@ window.JobsManagementModule = {
             });
         }
 
-        // Materials: Add row
+        // Materials: Add row (DOM-based like estimates)
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="add-material"]');
             if (target) {
-                this.state.modalState.materials.push({
-                    name: '',
-                    quantity: '',
-                    unit: 'pcs',
-                    unit_price: '',
-                    supplier: ''
-                });
-                this.jobs_refreshMaterials();
+                const container = overlay.querySelector('#materialRows');
+                const currentCount = container.querySelectorAll('.job-line-item').length;
+
+                if (currentCount >= 50) {
+                    alert('Maximum 50 materials allowed');
+                    return;
+                }
+
+                const newMaterial = { name: '', quantity: '', unit: 'pcs', unit_price: '', supplier: '' };
+                const html = this.jobs_renderMaterialRow(newMaterial, currentCount);
+                container.insertAdjacentHTML('beforeend', html);
+                this.jobs_updateMaterialsCounter(overlay);
             }
         });
 
-        // Materials: Delete row
+        // Materials: Delete row (DOM-based like estimates)
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="delete-material"]');
             if (target) {
+                const container = overlay.querySelector('#materialRows');
+                const items = container.querySelectorAll('.job-line-item');
+
                 // Silently prevent deletion if only one item remains
-                if (this.state.modalState.materials.length <= 1) {
+                if (items.length <= 1) {
                     return;
                 }
+
                 const index = parseInt(target.dataset.index);
-                this.state.modalState.materials.splice(index, 1);
-                this.jobs_refreshMaterials();
+                items[index].remove();
+
+                // Re-index remaining items
+                container.querySelectorAll('.job-line-item').forEach((item, newIndex) => {
+                    item.dataset.index = newIndex;
+                    const inputs = item.querySelectorAll('[data-material]');
+                    inputs.forEach(input => input.dataset.material = newIndex);
+                    const deleteBtn = item.querySelector('[data-action="delete-material"]');
+                    if (deleteBtn) deleteBtn.dataset.index = newIndex;
+                });
+
+                this.jobs_updateMaterialsCounter(overlay);
             }
         });
 
-        // Materials: Input changes
-        overlay.addEventListener('input', (e) => {
-            if (e.target.dataset.material !== undefined) {
-                const index = parseInt(e.target.dataset.material);
-                const field = e.target.dataset.field;
-                let value = e.target.value;
-
-                if (field === 'quantity' || field === 'unit_price') {
-                    // Keep empty values as empty strings, don't convert to 0
-                    value = value === '' ? '' : (parseFloat(value) || '');
-                }
-
-                this.state.modalState.materials[index][field] = value;
-                this.jobs_refreshMaterials();
-            }
-        });
-
-        // Crew: Add row
+        // Crew: Add row (DOM-based like estimates)
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="add-crew"]');
             if (target) {
-                this.state.modalState.crew.push({
-                    name: '',
-                    role: '',
-                    hours: '',
-                    rate: ''
-                });
-                this.jobs_refreshCrew();
+                const container = overlay.querySelector('#crewRows');
+                const currentCount = container.querySelectorAll('.job-line-item').length;
+
+                if (currentCount >= 20) {
+                    alert('Maximum 20 crew members allowed');
+                    return;
+                }
+
+                const newCrew = { name: '', role: '', hours: '', rate: '' };
+                const html = this.jobs_renderCrewRow(newCrew, currentCount);
+                container.insertAdjacentHTML('beforeend', html);
+                this.jobs_updateCrewCounter(overlay);
             }
         });
 
-        // Crew: Delete row
+        // Crew: Delete row (DOM-based like estimates)
         overlay.addEventListener('click', (e) => {
             const target = e.target.closest('[data-action="delete-crew"]');
             if (target) {
+                const container = overlay.querySelector('#crewRows');
+                const items = container.querySelectorAll('.job-line-item');
+
                 // Silently prevent deletion if only one item remains
-                if (this.state.modalState.crew.length <= 1) {
+                if (items.length <= 1) {
                     return;
                 }
+
                 const index = parseInt(target.dataset.index);
-                this.state.modalState.crew.splice(index, 1);
-                this.jobs_refreshCrew();
-            }
-        });
+                items[index].remove();
 
-        // Crew: Input changes
-        overlay.addEventListener('input', (e) => {
-            if (e.target.dataset.crew !== undefined) {
-                const index = parseInt(e.target.dataset.crew);
-                const field = e.target.dataset.field;
-                let value = e.target.value;
+                // Re-index remaining items
+                container.querySelectorAll('.job-line-item').forEach((item, newIndex) => {
+                    item.dataset.index = newIndex;
+                    const inputs = item.querySelectorAll('[data-crew]');
+                    inputs.forEach(input => input.dataset.crew = newIndex);
+                    const deleteBtn = item.querySelector('[data-action="delete-crew"]');
+                    if (deleteBtn) deleteBtn.dataset.index = newIndex;
+                });
 
-                if (field === 'hours' || field === 'rate') {
-                    // Keep empty values as empty strings, don't convert to 0
-                    value = value === '' ? '' : (parseFloat(value) || '');
-                }
-
-                this.state.modalState.crew[index][field] = value;
-                this.jobs_refreshCrew();
+                this.jobs_updateCrewCounter(overlay);
             }
         });
 
@@ -2765,6 +2768,24 @@ window.JobsManagementModule = {
         const container = document.getElementById('photosContainer');
         if (container) {
             container.innerHTML = this.jobs_renderPhotosGrid();
+        }
+    },
+
+    jobs_updateMaterialsCounter(overlay) {
+        const container = overlay.querySelector('#materialRows');
+        const count = container ? container.querySelectorAll('.job-line-item').length : 0;
+        const counterSpan = overlay.querySelector('[data-section="materials"]')?.querySelector('span');
+        if (counterSpan) {
+            counterSpan.textContent = `${count}/50 materials`;
+        }
+    },
+
+    jobs_updateCrewCounter(overlay) {
+        const container = overlay.querySelector('#crewRows');
+        const count = container ? container.querySelectorAll('.job-line-item').length : 0;
+        const counterSpan = overlay.querySelector('[data-section="crew"]')?.querySelector('span');
+        if (counterSpan) {
+            counterSpan.textContent = `${count}/20 crew members`;
         }
     },
 
@@ -2872,6 +2893,37 @@ window.JobsManagementModule = {
 
         const formData = new FormData(form);
 
+        // Collect materials from DOM
+        const materials = [];
+        const materialRows = form.querySelectorAll('#materialRows .job-line-item');
+        materialRows.forEach(row => {
+            const name = row.querySelector('[data-field="name"]')?.value || '';
+            const quantity = parseFloat(row.querySelector('[data-field="quantity"]')?.value) || 0;
+            const unit = row.querySelector('[data-field="unit"]')?.value || '';
+            const unit_price = parseFloat(row.querySelector('[data-field="unit_price"]')?.value) || 0;
+            const supplier = row.querySelector('[data-field="supplier"]')?.value || '';
+
+            // Only include if at least name is provided
+            if (name || quantity || unit_price) {
+                materials.push({ name, quantity, unit, unit_price, supplier });
+            }
+        });
+
+        // Collect crew from DOM
+        const crew_members = [];
+        const crewRows = form.querySelectorAll('#crewRows .job-line-item');
+        crewRows.forEach(row => {
+            const name = row.querySelector('[data-field="name"]')?.value || '';
+            const role = row.querySelector('[data-field="role"]')?.value || '';
+            const hours = parseFloat(row.querySelector('[data-field="hours"]')?.value) || 0;
+            const rate = parseFloat(row.querySelector('[data-field="rate"]')?.value) || 0;
+
+            // Only include if at least name is provided
+            if (name || role || hours || rate) {
+                crew_members.push({ name, role, hours, rate });
+            }
+        });
+
         const jobData = {
             title: formData.get('title'),
             lead_id: formData.get('lead_id') || null,
@@ -2889,8 +2941,8 @@ window.JobsManagementModule = {
             quoted_price: parseFloat(formData.get('quoted_price')) || 0,
             deposit_amount: parseFloat(formData.get('deposit_amount')) || 0,
             deposit_paid: formData.get('deposit_paid') === 'on',
-            materials: this.state.modalState.materials,
-            crew_members: this.state.modalState.crew,
+            materials: materials,
+            crew_members: crew_members,
             photos: this.state.modalState.photos,
             notes: formData.get('notes') || null
         };
