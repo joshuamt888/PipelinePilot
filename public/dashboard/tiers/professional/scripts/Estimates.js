@@ -767,7 +767,12 @@ estimates_renderModalStyles() {
             background: var(--surface);
             color: var(--text-primary);
             font-size: 14px;
-            text-align: left;
+            text-align: left !important;
+        }
+
+        .line-item-quantity,
+        .line-item-rate {
+            text-align: left !important;
         }
 
         .estimate-line-item-total {

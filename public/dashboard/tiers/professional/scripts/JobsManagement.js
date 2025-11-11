@@ -1447,6 +1447,14 @@ window.JobsManagementModule = {
                     background: var(--surface);
                     color: var(--text-primary);
                     font-size: 14px;
+                    text-align: left !important;
+                }
+
+                .job-material-qty,
+                .job-material-unit-price,
+                .job-crew-hours,
+                .job-crew-rate {
+                    text-align: left !important;
                 }
 
                 .job-line-item input:focus {
