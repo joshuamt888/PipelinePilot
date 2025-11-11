@@ -2692,8 +2692,8 @@ estimates_removeLineItem(overlay, index) {
     const container = overlay.querySelector('#lineItemsContainer');
     const items = container.querySelectorAll('.estimate-line-item');
 
+    // Silently prevent deletion if only one item remains
     if (items.length <= 1) {
-        alert('At least one line item required');
         return;
     }
 

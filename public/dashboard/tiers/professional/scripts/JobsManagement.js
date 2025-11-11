@@ -1399,141 +1399,120 @@ window.JobsManagementModule = {
                 }
 
                 /* Materials/Crew Table */
-                .job-dynamic-table {
-                    width: 100%;
-                    border: 2px solid var(--border);
+                /* Line Items (Materials & Crew) */
+                .job-line-items {
+                    background: var(--background);
+                    border: 1px solid var(--border);
                     border-radius: 8px;
-                    overflow: hidden;
+                    padding: 16px;
                 }
 
-                .job-dynamic-table-header {
+                .job-line-item-header {
                     display: grid;
-                    background: var(--surface-hover);
-                    padding: 0.75rem;
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    color: var(--text-secondary);
+                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
+                    color: var(--text-secondary);
                 }
 
-                .job-materials-header {
-                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 0.5fr;
-                    gap: 0.5rem;
+                .job-line-item-header.job-crew-header {
+                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 40px;
                 }
 
-                .job-crew-header {
-                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 0.5fr;
-                    gap: 0.5rem;
-                }
-
-                .job-dynamic-row {
+                .job-line-item {
                     display: grid;
-                    padding: 0.75rem;
-                    border-top: 1px solid var(--border);
-                    gap: 0.5rem;
+                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
                     align-items: center;
                 }
 
-                .job-materials-row {
-                    grid-template-columns: 2fr 0.8fr 0.8fr 1fr 1.5fr 1fr 0.5fr;
+                .job-line-item.job-crew-row {
+                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 40px;
                 }
 
-                .job-crew-row {
-                    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 0.5fr;
-                }
-
-                .job-dynamic-row input {
+                .job-line-item input {
                     padding: 8px 10px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    background: var(--background);
+                    background: var(--surface);
                     color: var(--text-primary);
-                    font-size: 13px;
+                    font-size: 14px;
                 }
 
-                .job-dynamic-row input:focus {
+                .job-line-item input:focus {
                     outline: none;
                     border-color: var(--primary);
                 }
 
-                .job-row-total {
-                    font-weight: 700;
+                .job-line-item-total {
+                    font-weight: 500;
                     color: var(--text-primary);
                 }
 
-                .job-row-delete {
-                    background: none;
-                    border: none;
+                .job-line-item-remove {
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
                     color: #ef4444;
                     cursor: pointer;
-                    padding: 0.25rem;
+                    padding: 8px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     transition: all 0.2s;
                 }
 
-                .job-row-delete:hover {
+                .job-line-item-remove:hover {
                     background: rgba(239, 68, 68, 0.1);
-                    border-radius: 4px;
+                    border-color: #ef4444;
                 }
 
-                .job-row-delete svg {
-                    width: 1rem;
-                    height: 1rem;
-                }
-
-                .job-add-row-btn {
-                    margin-top: 1rem;
-                    padding: 0.75rem 1rem;
-                    border: 2px dashed var(--border);
-                    border-radius: 8px;
-                    background: transparent;
-                    color: var(--text-secondary);
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    cursor: pointer;
+                .job-add-line-item {
                     display: flex;
                     align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
+                    gap: 8px;
+                    padding: 10px;
+                    background: transparent;
+                    border: 1px dashed var(--border);
+                    border-radius: 6px;
+                    color: var(--primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
                     transition: all 0.2s;
+                    margin-top: 12px;
                     width: 100%;
                 }
 
-                .job-add-row-btn:hover {
-                    border-color: #667eea;
-                    color: #667eea;
-                    background: rgba(102, 126, 234, 0.05);
+                .job-add-line-item:hover {
+                    background: rgba(59, 130, 246, 0.05);
+                    border-color: var(--primary);
                 }
 
-                .job-add-row-btn svg {
-                    width: 1rem;
-                    height: 1rem;
+                .job-total-box {
+                    margin-top: 16px;
+                    padding: 16px;
+                    background: rgba(59, 130, 246, 0.05);
+                    border: 1px solid var(--primary);
+                    border-radius: 6px;
+                    text-align: right;
                 }
 
-                .job-table-total {
-                    margin-top: 1rem;
-                    padding: 1rem;
-                    background: var(--surface-hover);
-                    border-radius: 8px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-weight: 700;
-                }
-
-                .job-table-total-label {
+                .job-total-label {
+                    font-size: 14px;
                     color: var(--text-secondary);
-                    font-size: 0.875rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    margin-bottom: 4px;
                 }
 
-                .job-table-total-value {
-                    color: var(--text-primary);
-                    font-size: 1.25rem;
+                .job-total-value {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: var(--primary);
                 }
 
                 /* Photos */
@@ -1979,7 +1958,7 @@ window.JobsManagementModule = {
                             <div class="job-form-section-header">
                                 <h3>Materials</h3>
                                 <button type="button" class="job-form-section-toggle" data-section="materials">
-                                    <span>${this.state.modalState.materials.length} item${this.state.modalState.materials.length !== 1 ? 's' : ''}</span>
+                                    <span>${this.state.modalState.materials.length}/50 materials</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
@@ -1997,7 +1976,7 @@ window.JobsManagementModule = {
                             <div class="job-form-section-header">
                                 <h3>Crew</h3>
                                 <button type="button" class="job-form-section-toggle" data-section="crew">
-                                    <span>${this.state.modalState.crew.length} member${this.state.modalState.crew.length !== 1 ? 's' : ''}</span>
+                                    <span>${this.state.modalState.crew.length}/20 crew members</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
@@ -2180,26 +2159,16 @@ window.JobsManagementModule = {
 
     jobs_renderMaterialsTable() {
         const materials = this.state.modalState.materials;
-
-        if (materials.length === 0) {
-            return `
-                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                    No materials added yet
-                </p>
-                <button type="button" class="job-add-row-btn" data-action="add-material">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    Add Material
-                </button>
-            `;
-        }
-
         const total = materials.reduce((sum, m) => sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
 
+        // Always show at least one row for easy entry
+        const itemsToRender = materials.length === 0 ?
+            [{ name: '', quantity: 1, unit: '', unit_price: 0, supplier: '' }] :
+            materials;
+
         return `
-            <div class="job-dynamic-table">
-                <div class="job-dynamic-table-header job-materials-header">
+            <div class="job-line-items">
+                <div class="job-line-item-header">
                     <div>Name</div>
                     <div>Qty</div>
                     <div>Unit</div>
@@ -2208,17 +2177,21 @@ window.JobsManagementModule = {
                     <div>Total</div>
                     <div></div>
                 </div>
-                ${materials.map((m, i) => this.jobs_renderMaterialRow(m, i)).join('')}
-            </div>
-            <button type="button" class="job-add-row-btn" data-action="add-material">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Add Material
-            </button>
-            <div class="job-table-total">
-                <div class="job-table-total-label">Total Materials</div>
-                <div class="job-table-total-value">${formatCurrency(total)}</div>
+                <div id="materialRows">
+                    ${itemsToRender.map((m, i) => this.jobs_renderMaterialRow(m, i)).join('')}
+                </div>
+                ${materials.length < 50 ? `
+                    <button type="button" class="job-add-line-item" data-action="add-material">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Add Material
+                    </button>
+                ` : ''}
+                <div class="job-total-box">
+                    <div class="job-total-label">Total Materials Cost</div>
+                    <div class="job-total-value">${formatCurrency(total)}</div>
+                </div>
             </div>
         `;
     },
@@ -2226,16 +2199,16 @@ window.JobsManagementModule = {
     jobs_renderMaterialRow(material, index) {
         const total = (material.quantity || 0) * (material.unit_price || 0);
         return `
-            <div class="job-dynamic-row job-materials-row">
-                <input type="text" placeholder="Name" value="${material.name || ''}" data-material="${index}" data-field="name">
-                <input type="number" placeholder="0" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0" max="99999999.99">
-                <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit">
-                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0" max="99999999.99">
-                <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier">
-                <div class="job-row-total">${formatCurrency(total)}</div>
-                <button type="button" class="job-row-delete" data-action="delete-material" data-index="${index}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/>
+            <div class="job-line-item" data-index="${index}">
+                <input type="text" placeholder="Material name" value="${material.name || ''}" data-material="${index}" data-field="name" maxlength="50">
+                <input type="number" placeholder="1" value="${material.quantity || ''}" data-material="${index}" data-field="quantity" step="0.01" min="0">
+                <input type="text" placeholder="pcs" value="${material.unit || ''}" data-material="${index}" data-field="unit" maxlength="10">
+                <input type="number" placeholder="0.00" value="${material.unit_price || ''}" data-material="${index}" data-field="unit_price" step="0.01" min="0">
+                <input type="text" placeholder="Supplier" value="${material.supplier || ''}" data-material="${index}" data-field="supplier" maxlength="50">
+                <div class="job-line-item-total">${formatCurrency(total)}</div>
+                <button type="button" class="job-line-item-remove" data-action="delete-material" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
             </div>
@@ -2244,44 +2217,38 @@ window.JobsManagementModule = {
 
     jobs_renderCrewTable() {
         const crew = this.state.modalState.crew;
-
-        if (crew.length === 0) {
-            return `
-                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                    No crew members added yet
-                </p>
-                <button type="button" class="job-add-row-btn" data-action="add-crew">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    Add Crew Member
-                </button>
-            `;
-        }
-
         const total = crew.reduce((sum, c) => sum + ((c.hours || 0) * (c.rate || 0)), 0);
 
+        // Always show at least one row for easy entry
+        const itemsToRender = crew.length === 0 ?
+            [{ name: '', role: '', hours: 0, rate: 0 }] :
+            crew;
+
         return `
-            <div class="job-dynamic-table">
-                <div class="job-dynamic-table-header job-crew-header">
+            <div class="job-line-items">
+                <div class="job-line-item-header job-crew-header">
                     <div>Name</div>
                     <div>Role</div>
                     <div>Hours</div>
-                    <div>Rate</div>
+                    <div>Rate ($/hr)</div>
                     <div>Total</div>
                     <div></div>
                 </div>
-                ${crew.map((c, i) => this.jobs_renderCrewRow(c, i)).join('')}
-            </div>
-            <button type="button" class="job-add-row-btn" data-action="add-crew">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Add Crew Member
-            </button>
-            <div class="job-table-total">
-                <div class="job-table-total-label">Total Labor Cost</div>
-                <div class="job-table-total-value">${formatCurrency(total)}</div>
+                <div id="crewRows">
+                    ${itemsToRender.map((c, i) => this.jobs_renderCrewRow(c, i)).join('')}
+                </div>
+                ${crew.length < 20 ? `
+                    <button type="button" class="job-add-line-item" data-action="add-crew">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Add Crew Member
+                    </button>
+                ` : ''}
+                <div class="job-total-box">
+                    <div class="job-total-label">Total Labor Cost</div>
+                    <div class="job-total-value">${formatCurrency(total)}</div>
+                </div>
             </div>
         `;
     },
@@ -2289,15 +2256,15 @@ window.JobsManagementModule = {
     jobs_renderCrewRow(member, index) {
         const total = (member.hours || 0) * (member.rate || 0);
         return `
-            <div class="job-dynamic-row job-crew-row">
-                <input type="text" placeholder="Name" value="${member.name || ''}" data-crew="${index}" data-field="name">
-                <input type="text" placeholder="Role" value="${member.role || ''}" data-crew="${index}" data-field="role">
-                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0" max="99999999.99">
-                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0" max="99999999.99">
-                <div class="job-row-total">${formatCurrency(total)}</div>
-                <button type="button" class="job-row-delete" data-action="delete-crew" data-index="${index}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/>
+            <div class="job-line-item job-crew-row" data-index="${index}">
+                <input type="text" placeholder="Crew member name" value="${member.name || ''}" data-crew="${index}" data-field="name" maxlength="50">
+                <input type="text" placeholder="Role/position" value="${member.role || ''}" data-crew="${index}" data-field="role" maxlength="30">
+                <input type="number" placeholder="0" value="${member.hours || ''}" data-crew="${index}" data-field="hours" step="0.5" min="0">
+                <input type="number" placeholder="0.00" value="${member.rate || ''}" data-crew="${index}" data-field="rate" step="0.01" min="0">
+                <div class="job-line-item-total">${formatCurrency(total)}</div>
+                <button type="button" class="job-line-item-remove" data-action="delete-crew" data-index="${index}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px; height: 16px;">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </button>
             </div>
