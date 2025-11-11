@@ -235,10 +235,10 @@ window.EstimatesModule = {
     estimates_renderStats() {
         const { totalQuoted, totalAccepted, totalPending, acceptanceRate } = this.state.stats;
 
-        // Helper to format stat values - show "..." if > 99,999,999.99
+        // Helper to format stat values - show "..." suffix if > 99,999,999.99
         const formatStatValue = (amount) => {
             if (amount > 99999999.99) {
-                return '...';
+                return '$99,999,999.99...';
             }
             return formatCurrency(amount);
         };
@@ -2163,24 +2163,34 @@ estimates_showViewModal(estimateId) {
     overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
         const newStatus = e.target.value;
 
-        // Close modal immediately
+        // Close modal immediately for instant feedback
         overlay.style.opacity = '0';
         setTimeout(() => overlay.remove(), 200);
 
-        // Update in background
+        // Update local state immediately
+        const est = this.state.estimates.find(e => e.id === estimate.id);
+        if (est) {
+            est.status = newStatus;
+        }
+
+        // Update UI immediately
+        this.estimates_calculateStats();
+        this.estimates_instantFilterChange();
+
+        // Update stats section in DOM
+        const container = document.getElementById(this.state.container);
+        if (container) {
+            const statsSection = container.querySelector('.estimates-stats');
+            if (statsSection) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.estimates_renderStats();
+                statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+            }
+        }
+
+        // Update server in background
         try {
             await API.updateEstimate(estimate.id, { status: newStatus });
-
-            // Update local state
-            const est = this.state.estimates.find(e => e.id === estimate.id);
-            if (est) {
-                est.status = newStatus;
-            }
-
-            // Update UI silently
-            this.estimates_calculateStats();
-            this.estimates_instantFilterChange();
-
         } catch (error) {
             console.error('Update status error:', error);
             window.SteadyUtils.showToast('Failed to update status', 'error');
