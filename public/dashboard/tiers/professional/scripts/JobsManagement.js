@@ -2535,10 +2535,23 @@ window.JobsManagementModule = {
 
             // Helper function to validate number inputs
             const validateNumberInput = (input, triggerCalc = false) => {
-                // Save cursor position before modification
-                const cursorPos = input.selectionStart;
                 const oldValue = input.value;
                 let value = input.value;
+
+                // If empty, just allow it
+                if (value === '') {
+                    if (triggerCalc && oldValue !== '') {
+                        // Only trigger calc if we're going from a value to empty
+                        clearTimeout(profitCalcTimeout);
+                        profitCalcTimeout = setTimeout(() => {
+                            this.jobs_updateProfitCalculator();
+                        }, 300);
+                    }
+                    return;
+                }
+
+                // Save cursor position
+                const cursorPos = input.selectionStart;
 
                 // Remove any non-numeric characters except decimal point
                 value = value.replace(/[^0-9.]/g, '');
@@ -2556,13 +2569,13 @@ window.JobsManagementModule = {
 
                 // Get max value and calculate max digits allowed
                 const max = parseFloat(input.getAttribute('max'));
-                if (max) {
+                if (max && value !== '') {
                     // Calculate max whole digits from max value
                     const maxWholeDigits = Math.floor(max).toString().length;
 
                     // If we have a decimal, split and check
                     const currentParts = value.split('.');
-                    if (currentParts[0].length > maxWholeDigits) {
+                    if (currentParts[0] && currentParts[0].length > maxWholeDigits) {
                         currentParts[0] = currentParts[0].substring(0, maxWholeDigits);
                         value = currentParts.join('.');
                     }
@@ -2571,17 +2584,21 @@ window.JobsManagementModule = {
                 // Only update if value changed
                 if (value !== oldValue) {
                     input.value = value;
-                    // Restore cursor position
-                    const newCursorPos = Math.min(cursorPos, value.length);
-                    input.setSelectionRange(newCursorPos, newCursorPos);
+                    // Restore cursor position only if we have a value
+                    if (value.length > 0) {
+                        const newCursorPos = Math.min(cursorPos, value.length);
+                        requestAnimationFrame(() => {
+                            input.setSelectionRange(newCursorPos, newCursorPos);
+                        });
+                    }
                 }
 
-                if (triggerCalc) {
-                    // Debounce profit calculator to prevent scroll issues
+                if (triggerCalc && value !== oldValue) {
+                    // Only trigger if value actually changed, longer debounce
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
-                    }, 100);
+                    }, 300);
                 }
             };
 
@@ -2590,19 +2607,19 @@ window.JobsManagementModule = {
             form.querySelectorAll('[data-calc-trigger]').forEach(input => {
                 input.addEventListener('input', () => validateNumberInput(input, true));
                 input.addEventListener('keypress', (e) => {
-                    // Prevent any non-numeric characters except decimal
-                    if (!/[0-9.]/.test(e.key)) {
+                    // Allow numbers, decimal, backspace, delete, arrows
+                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
                         e.preventDefault();
                     }
                 });
             });
 
-            // Add validation to all number inputs (materials/crew)
-            form.querySelectorAll('input[type="number"]').forEach(input => {
+            // Add validation to all number inputs (materials/crew) - no calc trigger
+            form.querySelectorAll('input[type="number"]:not([data-calc-trigger])').forEach(input => {
                 input.addEventListener('input', () => validateNumberInput(input, false));
                 input.addEventListener('keypress', (e) => {
-                    // Prevent any non-numeric characters except decimal
-                    if (!/[0-9.]/.test(e.key)) {
+                    // Allow numbers, decimal, backspace, delete, arrows
+                    if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
                         e.preventDefault();
                     }
                 });
