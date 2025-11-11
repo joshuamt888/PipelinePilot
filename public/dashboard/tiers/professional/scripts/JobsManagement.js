@@ -2016,7 +2016,7 @@ window.JobsManagementModule = {
                         <!-- MATERIALS (Collapsible) -->
                         <div class="job-form-section">
                             <div class="job-form-section-header job-form-section-toggle" data-section="materials">
-                                <h3>Materials <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <h3>Materials <span style="color: var(--text-tertiary); font-weight: 400; font-size: 0.75rem; text-transform: none;">(optional)</span></h3>
                                 <div class="job-form-section-toggle-info">
                                     <span>${this.state.modalState.materials.length}/50 materials</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2034,7 +2034,7 @@ window.JobsManagementModule = {
                         <!-- CREW (Collapsible) -->
                         <div class="job-form-section">
                             <div class="job-form-section-header job-form-section-toggle" data-section="crew">
-                                <h3>Crew <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <h3>Crew <span style="color: var(--text-tertiary); font-weight: 400; font-size: 0.75rem; text-transform: none;">(optional)</span></h3>
                                 <div class="job-form-section-toggle-info">
                                     <span>${this.state.modalState.crew.length}/20 crew members</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2052,7 +2052,7 @@ window.JobsManagementModule = {
                         <!-- PHOTOS (Collapsible) -->
                         <div class="job-form-section">
                             <div class="job-form-section-header job-form-section-toggle" data-section="photos">
-                                <h3>Photos <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <h3>Photos <span style="color: var(--text-tertiary); font-weight: 400; font-size: 0.75rem; text-transform: none;">(optional)</span></h3>
                                 <div class="job-form-section-toggle-info">
                                     <span>${this.state.modalState.photos.length}/3 photos</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2070,7 +2070,7 @@ window.JobsManagementModule = {
                         <!-- NOTES (Collapsible) -->
                         <div class="job-form-section">
                             <div class="job-form-section-header job-form-section-toggle" data-section="notes">
-                                <h3>Notes <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></h3>
+                                <h3>Notes <span style="color: var(--text-tertiary); font-weight: 400; font-size: 0.75rem; text-transform: none;">(optional)</span></h3>
                                 <div class="job-form-section-toggle-info">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2523,31 +2523,68 @@ window.JobsManagementModule = {
                 });
             }
 
-            // Financial inputs - trigger profit calculator with validation
-            let profitCalcTimeout;
-            form.querySelectorAll('[data-calc-trigger]').forEach(input => {
-                input.addEventListener('input', () => {
-                    // Enforce max values
-                    const max = parseFloat(input.getAttribute('max'));
-                    const value = parseFloat(input.value);
-                    if (value > max) {
-                        input.value = max;
-                    }
+            // Helper function to validate number inputs
+            const validateNumberInput = (input, triggerCalc = false) => {
+                let value = input.value;
 
+                // Remove any non-numeric characters except decimal point
+                value = value.replace(/[^0-9.]/g, '');
+
+                // Only allow one decimal point
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+
+                // Limit to 2 decimal places
+                if (parts.length === 2 && parts[1].length > 2) {
+                    value = parts[0] + '.' + parts[1].substring(0, 2);
+                }
+
+                // Get max value and calculate max digits allowed
+                const max = parseFloat(input.getAttribute('max'));
+                if (max) {
+                    // Calculate max whole digits from max value
+                    const maxWholeDigits = Math.floor(max).toString().length;
+
+                    // If we have a decimal, split and check
+                    const currentParts = value.split('.');
+                    if (currentParts[0].length > maxWholeDigits) {
+                        currentParts[0] = currentParts[0].substring(0, maxWholeDigits);
+                        value = currentParts.join('.');
+                    }
+                }
+
+                input.value = value;
+
+                if (triggerCalc) {
                     // Debounce profit calculator to prevent scroll issues
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
                     }, 100);
+                }
+            };
+
+            // Financial inputs - trigger profit calculator with validation
+            let profitCalcTimeout;
+            form.querySelectorAll('[data-calc-trigger]').forEach(input => {
+                input.addEventListener('input', () => validateNumberInput(input, true));
+                input.addEventListener('keypress', (e) => {
+                    // Prevent any non-numeric characters except decimal
+                    if (!/[0-9.]/.test(e.key)) {
+                        e.preventDefault();
+                    }
                 });
             });
 
-            // Add validation to all number inputs in materials/crew
+            // Add validation to all number inputs (materials/crew)
             form.querySelectorAll('input[type="number"]').forEach(input => {
-                input.addEventListener('input', () => {
-                    const max = parseFloat(input.getAttribute('max'));
-                    if (max && parseFloat(input.value) > max) {
-                        input.value = max;
+                input.addEventListener('input', () => validateNumberInput(input, false));
+                input.addEventListener('keypress', (e) => {
+                    // Prevent any non-numeric characters except decimal
+                    if (!/[0-9.]/.test(e.key)) {
+                        e.preventDefault();
                     }
                 });
             });
