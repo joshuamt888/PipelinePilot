@@ -2117,22 +2117,34 @@ estimates_showViewModal(estimateId) {
 
         if (!confirmed) return;
 
+        // Close modal immediately for instant feedback
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 200);
+
+        // Remove from local state immediately
+        const index = this.state.estimates.findIndex(e => e.id === estimate.id);
+        if (index !== -1) {
+            this.state.estimates.splice(index, 1);
+        }
+
+        // Update UI immediately
+        this.estimates_calculateStats();
+        this.estimates_instantFilterChange();
+
+        // Update stats section in DOM
+        const container = document.getElementById(this.state.container);
+        if (container) {
+            const statsSection = container.querySelector('.estimates-stats');
+            if (statsSection) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.estimates_renderStats();
+                statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+            }
+        }
+
+        // Delete from server in background
         try {
             await API.deleteEstimate(estimate.id);
-
-            // Remove from local state
-            const index = this.state.estimates.findIndex(e => e.id === estimate.id);
-            if (index !== -1) {
-                this.state.estimates.splice(index, 1);
-            }
-
-            // Close modal immediately
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
-
-            // Update UI silently
-            this.estimates_calculateStats();
-            this.estimates_instantFilterChange();
         } catch (error) {
             console.error('Delete estimate error:', error);
             window.SteadyUtils.showToast('Failed to delete estimate', 'error');
