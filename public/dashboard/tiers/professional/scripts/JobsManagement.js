@@ -2553,7 +2553,9 @@ window.JobsManagementModule = {
                 // Check if this should trigger profit calculator
                 const triggerCalc = input.hasAttribute('data-calc-trigger');
 
-                // Get the current value
+                // Save the old value and cursor position
+                const oldValue = input.value;
+                const cursorPos = input.selectionStart;
                 let value = input.value;
 
                 // If empty, just allow it and trigger calc if needed
@@ -2595,11 +2597,19 @@ window.JobsManagementModule = {
                     }
                 }
 
-                // Update the input value
-                input.value = value;
+                // Only update if value changed
+                if (value !== oldValue) {
+                    input.value = value;
+
+                    // Restore cursor position
+                    const newCursorPos = Math.min(cursorPos, value.length);
+                    requestAnimationFrame(() => {
+                        input.setSelectionRange(newCursorPos, newCursorPos);
+                    });
+                }
 
                 // Trigger profit calculator if needed
-                if (triggerCalc) {
+                if (triggerCalc && value !== oldValue) {
                     clearTimeout(profitCalcTimeout);
                     profitCalcTimeout = setTimeout(() => {
                         this.jobs_updateProfitCalculator();
