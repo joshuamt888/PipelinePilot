@@ -559,21 +559,31 @@
         }
 
         async function loadPage(pageName) {
+            // If clicking Jobs while already on Jobs, go back to hub
+            if (appState.currentPage === pageName && pageName === 'jobs') {
+                console.log('Returning to Jobs hub');
+                if (window.JobsModule?.state) {
+                    window.JobsModule.state.activeSection = null;
+                    window.JobsModule.renderSectionSelector();
+                }
+                return;
+            }
+
             // Skip if already on this page
             if (appState.currentPage === pageName) {
                 console.log(`Already on ${pageName}`);
                 return;
             }
-            
+
             console.log(`Loading: ${pageName}`);
-            
+
             // Update UI
             document.querySelectorAll('.page-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${pageName}-content`)?.classList.add('active');
-            
+
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.querySelector(`[data-page="${pageName}"]`)?.classList.add('active');
-            
+
             const titles = {
                 dashboard: 'Dashboard',
                 leads: 'Add Leads',
@@ -587,10 +597,10 @@
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
-            
+
             // Update state
             appState.currentPage = pageName;
-            
+
             // Load module
             await loadModule(pageName);
         }
