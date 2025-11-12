@@ -491,18 +491,15 @@ window.JobsManagementModule = {
                     <div class="jobs-batch-selected">${count} selected</div>
                 </div>
                 <div class="jobs-batch-actions-right">
-                    <button class="jobs-batch-btn" data-action="batch-mark-complete">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke-width="2"/>
-                        </svg>
-                        Mark Complete
-                    </button>
-                    <button class="jobs-batch-btn" data-action="batch-mark-paid">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
-                        </svg>
-                        Mark Paid
-                    </button>
+                    <div class="jobs-batch-status-group">
+                        <label for="batchStatusSelect">Change all status to:</label>
+                        <select id="batchStatusSelect" class="jobs-batch-status-select" data-action="batch-change-status">
+                            <option value="">Select status...</option>
+                            ${this.STATUSES.map(status => `
+                                <option value="${status}">${this.jobs_formatStatus(status)}</option>
+                            `).join('')}
+                        </select>
+                    </div>
                     <button class="jobs-batch-btn delete" data-action="batch-delete">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -546,11 +543,13 @@ window.JobsManagementModule = {
                     const filter = target.dataset.filter;
                     this.jobs_instantFilterChange(filter);
                     break;
-                case 'batch-mark-complete':
-                    await this.jobs_batchMarkComplete();
-                    break;
-                case 'batch-mark-paid':
-                    await this.jobs_batchMarkPaid();
+                case 'batch-change-status':
+                    const newStatus = target.value;
+                    if (newStatus) {
+                        await this.jobs_batchChangeStatus(newStatus);
+                        // Reset dropdown
+                        target.value = '';
+                    }
                     break;
                 case 'batch-delete':
                     await this.jobs_batchDelete();
@@ -757,30 +756,41 @@ window.JobsManagementModule = {
     /**
      * BATCH ACTIONS
      */
-    async jobs_batchMarkComplete() {
+    async jobs_batchChangeStatus(newStatus) {
         const count = this.state.selectedJobIds.length;
-        if (count === 0) return;
+        if (count === 0 || !newStatus) return;
 
         const confirmed = await this.jobs_showConfirmation({
-            title: 'Mark as Complete',
-            message: `Are you sure you want to mark ${count} job${count > 1 ? 's' : ''} as complete?`,
-            confirmText: 'Mark Complete',
+            title: 'Change Status',
+            message: `Are you sure you want to change ${count} job${count > 1 ? 's' : ''} to ${this.jobs_formatStatus(newStatus)}?`,
+            confirmText: 'Change Status',
             type: 'success'
         });
 
         if (!confirmed) return;
 
         try {
-            await API.batchUpdateJobs(this.state.selectedJobIds, {
-                status: 'completed',
-                completed_at: new Date().toISOString()
-            });
+            // Build update data
+            const updateData = { status: newStatus };
+
+            // Add timestamp fields for specific statuses
+            if (newStatus === 'completed') {
+                updateData.completed_at = new Date().toISOString();
+            }
+            if (newStatus === 'paid') {
+                updateData.payment_status = 'paid';
+            }
+
+            await API.batchUpdateJobs(this.state.selectedJobIds, updateData);
 
             // Update local state
             this.state.selectedJobIds.forEach(id => {
                 const job = this.state.jobs.find(j => j.id === id);
                 if (job) {
-                    job.status = 'completed';
+                    job.status = newStatus;
+                    if (newStatus === 'paid') {
+                        job.payment_status = 'paid';
+                    }
                 }
             });
 
@@ -791,51 +801,9 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
 
-            window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} marked as complete`, 'success');
+            window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} updated to ${this.jobs_formatStatus(newStatus)}`, 'success');
         } catch (error) {
-            console.error('Batch mark complete error:', error);
-            window.SteadyUtils.showToast('Failed to update jobs', 'error');
-        }
-    },
-
-    async jobs_batchMarkPaid() {
-        const count = this.state.selectedJobIds.length;
-        if (count === 0) return;
-
-        const confirmed = await this.jobs_showConfirmation({
-            title: 'Mark as Paid',
-            message: `Are you sure you want to mark ${count} job${count > 1 ? 's' : ''} as paid?`,
-            confirmText: 'Mark Paid',
-            type: 'success'
-        });
-
-        if (!confirmed) return;
-
-        try {
-            await API.batchUpdateJobs(this.state.selectedJobIds, {
-                status: 'paid',
-                payment_status: 'paid'
-            });
-
-            // Update local state
-            this.state.selectedJobIds.forEach(id => {
-                const job = this.state.jobs.find(j => j.id === id);
-                if (job) {
-                    job.status = 'paid';
-                    job.payment_status = 'paid';
-                }
-            });
-
-            // Clear selections and exit batch mode
-            this.state.selectedJobIds = [];
-            this.state.batchMode = false;
-
-            this.jobs_calculateStats();
-            this.jobs_instantFilterChange();
-
-            window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} marked as paid`, 'success');
-        } catch (error) {
-            console.error('Batch mark paid error:', error);
+            console.error('Batch change status error:', error);
             window.SteadyUtils.showToast('Failed to update jobs', 'error');
         }
     },
@@ -3380,9 +3348,9 @@ window.JobsManagementModule = {
                 j.status = newStatus;
             }
 
-            // Update UI immediately
+            // Update UI immediately and switch to matching tab
             this.jobs_calculateStats();
-            this.jobs_instantFilterChange();
+            this.jobs_instantFilterChange(newStatus);
 
             // Update server in background
             try {
@@ -5182,6 +5150,48 @@ window.JobsManagementModule = {
 .jobs-batch-btn.delete:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
+}
+
+.jobs-batch-status-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.jobs-batch-status-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.jobs-batch-status-select {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+    min-width: 180px;
+}
+
+.jobs-batch-status-select:hover {
+    border-color: #667eea;
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.jobs-batch-status-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* EMPTY STATE */

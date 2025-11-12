@@ -453,18 +453,15 @@ window.EstimatesModule = {
                     <div class="estimates-batch-selected">${count} selected</div>
                 </div>
                 <div class="estimates-batch-actions-right">
-                    <button class="estimates-batch-btn" data-action="batch-mark-sent">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>
-                        </svg>
-                        Mark Sent
-                    </button>
-                    <button class="estimates-batch-btn" data-action="batch-mark-accepted">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
-                        </svg>
-                        Mark Accepted
-                    </button>
+                    <div class="estimates-batch-status-group">
+                        <label for="batchStatusSelect">Change all status to:</label>
+                        <select id="batchStatusSelect" class="estimates-batch-status-select" data-action="batch-change-status">
+                            <option value="">Select status...</option>
+                            ${this.STATUSES.map(status => `
+                                <option value="${status}">${this.estimates_formatStatus(status)}</option>
+                            `).join('')}
+                        </select>
+                    </div>
                     <button class="estimates-batch-btn delete" data-action="batch-delete">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -2181,9 +2178,9 @@ estimates_showViewModal(estimateId) {
             est.status = newStatus;
         }
 
-        // Update UI immediately
+        // Update UI immediately and switch to matching tab
         this.estimates_calculateStats();
-        this.estimates_instantFilterChange();
+        this.estimates_instantFilterChange(newStatus);
 
         // Update stats section in DOM
         const container = document.getElementById(this.state.container);
@@ -3254,11 +3251,13 @@ estimates_formatStatus(status) {
                     const filter = target.dataset.filter;
                     this.estimates_instantFilterChange(filter);
                     break;
-                case 'batch-mark-sent':
-                    await this.estimates_batchMarkSent();
-                    break;
-                case 'batch-mark-accepted':
-                    await this.estimates_batchMarkAccepted();
+                case 'batch-change-status':
+                    const newStatus = target.value;
+                    if (newStatus) {
+                        await this.estimates_batchChangeStatus(newStatus);
+                        // Reset dropdown
+                        target.value = '';
+                    }
                     break;
                 case 'batch-delete':
                     await this.estimates_batchDelete();
@@ -3472,74 +3471,39 @@ estimates_formatStatus(status) {
     /**
      * BATCH ACTIONS
      */
-    async estimates_batchMarkSent() {
+    async estimates_batchChangeStatus(newStatus) {
         const count = this.state.selectedEstimateIds.length;
-        if (count === 0) return;
+        if (count === 0 || !newStatus) return;
 
         const confirmed = await this.estimates_showConfirmation({
-            title: 'Mark as Sent',
-            message: `Are you sure you want to mark ${count} estimate${count > 1 ? 's' : ''} as sent?`,
-            confirmText: 'Mark Sent',
-            type: 'warning'
-        });
-
-        if (!confirmed) return;
-
-        try {
-            // Batch update in backend
-            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
-                status: 'sent',
-                sent_at: new Date().toISOString()
-            });
-
-            // Update local state
-            this.state.selectedEstimateIds.forEach(id => {
-                const estimate = this.state.estimates.find(e => e.id === id);
-                if (estimate) {
-                    estimate.status = 'sent';
-                }
-            });
-
-            // Clear selections and exit batch mode
-            this.state.selectedEstimateIds = [];
-            this.state.batchMode = false;
-
-            // Instant UI update without reload
-            this.estimates_calculateStats();
-            this.estimates_instantFilterChange();
-
-            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as sent`, 'success');
-        } catch (error) {
-            console.error('Batch mark sent error:', error);
-            window.SteadyUtils.showToast('Failed to update estimates', 'error');
-        }
-    },
-
-    async estimates_batchMarkAccepted() {
-        const count = this.state.selectedEstimateIds.length;
-        if (count === 0) return;
-
-        const confirmed = await this.estimates_showConfirmation({
-            title: 'Mark as Accepted',
-            message: `Are you sure you want to mark ${count} estimate${count > 1 ? 's' : ''} as accepted?`,
-            confirmText: 'Mark Accepted',
+            title: 'Change Status',
+            message: `Are you sure you want to change ${count} estimate${count > 1 ? 's' : ''} to ${this.estimates_formatStatus(newStatus)}?`,
+            confirmText: 'Change Status',
             type: 'success'
         });
 
         if (!confirmed) return;
 
         try {
+            // Build update data
+            const updateData = { status: newStatus };
+
+            // Add timestamp fields for specific statuses
+            if (newStatus === 'sent') {
+                updateData.sent_at = new Date().toISOString();
+            }
+            if (newStatus === 'accepted') {
+                updateData.accepted_at = new Date().toISOString();
+            }
+
             // Batch update in backend
-            await API.batchUpdateEstimates(this.state.selectedEstimateIds, {
-                status: 'accepted',
-                accepted_at: new Date().toISOString()
-            });
+            await API.batchUpdateEstimates(this.state.selectedEstimateIds, updateData);
 
             // Update local state
             this.state.selectedEstimateIds.forEach(id => {
                 const estimate = this.state.estimates.find(e => e.id === id);
                 if (estimate) {
-                    estimate.status = 'accepted';
+                    estimate.status = newStatus;
                 }
             });
 
@@ -3551,9 +3515,9 @@ estimates_formatStatus(status) {
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
-            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} marked as accepted`, 'success');
+            window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
         } catch (error) {
-            console.error('Batch mark accepted error:', error);
+            console.error('Batch change status error:', error);
             window.SteadyUtils.showToast('Failed to update estimates', 'error');
         }
     },
@@ -4783,6 +4747,48 @@ estimates_formatStatus(status) {
 .estimates-batch-btn.delete:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: #ef4444;
+}
+
+.estimates-batch-status-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.estimates-batch-status-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.estimates-batch-status-select {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+    min-width: 180px;
+}
+
+.estimates-batch-status-select:hover {
+    border-color: #667eea;
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.estimates-batch-status-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* EMPTY STATE */
