@@ -1153,8 +1153,8 @@ window.ClientsModule = {
             }, 200);
         });
 
-        // Edit estimate
-        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
+        // Edit estimate - SELF-CONTAINED
+        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', () => {
             // Close all popups instantly
             overlay.remove();
             const clientModal = document.getElementById('clientViewModal');
@@ -1162,44 +1162,8 @@ window.ClientsModule = {
                 clientModal.remove();
             }
 
-            // Ensure EstimatesModule has data loaded
-            if (window.EstimatesModule) {
-                try {
-                    // Load estimates and leads data into the module
-                    const [estimates, leadsData] = await Promise.all([
-                        API.getEstimates(),
-                        API.getLeads()
-                    ]);
-
-                    window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
-                    window.EstimatesModule.state.leads = leadsData?.all || [];
-
-                    // Now call the edit modal
-                    if (window.EstimatesModule.estimates_showCreateModal) {
-                        window.EstimatesModule.estimates_showCreateModal(estimate.id);
-
-                        // Keep Clients module visible
-                        requestAnimationFrame(() => {
-                            this.render();
-                        });
-
-                        // Watch for when edit modal closes, then reload Clients data
-                        const checkEditModalClosed = setInterval(() => {
-                            const editModal = document.querySelector('.estimate-modal-overlay');
-                            if (!editModal) {
-                                clearInterval(checkEditModalClosed);
-                                // Reload Clients data to show updated estimate
-                                this.loadData().then(() => {
-                                    this.render();
-                                });
-                            }
-                        }, 50);
-                    }
-                } catch (error) {
-                    console.error('Error loading estimate data:', error);
-                    alert('Failed to load estimate data');
-                }
-            }
+            // Show integrated estimate edit modal
+            this.showEstimateEditModal(estimate);
         });
 
         // Download client copy
@@ -2001,8 +1965,8 @@ window.ClientsModule = {
             }, 200);
         });
 
-        // Edit job
-        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', async () => {
+        // Edit job - SELF-CONTAINED
+        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', () => {
             // Close all popups instantly
             overlay.remove();
             const clientModal = document.getElementById('clientViewModal');
@@ -2010,44 +1974,8 @@ window.ClientsModule = {
                 clientModal.remove();
             }
 
-            // Ensure JobsManagementModule has data loaded
-            if (window.JobsManagementModule) {
-                try {
-                    // Load jobs and leads data into the module
-                    const [jobs, leadsData] = await Promise.all([
-                        API.getJobs(),
-                        API.getLeads()
-                    ]);
-
-                    window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
-                    window.JobsManagementModule.state.leads = leadsData?.all || [];
-
-                    // Now call the edit modal
-                    if (window.JobsManagementModule.jobs_showCreateModal) {
-                        window.JobsManagementModule.jobs_showCreateModal(job.id);
-
-                        // Keep Clients module visible
-                        requestAnimationFrame(() => {
-                            this.render();
-                        });
-
-                        // Watch for when edit modal closes, then reload Clients data
-                        const checkEditModalClosed = setInterval(() => {
-                            const editModal = document.querySelector('.job-modal-overlay');
-                            if (!editModal) {
-                                clearInterval(checkEditModalClosed);
-                                // Reload Clients data to show updated job
-                                this.loadData().then(() => {
-                                    this.render();
-                                });
-                            }
-                        }, 50);
-                    }
-                } catch (error) {
-                    console.error('Error loading job data:', error);
-                    alert('Failed to load job data');
-                }
-            }
+            // Show integrated job edit modal
+            this.showJobEditModal(job);
         });
 
         // Update status
@@ -2483,6 +2411,436 @@ window.ClientsModule = {
         doc.save(filename);
 
         window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
+    },
+
+    /**
+     * Show Estimate Edit Modal - SELF-CONTAINED
+     */
+    async showEstimateEditModal(estimate) {
+        // Load fresh data
+        const [allEstimates, leadsData] = await Promise.all([
+            API.getEstimates(),
+            API.getLeads()
+        ]);
+
+        const freshEstimate = allEstimates.find(e => e.id === estimate.id);
+        if (!freshEstimate) {
+            alert('Estimate not found');
+            return;
+        }
+
+        const allLeads = leadsData?.all || [];
+        const lineItems = freshEstimate.line_items || [{ description: '', quantity: 1, rate: 0 }];
+
+        const defaultExpiry = new Date();
+        defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+        const expiryDate = freshEstimate.expires_at ? freshEstimate.expires_at.split('T')[0] : defaultExpiry.toISOString().split('T')[0];
+
+        const overlay = document.createElement('div');
+        overlay.className = 'estimate-modal-overlay';
+        overlay.style.zIndex = '10001';
+        overlay.innerHTML = `
+            <div class="estimate-modal">
+                <div class="estimate-modal-header">
+                    <h2>Edit Estimate</h2>
+                    <button class="estimate-modal-close" data-action="close">×</button>
+                </div>
+
+                <div class="estimate-modal-body">
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Basic Information</div>
+
+                        <div class="estimate-form-group">
+                            <label>Title *</label>
+                            <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${this.escapeHtml(freshEstimate.title || '')}" maxlength="35" required>
+                        </div>
+
+                        <div class="estimate-form-row">
+                            <div class="estimate-form-group">
+                                <label>Expires On</label>
+                                <input type="date" id="estimateExpiry" value="${expiryDate}" ${!freshEstimate.expires_at ? 'disabled' : ''}>
+                                <div style="margin-top: 0.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" id="estimateNoExpiry" ${!freshEstimate.expires_at ? 'checked' : ''}>
+                                        No expiration
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="estimate-form-group">
+                                <label>Status</label>
+                                <select id="estimateStatus">
+                                    <option value="draft" ${freshEstimate.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                    <option value="sent" ${freshEstimate.status === 'sent' ? 'selected' : ''}>Sent</option>
+                                    <option value="accepted" ${freshEstimate.status === 'accepted' ? 'selected' : ''}>Accepted</option>
+                                    <option value="rejected" ${freshEstimate.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                    <option value="expired" ${freshEstimate.status === 'expired' ? 'selected' : ''}>Expired</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="estimate-form-group">
+                            <label>Description</label>
+                            <textarea id="estimateDescription" placeholder="Brief description..." maxlength="500">${this.escapeHtml(freshEstimate.description || '')}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Line Items</div>
+                        <div class="estimate-line-items">
+                            <div class="estimate-line-item-header">
+                                <div>Description</div>
+                                <div>Qty</div>
+                                <div>Rate</div>
+                                <div></div>
+                            </div>
+                            <div id="lineItemsContainer">
+                                ${lineItems.map((item, i) => `
+                                    <div class="estimate-line-item">
+                                        <input type="text" class="line-item-description" placeholder="Description" value="${this.escapeHtml(item.description || '')}" data-field="description" maxlength="100">
+                                        <input type="number" class="line-item-quantity" placeholder="0" value="${item.quantity || 1}" data-field="quantity" min="0" step="0.01">
+                                        <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate" min="0" step="0.01">
+                                        <button type="button" class="line-item-remove" data-action="remove-line-item">×</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button type="button" class="estimate-add-line-item" data-action="add-line-item">
+                                + Add Line Item
+                            </button>
+
+                            <div class="estimate-total-box">
+                                <div class="estimate-total-label">Total Estimate</div>
+                                <div class="estimate-total-value" id="estimateTotalDisplay">${this.formatCurrency(freshEstimate.total_price || 0)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Terms & Conditions</div>
+                        <div class="estimate-form-group">
+                            <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc..." maxlength="1000">${this.escapeHtml(freshEstimate.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.')}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="estimate-form-section">
+                        <div class="estimate-form-section-title">Internal Notes</div>
+                        <div class="estimate-form-group">
+                            <textarea id="estimateNotes" placeholder="Internal notes..." maxlength="500">${this.escapeHtml(freshEstimate.notes || '')}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="estimate-modal-footer">
+                    <button class="estimate-modal-btn estimate-modal-btn-cancel" data-action="close">Cancel</button>
+                    <button class="estimate-modal-btn estimate-modal-btn-save" data-action="save">Save Estimate</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            this.updateEstimateTotal();
+        });
+
+        // No expiry checkbox
+        const noExpiryCheckbox = overlay.querySelector('#estimateNoExpiry');
+        const expiryInput = overlay.querySelector('#estimateExpiry');
+        noExpiryCheckbox.addEventListener('change', () => {
+            expiryInput.disabled = noExpiryCheckbox.checked;
+        });
+
+        // Add line item
+        overlay.querySelector('[data-action="add-line-item"]').addEventListener('click', () => {
+            const container = overlay.querySelector('#lineItemsContainer');
+            const currentItems = container.querySelectorAll('.estimate-line-item');
+            if (currentItems.length >= 50) {
+                alert('Maximum 50 line items');
+                return;
+            }
+            const newRow = `
+                <div class="estimate-line-item">
+                    <input type="text" class="line-item-description" placeholder="Description" value="" data-field="description" maxlength="100">
+                    <input type="number" class="line-item-quantity" placeholder="0" value="1" data-field="quantity" min="0" step="0.01">
+                    <input type="number" class="line-item-rate" placeholder="0.00" value="0" data-field="rate" min="0" step="0.01">
+                    <button type="button" class="line-item-remove" data-action="remove-line-item">×</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', newRow);
+            this.updateEstimateTotal();
+        });
+
+        // Line item changes
+        overlay.addEventListener('input', (e) => {
+            if (e.target.closest('.estimate-line-item')) {
+                this.updateEstimateTotal();
+            }
+        });
+
+        // Remove line item
+        overlay.addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="remove-line-item"]')) {
+                e.target.closest('.estimate-line-item').remove();
+                this.updateEstimateTotal();
+            }
+        });
+
+        // Close
+        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            });
+        });
+
+        // Save
+        overlay.querySelector('[data-action="save"]').addEventListener('click', async () => {
+            await this.saveEstimate(freshEstimate.id, overlay);
+        });
+    },
+
+    /**
+     * Update estimate total
+     */
+    updateEstimateTotal() {
+        const overlay = document.querySelector('.estimate-modal-overlay');
+        if (!overlay) return;
+
+        const items = overlay.querySelectorAll('.estimate-line-item');
+        let total = 0;
+
+        items.forEach(item => {
+            const qty = parseFloat(item.querySelector('[data-field="quantity"]').value) || 0;
+            const rate = parseFloat(item.querySelector('[data-field="rate"]').value) || 0;
+            total += qty * rate;
+        });
+
+        const totalDisplay = overlay.querySelector('#estimateTotalDisplay');
+        if (totalDisplay) {
+            totalDisplay.textContent = this.formatCurrency(total);
+        }
+    },
+
+    /**
+     * Save estimate
+     */
+    async saveEstimate(estimateId, overlay) {
+        const titleInput = overlay.querySelector('#estimateTitle');
+        if (!titleInput.value.trim()) {
+            alert('Title is required');
+            return;
+        }
+
+        // Collect line items
+        const lineItems = [];
+        const itemRows = overlay.querySelectorAll('.estimate-line-item');
+        itemRows.forEach(row => {
+            const description = row.querySelector('[data-field="description"]').value;
+            const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
+            const rate = parseFloat(row.querySelector('[data-field="rate"]').value) || 0;
+
+            if (description || quantity || rate) {
+                lineItems.push({ description, quantity, rate });
+            }
+        });
+
+        // Calculate total
+        const totalPrice = lineItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+
+        // Handle expiry
+        const noExpiry = overlay.querySelector('#estimateNoExpiry').checked;
+        const expiresAt = noExpiry ? null : overlay.querySelector('#estimateExpiry').value;
+
+        const estimateData = {
+            title: titleInput.value.trim(),
+            status: overlay.querySelector('#estimateStatus').value,
+            expires_at: expiresAt,
+            description: overlay.querySelector('#estimateDescription').value.trim() || null,
+            line_items: lineItems,
+            total_price: totalPrice,
+            terms: overlay.querySelector('#estimateTerms').value.trim() || null,
+            notes: overlay.querySelector('#estimateNotes').value.trim() || null
+        };
+
+        try {
+            overlay.remove();
+
+            await API.updateEstimate(estimateId, estimateData);
+
+            await this.loadData();
+            this.render();
+
+            window.SteadyUtils.showToast('Estimate updated successfully', 'success');
+        } catch (error) {
+            console.error('[Clients] Save estimate error:', error);
+            window.SteadyUtils.showToast('Failed to save estimate', 'error');
+        }
+    },
+
+    /**
+     * Show Job Edit Modal - SELF-CONTAINED
+     */
+    async showJobEditModal(job) {
+        // Load fresh data
+        const allJobs = await API.getJobs();
+        const freshJob = allJobs.find(j => j.id === job.id);
+        if (!freshJob) {
+            alert('Job not found');
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'job-modal-overlay';
+        overlay.style.zIndex = '10001';
+        overlay.innerHTML = `
+            <div class="job-modal">
+                <div class="job-modal-header">
+                    <h2>Edit Job</h2>
+                    <button class="job-modal-close" data-action="close">×</button>
+                </div>
+
+                <div class="job-modal-body">
+                    <div class="job-form-section">
+                        <div class="job-form-section-title">Basic Information</div>
+
+                        <div class="job-form-group">
+                            <label>Title *</label>
+                            <input type="text" id="jobTitle" placeholder="e.g., Kitchen Installation" value="${this.escapeHtml(freshJob.title || '')}" maxlength="100" required>
+                        </div>
+
+                        <div class="job-form-row">
+                            <div class="job-form-group">
+                                <label>Job Type</label>
+                                <input type="text" id="jobType" placeholder="e.g., Plumbing" value="${this.escapeHtml(freshJob.job_type || '')}" maxlength="50">
+                            </div>
+
+                            <div class="job-form-group">
+                                <label>Status</label>
+                                <select id="jobStatus">
+                                    <option value="scheduled" ${freshJob.status === 'scheduled' ? 'selected' : ''}>Scheduled</option>
+                                    <option value="in_progress" ${freshJob.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="completed" ${freshJob.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    <option value="on_hold" ${freshJob.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                                    <option value="cancelled" ${freshJob.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="job-form-group">
+                            <label>Scheduled Date</label>
+                            <input type="date" id="jobScheduledDate" value="${freshJob.scheduled_date ? freshJob.scheduled_date.split('T')[0] : ''}">
+                        </div>
+
+                        <div class="job-form-group">
+                            <label>Description</label>
+                            <textarea id="jobDescription" placeholder="Job details..." maxlength="1000">${this.escapeHtml(freshJob.description || '')}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="job-form-section">
+                        <div class="job-form-section-title">Financial Details</div>
+
+                        <div class="job-form-row">
+                            <div class="job-form-group">
+                                <label>Material Cost</label>
+                                <input type="number" id="jobMaterialCost" placeholder="0.00" value="${freshJob.material_cost || ''}" min="0" step="0.01">
+                            </div>
+
+                            <div class="job-form-group">
+                                <label>Labor Rate ($/hr)</label>
+                                <input type="number" id="jobLaborRate" placeholder="0.00" value="${freshJob.labor_rate || ''}" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="job-form-row">
+                            <div class="job-form-group">
+                                <label>Estimated Labor Hours</label>
+                                <input type="number" id="jobLaborHours" placeholder="0" value="${freshJob.estimated_labor_hours || ''}" min="0" step="0.5">
+                            </div>
+
+                            <div class="job-form-group">
+                                <label>Other Expenses</label>
+                                <input type="number" id="jobOtherExpenses" placeholder="0.00" value="${freshJob.other_expenses || ''}" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="job-form-group">
+                            <label>Quoted Price</label>
+                            <input type="number" id="jobQuotedPrice" placeholder="0.00" value="${freshJob.quoted_price || ''}" min="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="job-form-section">
+                        <div class="job-form-section-title">Internal Notes</div>
+                        <div class="job-form-group">
+                            <textarea id="jobNotes" placeholder="Internal notes..." maxlength="1000">${this.escapeHtml(freshJob.notes || '')}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="job-modal-footer">
+                    <button class="job-modal-btn job-modal-btn-cancel" data-action="close">Cancel</button>
+                    <button class="job-modal-btn job-modal-btn-save" data-action="save">Save Job</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+        });
+
+        // Close
+        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            });
+        });
+
+        // Save
+        overlay.querySelector('[data-action="save"]').addEventListener('click', async () => {
+            await this.saveJob(freshJob.id, overlay);
+        });
+    },
+
+    /**
+     * Save job
+     */
+    async saveJob(jobId, overlay) {
+        const titleInput = overlay.querySelector('#jobTitle');
+        if (!titleInput.value.trim()) {
+            alert('Title is required');
+            return;
+        }
+
+        const jobData = {
+            title: titleInput.value.trim(),
+            status: overlay.querySelector('#jobStatus').value,
+            job_type: overlay.querySelector('#jobType').value.trim() || null,
+            scheduled_date: overlay.querySelector('#jobScheduledDate').value || null,
+            description: overlay.querySelector('#jobDescription').value.trim() || null,
+            material_cost: parseFloat(overlay.querySelector('#jobMaterialCost').value) || 0,
+            labor_rate: parseFloat(overlay.querySelector('#jobLaborRate').value) || 0,
+            estimated_labor_hours: parseFloat(overlay.querySelector('#jobLaborHours').value) || 0,
+            other_expenses: parseFloat(overlay.querySelector('#jobOtherExpenses').value) || 0,
+            quoted_price: parseFloat(overlay.querySelector('#jobQuotedPrice').value) || 0,
+            notes: overlay.querySelector('#jobNotes').value.trim() || null
+        };
+
+        try {
+            overlay.remove();
+
+            await API.updateJob(jobId, jobData);
+
+            await this.loadData();
+            this.render();
+
+            window.SteadyUtils.showToast('Job updated successfully', 'success');
+        } catch (error) {
+            console.error('[Clients] Save job error:', error);
+            window.SteadyUtils.showToast('Failed to save job', 'error');
+        }
     },
 
     /**
