@@ -1,7 +1,7 @@
-# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v13.1
-**"JOBS HUB COMPLETE - 2-SECTION ARCHITECTURE"**
+# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v13.3
+**"JOBS HUB COMPLETE - 3-SECTION ARCHITECTURE (CLIENTS ACCESSIBLE VIA HUB ONLY)"**
 
-**Status:** Jobs Hub ✅ | Goals 100% | Estimates 100% | Jobs Management 100% | Database Clean | API Optimized
+**Status:** Jobs Hub ✅ | Goals 100% | Estimates 100% | Jobs Management 100% | Clients Placeholder ✅ | Database Clean | API Optimized
 **Philosophy:** Manual CRM + Smart Auto-Tracking + Professional UI + Unified Project Hub
 
 ---
@@ -1055,8 +1055,9 @@ API.toggleFeature(name, enabled)
 │                   ├── Scheduling.js    ✅ Complete
 │                   ├── Goals.js         ✅ 100% COMPLETE (recurring + completion count)
 │                   ├── Estimates.js     ✅ 100% COMPLETE (batch ops + PDF export)
-│                   ├── Jobs.js          ✅ NEW - Parent Hub Container (2 sections)
+│                   ├── Jobs.js          ✅ NEW - Parent Hub Container (3 sections)
 │                   ├── JobsManagement.js ✅ 100% COMPLETE (actual jobs functionality)
+│                   ├── Clients.js       ✅ Placeholder (accessible via Jobs Hub only)
 │                   └── Settings.js      🔨 Needs Preferences tab
 ```
 
@@ -2127,24 +2128,27 @@ Building estimates first means:
 
 ## 🏢 JOBS HUB - NEW ARCHITECTURE v13.0
 
-**Status:** ✅ COMPLETE - Jobs is now a parent container with 2 sections
+**Status:** ✅ COMPLETE - Jobs is now a parent container with 3 sections
 
 ### Overview
 
 Jobs has been restructured from a single module into a **parent hub** that consolidates project management features. This creates a unified "Project Management Hub" accessible from the navigation.
+
+**Important:** Clients is ONLY accessible through the Jobs Hub, NOT from the main navigation. This keeps the sidebar clean while grouping related project management features together.
 
 ### Architecture
 
 ```
 Jobs (Navigation) → Jobs Hub (Parent Container)
                     ├── Estimates Section
-                    └── Jobs Section
+                    ├── Jobs Section
+                    └── Clients Section (Hub-only, NOT in main nav)
 ```
 
 **When users click "Jobs" in the navigation:**
-1. They see 2 large, beautiful blocks: Estimates, Jobs
+1. They see 3 large, beautiful blocks: Estimates, Jobs, Clients
 2. Clicking any block loads that module inside the Jobs hub
-3. A "Back to Hub" button returns to the 2-block selector
+3. A "Back to Hub" button returns to the 3-block selector
 
 ### Files Structure
 
@@ -2153,11 +2157,12 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
   Jobs.js              // Parent hub container
   JobsManagement.js    // Actual jobs functionality
   Estimates.js         // Estimates module (unchanged)
+  Clients.js           // Clients placeholder (Hub-only access)
 ```
 
 **Jobs.js (Parent Hub):**
 - `window.JobsModule` - Parent container
-- Shows 2-block selector on init
+- Shows 3-block selector on init
 - Routes to appropriate sub-module when clicked
 - Provides "Back to Hub" navigation
 
@@ -2166,19 +2171,29 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 - Contains all job tracking, profit calculations, etc.
 - Loaded when "Jobs" block is clicked
 
+**Clients.js:**
+- `window.ClientsModule` - Placeholder (Coming Soon)
+- Only accessible through Jobs Hub
+- NOT in main navigation
+- Future: client management, project history, communication logs
+
 ### Navigation Changes
 
 **Removed from Navigation:**
 - ❌ Estimates (no longer a top-level nav item)
+- ❌ Clients (never added to main nav - Hub-only access)
 
-**Estimates is now accessible via:**
-- Jobs → Estimates block
+**How to access project management features:**
+- Estimates: Jobs → Estimates block
+- Jobs: Jobs → Jobs block
+- Clients: Jobs → Clients block
 
 **Why this structure?**
 - Groups related project management features
-- Reduces nav clutter
-- Natural workflow: Estimate → Job
-- Estimates and Jobs are tightly coupled
+- Reduces nav clutter (no "Clients" in sidebar)
+- Natural workflow: Estimate → Job → Client
+- All project-related features in one hub
+- Cleaner main navigation
 
 ### User Flow Examples
 
@@ -2194,6 +2209,12 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 3. Jobs Management module loads
 4. Full job tracking, profit calculations, etc.
 
+**Manage Clients (Coming Soon):**
+1. Click "Jobs" in nav
+2. Click "Clients" block
+3. Clients module loads
+4. View client information, project history, communication logs
+
 ### Implementation Details
 
 **Jobs.js structure:**
@@ -2201,11 +2222,11 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 window.JobsModule = {
     state: {
         container: 'jobs-content',
-        activeSection: null  // 'estimates' or 'jobs'
+        activeSection: null  // 'estimates', 'jobs', or 'clients'
     },
 
     async init(targetContainer) {
-        // Show 2-block selector
+        // Show 3-block selector
         this.renderSectionSelector();
     },
 
@@ -2213,6 +2234,7 @@ window.JobsModule = {
         // Load appropriate module:
         // - 'estimates' → EstimatesModule.init('jobs-section-content')
         // - 'jobs' → JobsManagementModule.init('jobs-section-content')
+        // - 'clients' → ClientsModule.init('jobs-section-content')
     }
 }
 ```
@@ -2221,7 +2243,7 @@ window.JobsModule = {
 ```
 #jobs-content (main container)
   └── .jobs-hub-container
-       ├── .jobs-hub-sections (2 blocks)
+       ├── .jobs-hub-sections (3 blocks)
        └── #jobs-section-content (sub-module renders here)
 ```
 
@@ -2241,10 +2263,11 @@ window.JobsModule = {
 
 ### Benefits
 
-✅ **Cleaner Navigation** - One entry point for all project management
-✅ **Better UX** - Related features grouped together
+✅ **Cleaner Navigation** - One entry point for all project management, Clients not in sidebar
+✅ **Better UX** - Related features grouped together (Estimates → Jobs → Clients)
 ✅ **Scalable** - Easy to add more sections (Invoices, Contracts, etc.)
 ✅ **Flexible** - Each sub-module maintains full functionality
+✅ **Organized** - Clients accessible through Jobs Hub only, keeping main nav clean
 
 ### Future Expansion
 
@@ -2630,23 +2653,24 @@ When an estimate is accepted:
 
 ## 📝 METADATA
 
-**Version:** 13.2
-**Subtitle:** JOBS HUB SIMPLIFIED - 2-SECTION ARCHITECTURE
-**Last Updated:** Removed Clients placeholder, Jobs Hub now has Estimates + Jobs only
-**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Settings 70% | Mobile not tested
+**Version:** 13.3
+**Subtitle:** JOBS HUB COMPLETE - 3-SECTION ARCHITECTURE (CLIENTS HUB-ONLY ACCESS)
+**Last Updated:** Re-added Clients to Jobs Hub, removed from main navigation for cleaner UX
+**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Clients Placeholder ✅ (Hub-only) | Settings 70% | Mobile not tested
 **Philosophy:** Simple CRM + Smart Auto-Tracking + Clean Professional UI + Unified Project Hub
 **Next Action:** Settings Preferences (2-3 hours) → Mobile optimization (5-6 hours)
 **Launch ETA:** 7-9 hours remaining
 
-**Major Changes from v13.1:**
-- ✅ Simplified Jobs Hub from 3 sections to 2 sections
-- ✅ Removed Clients.js placeholder module
-- ✅ Updated all documentation to reflect 2-section architecture
-- ✅ Cleaner project management workflow (Estimates → Jobs)
+**Major Changes from v13.2:**
+- ✅ Re-added Clients section to Jobs Hub (3 sections total)
+- ✅ Clients ONLY accessible through Jobs Hub, NOT in main navigation
+- ✅ Created Clients.js placeholder module with "Coming Soon" UI
+- ✅ Updated all documentation to reflect hub-only Clients access
+- ✅ Cleaner main navigation while maintaining full project workflow (Estimates → Jobs → Clients)
 
 ---
 
-**END OF HANDOFF DOCUMENT v13.2**
+**END OF HANDOFF DOCUMENT v13.3**
 
 *This is the single source of truth for SteadyManager Pro development.*
 *Current Focus: Jobs Hub ✅ → Settings Preferences → Mobile → Ship 🚀*
