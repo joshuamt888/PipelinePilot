@@ -3414,6 +3414,7 @@ window.JobsManagementModule = {
             // Update server in background
             try {
                 await API.updateJob(job.id, { status: newStatus });
+                window.SteadyUtils.showToast(`Status updated to ${this.jobs_formatStatus(newStatus)}`, 'success');
             } catch (error) {
                 console.error('Update status error:', error);
                 window.SteadyUtils.showToast('Failed to update status', 'error');

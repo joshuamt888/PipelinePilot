@@ -2172,6 +2172,7 @@ estimates_showViewModal(estimateId) {
         // Delete from server in background
         try {
             await API.deleteEstimate(estimate.id);
+            window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
         } catch (error) {
             console.error('Delete estimate error:', error);
             window.SteadyUtils.showToast('Failed to delete estimate', 'error');
@@ -2217,6 +2218,7 @@ estimates_showViewModal(estimateId) {
         // Update server in background
         try {
             await API.updateEstimate(estimate.id, { status: newStatus });
+            window.SteadyUtils.showToast(`Status updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
         } catch (error) {
             console.error('Update status error:', error);
             window.SteadyUtils.showToast('Failed to update status', 'error');
@@ -3092,31 +3094,57 @@ async estimates_handleSave(overlay, button) {
                 if (index !== -1) {
                     this.state.estimates[index] = savedEstimate;
                 }
+
+                // Update UI immediately (like Jobs)
+                this.estimates_calculateStats();
+                this.estimates_instantFilterChange();
+
+                // Update stats tabs and limit bar without full re-render
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.estimates-stats');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.estimates-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+
+                window.SteadyUtils.showToast('Estimate updated successfully', 'success');
             } else {
                 savedEstimate = await API.createEstimate(estimateData);
                 this.state.estimates.unshift(savedEstimate);
-            }
 
-            // Update UI immediately (like Jobs)
-            this.estimates_calculateStats();
-            this.estimates_instantFilterChange();
+                // Update UI immediately (like Jobs)
+                this.estimates_calculateStats();
+                this.estimates_instantFilterChange();
 
-            // Update stats tabs and limit bar without full re-render
-            const container = document.getElementById(this.state.container);
-            if (container) {
-                const statsSection = container.querySelector('.estimates-stats');
-                if (statsSection) {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = this.estimates_renderStats();
-                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                // Update stats tabs and limit bar without full re-render
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.estimates-stats');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.estimates-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
                 }
 
-                const limitBar = container.querySelector('.estimates-limit-bar');
-                if (limitBar) {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = this.estimates_renderLimitBar();
-                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
-                }
+                window.SteadyUtils.showToast('Estimate created successfully', 'success');
             }
 
             // Reset flag after successful save
