@@ -1233,8 +1233,8 @@ estimates_renderModal(estimate) {
 
                     <div class="estimate-form-group">
                         <label>Title *</label>
-                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="50" required>
-                        <span class="estimate-input-hint" id="titleCounter">50 characters remaining</span>
+                        <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${estimate?.title || ''}" maxlength="35" required>
+                        <span class="estimate-input-hint" id="titleCounter">35 characters remaining</span>
                     </div>
 
                     <div class="estimate-form-group">
@@ -1475,8 +1475,8 @@ estimates_initModalEvents(overlay) {
     };
 
     if (titleInput) {
-        updateCounter(titleInput, 'titleCounter', 50);
-        titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 50));
+        updateCounter(titleInput, 'titleCounter', 35);
+        titleInput.addEventListener('input', () => updateCounter(titleInput, 'titleCounter', 35));
     }
     if (descInput) {
         updateCounter(descInput, 'descriptionCounter', 500);
@@ -3005,7 +3005,7 @@ async estimates_handleSave(overlay, button) {
                 titleInput.style.borderColor = '';
                 titleInput.style.boxShadow = '';
                 if (titleCounter) {
-                    const remaining = 50 - titleInput.value.length;
+                    const remaining = 35 - titleInput.value.length;
                     titleCounter.textContent = `${remaining} characters remaining`;
                     titleCounter.style.color = remaining <= 5 ? 'var(--warning)' : '';
                     titleCounter.style.fontWeight = '500';
