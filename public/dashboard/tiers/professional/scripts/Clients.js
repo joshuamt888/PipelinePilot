@@ -809,7 +809,7 @@ window.ClientsModule = {
                 }
 
                 .client-card {
-                    background: var(--surface-primary);
+                    background: var(--surface-secondary);
                     border: 1px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
@@ -991,6 +991,10 @@ window.ClientsModule = {
                 /* View Section */
                 .view-section {
                     margin-bottom: 2rem;
+                    background: var(--surface-secondary);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 1.5rem;
                 }
 
                 .view-section:last-child {
@@ -1020,7 +1024,7 @@ window.ClientsModule = {
                 }
 
                 .view-section-content {
-                    padding-left: 2rem;
+                    padding-left: 0;
                 }
 
                 /* Info Rows */
@@ -1052,7 +1056,7 @@ window.ClientsModule = {
                 }
 
                 .summary-item {
-                    background: var(--surface-secondary);
+                    background: var(--surface-primary);
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     padding: 1rem;
@@ -1087,7 +1091,7 @@ window.ClientsModule = {
                     justify-content: space-between;
                     align-items: center;
                     padding: 1rem;
-                    background: var(--surface-secondary);
+                    background: var(--surface-primary);
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     margin-bottom: 0.75rem;
