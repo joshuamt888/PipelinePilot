@@ -1862,6 +1862,65 @@ class TierScalingAPI {
   }
 
 // =====================================================
+// CLIENTS (Pro Tier - Customer Management)
+// =====================================================
+
+/**
+ * Get all clients (leads that have at least 1 estimate OR 1 job)
+ * Returns leads enriched with client data: estimatesCount, jobsCount, totalRevenue
+ */
+static async getClients() {
+  // 1. Get all data in parallel
+  const [leadsData, estimates, jobs] = await Promise.all([
+    this.getLeads(),
+    this.getEstimates(),
+    this.getJobs()
+  ]);
+
+  const allLeads = leadsData.all || [];
+
+  // 2. Filter leads that have at least 1 estimate OR 1 job
+  const clients = allLeads.filter(lead => {
+    const hasEstimate = estimates.some(e => e.lead_id === lead.id);
+    const hasJob = jobs.some(j => j.lead_id === lead.id);
+    return hasEstimate || hasJob;
+  });
+
+  // 3. Enrich each client with their data
+  return clients.map(client => {
+    const clientEstimates = estimates.filter(e => e.lead_id === client.id);
+    const clientJobs = jobs.filter(j => j.lead_id === client.id);
+
+    // Calculate total revenue
+    const estimateRevenue = clientEstimates
+      .filter(e => e.status === 'accepted')
+      .reduce((sum, e) => sum + (parseFloat(e.total_price) || 0), 0);
+
+    const jobRevenue = clientJobs
+      .filter(j => j.status === 'completed' || j.status === 'paid')
+      .reduce((sum, j) => sum + (parseFloat(j.final_price || j.quoted_price) || 0), 0);
+
+    // Get last activity date
+    const allDates = [
+      ...clientEstimates.map(e => e.created_at),
+      ...clientJobs.map(j => j.created_at)
+    ].filter(Boolean);
+
+    const lastActivity = allDates.length > 0
+      ? new Date(Math.max(...allDates.map(d => new Date(d).getTime())))
+      : null;
+
+    return {
+      ...client,
+      estimatesCount: clientEstimates.length,
+      jobsCount: clientJobs.length,
+      totalRevenue: estimateRevenue + jobRevenue,
+      lastActivity: lastActivity
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name)); // A-Z sort by default
+}
+
+// =====================================================
 // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
 // =====================================================
 
