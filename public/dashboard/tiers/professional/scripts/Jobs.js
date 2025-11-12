@@ -233,7 +233,7 @@ window.JobsModule = {
                 }
 
                 .jobs-hub-section {
-                    background: var(--surface);
+                    background: var(--background);
                     border: 2px solid var(--border);
                     border-radius: 16px;
                     padding: 2.5rem;
@@ -317,7 +317,7 @@ window.JobsModule = {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 0.75rem 1.5rem;
-                    background: var(--surface);
+                    background: var(--background);
                     border: 2px solid var(--border);
                     border-radius: 12px;
                     color: var(--text-primary);

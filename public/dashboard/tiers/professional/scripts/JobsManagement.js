@@ -1165,6 +1165,9 @@ window.JobsManagementModule = {
                     resize: vertical;
                     min-height: 100px;
                     font-family: inherit;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    overflow-wrap: break-word;
                 }
 
                 .job-form-group input[type="checkbox"] {
@@ -2023,8 +2026,8 @@ window.JobsManagementModule = {
                                 <div class="job-form-group">
                                     <label>Job Title <span class="required">*</span></label>
                                     <input type="text" name="title" value="${job?.title || ''}"
-                                           placeholder="e.g., Kitchen Remodel" maxlength="50" required>
-                                    <div class="job-char-counter"><span id="titleCounter">${job?.title?.length || 0}</span> / 50</div>
+                                           placeholder="e.g., Kitchen Remodel" maxlength="35" required>
+                                    <div class="job-char-counter"><span id="titleCounter">${job?.title?.length || 0}</span> / 35</div>
                                 </div>
                             </div>
 
@@ -2995,6 +2998,28 @@ window.JobsManagementModule = {
                     text-transform: uppercase;
                 }
 
+                .job-photo-lightbox {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10002;
+                    animation: fadeIn 0.2s ease;
+                    cursor: pointer;
+                }
+
+                .job-photo-lightbox img {
+                    max-width: 90%;
+                    max-height: 90vh;
+                    border-radius: 8px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                }
+
                 .job-view-footer {
                     padding: 24px 32px;
                     border-top: 1px solid var(--border);
@@ -3311,6 +3336,26 @@ window.JobsManagementModule = {
                 this.jobs_calculateStats();
                 this.jobs_instantFilterChange();
             }
+        });
+
+        // Photo click to enlarge
+        overlay.querySelectorAll('.job-view-photo img').forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const lightbox = document.createElement('div');
+                lightbox.className = 'job-photo-lightbox';
+                lightbox.innerHTML = `<img src="${img.src}" alt="${img.alt}">`;
+                document.body.appendChild(lightbox);
+
+                setTimeout(() => {
+                    lightbox.style.opacity = '1';
+                }, 10);
+
+                lightbox.addEventListener('click', () => {
+                    lightbox.style.opacity = '0';
+                    setTimeout(() => lightbox.remove(), 200);
+                });
+            });
         });
 
         // Close on backdrop click
