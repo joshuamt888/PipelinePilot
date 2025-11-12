@@ -301,11 +301,11 @@ app.listen(PORT, () => {
   console.log('Auth handled by Supabase');
   console.log('Cron jobs active');
 
-  // Auto-open browser (local development only)
-  if (process.env.NODE_ENV !== 'production' && !process.env.RAILWAY_ENVIRONMENT) {
+  // Auto-open browser (local development only - skip on Railway)
+  if (!process.env.RAILWAY_ENVIRONMENT) {
     console.log('Opening browser at http://localhost:' + PORT);
     open(`http://localhost:${PORT}`);
   } else {
-    console.log('Skipping browser auto-open (NODE_ENV=' + process.env.NODE_ENV + ', RAILWAY=' + process.env.RAILWAY_ENVIRONMENT + ')');
+    console.log('Skipping browser auto-open (running on Railway)');
   }
 });
