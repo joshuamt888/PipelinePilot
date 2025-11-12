@@ -809,12 +809,16 @@ window.ClientsModule = {
                 }
 
                 .client-card {
-                    background: var(--surface-secondary);
+                    background: #f9fafb;
                     border: 1px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
                     cursor: pointer;
                     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+                }
+
+                .dark .client-card {
+                    background: #1f2937;
                 }
 
                 .client-card:hover {
@@ -991,10 +995,14 @@ window.ClientsModule = {
                 /* View Section */
                 .view-section {
                     margin-bottom: 2rem;
-                    background: var(--surface-secondary);
+                    background: #f9fafb;
                     border: 1px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
+                }
+
+                .dark .view-section {
+                    background: #1f2937;
                 }
 
                 .view-section:last-child {
@@ -1056,11 +1064,15 @@ window.ClientsModule = {
                 }
 
                 .summary-item {
-                    background: var(--surface-primary);
+                    background: white;
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     padding: 1rem;
                     text-align: center;
+                }
+
+                .dark .summary-item {
+                    background: #111827;
                 }
 
                 .summary-item-revenue {
@@ -1091,10 +1103,14 @@ window.ClientsModule = {
                     justify-content: space-between;
                     align-items: center;
                     padding: 1rem;
-                    background: var(--surface-primary);
+                    background: white;
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     margin-bottom: 0.75rem;
+                }
+
+                .dark .list-item {
+                    background: #111827;
                 }
 
                 .list-item:last-child {
