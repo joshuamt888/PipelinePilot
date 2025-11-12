@@ -175,9 +175,6 @@ window.ClientsModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        // Clear any lingering inline styles (removes opacity, makes it fade in)
-        container.removeAttribute('style');
-
         const stats = this.calculateStats();
 
         container.innerHTML = `
@@ -261,6 +258,11 @@ window.ClientsModule = {
                 ${this.state.filteredClients.length === 0 ? this.renderEmptyState() : ''}
             </div>
         `;
+
+        // Wait for browser to parse CSS, then trigger fade-in
+        requestAnimationFrame(() => {
+            container.removeAttribute('style');
+        });
 
         this.attachEventListeners();
     },
