@@ -3225,25 +3225,6 @@ window.JobsManagementModule = {
 
                     <div class="job-view-section">
                         <div class="job-view-section-title">Financial Summary</div>
-                        <div class="job-view-financial-grid">
-                            <div class="job-view-financial-item">
-                                <div class="job-view-financial-label">Revenue</div>
-                                <div class="job-view-financial-value">${formatCurrency(revenue)}</div>
-                            </div>
-                            <div class="job-view-financial-item">
-                                <div class="job-view-financial-label">Total Cost</div>
-                                <div class="job-view-financial-value">${formatCurrency(totalCost)}</div>
-                            </div>
-                            <div class="job-view-financial-item">
-                                <div class="job-view-financial-label">Profit</div>
-                                <div class="job-view-financial-value ${profit >= 0 ? 'profit' : 'loss'}">${formatCurrency(profit)}</div>
-                            </div>
-                            <div class="job-view-financial-item">
-                                <div class="job-view-financial-label">Margin</div>
-                                <div class="job-view-financial-value">${profitMargin.toFixed(1)}%</div>
-                            </div>
-                        </div>
-
                         <div class="job-view-profit-box">
                             <div class="job-view-profit-row">
                                 <span>Material Cost:</span>

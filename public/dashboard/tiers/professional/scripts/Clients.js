@@ -1812,25 +1812,6 @@ window.ClientsModule = {
 
                     <div class="clients-job-view-section">
                         <div class="clients-job-view-section-title">Financial Summary</div>
-                        <div class="clients-job-view-financial-grid">
-                            <div class="clients-job-view-financial-item">
-                                <div class="clients-job-view-financial-label">Revenue</div>
-                                <div class="clients-job-view-financial-value">${this.formatCurrency(revenue)}</div>
-                            </div>
-                            <div class="clients-job-view-financial-item">
-                                <div class="clients-job-view-financial-label">Total Cost</div>
-                                <div class="clients-job-view-financial-value">${this.formatCurrency(totalCost)}</div>
-                            </div>
-                            <div class="clients-job-view-financial-item">
-                                <div class="clients-job-view-financial-label">Profit</div>
-                                <div class="clients-job-view-financial-value ${profit >= 0 ? 'profit' : 'loss'}">${this.formatCurrency(profit)}</div>
-                            </div>
-                            <div class="clients-job-view-financial-item">
-                                <div class="clients-job-view-financial-label">Margin</div>
-                                <div class="clients-job-view-financial-value">${profitMargin.toFixed(1)}%</div>
-                            </div>
-                        </div>
-
                         <div class="clients-job-view-profit-box">
                             <div class="clients-job-view-profit-row">
                                 <span>Material Cost:</span>
