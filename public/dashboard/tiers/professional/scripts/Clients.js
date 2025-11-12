@@ -451,9 +451,7 @@ window.ClientsModule = {
         modalBody.querySelectorAll('.item-card[data-estimate-id]').forEach(card => {
             card.addEventListener('click', () => {
                 const estimateId = card.getAttribute('data-estimate-id');
-                // Hide client detail modal (don't close it)
-                modal.style.display = 'none';
-                // Open Clients module's estimate view modal (layers on top)
+                // Don't hide client modal - let view modal layer on top with higher z-index
                 this.clients_showEstimateViewModal(estimateId);
             });
         });
@@ -461,9 +459,7 @@ window.ClientsModule = {
         modalBody.querySelectorAll('.item-card[data-job-id]').forEach(card => {
             card.addEventListener('click', () => {
                 const jobId = card.getAttribute('data-job-id');
-                // Hide client detail modal (don't close it)
-                modal.style.display = 'none';
-                // Open Clients module's job view modal (layers on top)
+                // Don't hide client modal - let view modal layer on top with higher z-index
                 this.clients_showJobViewModal(jobId);
             });
         });
