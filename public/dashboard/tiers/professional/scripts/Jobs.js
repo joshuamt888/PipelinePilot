@@ -305,11 +305,12 @@ window.JobsModule = {
                 .jobs-hub-section-badge {
                     display: inline-block;
                     padding: 0.5rem 1rem;
-                    background: var(--primary-light);
-                    color: var(--primary);
+                    background: var(--background);
+                    color: var(--text-primary);
                     border-radius: 8px;
                     font-size: 0.875rem;
                     font-weight: 600;
+                    border: 1px solid var(--border);
                 }
 
                 .jobs-hub-back-button {
