@@ -183,7 +183,7 @@ window.ClientsModule = {
                 <!-- Header -->
                 <div class="clients-header">
                     <h2 class="clients-title">Client Overview</h2>
-                    <p class="clients-subtitle">Track your clients and their project history</p>
+                    <p class="clients-subtitle">View-only dashboard for leads with estimates or jobs • Track client relationships and project history</p>
                 </div>
 
                 <!-- Stats Cards -->
