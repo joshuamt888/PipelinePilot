@@ -240,30 +240,12 @@ window.JobsModule = {
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     text-align: center;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .jobs-hub-section::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 4px;
-                    background: var(--gradient-primary);
-                    transform: scaleX(0);
-                    transition: transform 0.3s ease;
                 }
 
                 .jobs-hub-section:hover {
                     border-color: var(--primary);
                     transform: translateY(-8px);
                     box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
-                }
-
-                .jobs-hub-section:hover::before {
-                    transform: scaleX(1);
                 }
 
                 .jobs-hub-section-icon {
