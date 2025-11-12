@@ -29,14 +29,19 @@ window.ClientsModule = {
             return;
         }
 
-        // Show loading state
-        this.renderLoading();
+        // Show loading state (fade out)
+        this.showLoading();
 
-        // Load data
-        await this.loadData();
+        try {
+            // Load data
+            await this.loadData();
 
-        // Render the module
-        this.render();
+            // Render the module
+            this.render();
+        } catch (error) {
+            console.error('[Clients] Init error:', error);
+            this.showError('Failed to load clients');
+        }
     },
 
     /**
@@ -44,7 +49,7 @@ window.ClientsModule = {
      */
     async loadData() {
         try {
-            this.state.loading = true;
+            console.log('[Clients] Fetching data...');
 
             // Fetch all data in parallel
             const [leads, estimates, jobs] = await Promise.all([
@@ -53,15 +58,24 @@ window.ClientsModule = {
                 API.getJobs()
             ]);
 
-            this.state.estimates = estimates || [];
-            this.state.jobs = jobs || [];
+            console.log('[Clients] Raw data:', {
+                leads: leads?.length || 0,
+                estimates: estimates?.length || 0,
+                jobs: jobs?.length || 0
+            });
+
+            this.state.estimates = Array.isArray(estimates) ? estimates : [];
+            this.state.jobs = Array.isArray(jobs) ? jobs : [];
 
             // Filter leads to only include those with estimates or jobs
-            const leadsWithProjects = (leads || []).filter(lead => {
+            const allLeads = Array.isArray(leads) ? leads : [];
+            const leadsWithProjects = allLeads.filter(lead => {
                 const hasEstimates = this.state.estimates.some(est => est.lead_id === lead.id);
                 const hasJobs = this.state.jobs.some(job => job.lead_id === lead.id);
                 return hasEstimates || hasJobs;
             });
+
+            console.log('[Clients] Leads with projects:', leadsWithProjects.length);
 
             // Transform leads into clients with stats
             this.state.clients = leadsWithProjects.map(lead => {
@@ -83,12 +97,11 @@ window.ClientsModule = {
             });
 
             this.state.filteredClients = [...this.state.clients];
-            this.state.loading = false;
 
-            console.log(`[Clients] Loaded ${this.state.clients.length} clients`);
+            console.log(`[Clients] ✅ Loaded ${this.state.clients.length} clients with projects`);
         } catch (error) {
-            console.error('[Clients] Error loading data:', error);
-            this.state.loading = false;
+            console.error('[Clients] ❌ Error loading data:', error);
+            throw error;
         }
     },
 
@@ -128,21 +141,30 @@ window.ClientsModule = {
     },
 
     /**
-     * Render loading state
+     * Show loading state (fade out pattern like Estimates)
      */
-    renderLoading() {
+    showLoading() {
         const container = document.getElementById(this.state.container);
-        if (!container) return;
+        if (container) {
+            container.style.opacity = '0';
+            container.innerHTML = `<div style="min-height: 400px;"></div>`;
+        }
+    },
 
-        container.innerHTML = `
-            ${this.renderStyles()}
-            <div class="clients-container">
-                <div class="clients-loading">
-                    <div class="loading-spinner"></div>
-                    <p>Loading clients...</p>
+    /**
+     * Show error message
+     */
+    showError(message) {
+        const container = document.getElementById(this.state.container);
+        if (container) {
+            container.removeAttribute('style');
+            container.innerHTML = `
+                <div style="text-align: center; padding: 60px; color: var(--danger);">
+                    <h3>Error</h3>
+                    <p>${message}</p>
                 </div>
-            </div>
-        `;
+            `;
+        }
     },
 
     /**
@@ -151,6 +173,9 @@ window.ClientsModule = {
     render() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
+
+        // Clear any lingering inline styles (removes opacity, makes it fade in)
+        container.removeAttribute('style');
 
         const stats = this.calculateStats();
 
@@ -676,30 +701,6 @@ window.ClientsModule = {
                 .clients-subtitle {
                     font-size: 1rem;
                     color: var(--text-secondary);
-                }
-
-                /* Loading */
-                .clients-loading {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 4rem;
-                    color: var(--text-secondary);
-                }
-
-                .loading-spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid var(--border);
-                    border-top-color: var(--primary);
-                    border-radius: 50%;
-                    animation: spin 0.8s linear infinite;
-                    margin-bottom: 1rem;
-                }
-
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
                 }
 
                 /* Stats Cards */
