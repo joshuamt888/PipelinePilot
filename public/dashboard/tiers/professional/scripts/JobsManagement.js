@@ -3575,6 +3575,7 @@ window.JobsManagementModule = {
                     const inputs = items[0].querySelectorAll('input');
                     inputs.forEach(input => input.value = '');
                     this.jobs_updateMaterialsCounter(overlay);
+                    this.jobs_updateMaterialsTotal(overlay);
                     this.jobs_updateProfitCalculator();
                     return;
                 }
@@ -3592,6 +3593,7 @@ window.JobsManagementModule = {
                 });
 
                 this.jobs_updateMaterialsCounter(overlay);
+                this.jobs_updateMaterialsTotal(overlay);
                 this.jobs_updateProfitCalculator();
             }
         });
@@ -3627,6 +3629,7 @@ window.JobsManagementModule = {
                     const inputs = items[0].querySelectorAll('input');
                     inputs.forEach(input => input.value = '');
                     this.jobs_updateCrewCounter(overlay);
+                    this.jobs_updateCrewTotal(overlay);
                     this.jobs_updateProfitCalculator();
                     return;
                 }
@@ -3644,6 +3647,7 @@ window.JobsManagementModule = {
                 });
 
                 this.jobs_updateCrewCounter(overlay);
+                this.jobs_updateCrewTotal(overlay);
                 this.jobs_updateProfitCalculator();
             }
         });
