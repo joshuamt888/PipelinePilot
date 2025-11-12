@@ -4574,148 +4574,60 @@ window.JobsManagementModule = {
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
         };
 
-        const { jsPDF } = window.jspdf;
+        const { jsPDF} = window.jspdf;
         const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
-        let y = 0.75;
+        let y = 1;
 
-        // Header: WORK ORDER
-        doc.setFontSize(26);
+        // Title
+        doc.setFontSize(24);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(102, 126, 234);
-        doc.text('WORK ORDER', 4.25, y, { align: 'center' });
-        y += 0.35;
+        doc.text(job.title || 'Work Order', 4.25, y, { align: 'center' });
+        y += 0.5;
 
-        // Job Title
-        doc.setFontSize(18);
-        doc.setTextColor(0, 0, 0);
-        doc.text(job.title || 'Job Details', 4.25, y, { align: 'center' });
-        y += 0.35;
-
-        // Horizontal line
+        // Line
         doc.setLineWidth(0.02);
         doc.line(0.75, y, 7.75, y);
-        y += 0.35;
+        y += 0.4;
 
-        // Job Info Box
-        doc.setFillColor(245, 245, 245);
-        doc.setDrawColor(200, 200, 200);
-        doc.rect(0.75, y, 7, 0.7, 'FD');
-        y += 0.2;
-
+        // Client Info (Left) and Job Info (Right)
         doc.setFontSize(10);
-        // Left column
-        doc.setFont('helvetica', 'bold');
-        doc.text('JOB #:', 0.85, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(job.id?.toString() || 'N/A', 1.5, y);
-        y += 0.2;
-
-        doc.setFont('helvetica', 'bold');
-        doc.text('TYPE:', 0.85, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(job.job_type || 'N/A', 1.5, y);
-
-        // Right column
-        let yRight = y - 0.2;
-        doc.setFont('helvetica', 'bold');
-        doc.text('STATUS:', 4.5, yRight);
-        doc.setFont('helvetica', 'normal');
-        doc.text(this.jobs_formatStatus(job.status), 5.2, yRight);
-        yRight += 0.2;
-
-        doc.setFont('helvetica', 'bold');
-        doc.text('PRIORITY:', 4.5, yRight);
-        doc.setFont('helvetica', 'normal');
-        const priorityMap = { low: 'Low', medium: 'Medium', high: 'High' };
-        doc.text(priorityMap[job.priority] || 'N/A', 5.2, yRight);
-
-        y += 0.3;
-
-        // Client Information
         if (lead) {
-            y += 0.15;
-            doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text('CLIENT INFORMATION', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.25;
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Name:', 0.85, y);
+            doc.text('CLIENT:', 0.75, y);
             doc.setFont('helvetica', 'normal');
-            doc.text(lead.name || 'N/A', 1.5, y);
+            doc.text(lead.name || '', 1.5, y);
+            y += 0.2;
 
             if (lead.phone) {
                 doc.setFont('helvetica', 'bold');
-                doc.text('Phone:', 4.5, y);
+                doc.text('PHONE:', 0.75, y);
                 doc.setFont('helvetica', 'normal');
-                doc.text(lead.phone, 5.1, y);
-            }
-            y += 0.2;
-
-            if (lead.email) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('Email:', 0.85, y);
-                doc.setFont('helvetica', 'normal');
-                doc.text(lead.email, 1.5, y);
+                doc.text(lead.phone, 1.5, y);
                 y += 0.2;
             }
-
-            if (lead.address) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('Address:', 0.85, y);
-                doc.setFont('helvetica', 'normal');
-                const addrLines = doc.splitTextToSize(lead.address, 5.5);
-                doc.text(addrLines, 1.75, y);
-                y += (addrLines.length * 0.15);
-            }
-
-            y += 0.15;
         }
 
-        // Schedule Information
-        if (job.scheduled_date || job.scheduled_time || job.duration_hours) {
-            y += 0.15;
-            doc.setFontSize(12);
+        // Job info on right
+        let yRight = 1.9;
+        doc.setFont('helvetica', 'bold');
+        doc.text('JOB #:', 5, yRight);
+        doc.setFont('helvetica', 'normal');
+        doc.text(job.id?.toString() || 'N/A', 5.6, yRight);
+        yRight += 0.2;
+
+        if (job.scheduled_date) {
             doc.setFont('helvetica', 'bold');
-            doc.text('SCHEDULE', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.25;
-
-            doc.setFontSize(10);
-            if (job.scheduled_date) {
-                const schedDate = new Date(job.scheduled_date);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Date:', 0.85, y);
-                doc.setFont('helvetica', 'normal');
-                doc.text(schedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 1.5, y);
-                y += 0.2;
-            }
-
-            if (job.scheduled_time) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('Time:', 0.85, y);
-                doc.setFont('helvetica', 'normal');
-                doc.text(job.scheduled_time, 1.5, y);
-
-                if (job.duration_hours) {
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('Duration:', 4.5, y);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`${job.duration_hours} hours`, 5.3, y);
-                }
-                y += 0.2;
-            }
-
-            y += 0.15;
+            doc.text('SCHEDULED:', 5, yRight);
+            doc.setFont('helvetica', 'normal');
+            const schedDate = new Date(job.scheduled_date);
+            doc.text(schedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 6.1, yRight);
+            yRight += 0.2;
         }
 
-        // Job Description
+        y = Math.max(y, yRight) + 0.2;
+
+        // Description
         if (job.description) {
-            y += 0.15;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
             doc.text('JOB DESCRIPTION', 0.75, y);
@@ -4730,17 +4642,11 @@ window.JobsManagementModule = {
             y += (descLines.length * 0.15) + 0.3;
         }
 
-        // Materials List
+        // Materials Table
         if (materials && materials.length > 0) {
-            // Check if we need a new page
-            if (y > 8.5) {
-                doc.addPage();
-                y = 0.75;
-            }
-
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text('MATERIALS REQUIRED', 0.75, y);
+            doc.text('MATERIALS', 0.75, y);
             y += 0.05;
             doc.line(0.75, y, 7.75, y);
             y += 0.3;
@@ -4749,49 +4655,36 @@ window.JobsManagementModule = {
             doc.setFillColor(51, 51, 51);
             doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.text('Material', 0.85, y);
-            doc.text('Qty', 3.5, y, { align: 'center' });
-            doc.text('Unit', 4.2, y, { align: 'center' });
-            doc.text('Supplier', 5, y);
-            doc.text('Cost', 7.5, y, { align: 'right' });
+            doc.text('Description', 0.85, y);
+            doc.text('Qty', 4.5, y, { align: 'center' });
+            doc.text('Supplier', 5.5, y);
+            doc.text('Amount', 7.5, y, { align: 'right' });
             y += 0.25;
 
             // Table rows
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
-            let materialTotal = 0;
             materials.forEach(item => {
                 const total = (item.quantity || 0) * (item.unit_price || 0);
-                materialTotal += total;
-
-                const nameLines = doc.splitTextToSize(item.name || '', 2.4);
-                doc.text(nameLines[0], 0.85, y);
-                doc.text((item.quantity || 0).toString(), 3.5, y, { align: 'center' });
-                doc.text(item.unit || '-', 4.2, y, { align: 'center' });
-                doc.text(item.supplier || '-', 5, y);
+                doc.text(item.name || '-', 0.85, y);
+                doc.text(String(item.quantity || 0), 4.5, y, { align: 'center' });
+                doc.text(item.supplier || '-', 5.5, y);
+                doc.setFont('helvetica', 'bold');
                 doc.text(formatMoney(total), 7.5, y, { align: 'right' });
+                doc.setFont('helvetica', 'normal');
                 y += 0.2;
             });
 
-            y += 0.1;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Materials Subtotal:', 6, y);
-            doc.text(formatMoney(materialTotal), 7.5, y, { align: 'right' });
-            y += 0.3;
+            y += 0.2;
         }
 
-        // Crew Assignments
+        // Crew Table
         if (crew && crew.length > 0) {
-            if (y > 8.5) {
-                doc.addPage();
-                y = 0.75;
-            }
-
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text('CREW ASSIGNMENTS', 0.75, y);
+            doc.text('CREW', 0.75, y);
             y += 0.05;
             doc.line(0.75, y, 7.75, y);
             y += 0.3;
@@ -4800,7 +4693,7 @@ window.JobsManagementModule = {
             doc.setFillColor(51, 51, 51);
             doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.text('Name', 0.85, y);
             doc.text('Role', 3.5, y);
@@ -4811,85 +4704,41 @@ window.JobsManagementModule = {
             // Table rows
             doc.setTextColor(0, 0, 0);
             doc.setFont('helvetica', 'normal');
-            let laborTotal = 0;
             crew.forEach(member => {
                 const cost = (member.hours || 0) * (member.rate || 0);
-                laborTotal += cost;
-
-                doc.text(member.name || '', 0.85, y);
+                doc.text(member.name || '-', 0.85, y);
                 doc.text(member.role || '-', 3.5, y);
-                doc.text((member.hours || 0).toString(), 5.5, y, { align: 'center' });
+                doc.text(String(member.hours || 0), 5.5, y, { align: 'center' });
+                doc.setFont('helvetica', 'bold');
                 doc.text(formatMoney(cost), 7.5, y, { align: 'right' });
+                doc.setFont('helvetica', 'normal');
                 y += 0.2;
             });
 
-            y += 0.1;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Labor Subtotal:', 6, y);
-            doc.text(formatMoney(laborTotal), 7.5, y, { align: 'right' });
-            y += 0.3;
+            y += 0.2;
         }
 
-        // Cost Summary
-        y += 0.15;
+        // Total box (matching Estimates exactly)
         doc.setFillColor(245, 245, 245);
         doc.setDrawColor(51, 51, 51);
         doc.setLineWidth(0.02);
-        doc.rect(0.75, y, 7, 0.8, 'FD');
+        doc.rect(0.75, y, 7, 0.6, 'FD');
         y += 0.2;
 
-        doc.setFontSize(11);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('COST SUMMARY', 0.85, y);
+        doc.text('TOTAL', 0.85, y);
         y += 0.25;
 
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Materials:', 0.85, y);
-        doc.text(formatMoney(job.material_cost || 0), 7.5, y, { align: 'right' });
-        y += 0.18;
-
-        doc.text('Labor:', 0.85, y);
-        doc.text(formatMoney((job.estimated_labor_hours || 0) * (job.labor_rate || 0)), 7.5, y, { align: 'right' });
-        y += 0.18;
-
-        if (job.other_expenses > 0) {
-            doc.text('Other Expenses:', 0.85, y);
-            doc.text(formatMoney(job.other_expenses || 0), 7.5, y, { align: 'right' });
-            y += 0.18;
-        }
-
-        y += 0.05;
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(102, 126, 234);
-        doc.text('TOTAL:', 0.85, y);
-        doc.text(formatMoney(job.quoted_price || revenue), 7.5, y, { align: 'right' });
-        doc.setTextColor(0, 0, 0);
-        y += 0.3;
-
-        // Deposit info
-        if (job.deposit_amount > 0) {
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            const depositStatus = job.deposit_paid ? 'PAID ✓' : 'PENDING';
-            doc.text(`Deposit (${depositStatus}): ${formatMoney(job.deposit_amount)}`, 0.85, y);
-            y += 0.2;
-        }
+        doc.setFontSize(22);
+        doc.text(formatMoney(job.quoted_price || revenue), 0.85, y);
+        y += 0.4;
 
         // Internal Notes
         if (job.notes) {
-            if (y > 9) {
-                doc.addPage();
-                y = 0.75;
-            }
-
-            y += 0.2;
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(220, 38, 38);
-            doc.text('⚠ INTERNAL NOTES', 0.75, y);
-            doc.setTextColor(0, 0, 0);
+            doc.text('INTERNAL NOTES', 0.75, y);
             y += 0.05;
             doc.line(0.75, y, 7.75, y);
             y += 0.25;
@@ -4898,14 +4747,13 @@ window.JobsManagementModule = {
             doc.setFont('helvetica', 'normal');
             const notesLines = doc.splitTextToSize(job.notes, 6.5);
             doc.text(notesLines, 0.75, y);
-            y += (notesLines.length * 0.12) + 0.2;
+            y += (notesLines.length * 0.12) + 0.3;
         }
 
         // Footer
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(128, 128, 128);
-        doc.text('Internal Work Order - Not for client distribution', 4.25, 10.5, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Internal work order for crew reference. Not for client distribution.', 4.25, 10.5, { align: 'center' });
 
         // Save PDF
         const filename = `WorkOrder-${job.id || 'draft'}.pdf`;
