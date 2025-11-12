@@ -1,7 +1,7 @@
 /**
- * CLIENTS MODULE - Complete rewrite with independent edit modals
- * No crossover with Estimates or Jobs modules - all functionality self-contained
- * All API calls happen directly in this module
+ * CLIENTS MODULE - Visual dashboard for client relationships
+ * Read-only view showing clients with their project history
+ * Accessible only through Jobs Hub
  */
 
 window.ClientsModule = {
@@ -11,16 +11,10 @@ window.ClientsModule = {
         filteredClients: [],
         estimates: [],
         jobs: [],
-        allLeads: [],
         loading: false,
         searchQuery: '',
-        selectedClient: null,
-        modalPhotos: [],
-        isSaving: false
+        selectedClient: null
     },
-
-    ESTIMATE_STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
-    JOB_STATUSES: ['scheduled', 'in_progress', 'completed', 'on_hold', 'cancelled'],
 
     /**
      * Initialize the Clients module
@@ -35,10 +29,14 @@ window.ClientsModule = {
             return;
         }
 
+        // Show loading state (fade out)
         this.showLoading();
 
         try {
+            // Load data
             await this.loadData();
+
+            // Render the module
             this.render();
         } catch (error) {
             console.error('[Clients] Init error:', error);
@@ -47,30 +45,40 @@ window.ClientsModule = {
     },
 
     /**
-     * Load all data
+     * Load all data (leads, estimates, jobs)
      */
     async loadData() {
         try {
             console.log('[Clients] Fetching data...');
 
+            // Fetch all data in parallel
             const [leads, estimates, jobs] = await Promise.all([
                 API.getLeads(),
                 API.getEstimates(),
                 API.getJobs()
             ]);
 
+            console.log('[Clients] Raw data:', {
+                leads: leads?.all?.length || 0,
+                estimates: estimates?.length || 0,
+                jobs: jobs?.length || 0
+            });
+
             this.state.estimates = Array.isArray(estimates) ? estimates : [];
             this.state.jobs = Array.isArray(jobs) ? jobs : [];
-            this.state.allLeads = Array.isArray(leads?.all) ? leads.all : [];
 
-            // Filter leads to only those with estimates or jobs
-            const leadsWithProjects = this.state.allLeads.filter(lead => {
+            // Filter leads to only include those with estimates or jobs
+            // API.getLeads() returns { cold, warm, all }, so use leads.all
+            const allLeads = Array.isArray(leads?.all) ? leads.all : [];
+            const leadsWithProjects = allLeads.filter(lead => {
                 const hasEstimates = this.state.estimates.some(est => est.lead_id === lead.id);
                 const hasJobs = this.state.jobs.some(job => job.lead_id === lead.id);
                 return hasEstimates || hasJobs;
             });
 
-            // Transform to clients with stats
+            console.log('[Clients] Leads with projects:', leadsWithProjects.length);
+
+            // Transform leads into clients with stats
             this.state.clients = leadsWithProjects.map(lead => {
                 const clientEstimates = this.state.estimates.filter(est => est.lead_id === lead.id);
                 const clientJobs = this.state.jobs.filter(job => job.lead_id === lead.id);
@@ -83,28 +91,30 @@ window.ClientsModule = {
                     ...lead,
                     estimateCount: clientEstimates.length,
                     jobCount: clientJobs.length,
-                    totalRevenue: totalRevenue
+                    totalRevenue: totalRevenue,
+                    estimates: clientEstimates,
+                    jobs: clientJobs
                 };
             });
 
             this.state.filteredClients = [...this.state.clients];
 
-            console.log(`[Clients] ✅ Loaded ${this.state.clients.length} clients`);
+            console.log(`[Clients] ✅ Loaded ${this.state.clients.length} clients with projects`);
         } catch (error) {
-            console.error('[Clients] Error loading data:', error);
+            console.error('[Clients] ❌ Error loading data:', error);
             throw error;
         }
     },
 
     /**
-     * Calculate stats
+     * Calculate stats for display
      */
     calculateStats() {
-        const total = this.state.clients.length;
-        const totalRevenue = this.state.clients.reduce((sum, c) => sum + c.totalRevenue, 0);
-        const totalProjects = this.state.clients.reduce((sum, c) => sum + c.estimateCount + c.jobCount, 0);
+        const totalClients = this.state.clients.length;
+        const totalJobs = this.state.jobs.length;
+        const totalEstimates = this.state.estimates.length;
 
-        return { total, totalRevenue, totalProjects };
+        return { totalClients, totalJobs, totalEstimates };
     },
 
     /**
@@ -120,31 +130,25 @@ window.ClientsModule = {
                 const name = (client.name || '').toLowerCase();
                 const email = (client.email || '').toLowerCase();
                 const phone = (client.phone || '').toLowerCase();
-                const company = (client.company || '').toLowerCase();
 
                 return name.includes(this.state.searchQuery) ||
                        email.includes(this.state.searchQuery) ||
-                       phone.includes(this.state.searchQuery) ||
-                       company.includes(this.state.searchQuery);
+                       phone.includes(this.state.searchQuery);
             });
         }
 
+        // Re-render client cards
         this.renderClientCards();
     },
 
     /**
-     * Show loading state
+     * Show loading state (fade out pattern like Estimates)
      */
     showLoading() {
         const container = document.getElementById(this.state.container);
         if (container) {
-            container.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; min-height: 400px; color: var(--text-secondary);">
-                    <div style="text-align: center;">
-                        <div style="margin-bottom: 1rem;">Loading clients...</div>
-                    </div>
-                </div>
-            `;
+            container.style.opacity = '0';
+            container.innerHTML = `<div style="min-height: 400px;"></div>`;
         }
     },
 
@@ -156,16 +160,16 @@ window.ClientsModule = {
         if (container) {
             container.removeAttribute('style');
             container.innerHTML = `
-                <div style="padding: 2rem; text-align: center; color: var(--text-secondary);">
-                    <div style="font-size: 1.125rem; margin-bottom: 0.5rem;">⚠️ Error</div>
-                    <div>${this.escapeHtml(message)}</div>
+                <div style="text-align: center; padding: 60px; color: var(--danger);">
+                    <h3>Error</h3>
+                    <p>${message}</p>
                 </div>
             `;
         }
     },
 
     /**
-     * Main render function
+     * Render the full module
      */
     render() {
         const container = document.getElementById(this.state.container);
@@ -173,65 +177,107 @@ window.ClientsModule = {
 
         const stats = this.calculateStats();
 
-        container.removeAttribute('style');
         container.innerHTML = `
             ${this.renderStyles()}
-
             <div class="clients-container">
                 <!-- Header -->
                 <div class="clients-header">
-                    <div class="clients-header-content">
-                        <h1 class="clients-title">Clients</h1>
-                        <p class="clients-subtitle">View client relationships and project history</p>
-                    </div>
+                    <h2 class="clients-title">Client Overview</h2>
+                    <p class="clients-subtitle">Track your clients and their project history</p>
                 </div>
 
                 <!-- Stats Cards -->
-                <div class="clients-stats-grid">
+                <div class="clients-stats">
                     <div class="clients-stat-card">
-                        <div class="clients-stat-icon">👥</div>
+                        <div class="clients-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 010 7.75"/>
+                            </svg>
+                        </div>
                         <div class="clients-stat-content">
                             <div class="clients-stat-label">Total Clients</div>
-                            <div class="clients-stat-value">${stats.total}</div>
+                            <div class="clients-stat-value">${stats.totalClients}</div>
                         </div>
                     </div>
+
                     <div class="clients-stat-card">
-                        <div class="clients-stat-icon">💰</div>
+                        <div class="clients-stat-icon clients-stat-icon-jobs">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                                <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+                            </svg>
+                        </div>
                         <div class="clients-stat-content">
-                            <div class="clients-stat-label">Total Revenue</div>
-                            <div class="clients-stat-value">${this.formatCurrency(stats.totalRevenue)}</div>
+                            <div class="clients-stat-label">Total Jobs</div>
+                            <div class="clients-stat-value">${stats.totalJobs}</div>
                         </div>
                     </div>
+
                     <div class="clients-stat-card">
-                        <div class="clients-stat-icon">📋</div>
+                        <div class="clients-stat-icon clients-stat-icon-estimates">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                        </div>
                         <div class="clients-stat-content">
-                            <div class="clients-stat-label">Total Projects</div>
-                            <div class="clients-stat-value">${stats.totalProjects}</div>
+                            <div class="clients-stat-label">Total Estimates</div>
+                            <div class="clients-stat-value">${stats.totalEstimates}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Search -->
-                <div class="clients-search-container">
-                    <input
-                        type="text"
-                        class="clients-search-input"
-                        placeholder="Search clients by name, email, phone, or company..."
-                        value="${this.escapeHtml(this.state.searchQuery)}"
-                        id="clientsSearchInput"
-                    >
+                <!-- Search Bar -->
+                <div class="clients-toolbar">
+                    <div class="search-container">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <input
+                            type="text"
+                            id="clientSearch"
+                            class="search-input"
+                            placeholder="Search clients by name, email, or phone..."
+                            value="${this.state.searchQuery}"
+                        />
+                    </div>
                 </div>
 
-                <!-- Client Cards -->
-                <div class="clients-cards-container" id="clientsCardsContainer">
+                <!-- Client Cards Container -->
+                <div id="clientCardsContainer" class="clients-grid">
                     ${this.renderClientCardsHTML()}
+                </div>
+
+                <!-- Empty State -->
+                ${this.state.filteredClients.length === 0 ? this.renderEmptyState() : ''}
+            </div>
+
+            <!-- View Modal -->
+            <div id="clientViewModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="viewModalTitle">Client Details</h3>
+                        <button class="modal-close" id="closeViewModal">×</button>
+                    </div>
+                    <div class="modal-body" id="viewModalBody">
+                        <!-- Populated when viewing a client -->
+                    </div>
                 </div>
             </div>
         `;
 
+        // Wait for browser to parse CSS, then trigger fade-in
         requestAnimationFrame(() => {
-            this.attachEventListeners();
+            container.removeAttribute('style');
         });
+
+        this.attachEventListeners();
     },
 
     /**
@@ -239,89 +285,97 @@ window.ClientsModule = {
      */
     renderClientCardsHTML() {
         if (this.state.filteredClients.length === 0) {
-            return this.renderEmptyState();
+            return '';
         }
 
-        return `
-            <div class="clients-grid">
-                ${this.state.filteredClients.map(client => `
-                    <div class="clients-card" data-client-id="${client.id}">
-                        <div class="clients-card-header">
-                            <div class="clients-card-avatar">
-                                ${(client.name || '?')[0].toUpperCase()}
-                            </div>
-                            <div class="clients-card-info">
-                                <div class="clients-card-name">${this.escapeHtml(client.name || 'Unnamed')}</div>
-                                ${client.company ? `<div class="clients-card-company">${this.escapeHtml(client.company)}</div>` : ''}
-                            </div>
-                        </div>
-
-                        <div class="clients-card-details">
-                            ${client.email ? `
-                                <div class="clients-card-detail">
-                                    <span class="clients-card-detail-icon">📧</span>
-                                    <span>${this.escapeHtml(client.email)}</span>
-                                </div>
-                            ` : ''}
-                            ${client.phone ? `
-                                <div class="clients-card-detail">
-                                    <span class="clients-card-detail-icon">📱</span>
-                                    <span>${this.formatPhone(client.phone)}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-
-                        <div class="clients-card-stats">
-                            <div class="clients-card-stat">
-                                <div class="clients-card-stat-value">${client.estimateCount}</div>
-                                <div class="clients-card-stat-label">Estimates</div>
-                            </div>
-                            <div class="clients-card-stat">
-                                <div class="clients-card-stat-value">${client.jobCount}</div>
-                                <div class="clients-card-stat-label">Jobs</div>
-                            </div>
-                            <div class="clients-card-stat">
-                                <div class="clients-card-stat-value">${this.formatCurrency(client.totalRevenue)}</div>
-                                <div class="clients-card-stat-label">Revenue</div>
-                            </div>
-                        </div>
-
-                        <button class="clients-card-btn">View Details</button>
+        return this.state.filteredClients.map(client => `
+            <div class="client-card" data-client-id="${client.id}">
+                <div class="client-card-header">
+                    <div class="client-name">${this.escapeHtml(client.name || 'Unknown')}</div>
+                    <div class="client-phone">${this.formatPhone(client.phone)}</div>
+                </div>
+                <div class="client-email">${this.escapeHtml(client.email || 'No email')}</div>
+                <div class="client-divider"></div>
+                <div class="client-stats">
+                    <div class="client-stat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span>${client.estimateCount} Estimate${client.estimateCount !== 1 ? 's' : ''}</span>
                     </div>
-                `).join('')}
+                    <div class="client-stat-divider">•</div>
+                    <div class="client-stat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                            <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
+                        </svg>
+                        <span>${client.jobCount} Job${client.jobCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="client-stat-divider">•</div>
+                    <div class="client-stat client-stat-revenue">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                        </svg>
+                        <span>${this.formatCurrency(client.totalRevenue)} Revenue</span>
+                    </div>
+                </div>
             </div>
-        `;
+        `).join('');
     },
 
     /**
-     * Render client cards (just the cards section)
+     * Re-render just the client cards
      */
     renderClientCards() {
-        const container = document.getElementById('clientsCardsContainer');
-        if (container) {
-            container.innerHTML = this.renderClientCardsHTML();
-        }
+        const container = document.getElementById('clientCardsContainer');
+        if (!container) return;
+
+        container.innerHTML = this.renderClientCardsHTML();
+
+        // Reattach click listeners to client cards
+        document.querySelectorAll('.client-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const clientId = card.getAttribute('data-client-id');
+                this.openViewModal(clientId);
+            });
+        });
     },
 
     /**
      * Render empty state
      */
     renderEmptyState() {
-        const hasSearch = this.state.searchQuery.length > 0;
-
-        return `
-            <div class="clients-empty-state">
-                <div class="clients-empty-icon">${hasSearch ? '🔍' : '👥'}</div>
-                <div class="clients-empty-title">${hasSearch ? 'No clients found' : 'No clients yet'}</div>
-                <div class="clients-empty-text">
-                    ${hasSearch ? 'Try adjusting your search' : 'Clients with estimates or jobs will appear here'}
+        if (this.state.searchQuery) {
+            return `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <h3>No clients found</h3>
+                    <p>No clients match your search "${this.escapeHtml(this.state.searchQuery)}"</p>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            return `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    <h3>No clients yet</h3>
+                    <p>Clients will appear here once you create estimates or jobs for your leads.</p>
+                </div>
+            `;
+        }
     },
 
     /**
-     * Open client view modal
+     * Open view modal for a client
      */
     openViewModal(clientId) {
         const client = this.state.clients.find(c => c.id === clientId);
@@ -329,120 +383,88 @@ window.ClientsModule = {
 
         this.state.selectedClient = client;
 
-        const clientEstimates = this.state.estimates.filter(est => est.lead_id === client.id);
-        const clientJobs = this.state.jobs.filter(job => job.lead_id === client.id);
+        const modal = document.getElementById('clientViewModal');
+        const modalBody = document.getElementById('viewModalBody');
+        const modalTitle = document.getElementById('viewModalTitle');
 
-        const modal = document.createElement('div');
-        modal.id = 'clientViewModal';
-        modal.className = 'clients-view-modal-overlay';
-        modal.innerHTML = `
-            <div class="clients-view-modal">
-                <div class="clients-view-modal-header">
-                    <div>
-                        <h2>${this.escapeHtml(client.name || 'Unnamed Client')}</h2>
-                        ${client.company ? `<p style="color: var(--text-secondary); margin-top: 0.25rem;">${this.escapeHtml(client.company)}</p>` : ''}
+        if (!modal || !modalBody || !modalTitle) return;
+
+        modalTitle.textContent = client.name || 'Client Details';
+
+        modalBody.innerHTML = `
+            <div class="client-modal-content">
+                <!-- Contact Info -->
+                <div class="modal-section">
+                    <div class="modal-section-title">Contact Information</div>
+                    <div class="contact-info">
+                        ${client.email ? `<div class="contact-item"><strong>Email:</strong> ${this.escapeHtml(client.email)}</div>` : ''}
+                        ${client.phone ? `<div class="contact-item"><strong>Phone:</strong> ${this.formatPhone(client.phone)}</div>` : ''}
+                        ${client.address ? `<div class="contact-item"><strong>Address:</strong> ${this.formatAddress(client)}</div>` : ''}
                     </div>
-                    <button class="clients-view-modal-close" data-action="close-view">×</button>
                 </div>
 
-                <div class="clients-view-modal-body">
-                    <!-- Contact Info -->
-                    <div class="clients-view-section">
-                        <div class="clients-view-section-title">Contact Information</div>
-                        <div class="clients-view-info-grid">
-                            ${client.email ? `
-                                <div class="clients-view-info-item">
-                                    <div class="clients-view-info-label">Email</div>
-                                    <div class="clients-view-info-value">${this.escapeHtml(client.email)}</div>
-                                </div>
-                            ` : ''}
-                            ${client.phone ? `
-                                <div class="clients-view-info-item">
-                                    <div class="clients-view-info-label">Phone</div>
-                                    <div class="clients-view-info-value">${this.formatPhone(client.phone)}</div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-
-                    <!-- Estimates -->
-                    ${clientEstimates.length > 0 ? `
-                        <div class="clients-view-section">
-                            <div class="clients-view-section-title">Estimates (${clientEstimates.length})</div>
-                            <div class="clients-item-cards">
-                                ${clientEstimates.map(est => `
-                                    <div class="clients-item-card" data-estimate-id="${est.id}">
+                <!-- Estimates Section -->
+                ${client.estimates.length > 0 ? `
+                    <div class="modal-section">
+                        <div class="modal-section-title">Estimates (${client.estimates.length})</div>
+                        <div class="clients-item-cards">
+                            ${client.estimates.map(est => `
+                                <div class="clients-item-card" data-estimate-id="${est.id}">
+                                    <div class="clients-item-card-header">
                                         <div class="clients-item-card-title">${this.truncateText(est.title || 'Untitled', 35)}</div>
-                                        <div class="clients-item-card-meta">
-                                            <span class="clients-item-card-status clients-item-card-status-${est.status || 'draft'}">
-                                                ${this.formatStatus(est.status || 'draft')}
-                                            </span>
-                                            <span class="clients-item-card-amount">${this.formatCurrency(est.total_price || 0)}</span>
-                                        </div>
-                                        <div class="clients-item-card-date">${this.getRelativeTime(est.created_at)}</div>
+                                        <span class="status-badge status-${est.status}">${this.formatStatus(est.status)}</span>
                                     </div>
-                                `).join('')}
-                            </div>
+                                    <div class="clients-item-card-meta">
+                                        <span class="clients-item-price">${this.formatCurrency(est.total_price)}</span>
+                                        <span class="clients-item-date">${this.getRelativeTime(est.created_at)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
-                    ` : ''}
+                    </div>
+                ` : ''}
 
-                    <!-- Jobs -->
-                    ${clientJobs.length > 0 ? `
-                        <div class="clients-view-section">
-                            <div class="clients-view-section-title">Jobs (${clientJobs.length})</div>
-                            <div class="clients-item-cards">
-                                ${clientJobs.map(job => `
-                                    <div class="clients-item-card" data-job-id="${job.id}">
+                <!-- Jobs Section -->
+                ${client.jobs.length > 0 ? `
+                    <div class="modal-section">
+                        <div class="modal-section-title">Jobs (${client.jobs.length})</div>
+                        <div class="clients-item-cards">
+                            ${client.jobs.map(job => `
+                                <div class="clients-item-card" data-job-id="${job.id}">
+                                    <div class="clients-item-card-header">
                                         <div class="clients-item-card-title">${this.truncateText(job.title || 'Untitled', 35)}</div>
-                                        <div class="clients-item-card-meta">
-                                            <span class="clients-item-card-status clients-item-card-status-${job.status || 'scheduled'}">
-                                                ${this.formatStatus(job.status || 'scheduled')}
-                                            </span>
-                                            <span class="clients-item-card-amount">${this.formatCurrency(job.final_price || job.quoted_price || 0)}</span>
-                                        </div>
-                                        <div class="clients-item-card-date">${this.getRelativeTime(job.created_at)}</div>
+                                        <span class="status-badge status-${job.status}">${this.formatStatus(job.status)}</span>
                                     </div>
-                                `).join('')}
-                            </div>
+                                    <div class="clients-item-card-meta">
+                                        <span class="clients-item-price">${this.formatCurrency(job.final_price || job.quoted_price || 0)}</span>
+                                        <span class="clients-item-date">${this.getRelativeTime(job.created_at)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
-                    ` : ''}
-                </div>
+                    </div>
+                ` : ''}
             </div>
         `;
 
-        document.body.appendChild(modal);
-
-        // Fade in
-        requestAnimationFrame(() => {
-            modal.style.opacity = '1';
-        });
-
-        // Attach event listeners
-        modal.querySelector('[data-action="close-view"]').addEventListener('click', () => {
-            this.closeViewModal();
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeViewModal();
-            }
-        });
-
-        // Estimate card clicks - open detail modal
-        modal.querySelectorAll('[data-estimate-id]').forEach(card => {
+        // Add click handlers for estimate/job cards
+        modalBody.querySelectorAll('.clients-item-card[data-estimate-id]').forEach(card => {
             card.addEventListener('click', () => {
-                const estimateId = card.dataset.estimateId;
-                this.showEstimateDetailModal(estimateId);
+                const estimateId = card.getAttribute('data-estimate-id');
+                // Don't hide client modal - let view modal layer on top with higher z-index
+                this.clients_showEstimateViewModal(estimateId);
             });
         });
 
-        // Job card clicks - open detail modal
-        modal.querySelectorAll('[data-job-id]').forEach(card => {
+        modalBody.querySelectorAll('.clients-item-card[data-job-id]').forEach(card => {
             card.addEventListener('click', () => {
-                const jobId = card.dataset.jobId;
-                this.showJobDetailModal(jobId);
+                const jobId = card.getAttribute('data-job-id');
+                // Don't hide client modal - let view modal layer on top with higher z-index
+                this.clients_showJobViewModal(jobId);
             });
         });
+
+        modal.style.display = 'flex';
     },
 
     /**
@@ -451,854 +473,8 @@ window.ClientsModule = {
     closeViewModal() {
         const modal = document.getElementById('clientViewModal');
         if (modal) {
-            modal.style.opacity = '0';
-            setTimeout(() => modal.remove(), 200);
-        }
-        this.state.selectedClient = null;
-    },
-
-    /**
-     * Show estimate detail modal (view/edit)
-     */
-    showEstimateDetailModal(estimateId) {
-        const estimate = this.state.estimates.find(e => e.id === estimateId);
-        if (!estimate) return;
-
-        const lead = this.state.allLeads.find(l => l.id === estimate.lead_id);
-        const lineItems = estimate.line_items || [];
-        const photos = estimate.photos || [];
-        const totalPrice = estimate.total_price || 0;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'clients-detail-modal-overlay';
-        overlay.style.zIndex = '10000';
-        overlay.innerHTML = `
-            <div class="clients-detail-modal">
-                <div class="clients-detail-modal-header">
-                    <h2>${this.truncateText(estimate.title || 'Untitled Estimate', 50)}</h2>
-                    <button class="clients-detail-modal-close" data-action="close">×</button>
-                </div>
-
-                <div class="clients-detail-modal-body">
-                    <!-- Basic Info -->
-                    <div class="clients-detail-section">
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Status</div>
-                            <div class="clients-detail-value">
-                                <span class="clients-detail-status clients-detail-status-${estimate.status || 'draft'}">
-                                    ${this.formatStatus(estimate.status || 'draft')}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Client</div>
-                            <div class="clients-detail-value">${this.escapeHtml(lead?.name || 'Unknown')}</div>
-                        </div>
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Created</div>
-                            <div class="clients-detail-value">${this.getRelativeTime(estimate.created_at)}</div>
-                        </div>
-                        ${estimate.expires_at ? `
-                            <div class="clients-detail-row">
-                                <div class="clients-detail-label">Expires</div>
-                                <div class="clients-detail-value">${this.getRelativeTime(estimate.expires_at)}</div>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${estimate.description ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Description</div>
-                            <div class="clients-detail-text">${this.escapeHtml(estimate.description)}</div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Line Items -->
-                    ${lineItems.length > 0 ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Line Items</div>
-                            <div class="clients-detail-table">
-                                <div class="clients-detail-table-header">
-                                    <div>Description</div>
-                                    <div>Qty</div>
-                                    <div>Rate</div>
-                                    <div>Total</div>
-                                </div>
-                                ${lineItems.map(item => `
-                                    <div class="clients-detail-table-row">
-                                        <div>${this.escapeHtml(item.description || '')}</div>
-                                        <div>${item.quantity || 0}</div>
-                                        <div>${this.formatCurrency(item.rate || 0)}</div>
-                                        <div>${this.formatCurrency((item.quantity || 0) * (item.rate || 0))}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <div class="clients-detail-total">
-                                <span>Total:</span>
-                                <span>${this.formatCurrency(totalPrice)}</span>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Photos -->
-                    ${photos.length > 0 ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Photos</div>
-                            <div class="clients-detail-photos">
-                                ${photos.map(photo => `
-                                    <img src="${photo}" alt="Estimate photo" class="clients-detail-photo">
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="clients-detail-modal-footer">
-                    <button class="clients-detail-btn clients-detail-btn-secondary" data-action="close">Close</button>
-                    <button class="clients-detail-btn clients-detail-btn-primary" data-action="edit-estimate">Edit</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-        });
-
-        // Close button
-        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            });
-        });
-
-        // Click outside to close
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            }
-        });
-
-        // Edit button - open edit modal
-        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', () => {
-            overlay.remove();
-            this.showEstimateEditModal(estimateId);
-        });
-    },
-
-    /**
-     * Show estimate edit modal
-     */
-    showEstimateEditModal(estimateId) {
-        const estimate = this.state.estimates.find(e => e.id === estimateId);
-        if (!estimate) return;
-
-        const lineItems = estimate.line_items || [{ description: '', quantity: 1, rate: 0 }];
-        const photos = estimate.photos || [];
-        this.state.modalPhotos = [...photos];
-
-        // Default expiry: 30 days from now
-        const defaultExpiry = new Date();
-        defaultExpiry.setDate(defaultExpiry.getDate() + 30);
-        const expiryDate = estimate.expires_at ? estimate.expires_at.split('T')[0] : defaultExpiry.toISOString().split('T')[0];
-
-        const overlay = document.createElement('div');
-        overlay.className = 'clients-edit-modal-overlay';
-        overlay.style.zIndex = '10000';
-        overlay.innerHTML = `
-            <div class="clients-edit-modal">
-                <div class="clients-edit-modal-header">
-                    <h2>Edit Estimate</h2>
-                    <button class="clients-edit-modal-close" data-action="close">×</button>
-                </div>
-
-                <form id="estimateEditForm" class="clients-edit-modal-body">
-                    <!-- Title -->
-                    <div class="clients-edit-form-group">
-                        <label>Title *</label>
-                        <input
-                            type="text"
-                            name="title"
-                            placeholder="e.g., Kitchen Remodel"
-                            value="${this.escapeHtml(estimate.title || '')}"
-                            maxlength="35"
-                            required
-                        >
-                    </div>
-
-                    <!-- Status -->
-                    <div class="clients-edit-form-group">
-                        <label>Status</label>
-                        <select name="status">
-                            ${this.ESTIMATE_STATUSES.map(status => `
-                                <option value="${status}" ${estimate.status === status ? 'selected' : ''}>
-                                    ${this.formatStatus(status)}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-
-                    <!-- Expiry -->
-                    <div class="clients-edit-form-group">
-                        <label>Expires On</label>
-                        <input
-                            type="date"
-                            name="expires_at"
-                            value="${expiryDate}"
-                            ${!estimate.expires_at ? 'disabled' : ''}
-                        >
-                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; cursor: pointer;">
-                            <input
-                                type="checkbox"
-                                id="noExpiry"
-                                ${!estimate.expires_at ? 'checked' : ''}
-                                style="cursor: pointer;"
-                            >
-                            <span style="font-size: 0.875rem;">No expiration date</span>
-                        </label>
-                    </div>
-
-                    <!-- Description -->
-                    <div class="clients-edit-form-group">
-                        <label>Description</label>
-                        <textarea
-                            name="description"
-                            placeholder="Brief description of the work..."
-                            maxlength="500"
-                            rows="3"
-                        >${this.escapeHtml(estimate.description || '')}</textarea>
-                    </div>
-
-                    <!-- Line Items -->
-                    <div class="clients-edit-form-group">
-                        <label>Line Items</label>
-                        <div class="clients-edit-line-items" id="lineItemsContainer">
-                            ${lineItems.map((item, i) => this.renderLineItemRow(item, i)).join('')}
-                        </div>
-                        <button type="button" class="clients-edit-add-btn" data-action="add-line-item">
-                            + Add Line Item
-                        </button>
-                        <div class="clients-edit-total">
-                            <span>Total:</span>
-                            <span id="estimateTotalDisplay">${this.formatCurrency(estimate.total_price || 0)}</span>
-                        </div>
-                    </div>
-
-                    <!-- Terms -->
-                    <div class="clients-edit-form-group">
-                        <label>Terms & Conditions</label>
-                        <textarea
-                            name="terms"
-                            placeholder="Payment terms, warranty, etc..."
-                            maxlength="1000"
-                            rows="4"
-                        >${this.escapeHtml(estimate.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.')}</textarea>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="clients-edit-form-group">
-                        <label>Internal Notes</label>
-                        <textarea
-                            name="notes"
-                            placeholder="Internal notes (not visible to client)..."
-                            maxlength="500"
-                            rows="3"
-                        >${this.escapeHtml(estimate.notes || '')}</textarea>
-                    </div>
-                </form>
-
-                <div class="clients-edit-modal-footer">
-                    <button class="clients-edit-btn clients-edit-btn-secondary" data-action="close">Cancel</button>
-                    <button class="clients-edit-btn clients-edit-btn-primary" data-action="save">Save Changes</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-            this.updateLineItemsTotal();
-        });
-
-        // No expiry checkbox
-        const noExpiryCheckbox = overlay.querySelector('#noExpiry');
-        const expiryInput = overlay.querySelector('[name="expires_at"]');
-
-        noExpiryCheckbox.addEventListener('change', () => {
-            expiryInput.disabled = noExpiryCheckbox.checked;
-        });
-
-        // Add line item
-        overlay.querySelector('[data-action="add-line-item"]').addEventListener('click', () => {
-            const container = overlay.querySelector('#lineItemsContainer');
-            const currentItems = container.querySelectorAll('.clients-edit-line-item');
-            if (currentItems.length >= 50) {
-                alert('Maximum 50 line items allowed');
-                return;
-            }
-            const newIndex = currentItems.length;
-            const newRow = this.renderLineItemRow({ description: '', quantity: 1, rate: 0 }, newIndex);
-            container.insertAdjacentHTML('beforeend', newRow);
-            this.updateLineItemsTotal();
-        });
-
-        // Line item changes
-        overlay.addEventListener('input', (e) => {
-            if (e.target.closest('.clients-edit-line-item')) {
-                this.updateLineItemsTotal();
-            }
-        });
-
-        // Remove line item
-        overlay.addEventListener('click', (e) => {
-            if (e.target.closest('[data-action="remove-line-item"]')) {
-                e.target.closest('.clients-edit-line-item').remove();
-                this.updateLineItemsTotal();
-            }
-        });
-
-        // Close button
-        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            });
-        });
-
-        // Save button
-        overlay.querySelector('[data-action="save"]').addEventListener('click', async () => {
-            await this.saveEstimate(estimateId, overlay);
-        });
-    },
-
-    /**
-     * Render line item row
-     */
-    renderLineItemRow(item, index) {
-        return `
-            <div class="clients-edit-line-item">
-                <input
-                    type="text"
-                    placeholder="Description"
-                    value="${this.escapeHtml(item.description || '')}"
-                    data-field="description"
-                    maxlength="100"
-                >
-                <input
-                    type="number"
-                    placeholder="Qty"
-                    value="${item.quantity || 1}"
-                    data-field="quantity"
-                    min="0"
-                    step="0.01"
-                >
-                <input
-                    type="number"
-                    placeholder="Rate"
-                    value="${item.rate || 0}"
-                    data-field="rate"
-                    min="0"
-                    step="0.01"
-                >
-                <button type="button" class="clients-edit-remove-btn" data-action="remove-line-item">×</button>
-            </div>
-        `;
-    },
-
-    /**
-     * Update line items total
-     */
-    updateLineItemsTotal() {
-        const overlay = document.querySelector('.clients-edit-modal-overlay');
-        if (!overlay) return;
-
-        const items = overlay.querySelectorAll('.clients-edit-line-item');
-        let total = 0;
-
-        items.forEach(item => {
-            const qty = parseFloat(item.querySelector('[data-field="quantity"]').value) || 0;
-            const rate = parseFloat(item.querySelector('[data-field="rate"]').value) || 0;
-            total += qty * rate;
-        });
-
-        const totalDisplay = overlay.querySelector('#estimateTotalDisplay');
-        if (totalDisplay) {
-            totalDisplay.textContent = this.formatCurrency(total);
-        }
-    },
-
-    /**
-     * Save estimate
-     */
-    async saveEstimate(estimateId, overlay) {
-        if (this.state.isSaving) return;
-        this.state.isSaving = true;
-
-        const form = overlay.querySelector('#estimateEditForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            this.state.isSaving = false;
-            return;
-        }
-
-        const formData = new FormData(form);
-
-        // Collect line items
-        const lineItems = [];
-        const itemRows = overlay.querySelectorAll('.clients-edit-line-item');
-        itemRows.forEach(row => {
-            const description = row.querySelector('[data-field="description"]').value;
-            const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
-            const rate = parseFloat(row.querySelector('[data-field="rate"]').value) || 0;
-
-            if (description || quantity || rate) {
-                lineItems.push({ description, quantity, rate });
-            }
-        });
-
-        // Calculate total
-        const totalPrice = lineItems.reduce((sum, item) => {
-            return sum + (item.quantity * item.rate);
-        }, 0);
-
-        // Handle expiry
-        const noExpiry = overlay.querySelector('#noExpiry').checked;
-        const expiresAt = noExpiry ? null : formData.get('expires_at');
-
-        const estimateData = {
-            title: formData.get('title'),
-            status: formData.get('status'),
-            expires_at: expiresAt,
-            description: formData.get('description') || null,
-            line_items: lineItems,
-            total_price: totalPrice,
-            terms: formData.get('terms') || null,
-            notes: formData.get('notes') || null,
-            photos: this.state.modalPhotos
-        };
-
-        try {
-            // Close modal immediately
-            overlay.remove();
-
-            // Update in background
-            const result = await API.updateEstimate(estimateId, estimateData);
-
-            // Update local state
-            const index = this.state.estimates.findIndex(e => e.id === estimateId);
-            if (index !== -1) {
-                this.state.estimates[index] = result;
-            }
-
-            // Reload and re-render
-            await this.loadData();
-            this.render();
-
-            window.SteadyUtils.showToast('Estimate updated successfully', 'success');
-        } catch (error) {
-            console.error('[Clients] Save estimate error:', error);
-            window.SteadyUtils.showToast('Failed to save estimate', 'error');
-        } finally {
-            this.state.isSaving = false;
-        }
-    },
-
-    /**
-     * Show job detail modal (view)
-     */
-    showJobDetailModal(jobId) {
-        const job = this.state.jobs.find(j => j.id === jobId);
-        if (!job) return;
-
-        const lead = this.state.allLeads.find(l => l.id === job.lead_id);
-        const materials = job.materials || [];
-        const crewMembers = job.crew_members || [];
-
-        const overlay = document.createElement('div');
-        overlay.className = 'clients-detail-modal-overlay';
-        overlay.style.zIndex = '10000';
-        overlay.innerHTML = `
-            <div class="clients-detail-modal">
-                <div class="clients-detail-modal-header">
-                    <h2>${this.truncateText(job.title || 'Untitled Job', 50)}</h2>
-                    <button class="clients-detail-modal-close" data-action="close">×</button>
-                </div>
-
-                <div class="clients-detail-modal-body">
-                    <!-- Basic Info -->
-                    <div class="clients-detail-section">
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Status</div>
-                            <div class="clients-detail-value">
-                                <span class="clients-detail-status clients-detail-status-${job.status || 'scheduled'}">
-                                    ${this.formatStatus(job.status || 'scheduled')}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Client</div>
-                            <div class="clients-detail-value">${this.escapeHtml(lead?.name || 'Unknown')}</div>
-                        </div>
-                        <div class="clients-detail-row">
-                            <div class="clients-detail-label">Job Type</div>
-                            <div class="clients-detail-value">${this.escapeHtml(job.job_type || 'N/A')}</div>
-                        </div>
-                        ${job.scheduled_date ? `
-                            <div class="clients-detail-row">
-                                <div class="clients-detail-label">Scheduled</div>
-                                <div class="clients-detail-value">${this.getRelativeTime(job.scheduled_date)}</div>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${job.description ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Description</div>
-                            <div class="clients-detail-text">${this.escapeHtml(job.description)}</div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Financial Summary -->
-                    <div class="clients-detail-section">
-                        <div class="clients-detail-section-title">Financial Summary</div>
-                        <div class="clients-detail-info-grid">
-                            <div class="clients-detail-info-item">
-                                <div class="clients-detail-label">Material Cost</div>
-                                <div class="clients-detail-value">${this.formatCurrency(job.material_cost || 0)}</div>
-                            </div>
-                            <div class="clients-detail-info-item">
-                                <div class="clients-detail-label">Labor Cost</div>
-                                <div class="clients-detail-value">${this.formatCurrency((job.labor_rate || 0) * (job.estimated_labor_hours || 0))}</div>
-                            </div>
-                            <div class="clients-detail-info-item">
-                                <div class="clients-detail-label">Other Expenses</div>
-                                <div class="clients-detail-value">${this.formatCurrency(job.other_expenses || 0)}</div>
-                            </div>
-                            <div class="clients-detail-info-item">
-                                <div class="clients-detail-label">Quoted Price</div>
-                                <div class="clients-detail-value">${this.formatCurrency(job.quoted_price || 0)}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Materials -->
-                    ${materials.length > 0 ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Materials</div>
-                            <div class="clients-detail-table">
-                                <div class="clients-detail-table-header">
-                                    <div>Name</div>
-                                    <div>Quantity</div>
-                                    <div>Unit Price</div>
-                                    <div>Total</div>
-                                </div>
-                                ${materials.map(item => `
-                                    <div class="clients-detail-table-row">
-                                        <div>${this.escapeHtml(item.name || '')}</div>
-                                        <div>${item.quantity || 0} ${this.escapeHtml(item.unit || '')}</div>
-                                        <div>${this.formatCurrency(item.unit_price || 0)}</div>
-                                        <div>${this.formatCurrency((item.quantity || 0) * (item.unit_price || 0))}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Crew -->
-                    ${crewMembers.length > 0 ? `
-                        <div class="clients-detail-section">
-                            <div class="clients-detail-section-title">Crew Members</div>
-                            <div class="clients-detail-table">
-                                <div class="clients-detail-table-header">
-                                    <div>Name</div>
-                                    <div>Role</div>
-                                    <div>Hours</div>
-                                    <div>Rate</div>
-                                </div>
-                                ${crewMembers.map(member => `
-                                    <div class="clients-detail-table-row">
-                                        <div>${this.escapeHtml(member.name || '')}</div>
-                                        <div>${this.escapeHtml(member.role || '')}</div>
-                                        <div>${member.hours || 0}</div>
-                                        <div>${this.formatCurrency(member.rate || 0)}/hr</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-
-                <div class="clients-detail-modal-footer">
-                    <button class="clients-detail-btn clients-detail-btn-secondary" data-action="close">Close</button>
-                    <button class="clients-detail-btn clients-detail-btn-primary" data-action="edit-job">Edit</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-        });
-
-        // Close button
-        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            });
-        });
-
-        // Click outside to close
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            }
-        });
-
-        // Edit button
-        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', () => {
-            overlay.remove();
-            this.showJobEditModal(jobId);
-        });
-    },
-
-    /**
-     * Show job edit modal
-     */
-    showJobEditModal(jobId) {
-        const job = this.state.jobs.find(j => j.id === jobId);
-        if (!job) return;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'clients-edit-modal-overlay';
-        overlay.style.zIndex = '10000';
-        overlay.innerHTML = `
-            <div class="clients-edit-modal">
-                <div class="clients-edit-modal-header">
-                    <h2>Edit Job</h2>
-                    <button class="clients-edit-modal-close" data-action="close">×</button>
-                </div>
-
-                <form id="jobEditForm" class="clients-edit-modal-body">
-                    <!-- Title -->
-                    <div class="clients-edit-form-group">
-                        <label>Title *</label>
-                        <input
-                            type="text"
-                            name="title"
-                            placeholder="e.g., Kitchen Installation"
-                            value="${this.escapeHtml(job.title || '')}"
-                            maxlength="100"
-                            required
-                        >
-                    </div>
-
-                    <!-- Status -->
-                    <div class="clients-edit-form-group">
-                        <label>Status</label>
-                        <select name="status">
-                            ${this.JOB_STATUSES.map(status => `
-                                <option value="${status}" ${job.status === status ? 'selected' : ''}>
-                                    ${this.formatStatus(status)}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-
-                    <!-- Job Type -->
-                    <div class="clients-edit-form-group">
-                        <label>Job Type</label>
-                        <input
-                            type="text"
-                            name="job_type"
-                            placeholder="e.g., Plumbing, Electrical..."
-                            value="${this.escapeHtml(job.job_type || '')}"
-                            maxlength="50"
-                        >
-                    </div>
-
-                    <!-- Scheduled Date -->
-                    <div class="clients-edit-form-group">
-                        <label>Scheduled Date</label>
-                        <input
-                            type="date"
-                            name="scheduled_date"
-                            value="${job.scheduled_date ? job.scheduled_date.split('T')[0] : ''}"
-                        >
-                    </div>
-
-                    <!-- Description -->
-                    <div class="clients-edit-form-group">
-                        <label>Description</label>
-                        <textarea
-                            name="description"
-                            placeholder="Job details..."
-                            maxlength="1000"
-                            rows="4"
-                        >${this.escapeHtml(job.description || '')}</textarea>
-                    </div>
-
-                    <!-- Financial Details -->
-                    <div class="clients-edit-form-row">
-                        <div class="clients-edit-form-group">
-                            <label>Material Cost</label>
-                            <input
-                                type="number"
-                                name="material_cost"
-                                placeholder="0.00"
-                                value="${job.material_cost || ''}"
-                                min="0"
-                                step="0.01"
-                            >
-                        </div>
-                        <div class="clients-edit-form-group">
-                            <label>Labor Rate ($/hr)</label>
-                            <input
-                                type="number"
-                                name="labor_rate"
-                                placeholder="0.00"
-                                value="${job.labor_rate || ''}"
-                                min="0"
-                                step="0.01"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="clients-edit-form-row">
-                        <div class="clients-edit-form-group">
-                            <label>Estimated Labor Hours</label>
-                            <input
-                                type="number"
-                                name="estimated_labor_hours"
-                                placeholder="0"
-                                value="${job.estimated_labor_hours || ''}"
-                                min="0"
-                                step="0.5"
-                            >
-                        </div>
-                        <div class="clients-edit-form-group">
-                            <label>Other Expenses</label>
-                            <input
-                                type="number"
-                                name="other_expenses"
-                                placeholder="0.00"
-                                value="${job.other_expenses || ''}"
-                                min="0"
-                                step="0.01"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="clients-edit-form-group">
-                        <label>Quoted Price</label>
-                        <input
-                            type="number"
-                            name="quoted_price"
-                            placeholder="0.00"
-                            value="${job.quoted_price || ''}"
-                            min="0"
-                            step="0.01"
-                        >
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="clients-edit-form-group">
-                        <label>Internal Notes</label>
-                        <textarea
-                            name="notes"
-                            placeholder="Internal notes..."
-                            maxlength="1000"
-                            rows="3"
-                        >${this.escapeHtml(job.notes || '')}</textarea>
-                    </div>
-                </form>
-
-                <div class="clients-edit-modal-footer">
-                    <button class="clients-edit-btn clients-edit-btn-secondary" data-action="close">Cancel</button>
-                    <button class="clients-edit-btn clients-edit-btn-primary" data-action="save">Save Changes</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-        });
-
-        // Close button
-        overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.remove(), 200);
-            });
-        });
-
-        // Save button
-        overlay.querySelector('[data-action="save"]').addEventListener('click', async () => {
-            await this.saveJob(jobId, overlay);
-        });
-    },
-
-    /**
-     * Save job
-     */
-    async saveJob(jobId, overlay) {
-        if (this.state.isSaving) return;
-        this.state.isSaving = true;
-
-        const form = overlay.querySelector('#jobEditForm');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            this.state.isSaving = false;
-            return;
-        }
-
-        const formData = new FormData(form);
-
-        const jobData = {
-            title: formData.get('title'),
-            status: formData.get('status'),
-            job_type: formData.get('job_type') || null,
-            scheduled_date: formData.get('scheduled_date') || null,
-            description: formData.get('description') || null,
-            material_cost: parseFloat(formData.get('material_cost')) || 0,
-            labor_rate: parseFloat(formData.get('labor_rate')) || 0,
-            estimated_labor_hours: parseFloat(formData.get('estimated_labor_hours')) || 0,
-            other_expenses: parseFloat(formData.get('other_expenses')) || 0,
-            quoted_price: parseFloat(formData.get('quoted_price')) || 0,
-            notes: formData.get('notes') || null
-        };
-
-        try {
-            // Close modal immediately
-            overlay.remove();
-
-            // Update in background
-            const result = await API.updateJob(jobId, jobData);
-
-            // Update local state
-            const index = this.state.jobs.findIndex(j => j.id === jobId);
-            if (index !== -1) {
-                this.state.jobs[index] = result;
-            }
-
-            // Reload and re-render
-            await this.loadData();
-            this.render();
-
-            window.SteadyUtils.showToast('Job updated successfully', 'success');
-        } catch (error) {
-            console.error('[Clients] Save job error:', error);
-            window.SteadyUtils.showToast('Failed to save job', 'error');
-        } finally {
-            this.state.isSaving = false;
+            modal.style.display = 'none';
+            this.state.selectedClient = null;
         }
     },
 
@@ -1307,44 +483,95 @@ window.ClientsModule = {
      */
     attachEventListeners() {
         // Search input
-        const searchInput = document.getElementById('clientsSearchInput');
+        const searchInput = document.getElementById('clientSearch');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.filterClients(e.target.value);
             });
         }
 
-        // Client cards
-        document.querySelectorAll('.clients-card').forEach(card => {
+        // Client card clicks
+        document.querySelectorAll('.client-card').forEach(card => {
             card.addEventListener('click', () => {
-                const clientId = card.dataset.clientId;
+                const clientId = card.getAttribute('data-client-id');
                 this.openViewModal(clientId);
             });
         });
+
+        // Close modal button
+        const closeModalBtn = document.getElementById('closeViewModal');
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => this.closeViewModal());
+        }
+
+        // Close modal on overlay click
+        const modal = document.getElementById('clientViewModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeViewModal();
+                }
+            });
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.state.selectedClient) {
+                this.closeViewModal();
+            }
+        });
     },
 
+    // ==================== UTILITY FUNCTIONS ====================
+
     /**
-     * Utility functions
+     * Format currency
      */
     formatCurrency(amount) {
-        const num = parseFloat(amount) || 0;
+        if (!amount || isNaN(amount)) return '$0.00';
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        }).format(num);
+        }).format(amount);
     },
 
+    /**
+     * Format phone number
+     */
     formatPhone(phone) {
-        if (!phone) return '';
+        if (!phone) return 'Not provided';
         const cleaned = phone.replace(/\D/g, '');
         if (cleaned.length === 10) {
-            return `(${cleaned.slice(0,3)}) ${cleaned.slice(3,6)}-${cleaned.slice(6)}`;
+            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
         }
         return phone;
     },
 
+    /**
+     * Format address
+     */
+    formatAddress(client) {
+        const parts = [];
+        if (client.address) parts.push(client.address);
+        if (client.city) parts.push(client.city);
+        if (client.state) parts.push(client.state);
+        if (client.zip) parts.push(client.zip);
+
+        if (parts.length === 0) return 'Not provided';
+
+        // Format: "123 Main St, Minneapolis, MN 55401"
+        if (parts.length === 4) {
+            return `${parts[0]}, ${parts[1]}, ${parts[2]} ${parts[3]}`;
+        }
+
+        return parts.join(', ');
+    },
+
+    /**
+     * Format status for display
+     */
     formatStatus(status) {
         if (!status) return 'Unknown';
         return status.split('_').map(word =>
@@ -1352,8 +579,11 @@ window.ClientsModule = {
         ).join(' ');
     },
 
+    /**
+     * Get relative time (e.g., "2 days ago")
+     */
     getRelativeTime(dateString) {
-        if (!dateString) return 'N/A';
+        if (!dateString) return 'Unknown';
 
         const date = new Date(dateString);
         const now = new Date();
@@ -1363,11 +593,14 @@ window.ClientsModule = {
         if (diffDays === 0) return 'Today';
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-        if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-        return `${Math.floor(diffDays / 365)} years ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) !== 1 ? 's' : ''} ago`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) !== 1 ? 's' : ''} ago`;
+        return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) !== 1 ? 's' : ''} ago`;
     },
 
+    /**
+     * Escape HTML to prevent XSS
+     */
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -1375,6 +608,9 @@ window.ClientsModule = {
         return div.innerHTML;
     },
 
+    /**
+     * Truncate text to max length with ellipsis
+     */
     truncateText(text, maxLength) {
         if (!text) return '';
         const escaped = this.escapeHtml(text);
@@ -1382,872 +618,2355 @@ window.ClientsModule = {
         return escaped.substring(0, maxLength) + '...';
     },
 
+    // ==================== CONSTANTS ====================
+
+    ESTIMATE_STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
+    JOB_STATUSES: ['draft', 'scheduled', 'in_progress', 'completed', 'invoiced', 'paid', 'cancelled'],
+
+    // ==================== VIEW MODAL FUNCTIONS ====================
+
+    /**
+     * Show estimate view modal (clients version)
+     */
+    clients_showEstimateViewModal(estimateId) {
+        const estimate = this.state.estimates.find(e => e.id === estimateId);
+        if (!estimate) return;
+
+        // Clean up any existing modals first
+        const existingModals = document.querySelectorAll('.clients-estimate-modal-overlay, .clients-estimate-confirm-overlay');
+        existingModals.forEach(m => m.remove());
+
+        const lead = this.state.clients.find(c => c.id === estimate.lead_id);
+        const lineItems = estimate.line_items || [];
+        const photos = estimate.photos || [];
+        const totalPrice = estimate.total_price || 0;
+
+        const statusIcons = {
+            draft: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2"/>',
+            sent: '<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2"/>',
+            accepted: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            rejected: '<path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            expired: '<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>'
+        };
+
+        const statusColors = {
+            draft: '#6b7280',
+            sent: '#3b82f6',
+            accepted: '#10b981',
+            rejected: '#ef4444',
+            expired: '#f59e0b'
+        };
+
+        const overlay = document.createElement('div');
+        overlay.className = 'clients-estimate-modal-overlay';
+        overlay.innerHTML = `
+            <style>
+                .clients-estimate-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s ease;
+                    padding: 2rem;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .clients-estimate-view-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 630px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                .clients-estimate-view-header {
+                    padding: 32px;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+
+                .clients-estimate-view-header-left {
+                    flex: 1;
+                }
+
+                .clients-estimate-view-title {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin: 0 0 12px 0;
+                }
+
+                .clients-estimate-view-meta {
+                    display: flex;
+                    gap: 24px;
+                    align-items: center;
+                    flex-wrap: wrap;
+                }
+
+                .clients-estimate-view-meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
+
+                .clients-estimate-view-meta-item svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .clients-estimate-view-status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    background: ${statusColors[estimate.status]}15;
+                    color: ${statusColors[estimate.status]};
+                }
+
+                .clients-estimate-view-status-badge svg {
+                    width: 14px;
+                    height: 14px;
+                }
+
+                .clients-estimate-view-close {
+                    background: transparent;
+                    border: none;
+                    font-size: 28px;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+
+                .clients-estimate-view-close:hover {
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
+                }
+
+                .clients-estimate-view-body {
+                    padding: 32px;
+                }
+
+                .clients-estimate-view-section {
+                    margin-bottom: 32px;
+                }
+
+                .clients-estimate-view-section:last-child {
+                    margin-bottom: 0;
+                }
+
+                .clients-estimate-view-section-title {
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-tertiary);
+                    margin-bottom: 16px;
+                }
+
+                .clients-estimate-view-description {
+                    padding: 16px;
+                    background: var(--background);
+                    border-radius: 8px;
+                    font-size: 14px;
+                    color: var(--text-primary);
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                }
+
+                .clients-estimate-view-line-items-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: var(--background);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+
+                .clients-estimate-view-line-items-table thead {
+                    background: var(--surface-hover);
+                }
+
+                .clients-estimate-view-line-items-table th {
+                    padding: 12px 16px;
+                    text-align: left;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-tertiary);
+                }
+
+                .clients-estimate-view-line-items-table td {
+                    padding: 12px 16px;
+                    font-size: 14px;
+                    color: var(--text-primary);
+                    border-top: 1px solid var(--border);
+                }
+
+                .clients-estimate-view-line-items-table td:last-child {
+                    text-align: right;
+                    font-weight: 500;
+                }
+
+                .clients-estimate-view-total-box {
+                    margin-top: 16px;
+                    padding: 20px;
+                    background: rgba(59, 130, 246, 0.05);
+                    border: 1px solid var(--primary);
+                    border-radius: 8px;
+                    text-align: left;
+                }
+
+                .clients-estimate-view-total-label {
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                    margin-bottom: 4px;
+                }
+
+                .clients-estimate-view-total-value {
+                    font-size: 32px;
+                    font-weight: 600;
+                    color: var(--primary);
+                }
+
+                .clients-estimate-view-photos-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                    gap: 12px;
+                }
+
+                .clients-estimate-view-photo {
+                    aspect-ratio: 1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 1px solid var(--border);
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                }
+
+                .clients-estimate-view-photo:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                }
+
+                .clients-estimate-photo-lightbox {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.2s ease;
+                    cursor: pointer;
+                }
+
+                .clients-estimate-photo-lightbox img {
+                    max-width: 90%;
+                    max-height: 90vh;
+                    border-radius: 8px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                }
+
+                .clients-estimate-view-photo img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .clients-estimate-view-footer {
+                    padding: 24px 32px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .clients-estimate-view-actions {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                }
+
+                .clients-estimate-view-btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .clients-estimate-view-btn svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .clients-estimate-view-btn-edit {
+                    background: var(--primary);
+                    color: white;
+                }
+
+                .clients-estimate-view-btn-edit:hover {
+                    opacity: 0.9;
+                    transform: translateY(-1px);
+                }
+
+                .clients-estimate-view-btn-download {
+                    background: #10b981;
+                    color: white;
+                }
+
+                .clients-estimate-view-btn-download:hover {
+                    background: #059669;
+                    transform: translateY(-1px);
+                }
+
+                .clients-estimate-view-btn-delete {
+                    background: transparent;
+                    border: 1px solid #ef4444;
+                    color: #ef4444;
+                }
+
+                .clients-estimate-view-btn-delete:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                }
+
+                .clients-estimate-view-status-dropdown {
+                    padding: 10px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px;
+                }
+
+                .clients-estimate-view-status-dropdown:hover {
+                    border-color: var(--primary);
+                }
+
+                .clients-estimate-view-status-dropdown:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+            </style>
+            <div class="clients-estimate-view-modal">
+                <div class="clients-estimate-view-header">
+                    <div class="clients-estimate-view-header-left">
+                        <h2 class="clients-estimate-view-title">${estimate.title}</h2>
+                        <div class="clients-estimate-view-meta">
+                            <div class="clients-estimate-view-status-badge">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    ${statusIcons[estimate.status]}
+                                </svg>
+                                ${this.formatStatus(estimate.status)}
+                            </div>
+                            ${lead ? `
+                                <div class="clients-estimate-view-meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    ${lead.name}
+                                </div>
+                            ` : ''}
+                            <div class="clients-estimate-view-meta-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                ${estimate.expires_at ? `Expires ${new Date(estimate.expires_at).toLocaleDateString()}` : 'No expiration'}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="clients-estimate-view-close" data-action="close-view-modal">×</button>
+                </div>
+
+                <div class="clients-estimate-view-body">
+                    ${estimate.description ? `
+                        <div class="clients-estimate-view-section">
+                            <div class="clients-estimate-view-section-title">Description</div>
+                            <div class="clients-estimate-view-description">${estimate.description || 'No description provided'}</div>
+                        </div>
+                    ` : ''}
+
+                    ${lineItems.length > 0 ? `
+                        <div class="clients-estimate-view-section">
+                            <div class="clients-estimate-view-section-title">Line Items</div>
+                            <table class="clients-estimate-view-line-items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Quantity</th>
+                                        <th>Rate</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${lineItems.map(item => `
+                                        <tr>
+                                            <td>${item.description || '-'}</td>
+                                            <td>${item.quantity}</td>
+                                            <td>${this.formatCurrency(item.rate)}</td>
+                                            <td style="text-align: right;">${this.formatCurrency(item.quantity * item.rate)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            <div class="clients-estimate-view-total-box">
+                                <div class="clients-estimate-view-total-label">Total Estimate</div>
+                                <div class="clients-estimate-view-total-value">${this.formatCurrency(totalPrice)}</div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${photos.length > 0 ? `
+                        <div class="clients-estimate-view-section">
+                            <div class="clients-estimate-view-section-title">Photos (${photos.length})</div>
+                            <div class="clients-estimate-view-photos-grid">
+                                ${photos.map(photo => `
+                                    <div class="clients-estimate-view-photo">
+                                        <img src="${photo.url}" alt="${photo.caption || 'Photo'}">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${estimate.terms ? `
+                        <div class="clients-estimate-view-section">
+                            <div class="clients-estimate-view-section-title">Terms & Conditions</div>
+                            <div class="clients-estimate-view-description">${estimate.terms}</div>
+                        </div>
+                    ` : ''}
+
+                    ${estimate.notes ? `
+                        <div class="clients-estimate-view-section">
+                            <div class="clients-estimate-view-section-title">Internal Notes</div>
+                            <div class="clients-estimate-view-description">${estimate.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="clients-estimate-view-footer">
+                    <button class="clients-estimate-view-btn clients-estimate-view-btn-edit" data-action="edit-estimate" data-id="${estimate.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit
+                    </button>
+
+                    <button class="clients-estimate-view-btn clients-estimate-view-btn-download" data-action="download-client-copy" data-id="${estimate.id}">
+                        Download Client Copy
+                    </button>
+
+                    <div class="clients-estimate-view-actions">
+                        <select class="clients-estimate-view-status-dropdown" data-action="update-status" data-id="${estimate.id}">
+                            ${this.ESTIMATE_STATUSES.map(status => `
+                                <option value="${status}" ${estimate.status === status ? 'selected' : ''}>
+                                    ${this.formatStatus(status)}
+                                </option>
+                            `).join('')}
+                        </select>
+
+                        <button class="clients-estimate-view-btn clients-estimate-view-btn-delete" data-action="delete-estimate" data-id="${estimate.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Close modal - return to client detail modal if it exists
+        overlay.querySelector('[data-action="close-view-modal"]').addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+
+                // Show client detail modal if it was hidden
+                const clientModal = document.getElementById('clientViewModal');
+                if (clientModal && this.state.selectedClient) {
+                    clientModal.style.display = 'flex';
+                }
+            }, 200);
+        });
+
+        // Edit estimate
+        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
+            // Close all popups instantly
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
+
+            // Ensure EstimatesModule has data loaded
+            if (window.EstimatesModule) {
+                try {
+                    // Load estimates and leads data into the module
+                    const [estimates, leadsData] = await Promise.all([
+                        API.getEstimates(),
+                        API.getLeads()
+                    ]);
+
+                    window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
+                    window.EstimatesModule.state.leads = leadsData?.all || [];
+
+                    // Now call the edit modal
+                    if (window.EstimatesModule.estimates_showCreateModal) {
+                        window.EstimatesModule.estimates_showCreateModal(estimate.id);
+
+                        // Keep Clients module visible
+                        requestAnimationFrame(() => {
+                            this.render();
+                        });
+
+                        // Watch for when edit modal closes, then reload Clients data
+                        const checkEditModalClosed = setInterval(() => {
+                            const editModal = document.querySelector('.estimate-modal-overlay');
+                            if (!editModal) {
+                                clearInterval(checkEditModalClosed);
+                                // Reload Clients data to show updated estimate
+                                this.loadData().then(() => {
+                                    this.render();
+                                });
+                            }
+                        }, 50);
+                    }
+                } catch (error) {
+                    console.error('Error loading estimate data:', error);
+                    alert('Failed to load estimate data');
+                }
+            }
+        });
+
+        // Download client copy
+        overlay.querySelector('[data-action="download-client-copy"]').addEventListener('click', () => {
+            this.clients_downloadEstimatePDF(estimate, lead, lineItems, photos, totalPrice);
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        });
+
+        // Delete estimate
+        overlay.querySelector('[data-action="delete-estimate"]').addEventListener('click', async () => {
+            const confirmed = await this.clients_showConfirmation({
+                title: 'Delete Estimate',
+                message: `Are you sure you want to delete "${estimate.title}"? This action cannot be undone.`,
+                confirmText: 'Delete',
+                type: 'danger'
+            });
+
+            if (!confirmed) return;
+
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+
+            try {
+                await API.deleteEstimate(estimate.id);
+                window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
+                // Reload Clients module data
+                await this.loadData();
+                this.render();
+            } catch (error) {
+                console.error('Delete estimate error:', error);
+                window.SteadyUtils.showToast('Failed to delete estimate', 'error');
+            }
+        });
+
+        // Update status
+        overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
+            const newStatus = e.target.value;
+
+            // Close both modals immediately
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
+
+            try {
+                await API.updateEstimate(estimate.id, { status: newStatus });
+                window.SteadyUtils.showToast('Status updated successfully', 'success');
+                // Reload Clients module data
+                await this.loadData();
+                this.render();
+            } catch (error) {
+                console.error('Update status error:', error);
+                window.SteadyUtils.showToast('Failed to update status', 'error');
+            }
+        });
+
+        // Photo click to enlarge
+        overlay.querySelectorAll('.clients-estimate-view-photo img').forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const lightbox = document.createElement('div');
+                lightbox.className = 'clients-estimate-photo-lightbox';
+                lightbox.innerHTML = `<img src="${img.src}" alt="${img.alt}">`;
+                document.body.appendChild(lightbox);
+
+                setTimeout(() => {
+                    lightbox.style.opacity = '1';
+                }, 10);
+
+                lightbox.addEventListener('click', () => {
+                    lightbox.style.opacity = '0';
+                    setTimeout(() => lightbox.remove(), 200);
+                });
+            });
+        });
+
+        // Close on overlay click
+        let mouseDownTarget = null;
+        overlay.addEventListener('mousedown', (e) => {
+            mouseDownTarget = e.target;
+        });
+        overlay.addEventListener('mouseup', (e) => {
+            if (mouseDownTarget === overlay && e.target === overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            }
+            mouseDownTarget = null;
+        });
+    },
+
+    /**
+     * Show job view modal (clients version)
+     */
+    clients_showJobViewModal(jobId) {
+        const job = this.state.jobs.find(j => j.id === jobId);
+        if (!job) return;
+
+        // Clean up any existing modals first
+        const existingModals = document.querySelectorAll('.clients-job-view-overlay, .clients-job-confirm-overlay');
+        existingModals.forEach(m => m.remove());
+
+        const lead = this.state.clients.find(c => c.id === job.lead_id);
+        const materials = job.materials || [];
+        const crew = job.crew_members || [];
+        const photos = job.photos || [];
+        const revenue = job.final_price || job.quoted_price || 0;
+        const materialCost = job.material_cost || 0;
+        const laborCost = (job.labor_rate || 0) * (job.estimated_labor_hours || 0);
+        const otherExpenses = job.other_expenses || 0;
+        const totalCost = materialCost + laborCost + otherExpenses;
+        const profit = revenue - totalCost;
+        const profitMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
+
+        const statusIcons = {
+            draft: '<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" stroke-width="2"/><path d="M18 2l-8 8v4h4l8-8-4-4z" stroke-width="2"/>',
+            scheduled: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>',
+            in_progress: '<circle cx="12" cy="12" r="10" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round"/>',
+            completed: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke-width="2"/>',
+            invoiced: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke-width="2"/>',
+            paid: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            cancelled: '<circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2"/>'
+        };
+
+        const overlay = document.createElement('div');
+        overlay.className = 'clients-job-view-overlay';
+        overlay.innerHTML = `
+            <style>
+                .clients-job-view-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s ease;
+                    padding: 2rem;
+                }
+
+                .clients-job-view-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                .clients-job-view-header {
+                    padding: 32px;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+
+                .clients-job-view-header-left {
+                    flex: 1;
+                }
+
+                .clients-job-view-title {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin: 0 0 12px 0;
+                }
+
+                .clients-job-view-meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    align-items: center;
+                }
+
+                .clients-job-view-status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 16px;
+                    border-radius: 999px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: capitalize;
+                }
+
+                .clients-job-view-status-badge[data-status="draft"] {
+                    background: rgba(156, 163, 175, 0.15);
+                    color: #6b7280;
+                }
+
+                .clients-job-view-status-badge[data-status="scheduled"] {
+                    background: rgba(251, 191, 36, 0.15);
+                    color: #fbbf24;
+                }
+
+                .clients-job-view-status-badge[data-status="in_progress"] {
+                    background: rgba(59, 130, 246, 0.15);
+                    color: #3b82f6;
+                }
+
+                .clients-job-view-status-badge[data-status="completed"] {
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
+                }
+
+                .clients-job-view-status-badge[data-status="invoiced"] {
+                    background: rgba(139, 92, 246, 0.15);
+                    color: #8b5cf6;
+                }
+
+                .clients-job-view-status-badge[data-status="paid"] {
+                    background: rgba(34, 197, 94, 0.15);
+                    color: #22c55e;
+                }
+
+                .clients-job-view-status-badge[data-status="cancelled"] {
+                    background: rgba(239, 68, 68, 0.15);
+                    color: #ef4444;
+                }
+
+                .clients-job-view-status-badge svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .clients-job-view-meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
+
+                .clients-job-view-meta-item svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .clients-job-view-close {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-tertiary);
+                    font-size: 32px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+
+                .clients-job-view-close:hover {
+                    background: var(--border);
+                    color: var(--text-primary);
+                }
+
+                .clients-job-view-body {
+                    padding: 32px;
+                }
+
+                .clients-job-view-section {
+                    margin-bottom: 32px;
+                }
+
+                .clients-job-view-section:last-child {
+                    margin-bottom: 0;
+                }
+
+                .clients-job-view-section-title {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 16px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid var(--border);
+                }
+
+                .clients-job-view-description {
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: var(--text-secondary);
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                }
+
+                .clients-job-view-financial-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 16px;
+                    margin-bottom: 24px;
+                }
+
+                .clients-job-view-financial-item {
+                    background: var(--background);
+                    padding: 16px;
+                    border-radius: 8px;
+                    border: 1px solid var(--border);
+                }
+
+                .clients-job-view-financial-label {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 8px;
+                }
+
+                .clients-job-view-financial-value {
+                    font-size: 24px;
+                    font-weight: 800;
+                    color: var(--text-primary);
+                }
+
+                .clients-job-view-financial-value.profit {
+                    color: #10b981;
+                }
+
+                .clients-job-view-financial-value.loss {
+                    color: #ef4444;
+                }
+
+                .clients-job-view-profit-box {
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+                    border: 2px solid rgba(102, 126, 234, 0.3);
+                    border-radius: 12px;
+                    padding: 24px;
+                }
+
+                .clients-job-view-profit-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 0;
+                    font-size: 15px;
+                }
+
+                .clients-job-view-profit-row span:first-child {
+                    color: var(--text-secondary);
+                    font-weight: 500;
+                }
+
+                .clients-job-view-profit-row span:last-child {
+                    color: var(--text-primary);
+                    font-weight: 700;
+                }
+
+                .clients-job-view-profit-divider {
+                    height: 1px;
+                    background: var(--border);
+                    margin: 12px 0;
+                }
+
+                .clients-job-view-profit-total {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px;
+                    background: var(--surface);
+                    border-radius: 8px;
+                    margin-top: 12px;
+                }
+
+                .clients-job-view-profit-total-label {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .clients-job-view-profit-total-value {
+                    font-size: 28px;
+                    font-weight: 900;
+                }
+
+                .clients-job-view-profit-total-value.positive {
+                    color: #10b981;
+                }
+
+                .clients-job-view-profit-total-value.negative {
+                    color: #ef4444;
+                }
+
+                .clients-job-view-profit-margin {
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin-left: 12px;
+                    opacity: 0.8;
+                }
+
+                .clients-job-view-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: var(--background);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+
+                .clients-job-view-table thead {
+                    background: var(--border);
+                }
+
+                .clients-job-view-table th {
+                    text-align: left;
+                    padding: 12px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .clients-job-view-table td {
+                    padding: 12px;
+                    font-size: 14px;
+                    color: var(--text-primary);
+                    border-top: 1px solid var(--border);
+                }
+
+                .clients-job-view-table tr:hover {
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .clients-job-view-photos-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                    gap: 16px;
+                }
+
+                .clients-job-view-photo {
+                    aspect-ratio: 1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    position: relative;
+                    cursor: pointer;
+                    border: 2px solid var(--border);
+                    transition: all 0.2s;
+                }
+
+                .clients-job-view-photo:hover {
+                    border-color: #667eea;
+                    transform: scale(1.05);
+                }
+
+                .clients-job-view-photo img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .clients-job-view-photo-type {
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    background: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+
+                .clients-job-photo-lightbox {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10002;
+                    animation: fadeIn 0.2s ease;
+                    cursor: pointer;
+                }
+
+                .clients-job-photo-lightbox img {
+                    max-width: 90%;
+                    max-height: 90vh;
+                    border-radius: 8px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                }
+
+                .clients-job-view-footer {
+                    padding: 24px 32px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 16px;
+                    flex-wrap: wrap;
+                }
+
+                .clients-job-view-btn {
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    border: none;
+                }
+
+                .clients-job-view-btn-edit {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                }
+
+                .clients-job-view-btn-edit:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+
+                .clients-job-view-btn-edit svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .clients-job-view-actions {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                }
+
+                .clients-job-view-status-dropdown {
+                    padding: 10px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px;
+                }
+
+                .clients-job-view-status-dropdown:hover {
+                    border-color: var(--primary);
+                }
+
+                .clients-job-view-status-dropdown:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+                .clients-job-view-btn-delete {
+                    background: transparent;
+                    border: 2px solid #ef4444;
+                    color: #ef4444;
+                }
+
+                .clients-job-view-btn-delete:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                }
+
+                .clients-job-view-btn-delete svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                @media (max-width: 768px) {
+                    .clients-job-view-modal {
+                        max-width: 100%;
+                        max-height: 100vh;
+                        border-radius: 0;
+                    }
+
+                    .clients-job-view-header, .clients-job-view-body, .clients-job-view-footer {
+                        padding: 24px 16px;
+                    }
+
+                    .clients-job-view-financial-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .clients-job-view-photos-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+            <div class="clients-job-view-modal">
+                <div class="clients-job-view-header">
+                    <div class="clients-job-view-header-left">
+                        <h2 class="clients-job-view-title">${job.title}</h2>
+                        <div class="clients-job-view-meta">
+                            <div class="clients-job-view-status-badge" data-status="${job.status}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    ${statusIcons[job.status]}
+                                </svg>
+                                ${this.formatStatus(job.status)}
+                            </div>
+                            ${lead ? `
+                                <div class="clients-job-view-meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    ${lead.name}
+                                </div>
+                            ` : ''}
+                            ${job.scheduled_date ? `
+                                <div class="clients-job-view-meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    ${new Date(job.scheduled_date).toLocaleDateString()}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <button class="clients-job-view-close" data-action="close-view-modal">×</button>
+                </div>
+
+                <div class="clients-job-view-body">
+                    ${job.description ? `
+                        <div class="clients-job-view-section">
+                            <div class="clients-job-view-section-title">Description</div>
+                            <div class="clients-job-view-description">${job.description}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="clients-job-view-section">
+                        <div class="clients-job-view-section-title">Financial Summary</div>
+                        <div class="clients-job-view-profit-box">
+                            <div class="clients-job-view-profit-row">
+                                <span>Material Cost:</span>
+                                <span>${this.formatCurrency(materialCost)}</span>
+                            </div>
+                            <div class="clients-job-view-profit-row">
+                                <span>Labor Cost:</span>
+                                <span>${this.formatCurrency(laborCost)}</span>
+                            </div>
+                            <div class="clients-job-view-profit-row">
+                                <span>Other Expenses:</span>
+                                <span>${this.formatCurrency(otherExpenses)}</span>
+                            </div>
+                            <div class="clients-job-view-profit-divider"></div>
+                            <div class="clients-job-view-profit-total">
+                                <span class="clients-job-view-profit-total-label">Net Profit</span>
+                                <span class="clients-job-view-profit-total-value ${profit >= 0 ? 'positive' : 'negative'}">
+                                    ${this.formatCurrency(profit)}
+                                    <span class="clients-job-view-profit-margin">(${profitMargin.toFixed(1)}%)</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${materials.length > 0 ? `
+                        <div class="clients-job-view-section">
+                            <div class="clients-job-view-section-title">Materials (${materials.length})</div>
+                            <table class="clients-job-view-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Quantity</th>
+                                        <th>Unit</th>
+                                        <th>$/Unit</th>
+                                        <th>Supplier</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${materials.map(m => `
+                                        <tr>
+                                            <td>${m.name || '-'}</td>
+                                            <td>${m.quantity || '-'}</td>
+                                            <td>${m.unit || '-'}</td>
+                                            <td>${this.formatCurrency(m.unit_price || 0)}</td>
+                                            <td>${m.supplier || '-'}</td>
+                                            <td style="text-align: right; font-weight: 700;">${this.formatCurrency((m.quantity || 0) * (m.unit_price || 0))}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+
+                    ${crew.length > 0 ? `
+                        <div class="clients-job-view-section">
+                            <div class="clients-job-view-section-title">Crew (${crew.length})</div>
+                            <table class="clients-job-view-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Role</th>
+                                        <th>Hours</th>
+                                        <th>Rate</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${crew.map(c => `
+                                        <tr>
+                                            <td>${c.name || '-'}</td>
+                                            <td>${c.role || '-'}</td>
+                                            <td>${c.hours || '-'}</td>
+                                            <td>${this.formatCurrency(c.rate || 0)}/hr</td>
+                                            <td style="text-align: right; font-weight: 700;">${this.formatCurrency((c.hours || 0) * (c.rate || 0))}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+
+                    ${photos.length > 0 ? `
+                        <div class="clients-job-view-section">
+                            <div class="clients-job-view-section-title">Photos (${photos.length})</div>
+                            <div class="clients-job-view-photos-grid">
+                                ${photos.map(photo => `
+                                    <div class="clients-job-view-photo">
+                                        <img src="${photo.url}" alt="${photo.type}">
+                                        <div class="clients-job-view-photo-type">${photo.type}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${job.notes ? `
+                        <div class="clients-job-view-section">
+                            <div class="clients-job-view-section-title">Internal Notes</div>
+                            <div class="clients-job-view-description">${job.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="clients-job-view-footer">
+                    <button class="clients-job-view-btn clients-job-view-btn-edit" data-action="edit-job" data-id="${job.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit
+                    </button>
+
+                    <div class="clients-job-view-actions">
+                        <select class="clients-job-view-status-dropdown" data-action="update-status" data-id="${job.id}">
+                            ${this.JOB_STATUSES.map(status => `
+                                <option value="${status}" ${job.status === status ? 'selected' : ''}>
+                                    ${this.formatStatus(status)}
+                                </option>
+                            `).join('')}
+                        </select>
+
+                        <button class="clients-job-view-btn clients-job-view-btn-delete" data-action="delete-job" data-id="${job.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Close modal - return to client detail modal if it exists
+        overlay.querySelector('[data-action="close-view-modal"]').addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+
+                // Show client detail modal if it was hidden
+                const clientModal = document.getElementById('clientViewModal');
+                if (clientModal && this.state.selectedClient) {
+                    clientModal.style.display = 'flex';
+                }
+            }, 200);
+        });
+
+        // Edit job
+        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', async () => {
+            // Close all popups instantly
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
+
+            // Ensure JobsManagementModule has data loaded
+            if (window.JobsManagementModule) {
+                try {
+                    // Load jobs and leads data into the module
+                    const [jobs, leadsData] = await Promise.all([
+                        API.getJobs(),
+                        API.getLeads()
+                    ]);
+
+                    window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
+                    window.JobsManagementModule.state.leads = leadsData?.all || [];
+
+                    // Now call the edit modal
+                    if (window.JobsManagementModule.jobs_showCreateModal) {
+                        window.JobsManagementModule.jobs_showCreateModal(job.id);
+
+                        // Keep Clients module visible
+                        requestAnimationFrame(() => {
+                            this.render();
+                        });
+
+                        // Watch for when edit modal closes, then reload Clients data
+                        const checkEditModalClosed = setInterval(() => {
+                            const editModal = document.querySelector('.job-modal-overlay');
+                            if (!editModal) {
+                                clearInterval(checkEditModalClosed);
+                                // Reload Clients data to show updated job
+                                this.loadData().then(() => {
+                                    this.render();
+                                });
+                            }
+                        }, 50);
+                    }
+                } catch (error) {
+                    console.error('Error loading job data:', error);
+                    alert('Failed to load job data');
+                }
+            }
+        });
+
+        // Update status
+        overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
+            const newStatus = e.target.value;
+
+            // Close both modals immediately
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
+
+            try {
+                await API.updateJob(job.id, { status: newStatus });
+                window.SteadyUtils.showToast('Status updated successfully', 'success');
+                // Reload Clients module data
+                await this.loadData();
+                this.render();
+            } catch (error) {
+                console.error('Update status error:', error);
+                window.SteadyUtils.showToast('Failed to update status', 'error');
+            }
+        });
+
+        // Delete job
+        overlay.querySelector('[data-action="delete-job"]').addEventListener('click', async () => {
+            const confirmed = await this.clients_showConfirmation({
+                title: 'Delete Job',
+                message: `Are you sure you want to delete "${job.title}"? This action cannot be undone.`,
+                confirmText: 'Delete',
+                type: 'danger'
+            });
+
+            if (!confirmed) return;
+
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+
+            try {
+                await API.deleteJob(job.id);
+                window.SteadyUtils.showToast('Job deleted successfully', 'success');
+                // Reload Clients module data
+                await this.loadData();
+                this.render();
+            } catch (error) {
+                console.error('Error deleting job:', error);
+                window.SteadyUtils.showToast('Failed to delete job', 'error');
+            }
+        });
+
+        // Photo click to enlarge
+        overlay.querySelectorAll('.clients-job-view-photo img').forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const lightbox = document.createElement('div');
+                lightbox.className = 'clients-job-photo-lightbox';
+                lightbox.innerHTML = `<img src="${img.src}" alt="${img.alt}">`;
+                document.body.appendChild(lightbox);
+
+                setTimeout(() => {
+                    lightbox.style.opacity = '1';
+                }, 10);
+
+                lightbox.addEventListener('click', () => {
+                    lightbox.style.opacity = '0';
+                    setTimeout(() => lightbox.remove(), 200);
+                });
+            });
+        });
+
+        // Close on backdrop click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            }
+        });
+
+        // Close on ESC key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    },
+
+    // ==================== HELPER FUNCTIONS ====================
+
+    /**
+     * Show confirmation modal (clients version)
+     */
+    clients_showConfirmation(options) {
+        return new Promise((resolve) => {
+            const { title, message, confirmText = 'Confirm', cancelText = 'Cancel', type = 'warning' } = options;
+
+            const icons = {
+                warning: '<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+                danger: '<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+                success: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>'
+            };
+
+            const colors = {
+                warning: '#f59e0b',
+                danger: '#ef4444',
+                success: '#10b981'
+            };
+
+            const overlay = document.createElement('div');
+            overlay.className = 'clients-confirm-overlay';
+            overlay.innerHTML = `
+                <style>
+                    .clients-confirm-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background: rgba(0, 0, 0, 0.6);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10001;
+                        animation: fadeIn 0.2s ease;
+                    }
+
+                    .clients-confirm-modal {
+                        background: var(--surface);
+                        border-radius: 12px;
+                        width: 90%;
+                        max-width: 480px;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        animation: slideUp 0.3s ease;
+                    }
+
+                    .clients-confirm-header {
+                        padding: 24px 24px 16px 24px;
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 16px;
+                    }
+
+                    .clients-confirm-icon {
+                        flex-shrink: 0;
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: ${colors[type]}15;
+                    }
+
+                    .clients-confirm-icon svg {
+                        width: 24px;
+                        height: 24px;
+                        stroke: ${colors[type]};
+                    }
+
+                    .clients-confirm-content {
+                        flex: 1;
+                        padding-top: 4px;
+                    }
+
+                    .clients-confirm-title {
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: var(--text-primary);
+                        margin: 0 0 8px 0;
+                    }
+
+                    .clients-confirm-message {
+                        font-size: 14px;
+                        color: var(--text-secondary);
+                        line-height: 1.5;
+                        margin: 0;
+                    }
+
+                    .clients-confirm-footer {
+                        padding: 16px 24px 24px 24px;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 12px;
+                    }
+
+                    .clients-confirm-btn {
+                        padding: 10px 20px;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        border: none;
+                    }
+
+                    .clients-confirm-btn-cancel {
+                        background: transparent;
+                        border: 1px solid var(--border);
+                        color: var(--text-primary);
+                    }
+
+                    .clients-confirm-btn-cancel:hover {
+                        background: var(--surface-hover);
+                    }
+
+                    .clients-confirm-btn-confirm {
+                        background: ${colors[type]};
+                        color: white;
+                    }
+
+                    .clients-confirm-btn-confirm:hover {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                    }
+                </style>
+                <div class="clients-confirm-modal">
+                    <div class="clients-confirm-header">
+                        <div class="clients-confirm-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                ${icons[type]}
+                            </svg>
+                        </div>
+                        <div class="clients-confirm-content">
+                            <h3 class="clients-confirm-title">${title}</h3>
+                            <p class="clients-confirm-message">${message}</p>
+                        </div>
+                    </div>
+                    <div class="clients-confirm-footer">
+                        <button class="clients-confirm-btn clients-confirm-btn-cancel" data-action="cancel">
+                            ${cancelText}
+                        </button>
+                        <button class="clients-confirm-btn clients-confirm-btn-confirm" data-action="confirm">
+                            ${confirmText}
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const handleConfirm = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    resolve(true);
+                }, 200);
+            };
+
+            const handleCancel = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    resolve(false);
+                }, 200);
+            };
+
+            overlay.querySelector('[data-action="confirm"]').addEventListener('click', handleConfirm);
+            overlay.querySelector('[data-action="cancel"]').addEventListener('click', handleCancel);
+
+            // ESC to cancel
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    handleCancel();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+    },
+
+    /**
+     * Download estimate as PDF (clients version)
+     */
+    async clients_downloadEstimatePDF(estimate, lead, lineItems, photos, totalPrice) {
+        // Load jsPDF library if not already loaded
+        if (!window.jspdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            document.head.appendChild(script);
+
+            await new Promise((resolve) => {
+                script.onload = resolve;
+            });
+        }
+
+        const formatMoney = (val) => {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+        };
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            unit: 'in',
+            format: 'letter',
+            orientation: 'portrait'
+        });
+
+        let y = 1;
+
+        // Title
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text(estimate.title || 'Estimate', 4.25, y, { align: 'center' });
+        y += 0.5;
+
+        // Line
+        doc.setLineWidth(0.02);
+        doc.line(0.75, y, 7.75, y);
+        y += 0.4;
+
+        // Client Info
+        doc.setFontSize(10);
+        if (lead) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('CLIENT:', 0.75, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(lead.name || '', 1.5, y);
+            y += 0.2;
+        }
+
+        // Date info on right
+        let yRight = 1.9;
+        doc.setFont('helvetica', 'bold');
+        doc.text('DATE:', 5, yRight);
+        doc.setFont('helvetica', 'normal');
+        doc.text(new Date(estimate.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 5.6, yRight);
+        yRight += 0.2;
+
+        if (estimate.expires_at) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('VALID UNTIL:', 5, yRight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(new Date(estimate.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 6.1, yRight);
+            yRight += 0.2;
+        }
+
+        y = Math.max(y, yRight) + 0.2;
+
+        // Description
+        if (estimate.description) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PROJECT DESCRIPTION', 0.75, y);
+            y += 0.05;
+            doc.line(0.75, y, 7.75, y);
+            y += 0.25;
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            const descLines = doc.splitTextToSize(estimate.description, 6.5);
+            doc.text(descLines, 0.75, y);
+            y += (descLines.length * 0.15) + 0.3;
+        }
+
+        // Line Items
+        if (lineItems.length > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SCOPE OF WORK', 0.75, y);
+            y += 0.05;
+            doc.line(0.75, y, 7.75, y);
+            y += 0.3;
+
+            // Table header
+            doc.setFillColor(51, 51, 51);
+            doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Description', 0.85, y);
+            doc.text('Qty', 4.5, y, { align: 'center' });
+            doc.text('Rate', 5.5, y, { align: 'right' });
+            doc.text('Amount', 7.5, y, { align: 'right' });
+            y += 0.25;
+
+            // Table rows
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            lineItems.forEach((item, idx) => {
+                doc.text(item.description || '-', 0.85, y);
+                doc.text(String(item.quantity), 4.5, y, { align: 'center' });
+                doc.text(formatMoney(item.rate), 5.5, y, { align: 'right' });
+                doc.setFont('helvetica', 'bold');
+                doc.text(formatMoney(item.quantity * item.rate), 7.5, y, { align: 'right' });
+                doc.setFont('helvetica', 'normal');
+                y += 0.2;
+            });
+
+            y += 0.2;
+
+            // Total box
+            doc.setFillColor(245, 245, 245);
+            doc.setDrawColor(51, 51, 51);
+            doc.setLineWidth(0.02);
+            doc.rect(0.75, y, 7, 0.6, 'FD');
+            y += 0.2;
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOTAL ESTIMATE', 0.85, y);
+            y += 0.25;
+
+            doc.setFontSize(22);
+            doc.text(formatMoney(totalPrice), 0.85, y);
+            y += 0.4;
+        }
+
+        // Terms
+        if (estimate.terms) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('TERMS & CONDITIONS', 0.75, y);
+            y += 0.05;
+            doc.line(0.75, y, 7.75, y);
+            y += 0.25;
+
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const termsLines = doc.splitTextToSize(estimate.terms, 6.5);
+            doc.text(termsLines, 0.75, y);
+            y += (termsLines.length * 0.12) + 0.3;
+        }
+
+        // Footer
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('This estimate is valid for the period specified above. Work will commence upon acceptance and deposit receipt.', 4.25, 10.5, { align: 'center' });
+
+        // Save PDF
+        const filename = `Estimate-${estimate.estimate_number || 'draft'}.pdf`;
+        doc.save(filename);
+
+        window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
+    },
+
     /**
      * Render styles
      */
     renderStyles() {
-        return `<style>
-.clients-container {
-    padding: 2rem;
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.clients-header {
-    margin-bottom: 2rem;
-}
-
-.clients-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.clients-subtitle {
-    color: var(--text-secondary);
-    margin-top: 0.5rem;
-    font-size: 1rem;
-}
-
-/* Stats Grid */
-.clients-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.clients-stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.clients-stat-icon {
-    font-size: 2rem;
-}
-
-.clients-stat-content {
-    flex: 1;
-}
-
-.clients-stat-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-}
-
-.clients-stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-/* Search */
-.clients-search-container {
-    margin-bottom: 2rem;
-}
-
-.clients-search-input {
-    width: 100%;
-    padding: 0.875rem 1rem;
-    font-size: 1rem;
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    color: var(--text-primary);
-    transition: all 0.2s ease;
-}
-
-.clients-search-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* Client Cards */
-.clients-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-}
-
-.clients-card {
-    background: var(--surface);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.clients-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.15);
-}
-
-.clients-card-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.clients-card-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.clients-card-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.clients-card-name {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.clients-card-company {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 0.125rem;
-}
-
-.clients-card-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.clients-card-detail {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-}
-
-.clients-card-detail-icon {
-    font-size: 1rem;
-}
-
-.clients-card-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.clients-card-stat {
-    text-align: center;
-}
-
-.clients-card-stat-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-card-stat-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-top: 0.25rem;
-}
-
-.clients-card-btn {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.clients-card-btn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-}
-
-/* Empty State */
-.clients-empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-}
-
-.clients-empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-.clients-empty-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.clients-empty-text {
-    color: var(--text-secondary);
-    font-size: 1rem;
-}
-
-/* View Modal */
-.clients-view-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    padding: 2rem;
-}
-
-.clients-view-modal {
-    background: var(--surface);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 900px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-.clients-view-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    padding: 2rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.clients-view-modal-header h2 {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-view-modal-close {
-    background: transparent;
-    border: none;
-    font-size: 2rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.clients-view-modal-close:hover {
-    background: var(--border);
-}
-
-.clients-view-modal-body {
-    padding: 2rem;
-}
-
-.clients-view-section {
-    margin-bottom: 2rem;
-}
-
-.clients-view-section:last-child {
-    margin-bottom: 0;
-}
-
-.clients-view-section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 1rem;
-}
-
-.clients-view-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.clients-view-info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.clients-view-info-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-}
-
-.clients-view-info-value {
-    font-size: 1rem;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-/* Item Cards */
-.clients-item-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 0.875rem;
-}
-
-.clients-item-card {
-    background: var(--background);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 1.25rem;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.clients-item-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
-}
-
-.clients-item-card-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.75rem;
-}
-
-.clients-item-card-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.clients-item-card-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.clients-item-card-status-draft { background: #f3f4f6; color: #6b7280; }
-.clients-item-card-status-sent { background: #dbeafe; color: #1e40af; }
-.clients-item-card-status-accepted { background: #d1fae5; color: #065f46; }
-.clients-item-card-status-rejected { background: #fee2e2; color: #991b1b; }
-.clients-item-card-status-expired { background: #fef3c7; color: #92400e; }
-.clients-item-card-status-scheduled { background: #dbeafe; color: #1e40af; }
-.clients-item-card-status-in_progress { background: #fef3c7; color: #92400e; }
-.clients-item-card-status-completed { background: #d1fae5; color: #065f46; }
-.clients-item-card-status-on_hold { background: #f3f4f6; color: #6b7280; }
-.clients-item-card-status-cancelled { background: #fee2e2; color: #991b1b; }
-
-.clients-item-card-amount {
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.clients-item-card-date {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-}
-
-/* Detail Modal */
-.clients-detail-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    padding: 2rem;
-}
-
-.clients-detail-modal {
-    background: var(--surface);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-.clients-detail-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.clients-detail-modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-detail-modal-close {
-    background: transparent;
-    border: none;
-    font-size: 2rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.clients-detail-modal-close:hover {
-    background: var(--border);
-}
-
-.clients-detail-modal-body {
-    padding: 2rem;
-}
-
-.clients-detail-section {
-    margin-bottom: 2rem;
-}
-
-.clients-detail-section:last-child {
-    margin-bottom: 0;
-}
-
-.clients-detail-section-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 1rem;
-}
-
-.clients-detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.clients-detail-row:last-child {
-    border-bottom: none;
-}
-
-.clients-detail-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
-
-.clients-detail-value {
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    font-weight: 600;
-}
-
-.clients-detail-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.clients-detail-status-draft { background: #f3f4f6; color: #6b7280; }
-.clients-detail-status-sent { background: #dbeafe; color: #1e40af; }
-.clients-detail-status-accepted { background: #d1fae5; color: #065f46; }
-.clients-detail-status-rejected { background: #fee2e2; color: #991b1b; }
-.clients-detail-status-expired { background: #fef3c7; color: #92400e; }
-.clients-detail-status-scheduled { background: #dbeafe; color: #1e40af; }
-.clients-detail-status-in_progress { background: #fef3c7; color: #92400e; }
-.clients-detail-status-completed { background: #d1fae5; color: #065f46; }
-.clients-detail-status-on_hold { background: #f3f4f6; color: #6b7280; }
-.clients-detail-status-cancelled { background: #fee2e2; color: #991b1b; }
-
-.clients-detail-text {
-    color: var(--text-primary);
-    line-height: 1.6;
-}
-
-.clients-detail-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
-}
-
-.clients-detail-info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.clients-detail-table {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.clients-detail-table-header {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    background: var(--background);
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-}
-
-.clients-detail-table-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.875rem;
-    color: var(--text-primary);
-}
-
-.clients-detail-total {
-    display: flex;
-    justify-content: space-between;
-    padding: 1rem;
-    margin-top: 1rem;
-    background: var(--background);
-    border-radius: 8px;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-detail-photos {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-}
-
-.clients-detail-photo {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-}
-
-.clients-detail-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid var(--border);
-}
-
-.clients-detail-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
-}
-
-.clients-detail-btn-secondary {
-    background: var(--background);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.clients-detail-btn-secondary:hover {
-    background: var(--border);
-}
-
-.clients-detail-btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.clients-detail-btn-primary:hover {
-    background: var(--primary-hover);
-}
-
-/* Edit Modal */
-.clients-edit-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    padding: 2rem;
-}
-
-.clients-edit-modal {
-    background: var(--surface);
-    border-radius: 16px;
-    width: 90%;
-    max-width: 700px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-.clients-edit-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.clients-edit-modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-edit-modal-close {
-    background: transparent;
-    border: none;
-    font-size: 2rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-}
-
-.clients-edit-modal-close:hover {
-    background: var(--border);
-}
-
-.clients-edit-modal-body {
-    padding: 2rem;
-}
-
-.clients-edit-form-group {
-    margin-bottom: 1.5rem;
-}
-
-.clients-edit-form-group:last-child {
-    margin-bottom: 0;
-}
-
-.clients-edit-form-group label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.clients-edit-form-group input[type="text"],
-.clients-edit-form-group input[type="date"],
-.clients-edit-form-group input[type="number"],
-.clients-edit-form-group select,
-.clients-edit-form-group textarea {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 0.9375rem;
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text-primary);
-    transition: all 0.2s ease;
-}
-
-.clients-edit-form-group input:focus,
-.clients-edit-form-group select:focus,
-.clients-edit-form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.clients-edit-form-group textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.clients-edit-form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-/* Line Items */
-.clients-edit-line-items {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.clients-edit-line-item {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.clients-edit-line-item input {
-    padding: 0.5rem;
-    font-size: 0.875rem;
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-primary);
-}
-
-.clients-edit-remove-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: var(--background);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-size: 1.25rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.clients-edit-remove-btn:hover {
-    background: #fee2e2;
-    border-color: #991b1b;
-    color: #991b1b;
-}
-
-.clients-edit-add-btn {
-    width: 100%;
-    padding: 0.625rem;
-    background: var(--background);
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    color: var(--primary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.clients-edit-add-btn:hover {
-    border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
-}
-
-.clients-edit-total {
-    display: flex;
-    justify-content: space-between;
-    padding: 1rem;
-    margin-top: 1rem;
-    background: var(--background);
-    border-radius: 8px;
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.clients-edit-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid var(--border);
-}
-
-.clients-edit-btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: none;
-}
-
-.clients-edit-btn-secondary {
-    background: var(--background);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.clients-edit-btn-secondary:hover {
-    background: var(--border);
-}
-
-.clients-edit-btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.clients-edit-btn-primary:hover {
-    background: var(--primary-hover);
-}
-</style>`;
+        return `
+            <style>
+                /* Container fade-in transition */
+                #clients-content,
+                #jobs-section-content {
+                    transition: opacity 0.6s ease-in-out;
+                }
+
+                /* Container */
+                .clients-container {
+                    padding: 2rem;
+                    max-width: 1400px;
+                    margin: 0 auto;
+                }
+
+                /* Header */
+                .clients-header {
+                    margin-bottom: 2rem;
+                }
+
+                .clients-title {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .clients-subtitle {
+                    font-size: 1rem;
+                    color: var(--text-secondary);
+                }
+
+                /* Stats Cards */
+                .clients-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 1.5rem;
+                    margin-bottom: 2rem;
+                }
+
+                .clients-stat-card {
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    border-radius: 12px;
+                    padding: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .clients-stat-icon {
+                    width: 48px;
+                    height: 48px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+
+                .clients-stat-icon-jobs {
+                    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                }
+
+                .clients-stat-icon-estimates {
+                    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                }
+
+                .clients-stat-icon svg {
+                    width: 24px;
+                    height: 24px;
+                    stroke: white;
+                }
+
+                .clients-stat-content {
+                    flex: 1;
+                }
+
+                .clients-stat-label {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.25rem;
+                }
+
+                .clients-stat-value {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                /* Toolbar */
+                .clients-toolbar {
+                    margin-bottom: 1.5rem;
+                }
+
+                .search-container {
+                    position: relative;
+                    max-width: 500px;
+                }
+
+                .search-icon {
+                    position: absolute;
+                    left: 1rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 20px;
+                    height: 20px;
+                    stroke: var(--text-secondary);
+                    pointer-events: none;
+                }
+
+                .search-input {
+                    width: 100%;
+                    padding: 0.75rem 1rem 0.75rem 3rem;
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-size: 0.875rem;
+                    transition: border-color 0.2s ease;
+                }
+
+                .search-input:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+                /* Client Cards Grid */
+                .clients-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+                    gap: 1.5rem;
+                }
+
+                .client-card {
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: 12px;
+                    padding: 1.5rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .client-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    border-color: var(--primary);
+                }
+
+                .client-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 0.5rem;
+                }
+
+                .client-name {
+                    font-size: 1.125rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .client-phone {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                }
+
+                .client-email {
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                    margin-bottom: 1rem;
+                }
+
+                .client-divider {
+                    height: 1px;
+                    background: var(--border);
+                    margin: 1rem 0;
+                }
+
+                .client-stats {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                }
+
+                .client-stat {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                }
+
+                .client-stat svg {
+                    width: 16px;
+                    height: 16px;
+                    stroke: var(--text-secondary);
+                }
+
+                .client-stat-revenue {
+                    color: var(--success);
+                    font-weight: 600;
+                }
+
+                .client-stat-revenue svg {
+                    stroke: var(--success);
+                }
+
+                .client-stat-divider {
+                    color: var(--border);
+                }
+
+                /* Empty State */
+                .empty-state {
+                    text-align: center;
+                    padding: 4rem 2rem;
+                    color: var(--text-secondary);
+                }
+
+                .empty-state svg {
+                    width: 80px;
+                    height: 80px;
+                    margin: 0 auto 1.5rem;
+                    stroke: var(--text-secondary);
+                    opacity: 0.5;
+                }
+
+                .empty-state h3 {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 0.5rem;
+                }
+
+                .empty-state p {
+                    font-size: 1rem;
+                }
+
+                /* Modal */
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    padding: 2rem;
+                }
+
+                .modal-content {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    max-width: 600px;
+                    width: fit-content;
+                    min-width: 500px;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                }
+
+                .modal-header {
+                    padding: 1.5rem;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-title {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin: 0;
+                }
+
+                .modal-close {
+                    width: 32px;
+                    height: 32px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    font-size: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: all 0.2s ease;
+                }
+
+                .modal-close:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                    transform: scale(1.1);
+                }
+
+                .modal-body {
+                    padding: 1.5rem;
+                    overflow-y: auto;
+                }
+
+                /* Modal Sections */
+                .modal-section {
+                    margin-bottom: 1.5rem;
+                }
+
+                .modal-section:last-child {
+                    margin-bottom: 0;
+                }
+
+                .modal-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.75rem;
+                }
+
+                .contact-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                    background: var(--background);
+                    padding: 1rem;
+                    border-radius: 8px;
+                    border: 1px solid var(--border);
+                }
+
+                .contact-item {
+                    font-size: 0.9rem;
+                    color: var(--text-primary);
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .contact-item strong {
+                    min-width: 80px;
+                    color: var(--text-secondary);
+                    font-weight: 600;
+                }
+
+                /* Item Cards (clickable estimate/job cards) */
+                .clients-item-cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                    gap: 0.875rem;
+                }
+
+                .clients-item-card {
+                    background: var(--background);
+                    border: 2px solid var(--border);
+                    border-radius: 10px;
+                    padding: 1.25rem;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .clients-item-card:hover {
+                    border-color: var(--primary);
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+                }
+
+                .clients-item-card:active {
+                    transform: translateY(-2px);
+                }
+
+                .clients-item-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 0.75rem;
+                    margin-bottom: 0.875rem;
+                }
+
+                .clients-item-card-title {
+                    font-size: 1rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    flex: 1;
+                    line-height: 1.3;
+                }
+
+                .clients-item-card-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                    padding-top: 0.5rem;
+                    border-top: 1px solid var(--border);
+                }
+
+                .clients-item-price {
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    color: var(--success);
+                }
+
+                .clients-item-date {
+                    color: var(--text-tertiary);
+                    font-size: 0.8rem;
+                }
+
+                /* Status Badges */
+                .status-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: capitalize;
+                }
+
+                .status-draft {
+                    background: rgba(156, 163, 175, 0.2);
+                    color: #6b7280;
+                }
+
+                .status-sent, .status-scheduled {
+                    background: rgba(59, 130, 246, 0.2);
+                    color: #3b82f6;
+                }
+
+                .status-accepted, .status-completed, .status-paid {
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #10b981;
+                }
+
+                .status-rejected {
+                    background: rgba(239, 68, 68, 0.2);
+                    color: #ef4444;
+                }
+
+                .status-in_progress {
+                    background: rgba(245, 158, 11, 0.2);
+                    color: #f59e0b;
+                }
+
+                /* Responsive */
+                @media (max-width: 768px) {
+                    .clients-container {
+                        padding: 1rem;
+                    }
+
+                    .clients-stats {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .clients-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .modal-content {
+                        min-width: 90vw;
+                        max-width: 90vw;
+                        width: 90vw;
+                    }
+
+                    .clients-item-cards {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .modal-overlay {
+                        padding: 1rem;
+                    }
+                }
+            </style>
+        `;
     }
 };
