@@ -4260,23 +4260,70 @@ window.JobsManagementModule = {
         }));
 
         try {
+            // Close modal immediately for instant feedback
+            this.jobs_closeModal();
+
             let result;
             if (this.state.editingJobId) {
+                // Update in background
                 result = await API.updateJob(this.state.editingJobId, jobData);
                 const index = this.state.jobs.findIndex(j => j.id === this.state.editingJobId);
                 if (index !== -1) {
                     this.state.jobs[index] = result;
                 }
+
+                // Update UI immediately
+                this.jobs_calculateStats();
+                this.jobs_instantFilterChange();
+
+                // Update stats tabs and limit bar
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.jobs-status-filters');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.jobs-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+
                 window.SteadyUtils.showToast('Job updated successfully', 'success');
             } else {
+                // Create in background
                 result = await API.createJob(jobData);
                 this.state.jobs.unshift(result);
+
+                // Update UI immediately
+                this.jobs_calculateStats();
+                this.jobs_instantFilterChange();
+
+                // Update stats tabs and limit bar
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.jobs-status-filters');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.jobs-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+
                 window.SteadyUtils.showToast('Job created successfully', 'success');
             }
-
-            this.jobs_calculateStats();
-            this.jobs_closeModal();
-            this.jobs_render();
         } catch (error) {
             console.error('Error saving job:', error);
             window.SteadyUtils.showToast('Failed to save job', 'error');
