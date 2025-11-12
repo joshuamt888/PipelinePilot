@@ -1,5 +1,5 @@
-# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v13.0
-**"JOBS HUB COMPLETE - 3-SECTION ARCHITECTURE"**
+# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v13.1
+**"JOBS HUB COMPLETE - 2-SECTION ARCHITECTURE"**
 
 **Status:** Jobs Hub ✅ | Goals 100% | Estimates 100% | Jobs Management 100% | Database Clean | API Optimized
 **Philosophy:** Manual CRM + Smart Auto-Tracking + Professional UI + Unified Project Hub
@@ -1055,9 +1055,8 @@ API.toggleFeature(name, enabled)
 │                   ├── Scheduling.js    ✅ Complete
 │                   ├── Goals.js         ✅ 100% COMPLETE (recurring + completion count)
 │                   ├── Estimates.js     ✅ 100% COMPLETE (batch ops + PDF export)
-│                   ├── Jobs.js          ✅ NEW - Parent Hub Container (3 sections)
+│                   ├── Jobs.js          ✅ NEW - Parent Hub Container (2 sections)
 │                   ├── JobsManagement.js ✅ 100% COMPLETE (actual jobs functionality)
-│                   ├── Clients.js       ✅ Placeholder (Coming Soon)
 │                   └── Settings.js      🔨 Needs Preferences tab
 ```
 
@@ -2128,7 +2127,7 @@ Building estimates first means:
 
 ## 🏢 JOBS HUB - NEW ARCHITECTURE v13.0
 
-**Status:** ✅ COMPLETE - Jobs is now a parent container with 3 sections
+**Status:** ✅ COMPLETE - Jobs is now a parent container with 2 sections
 
 ### Overview
 
@@ -2139,28 +2138,26 @@ Jobs has been restructured from a single module into a **parent hub** that conso
 ```
 Jobs (Navigation) → Jobs Hub (Parent Container)
                     ├── Estimates Section
-                    ├── Jobs Section
-                    └── Clients Section
+                    └── Jobs Section
 ```
 
 **When users click "Jobs" in the navigation:**
-1. They see 3 large, beautiful blocks: Estimates, Jobs, Clients
+1. They see 2 large, beautiful blocks: Estimates, Jobs
 2. Clicking any block loads that module inside the Jobs hub
-3. A "Back to Hub" button returns to the 3-block selector
+3. A "Back to Hub" button returns to the 2-block selector
 
 ### Files Structure
 
 ```javascript
 /scripts/
-  Jobs.js              // Parent hub container (NEW)
-  JobsManagement.js    // Actual jobs functionality (renamed from Jobs.js)
+  Jobs.js              // Parent hub container
+  JobsManagement.js    // Actual jobs functionality
   Estimates.js         // Estimates module (unchanged)
-  Clients.js           // Placeholder module (NEW)
 ```
 
 **Jobs.js (Parent Hub):**
 - `window.JobsModule` - Parent container
-- Shows 3-block selector on init
+- Shows 2-block selector on init
 - Routes to appropriate sub-module when clicked
 - Provides "Back to Hub" navigation
 
@@ -2168,11 +2165,6 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 - `window.JobsManagementModule` - Actual jobs functionality
 - Contains all job tracking, profit calculations, etc.
 - Loaded when "Jobs" block is clicked
-
-**Clients.js:**
-- `window.ClientsModule` - Placeholder
-- Coming soon message
-- Suggests using Pipeline for now
 
 ### Navigation Changes
 
@@ -2185,9 +2177,8 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 **Why this structure?**
 - Groups related project management features
 - Reduces nav clutter
-- Natural workflow: Estimate → Job → Client
+- Natural workflow: Estimate → Job
 - Estimates and Jobs are tightly coupled
-- Clients will integrate with both when built
 
 ### User Flow Examples
 
@@ -2203,12 +2194,6 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 3. Jobs Management module loads
 4. Full job tracking, profit calculations, etc.
 
-**Check Clients (Future):**
-1. Click "Jobs" in nav
-2. Click "Clients" block
-3. Clients module loads
-4. Manage client relationships, history, etc.
-
 ### Implementation Details
 
 **Jobs.js structure:**
@@ -2216,11 +2201,11 @@ Jobs (Navigation) → Jobs Hub (Parent Container)
 window.JobsModule = {
     state: {
         container: 'jobs-content',
-        activeSection: null  // 'estimates', 'jobs', or 'clients'
+        activeSection: null  // 'estimates' or 'jobs'
     },
 
     async init(targetContainer) {
-        // Show 3-block selector
+        // Show 2-block selector
         this.renderSectionSelector();
     },
 
@@ -2228,7 +2213,6 @@ window.JobsModule = {
         // Load appropriate module:
         // - 'estimates' → EstimatesModule.init('jobs-section-content')
         // - 'jobs' → JobsManagementModule.init('jobs-section-content')
-        // - 'clients' → ClientsModule.init('jobs-section-content')
     }
 }
 ```
@@ -2237,7 +2221,7 @@ window.JobsModule = {
 ```
 #jobs-content (main container)
   └── .jobs-hub-container
-       ├── .jobs-hub-sections (3 blocks)
+       ├── .jobs-hub-sections (2 blocks)
        └── #jobs-section-content (sub-module renders here)
 ```
 
@@ -2261,7 +2245,6 @@ window.JobsModule = {
 ✅ **Better UX** - Related features grouped together
 ✅ **Scalable** - Easy to add more sections (Invoices, Contracts, etc.)
 ✅ **Flexible** - Each sub-module maintains full functionality
-✅ **Progressive** - Can build Clients module independently
 
 ### Future Expansion
 
@@ -2647,28 +2630,23 @@ When an estimate is accepted:
 
 ## 📝 METADATA
 
-**Version:** 13.1
-**Subtitle:** JOBS MANAGEMENT COMPLETE + DATABASE VALIDATION BEST PRACTICES
-**Last Updated:** Jobs Management fully functional with silent value capping and live totals
-**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Clients Placeholder | Settings 70% | Mobile not tested
+**Version:** 13.2
+**Subtitle:** JOBS HUB SIMPLIFIED - 2-SECTION ARCHITECTURE
+**Last Updated:** Removed Clients placeholder, Jobs Hub now has Estimates + Jobs only
+**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Settings 70% | Mobile not tested
 **Philosophy:** Simple CRM + Smart Auto-Tracking + Clean Professional UI + Unified Project Hub
 **Next Action:** Settings Preferences (2-3 hours) → Mobile optimization (5-6 hours)
 **Launch ETA:** 7-9 hours remaining
 
-**Major Changes from v13.0:**
-- ✅ Jobs Management module fully functional and production-ready
-- ✅ Fixed materials unit field to show placeholder instead of default value
-- ✅ Updated currency formatting to show 2 decimal places
-- ✅ Created comprehensive view modal for jobs
-- ✅ Fixed live totals to update when deleting material/crew rows
-- ✅ Changed last row deletion behavior (clear instead of delete)
-- ✅ Implemented silent value capping at $99,999,999.99
-- ✅ Database migration for numeric precision (NUMERIC 12,2 → 20,2)
-- ✅ Added comprehensive database validation best practices section
+**Major Changes from v13.1:**
+- ✅ Simplified Jobs Hub from 3 sections to 2 sections
+- ✅ Removed Clients.js placeholder module
+- ✅ Updated all documentation to reflect 2-section architecture
+- ✅ Cleaner project management workflow (Estimates → Jobs)
 
 ---
 
-**END OF HANDOFF DOCUMENT v13.0**
+**END OF HANDOFF DOCUMENT v13.2**
 
 *This is the single source of truth for SteadyManager Pro development.*
 *Current Focus: Jobs Hub ✅ → Settings Preferences → Mobile → Ship 🚀*
