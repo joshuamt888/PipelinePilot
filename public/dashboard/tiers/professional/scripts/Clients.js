@@ -991,10 +991,6 @@ window.ClientsModule = {
                 /* View Section */
                 .view-section {
                     margin-bottom: 2rem;
-                    background: var(--surface);
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    padding: 1.5rem;
                 }
 
                 .view-section:last-child {
@@ -1007,7 +1003,7 @@ window.ClientsModule = {
                     gap: 0.75rem;
                     margin-bottom: 1rem;
                     padding-bottom: 0.75rem;
-                    border-bottom: 2px solid var(--border);
+                    border-bottom: 1px solid var(--border);
                 }
 
                 .view-section-header svg {
