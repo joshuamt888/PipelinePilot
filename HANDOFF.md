@@ -38,9 +38,9 @@
 - **Status:** 🔨 90% COMPLETE
 - **Lead Limit:** 5000
 - **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals ✅, Estimates ✅, Settings
-- **Modules In Progress:** Jobs (0%), Analytics (0%)
+- **Modules In Progress:** Jobs (0%)
 - **Icon System:** 95% complete (Lucide SVG - only Settings needs update)
-- **Build Order (UPDATED):** Goals ✅ → Estimates ✅ → Jobs → Analytics → Settings Preferences
+- **Build Order (UPDATED):** Goals ✅ → Estimates ✅ → Jobs → Settings Preferences
 
 ---
 
@@ -123,7 +123,6 @@ Run this checklist periodically to ensure all modules provide instant feedback a
 - [ ] Goals - Verify stat updates when goal status changes
 - [ ] Jobs - Implement instant feedback on create/edit/delete
 - [ ] Jobs - Verify stat updates when job status changes
-- [ ] Analytics - Implement instant data refresh (when module is built)
 
 ### 📊 Stats Tab Real-Time Updates
 All modules with stats tabs should update immediately when:
@@ -1675,14 +1674,12 @@ Run this checklist AFTER completing Jobs, Settings, and Mobile:
 1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals (COMPLETE)
 2. ✅ **Estimates** - Quote/estimate builder with client acceptance and auto-job creation (COMPLETE)
 3. 🔨 **Jobs** - Job management with profit tracking, cost calculation, and lead linking
-4. 🔨 **Analytics** - Revenue tracking, pipeline analytics, goal insights (aggregates all modules)
-5. 🔨 **Settings Preferences** - Theme, windowing, customization options
+4. 🔨 **Settings Preferences** - Theme, windowing, customization options
 
 **Build Order Rationale:**
-- **Jobs first** - Core money maker, tracks revenue/costs/profit, sets foundation for Estimates
-- **Estimates second** - Natural workflow (Estimate accepted → Auto-creates Job), builds on Jobs
-- **Analytics last** - Aggregates data from all modules, most valuable when everything feeds it
-- **Settings** - Polish piece, implement throughout as needed
+- **Goals + Estimates** - Completed, provide goal tracking and quote management
+- **Jobs next** - Core money maker, tracks revenue/costs/profit, natural extension of Estimates
+- **Settings** - Polish piece, implement preferences and customization options
 
 **Why Pro First:**
 - Establishes the feature ceiling
@@ -1729,7 +1726,6 @@ team_analytics (company_id, metrics, date)
 
 **Features to REMOVE from Free:**
 - ❌ Goals module entirely
-- ❌ Analytics module entirely
 - ❌ Jobs module entirely
 - ❌ Advanced pipeline filters
 - ❌ Bulk operations
@@ -1800,7 +1796,7 @@ team_analytics (company_id, metrics, date)
 ```
 
 **Current Status:** Phase 1 (Pro Tier) - 80% complete
-**Next Milestones:** Jobs → Analytics → Settings Preferences → Phase 2
+**Next Milestones:** Jobs → Settings Preferences → Phase 2
 
 ---
 
