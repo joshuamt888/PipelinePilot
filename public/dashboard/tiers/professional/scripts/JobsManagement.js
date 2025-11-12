@@ -4162,12 +4162,20 @@ window.JobsManagementModule = {
     },
 
     async jobs_handleSave() {
+        // Prevent duplicate submissions
+        if (this.state.isSaving) return;
+        this.state.isSaving = true;
+
         const form = document.getElementById('jobForm');
-        if (!form) return;
+        if (!form) {
+            this.state.isSaving = false;
+            return;
+        }
 
         // Validate
         if (!form.checkValidity()) {
             form.reportValidity();
+            this.state.isSaving = false;
             return;
         }
 
@@ -4324,9 +4332,15 @@ window.JobsManagementModule = {
 
                 window.SteadyUtils.showToast('Job created successfully', 'success');
             }
+
+            // Reset flag after successful save
+            this.state.isSaving = false;
         } catch (error) {
             console.error('Error saving job:', error);
             window.SteadyUtils.showToast('Failed to save job', 'error');
+
+            // Reset flag after error
+            this.state.isSaving = false;
         }
     },
 

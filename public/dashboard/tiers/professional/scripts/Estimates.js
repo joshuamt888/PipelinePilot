@@ -2953,6 +2953,10 @@ estimates_updatePhotoCounter(overlay) {
  * Handle estimate save
  */
 async estimates_handleSave(overlay) {
+    // Prevent duplicate submissions
+    if (this.state.isSaving) return;
+    this.state.isSaving = true;
+
     try {
         // Gather form data
         const title = overlay.querySelector('#estimateTitle').value.trim();
@@ -3002,6 +3006,8 @@ async estimates_handleSave(overlay) {
                 titleInput.removeEventListener('input', clearError);
             }, { once: true });
 
+            // Reset flag on validation failure
+            this.state.isSaving = false;
             return;
         }
 
@@ -3083,14 +3089,23 @@ async estimates_handleSave(overlay) {
             this.estimates_calculateStats();
             this.estimates_render();
 
+            // Reset flag after successful save
+            this.state.isSaving = false;
+
         } catch (error) {
             console.error('[Estimates] Save error:', error);
             window.SteadyUtils.showToast('Failed to save estimate', 'error');
+
+            // Reset flag after save error
+            this.state.isSaving = false;
         }
 
     } catch (error) {
         // Validation errors (before modal closes)
         console.error('[Estimates] Validation error:', error);
+
+        // Reset flag after validation error
+        this.state.isSaving = false;
     }
 },
 
