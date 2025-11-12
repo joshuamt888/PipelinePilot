@@ -201,7 +201,14 @@ app.get('/dashboard', (req, res) => {
   const filePath = path.join(__dirname, 'public', 'dashboard', 'index.html');
   console.log('Serving file:', filePath);
   res.setHeader('Content-Type', 'text/html');
-  res.sendFile(filePath);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error('Error sending dashboard file:', err);
+      res.status(500).send('Error loading dashboard');
+    } else {
+      console.log('Dashboard file sent successfully');
+    }
+  });
 });
 
 // 404 handler
