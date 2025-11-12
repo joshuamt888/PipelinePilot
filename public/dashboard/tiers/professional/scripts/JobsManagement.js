@@ -2589,8 +2589,747 @@ window.JobsManagementModule = {
     },
 
     jobs_showViewModal(jobId) {
-        console.log('[Jobs] TODO: Implement view modal for job:', jobId);
-        window.SteadyUtils.showToast('Job detail view coming soon...', 'info');
+        const job = this.state.jobs.find(j => j.id === jobId);
+        if (!job) return;
+
+        // Clean up any existing modals first
+        const existingModals = document.querySelectorAll('.job-view-overlay, .job-confirm-overlay');
+        existingModals.forEach(m => m.remove());
+
+        const lead = this.state.leads.find(l => l.id === job.lead_id);
+        const materials = job.materials || [];
+        const crew = job.crew_members || [];
+        const photos = job.photos || [];
+        const revenue = job.final_price || job.quoted_price || 0;
+        const materialCost = job.material_cost || 0;
+        const laborCost = (job.labor_rate || 0) * (job.estimated_labor_hours || 0);
+        const otherExpenses = job.other_expenses || 0;
+        const totalCost = materialCost + laborCost + otherExpenses;
+        const profit = revenue - totalCost;
+        const profitMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
+
+        const statusIcons = {
+            draft: '<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" stroke-width="2"/><path d="M18 2l-8 8v4h4l8-8-4-4z" stroke-width="2"/>',
+            scheduled: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>',
+            in_progress: '<circle cx="12" cy="12" r="10" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round"/>',
+            completed: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke-width="2"/><polyline points="22 4 12 14.01 9 11.01" stroke-width="2"/>',
+            invoiced: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke-width="2"/>',
+            paid: '<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>',
+            cancelled: '<circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke-width="2"/><line x1="9" y1="9" x2="15" y2="15" stroke-width="2"/>'
+        };
+
+        const statusColors = {
+            draft: '#6b7280',
+            scheduled: '#fbbf24',
+            in_progress: '#3b82f6',
+            completed: '#10b981',
+            invoiced: '#8b5cf6',
+            paid: '#22c55e',
+            cancelled: '#ef4444'
+        };
+
+        const overlay = document.createElement('div');
+        overlay.className = 'job-view-overlay';
+        overlay.innerHTML = `
+            <style>
+                .job-view-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s ease;
+                    padding: 2rem;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .job-view-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .job-view-header {
+                    padding: 32px;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+
+                .job-view-header-left {
+                    flex: 1;
+                }
+
+                .job-view-title {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin: 0 0 12px 0;
+                }
+
+                .job-view-meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    align-items: center;
+                }
+
+                .job-view-status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 16px;
+                    border-radius: 999px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: capitalize;
+                }
+
+                .job-view-status-badge[data-status="draft"] {
+                    background: rgba(156, 163, 175, 0.15);
+                    color: #6b7280;
+                }
+
+                .job-view-status-badge[data-status="scheduled"] {
+                    background: rgba(251, 191, 36, 0.15);
+                    color: #fbbf24;
+                }
+
+                .job-view-status-badge[data-status="in_progress"] {
+                    background: rgba(59, 130, 246, 0.15);
+                    color: #3b82f6;
+                }
+
+                .job-view-status-badge[data-status="completed"] {
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
+                }
+
+                .job-view-status-badge[data-status="invoiced"] {
+                    background: rgba(139, 92, 246, 0.15);
+                    color: #8b5cf6;
+                }
+
+                .job-view-status-badge[data-status="paid"] {
+                    background: rgba(34, 197, 94, 0.15);
+                    color: #22c55e;
+                }
+
+                .job-view-status-badge[data-status="cancelled"] {
+                    background: rgba(239, 68, 68, 0.15);
+                    color: #ef4444;
+                }
+
+                .job-view-status-badge svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .job-view-meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                }
+
+                .job-view-meta-item svg {
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .job-view-close {
+                    background: transparent;
+                    border: none;
+                    color: var(--text-tertiary);
+                    font-size: 32px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                }
+
+                .job-view-close:hover {
+                    background: var(--border);
+                    color: var(--text-primary);
+                }
+
+                .job-view-body {
+                    padding: 32px;
+                }
+
+                .job-view-section {
+                    margin-bottom: 32px;
+                }
+
+                .job-view-section:last-child {
+                    margin-bottom: 0;
+                }
+
+                .job-view-section-title {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 16px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid var(--border);
+                }
+
+                .job-view-description {
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: var(--text-secondary);
+                    white-space: pre-wrap;
+                }
+
+                .job-view-financial-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 16px;
+                    margin-bottom: 24px;
+                }
+
+                .job-view-financial-item {
+                    background: var(--background);
+                    padding: 16px;
+                    border-radius: 8px;
+                    border: 1px solid var(--border);
+                }
+
+                .job-view-financial-label {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 8px;
+                }
+
+                .job-view-financial-value {
+                    font-size: 24px;
+                    font-weight: 800;
+                    color: var(--text-primary);
+                }
+
+                .job-view-financial-value.profit {
+                    color: #10b981;
+                }
+
+                .job-view-financial-value.loss {
+                    color: #ef4444;
+                }
+
+                .job-view-profit-box {
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
+                    border: 2px solid rgba(102, 126, 234, 0.3);
+                    border-radius: 12px;
+                    padding: 24px;
+                }
+
+                .job-view-profit-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 0;
+                    font-size: 15px;
+                }
+
+                .job-view-profit-row span:first-child {
+                    color: var(--text-secondary);
+                    font-weight: 500;
+                }
+
+                .job-view-profit-row span:last-child {
+                    color: var(--text-primary);
+                    font-weight: 700;
+                }
+
+                .job-view-profit-divider {
+                    height: 1px;
+                    background: var(--border);
+                    margin: 12px 0;
+                }
+
+                .job-view-profit-total {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px;
+                    background: var(--surface);
+                    border-radius: 8px;
+                    margin-top: 12px;
+                }
+
+                .job-view-profit-total-label {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-view-profit-total-value {
+                    font-size: 28px;
+                    font-weight: 900;
+                }
+
+                .job-view-profit-total-value.positive {
+                    color: #10b981;
+                }
+
+                .job-view-profit-total-value.negative {
+                    color: #ef4444;
+                }
+
+                .job-view-profit-margin {
+                    font-size: 16px;
+                    font-weight: 600;
+                    margin-left: 12px;
+                    opacity: 0.8;
+                }
+
+                .job-view-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: var(--background);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+
+                .job-view-table thead {
+                    background: var(--border);
+                }
+
+                .job-view-table th {
+                    text-align: left;
+                    padding: 12px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .job-view-table td {
+                    padding: 12px;
+                    font-size: 14px;
+                    color: var(--text-primary);
+                    border-top: 1px solid var(--border);
+                }
+
+                .job-view-table tr:hover {
+                    background: rgba(102, 126, 234, 0.05);
+                }
+
+                .job-view-photos-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                    gap: 16px;
+                }
+
+                .job-view-photo {
+                    aspect-ratio: 1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    position: relative;
+                    cursor: pointer;
+                    border: 2px solid var(--border);
+                    transition: all 0.2s;
+                }
+
+                .job-view-photo:hover {
+                    border-color: #667eea;
+                    transform: scale(1.05);
+                }
+
+                .job-view-photo img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .job-view-photo-type {
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    background: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+
+                .job-view-footer {
+                    padding: 24px 32px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 16px;
+                    flex-wrap: wrap;
+                }
+
+                .job-view-btn {
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    border: none;
+                }
+
+                .job-view-btn-edit {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                }
+
+                .job-view-btn-edit:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+
+                .job-view-btn-edit svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                .job-view-btn-delete {
+                    background: transparent;
+                    border: 2px solid #ef4444;
+                    color: #ef4444;
+                }
+
+                .job-view-btn-delete:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                }
+
+                .job-view-btn-delete svg {
+                    width: 16px;
+                    height: 16px;
+                }
+
+                @media (max-width: 768px) {
+                    .job-view-modal {
+                        max-width: 100%;
+                        max-height: 100vh;
+                        border-radius: 0;
+                    }
+
+                    .job-view-header, .job-view-body, .job-view-footer {
+                        padding: 24px 16px;
+                    }
+
+                    .job-view-financial-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .job-view-photos-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+            <div class="job-view-modal">
+                <div class="job-view-header">
+                    <div class="job-view-header-left">
+                        <h2 class="job-view-title">${job.title}</h2>
+                        <div class="job-view-meta">
+                            <div class="job-view-status-badge" data-status="${job.status}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    ${statusIcons[job.status]}
+                                </svg>
+                                ${this.jobs_formatStatus(job.status)}
+                            </div>
+                            ${lead ? `
+                                <div class="job-view-meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    ${lead.name}
+                                </div>
+                            ` : ''}
+                            ${job.scheduled_date ? `
+                                <div class="job-view-meta-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    ${this.jobs_getScheduledInfo(job)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <button class="job-view-close" data-action="close-view-modal">×</button>
+                </div>
+
+                <div class="job-view-body">
+                    ${job.description ? `
+                        <div class="job-view-section">
+                            <div class="job-view-section-title">Description</div>
+                            <div class="job-view-description">${job.description}</div>
+                        </div>
+                    ` : ''}
+
+                    <div class="job-view-section">
+                        <div class="job-view-section-title">Financial Summary</div>
+                        <div class="job-view-financial-grid">
+                            <div class="job-view-financial-item">
+                                <div class="job-view-financial-label">Revenue</div>
+                                <div class="job-view-financial-value">${formatCurrency(revenue)}</div>
+                            </div>
+                            <div class="job-view-financial-item">
+                                <div class="job-view-financial-label">Total Cost</div>
+                                <div class="job-view-financial-value">${formatCurrency(totalCost)}</div>
+                            </div>
+                            <div class="job-view-financial-item">
+                                <div class="job-view-financial-label">Profit</div>
+                                <div class="job-view-financial-value ${profit >= 0 ? 'profit' : 'loss'}">${formatCurrency(profit)}</div>
+                            </div>
+                            <div class="job-view-financial-item">
+                                <div class="job-view-financial-label">Margin</div>
+                                <div class="job-view-financial-value">${profitMargin.toFixed(1)}%</div>
+                            </div>
+                        </div>
+
+                        <div class="job-view-profit-box">
+                            <div class="job-view-profit-row">
+                                <span>Material Cost:</span>
+                                <span>${formatCurrency(materialCost)}</span>
+                            </div>
+                            <div class="job-view-profit-row">
+                                <span>Labor Cost:</span>
+                                <span>${formatCurrency(laborCost)}</span>
+                            </div>
+                            <div class="job-view-profit-row">
+                                <span>Other Expenses:</span>
+                                <span>${formatCurrency(otherExpenses)}</span>
+                            </div>
+                            <div class="job-view-profit-divider"></div>
+                            <div class="job-view-profit-total">
+                                <span class="job-view-profit-total-label">Net Profit</span>
+                                <span class="job-view-profit-total-value ${profit >= 0 ? 'positive' : 'negative'}">
+                                    ${formatCurrency(profit)}
+                                    <span class="job-view-profit-margin">(${profitMargin.toFixed(1)}%)</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${materials.length > 0 ? `
+                        <div class="job-view-section">
+                            <div class="job-view-section-title">Materials (${materials.length})</div>
+                            <table class="job-view-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Quantity</th>
+                                        <th>Unit</th>
+                                        <th>$/Unit</th>
+                                        <th>Supplier</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${materials.map(m => `
+                                        <tr>
+                                            <td>${m.name || '-'}</td>
+                                            <td>${m.quantity || '-'}</td>
+                                            <td>${m.unit || '-'}</td>
+                                            <td>${formatCurrency(m.unit_price || 0)}</td>
+                                            <td>${m.supplier || '-'}</td>
+                                            <td style="text-align: right; font-weight: 700;">${formatCurrency((m.quantity || 0) * (m.unit_price || 0))}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+
+                    ${crew.length > 0 ? `
+                        <div class="job-view-section">
+                            <div class="job-view-section-title">Crew (${crew.length})</div>
+                            <table class="job-view-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Role</th>
+                                        <th>Hours</th>
+                                        <th>Rate</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${crew.map(c => `
+                                        <tr>
+                                            <td>${c.name || '-'}</td>
+                                            <td>${c.role || '-'}</td>
+                                            <td>${c.hours || '-'}</td>
+                                            <td>${formatCurrency(c.rate || 0)}/hr</td>
+                                            <td style="text-align: right; font-weight: 700;">${formatCurrency((c.hours || 0) * (c.rate || 0))}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+
+                    ${photos.length > 0 ? `
+                        <div class="job-view-section">
+                            <div class="job-view-section-title">Photos (${photos.length})</div>
+                            <div class="job-view-photos-grid">
+                                ${photos.map(photo => `
+                                    <div class="job-view-photo">
+                                        <img src="${photo.url}" alt="${photo.type}">
+                                        <div class="job-view-photo-type">${photo.type}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${job.notes ? `
+                        <div class="job-view-section">
+                            <div class="job-view-section-title">Internal Notes</div>
+                            <div class="job-view-description">${job.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="job-view-footer">
+                    <button class="job-view-btn job-view-btn-edit" data-action="edit-job" data-id="${job.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit
+                    </button>
+
+                    <button class="job-view-btn job-view-btn-delete" data-action="delete-job" data-id="${job.id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Close modal
+        overlay.querySelector('[data-action="close-view-modal"]').addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        });
+
+        // Edit job
+        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                this.jobs_showCreateModal(job.id);
+            }, 200);
+        });
+
+        // Delete job
+        overlay.querySelector('[data-action="delete-job"]').addEventListener('click', async () => {
+            const confirmed = await this.jobs_showConfirmation({
+                title: 'Delete Job',
+                message: `Are you sure you want to delete "${job.title}"? This action cannot be undone.`,
+                confirmText: 'Delete',
+                type: 'danger'
+            });
+
+            if (!confirmed) return;
+
+            // Close modal immediately for instant feedback
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+
+            // Remove from local state immediately
+            const index = this.state.jobs.findIndex(j => j.id === job.id);
+            if (index !== -1) {
+                this.state.jobs.splice(index, 1);
+            }
+
+            // Update UI immediately
+            this.jobs_calculateStats();
+            this.jobs_instantFilterChange();
+
+            // Delete from server in background
+            try {
+                await API.deleteJob(job.id);
+                window.SteadyUtils.showToast('Job deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting job:', error);
+                window.SteadyUtils.showToast('Failed to delete job', 'error');
+
+                // Restore job on error
+                this.state.jobs.splice(index, 0, job);
+                this.jobs_calculateStats();
+                this.jobs_instantFilterChange();
+            }
+        });
+
+        // Close on backdrop click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+            }
+        });
+
+        // Close on ESC key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 200);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     },
 
     /**
