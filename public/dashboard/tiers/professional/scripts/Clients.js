@@ -257,6 +257,19 @@ window.ClientsModule = {
                 <!-- Empty State -->
                 ${this.state.filteredClients.length === 0 ? this.renderEmptyState() : ''}
             </div>
+
+            <!-- View Modal -->
+            <div id="clientViewModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title" id="viewModalTitle">Client Details</h3>
+                        <button class="modal-close" id="closeViewModal">×</button>
+                    </div>
+                    <div class="modal-body" id="viewModalBody">
+                        <!-- Populated when viewing a client -->
+                    </div>
+                </div>
+            </div>
         `;
 
         // Wait for browser to parse CSS, then trigger fade-in
@@ -361,6 +374,115 @@ window.ClientsModule = {
         }
     },
 
+    /**
+     * Open view modal for a client
+     */
+    openViewModal(clientId) {
+        const client = this.state.clients.find(c => c.id === clientId);
+        if (!client) return;
+
+        this.state.selectedClient = client;
+
+        const modal = document.getElementById('clientViewModal');
+        const modalBody = document.getElementById('viewModalBody');
+        const modalTitle = document.getElementById('viewModalTitle');
+
+        if (!modal || !modalBody || !modalTitle) return;
+
+        modalTitle.textContent = client.name || 'Client Details';
+
+        modalBody.innerHTML = `
+            <div class="client-modal-content">
+                <!-- Contact Info -->
+                <div class="modal-section">
+                    <div class="modal-section-title">Contact Information</div>
+                    <div class="contact-info">
+                        ${client.email ? `<div class="contact-item"><strong>Email:</strong> ${this.escapeHtml(client.email)}</div>` : ''}
+                        ${client.phone ? `<div class="contact-item"><strong>Phone:</strong> ${this.formatPhone(client.phone)}</div>` : ''}
+                        ${client.address ? `<div class="contact-item"><strong>Address:</strong> ${this.formatAddress(client)}</div>` : ''}
+                    </div>
+                </div>
+
+                <!-- Estimates Section -->
+                ${client.estimates.length > 0 ? `
+                    <div class="modal-section">
+                        <div class="modal-section-title">Estimates (${client.estimates.length})</div>
+                        <div class="item-cards">
+                            ${client.estimates.map(est => `
+                                <div class="item-card" data-estimate-id="${est.id}">
+                                    <div class="item-card-header">
+                                        <div class="item-card-title">${this.escapeHtml(est.title || 'Untitled')}</div>
+                                        <span class="status-badge status-${est.status}">${this.formatStatus(est.status)}</span>
+                                    </div>
+                                    <div class="item-card-meta">
+                                        <span class="item-price">${this.formatCurrency(est.total_price)}</span>
+                                        <span class="item-date">${this.getRelativeTime(est.created_at)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Jobs Section -->
+                ${client.jobs.length > 0 ? `
+                    <div class="modal-section">
+                        <div class="modal-section-title">Jobs (${client.jobs.length})</div>
+                        <div class="item-cards">
+                            ${client.jobs.map(job => `
+                                <div class="item-card" data-job-id="${job.id}">
+                                    <div class="item-card-header">
+                                        <div class="item-card-title">${this.escapeHtml(job.title || 'Untitled')}</div>
+                                        <span class="status-badge status-${job.status}">${this.formatStatus(job.status)}</span>
+                                    </div>
+                                    <div class="item-card-meta">
+                                        <span class="item-price">${this.formatCurrency(job.final_price || job.quoted_price || 0)}</span>
+                                        <span class="item-date">${this.getRelativeTime(job.created_at)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        // Add click handlers for estimate/job cards
+        modalBody.querySelectorAll('.item-card[data-estimate-id]').forEach(card => {
+            card.addEventListener('click', () => {
+                const estimateId = card.getAttribute('data-estimate-id');
+                this.closeViewModal();
+                // Open Estimates module view modal
+                if (window.EstimatesModule && window.EstimatesModule.estimates_showViewModal) {
+                    window.EstimatesModule.estimates_showViewModal(estimateId);
+                }
+            });
+        });
+
+        modalBody.querySelectorAll('.item-card[data-job-id]').forEach(card => {
+            card.addEventListener('click', () => {
+                const jobId = card.getAttribute('data-job-id');
+                this.closeViewModal();
+                // Open Jobs module view modal
+                if (window.JobsManagementModule && window.JobsManagementModule.jobs_showViewModal) {
+                    window.JobsManagementModule.jobs_showViewModal(jobId);
+                }
+            });
+        });
+
+        modal.style.display = 'flex';
+    },
+
+    /**
+     * Close view modal
+     */
+    closeViewModal() {
+        const modal = document.getElementById('clientViewModal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.state.selectedClient = null;
+        }
+    },
 
     /**
      * Attach event listeners
@@ -373,6 +495,37 @@ window.ClientsModule = {
                 this.filterClients(e.target.value);
             });
         }
+
+        // Client card clicks
+        document.querySelectorAll('.client-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const clientId = card.getAttribute('data-client-id');
+                this.openViewModal(clientId);
+            });
+        });
+
+        // Close modal button
+        const closeModalBtn = document.getElementById('closeViewModal');
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => this.closeViewModal());
+        }
+
+        // Close modal on overlay click
+        const modal = document.getElementById('clientViewModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closeViewModal();
+                }
+            });
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.state.selectedClient) {
+                this.closeViewModal();
+            }
+        });
     },
 
     // ==================== UTILITY FUNCTIONS ====================
@@ -606,6 +759,14 @@ window.ClientsModule = {
                     border: 2px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
+
+                .client-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+                    border-color: var(--primary);
                 }
 
                 .client-card-header {
@@ -696,6 +857,189 @@ window.ClientsModule = {
 
                 .empty-state p {
                     font-size: 1rem;
+                }
+
+                /* Modal */
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 9999;
+                    padding: 2rem;
+                }
+
+                .modal-content {
+                    background: var(--surface-primary);
+                    border-radius: 12px;
+                    max-width: 700px;
+                    width: 100%;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                }
+
+                .modal-header {
+                    padding: 1.5rem;
+                    border-bottom: 1px solid var(--border);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-title {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin: 0;
+                }
+
+                .modal-close {
+                    width: 32px;
+                    height: 32px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    font-size: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: background-color 0.2s ease;
+                }
+
+                .modal-close:hover {
+                    background: var(--surface-secondary);
+                }
+
+                .modal-body {
+                    padding: 1.5rem;
+                    overflow-y: auto;
+                }
+
+                /* Modal Sections */
+                .modal-section {
+                    margin-bottom: 1.5rem;
+                }
+
+                .modal-section:last-child {
+                    margin-bottom: 0;
+                }
+
+                .modal-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.75rem;
+                }
+
+                .contact-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .contact-item {
+                    font-size: 0.9rem;
+                    color: var(--text-primary);
+                }
+
+                /* Item Cards (clickable estimate/job cards) */
+                .item-cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 0.75rem;
+                }
+
+                .item-card {
+                    background: var(--surface);
+                    border: 2px solid var(--border);
+                    border-radius: 8px;
+                    padding: 1rem;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .item-card:hover {
+                    border-color: var(--primary);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+
+                .item-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                .item-card-title {
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    flex: 1;
+                }
+
+                .item-card-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 0.875rem;
+                    color: var(--text-secondary);
+                }
+
+                .item-price {
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .item-date {
+                    color: var(--text-tertiary);
+                }
+
+                /* Status Badges */
+                .status-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: capitalize;
+                }
+
+                .status-draft {
+                    background: rgba(156, 163, 175, 0.2);
+                    color: #6b7280;
+                }
+
+                .status-sent, .status-scheduled {
+                    background: rgba(59, 130, 246, 0.2);
+                    color: #3b82f6;
+                }
+
+                .status-accepted, .status-completed, .status-paid {
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #10b981;
+                }
+
+                .status-rejected {
+                    background: rgba(239, 68, 68, 0.2);
+                    color: #ef4444;
+                }
+
+                .status-in_progress {
+                    background: rgba(245, 158, 11, 0.2);
+                    color: #f59e0b;
                 }
 
                 /* Responsive */
