@@ -2440,6 +2440,286 @@ window.ClientsModule = {
         overlay.className = 'estimate-modal-overlay';
         overlay.style.zIndex = '10001';
         overlay.innerHTML = `
+            <style>
+                .estimate-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.2s ease;
+                    padding: 2rem;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .estimate-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                }
+
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                .estimate-modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 24px;
+                    border-bottom: 1px solid var(--border);
+                }
+
+                .estimate-modal-header h2 {
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-close {
+                    background: transparent;
+                    border: none;
+                    font-size: 28px;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+
+                .estimate-modal-close:hover {
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-body {
+                    padding: 24px;
+                }
+
+                .estimate-form-section {
+                    margin-bottom: 32px;
+                }
+
+                .estimate-form-section-title {
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                    margin-bottom: 16px;
+                }
+
+                .estimate-form-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 16px;
+                    margin-top: 12px;
+                    margin-bottom: 16px;
+                }
+
+                .estimate-form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .estimate-form-group label {
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: var(--text-primary);
+                }
+
+                .estimate-form-group input,
+                .estimate-form-group select,
+                .estimate-form-group textarea {
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+
+                .estimate-form-group input:focus,
+                .estimate-form-group select:focus,
+                .estimate-form-group textarea:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+                .estimate-form-group textarea {
+                    resize: vertical;
+                    min-height: 80px;
+                }
+
+                .estimate-line-items {
+                    background: var(--background);
+                    border: 1px solid var(--border);
+                    border-radius: 8px;
+                    padding: 16px;
+                }
+
+                .estimate-line-item-header {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    color: var(--text-secondary);
+                }
+
+                .estimate-line-item {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 40px;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    align-items: center;
+                }
+
+                .estimate-line-item input {
+                    padding: 8px 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background: var(--surface);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    width: 100%;
+                }
+
+                .line-item-remove {
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    color: #ef4444;
+                    cursor: pointer;
+                    padding: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                    font-size: 18px;
+                    line-height: 1;
+                }
+
+                .line-item-remove:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    border-color: #ef4444;
+                }
+
+                .estimate-add-line-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px;
+                    background: transparent;
+                    border: 1px dashed var(--border);
+                    border-radius: 6px;
+                    color: var(--primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    margin-top: 12px;
+                    width: 100%;
+                }
+
+                .estimate-add-line-item:hover {
+                    background: rgba(59, 130, 246, 0.05);
+                    border-color: var(--primary);
+                }
+
+                .estimate-total-box {
+                    margin-top: 16px;
+                    padding: 16px;
+                    background: rgba(59, 130, 246, 0.05);
+                    border: 1px solid var(--primary);
+                    border-radius: 6px;
+                    text-align: right;
+                }
+
+                .estimate-total-label {
+                    font-size: 14px;
+                    color: var(--text-secondary);
+                    margin-bottom: 4px;
+                }
+
+                .estimate-total-value {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: var(--primary);
+                }
+
+                .estimate-modal-footer {
+                    padding: 20px 24px;
+                    border-top: 1px solid var(--border);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                }
+
+                .estimate-modal-btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .estimate-modal-btn-cancel {
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    color: var(--text-primary);
+                }
+
+                .estimate-modal-btn-cancel:hover {
+                    background: var(--surface-hover);
+                }
+
+                .estimate-modal-btn-save {
+                    background: var(--primary);
+                    border: none;
+                    color: white;
+                }
+
+                .estimate-modal-btn-save:hover {
+                    background: var(--primary-dark);
+                }
+
+                @media (max-width: 768px) {
+                    .estimate-form-row,
+                    .estimate-line-item-header,
+                    .estimate-line-item {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
             <div class="estimate-modal">
                 <div class="estimate-modal-header">
                     <h2>Edit Estimate</h2>
@@ -2693,6 +2973,210 @@ window.ClientsModule = {
         overlay.className = 'job-modal-overlay';
         overlay.style.zIndex = '10001';
         overlay.innerHTML = `
+            <style>
+                .job-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10001;
+                    animation: fadeIn 0.2s ease;
+                    overflow-y: auto;
+                    padding: 2rem;
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .job-modal {
+                    background: var(--surface);
+                    border-radius: 12px;
+                    width: 100%;
+                    max-width: 900px;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                    margin: auto;
+                }
+
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                .job-modal-header {
+                    padding: 1.5rem 2rem;
+                    border-bottom: 2px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .job-modal-header h2 {
+                    margin: 0;
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .job-modal-close {
+                    width: 2rem;
+                    height: 2rem;
+                    border-radius: 6px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
+                    font-size: 24px;
+                }
+
+                .job-modal-close:hover {
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
+                }
+
+                .job-modal-body {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 2rem;
+                }
+
+                .job-form-section {
+                    margin-bottom: 2rem;
+                }
+
+                .job-form-section-title {
+                    font-size: 0.875rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid var(--border);
+                }
+
+                .job-form-row {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+
+                .job-form-row.single {
+                    grid-template-columns: 1fr;
+                }
+
+                .job-form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .job-form-group label {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                }
+
+                .job-form-group input,
+                .job-form-group select,
+                .job-form-group textarea {
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    transition: all 0.2s;
+                }
+
+                .job-form-group input:focus,
+                .job-form-group select:focus,
+                .job-form-group textarea:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
+                .job-form-group select {
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px;
+                    cursor: pointer;
+                }
+
+                .job-form-group textarea {
+                    resize: vertical;
+                    min-height: 100px;
+                    font-family: inherit;
+                }
+
+                .job-modal-footer {
+                    padding: 1.5rem 2rem;
+                    border-top: 2px solid var(--border);
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                }
+
+                .job-modal-btn {
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: none;
+                }
+
+                .job-modal-btn-cancel {
+                    background: transparent;
+                    border: 2px solid var(--border);
+                    color: var(--text-primary);
+                }
+
+                .job-modal-btn-cancel:hover {
+                    background: var(--surface-hover);
+                }
+
+                .job-modal-btn-save {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                }
+
+                .job-modal-btn-save:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+
+                @media (max-width: 768px) {
+                    .job-modal {
+                        max-width: 100%;
+                        max-height: 100vh;
+                        border-radius: 0;
+                    }
+                    .job-form-row {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
             <div class="job-modal">
                 <div class="job-modal-header">
                     <h2>Edit Job</h2>
