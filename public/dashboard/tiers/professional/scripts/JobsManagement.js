@@ -2817,6 +2817,8 @@ window.JobsManagementModule = {
                     line-height: 1.6;
                     color: var(--text-secondary);
                     white-space: pre-wrap;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
                 }
 
                 .job-view-financial-grid {
