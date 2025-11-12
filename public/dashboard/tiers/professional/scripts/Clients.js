@@ -2437,11 +2437,11 @@ window.ClientsModule = {
         const expiryDate = freshEstimate.expires_at ? freshEstimate.expires_at.split('T')[0] : defaultExpiry.toISOString().split('T')[0];
 
         const overlay = document.createElement('div');
-        overlay.className = 'estimate-modal-overlay';
+        overlay.className = 'clients-estimate-modal-overlay';
         overlay.style.zIndex = '10001';
         overlay.innerHTML = `
             <style>
-                .estimate-modal-overlay {
+                .clients-estimate-modal-overlay {
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -2462,7 +2462,7 @@ window.ClientsModule = {
                     to { opacity: 1; }
                 }
 
-                .estimate-modal {
+                .clients-estimate-modal {
                     background: var(--surface);
                     border-radius: 12px;
                     width: 90%;
@@ -2478,7 +2478,7 @@ window.ClientsModule = {
                     to { transform: translateY(0); opacity: 1; }
                 }
 
-                .estimate-modal-header {
+                .clients-estimate-modal-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -2486,14 +2486,14 @@ window.ClientsModule = {
                     border-bottom: 1px solid var(--border);
                 }
 
-                .estimate-modal-header h2 {
+                .clients-estimate-modal-header h2 {
                     margin: 0;
                     font-size: 24px;
                     font-weight: 600;
                     color: var(--text-primary);
                 }
 
-                .estimate-modal-close {
+                .clients-estimate-modal-close {
                     background: transparent;
                     border: none;
                     font-size: 28px;
@@ -2509,20 +2509,20 @@ window.ClientsModule = {
                     transition: all 0.2s;
                 }
 
-                .estimate-modal-close:hover {
+                .clients-estimate-modal-close:hover {
                     background: var(--surface-hover);
                     color: var(--text-primary);
                 }
 
-                .estimate-modal-body {
+                .clients-estimate-modal-body {
                     padding: 24px;
                 }
 
-                .estimate-form-section {
+                .clients-estimate-form-section {
                     margin-bottom: 32px;
                 }
 
-                .estimate-form-section-title {
+                .clients-estimate-form-section-title {
                     font-size: 14px;
                     font-weight: 600;
                     text-transform: uppercase;
@@ -2531,7 +2531,7 @@ window.ClientsModule = {
                     margin-bottom: 16px;
                 }
 
-                .estimate-form-row {
+                .clients-estimate-form-row {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 16px;
@@ -2539,21 +2539,21 @@ window.ClientsModule = {
                     margin-bottom: 16px;
                 }
 
-                .estimate-form-group {
+                .clients-estimate-form-group {
                     display: flex;
                     flex-direction: column;
                     gap: 8px;
                 }
 
-                .estimate-form-group label {
+                .clients-estimate-form-group label {
                     font-size: 14px;
                     font-weight: 500;
                     color: var(--text-primary);
                 }
 
-                .estimate-form-group input,
-                .estimate-form-group select,
-                .estimate-form-group textarea {
+                .clients-estimate-form-group input,
+                .clients-estimate-form-group select,
+                .clients-estimate-form-group textarea {
                     padding: 10px 12px;
                     border: 1px solid var(--border);
                     border-radius: 6px;
@@ -2563,26 +2563,26 @@ window.ClientsModule = {
                     transition: all 0.2s;
                 }
 
-                .estimate-form-group input:focus,
-                .estimate-form-group select:focus,
-                .estimate-form-group textarea:focus {
+                .clients-estimate-form-group input:focus,
+                .clients-estimate-form-group select:focus,
+                .clients-estimate-form-group textarea:focus {
                     outline: none;
                     border-color: var(--primary);
                 }
 
-                .estimate-form-group textarea {
+                .clients-estimate-form-group textarea {
                     resize: vertical;
                     min-height: 80px;
                 }
 
-                .estimate-line-items {
+                .clients-estimate-line-items {
                     background: var(--background);
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     padding: 16px;
                 }
 
-                .estimate-line-item-header {
+                .clients-estimate-line-item-header {
                     display: grid;
                     grid-template-columns: 2fr 1fr 1fr 40px;
                     gap: 12px;
@@ -2594,7 +2594,7 @@ window.ClientsModule = {
                     color: var(--text-secondary);
                 }
 
-                .estimate-line-item {
+                .clients-estimate-line-item {
                     display: grid;
                     grid-template-columns: 2fr 1fr 1fr 40px;
                     gap: 12px;
@@ -2602,7 +2602,7 @@ window.ClientsModule = {
                     align-items: center;
                 }
 
-                .estimate-line-item input {
+                .clients-estimate-line-item input {
                     padding: 8px 10px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
@@ -2612,7 +2612,7 @@ window.ClientsModule = {
                     width: 100%;
                 }
 
-                .line-item-remove {
+                .clients-line-item-remove {
                     background: transparent;
                     border: 1px solid var(--border);
                     border-radius: 4px;
@@ -2627,12 +2627,12 @@ window.ClientsModule = {
                     line-height: 1;
                 }
 
-                .line-item-remove:hover {
+                .clients-line-item-remove:hover {
                     background: rgba(239, 68, 68, 0.1);
                     border-color: #ef4444;
                 }
 
-                .estimate-add-line-item {
+                .clients-estimate-add-line-item {
                     display: flex;
                     align-items: center;
                     gap: 8px;
@@ -2649,12 +2649,12 @@ window.ClientsModule = {
                     width: 100%;
                 }
 
-                .estimate-add-line-item:hover {
+                .clients-estimate-add-line-item:hover {
                     background: rgba(59, 130, 246, 0.05);
                     border-color: var(--primary);
                 }
 
-                .estimate-total-box {
+                .clients-estimate-total-box {
                     margin-top: 16px;
                     padding: 16px;
                     background: rgba(59, 130, 246, 0.05);
@@ -2663,19 +2663,19 @@ window.ClientsModule = {
                     text-align: right;
                 }
 
-                .estimate-total-label {
+                .clients-estimate-total-label {
                     font-size: 14px;
                     color: var(--text-secondary);
                     margin-bottom: 4px;
                 }
 
-                .estimate-total-value {
+                .clients-estimate-total-value {
                     font-size: 28px;
                     font-weight: 600;
                     color: var(--primary);
                 }
 
-                .estimate-modal-footer {
+                .clients-estimate-modal-footer {
                     padding: 20px 24px;
                     border-top: 1px solid var(--border);
                     display: flex;
@@ -2683,7 +2683,7 @@ window.ClientsModule = {
                     gap: 12px;
                 }
 
-                .estimate-modal-btn {
+                .clients-estimate-modal-btn {
                     padding: 10px 20px;
                     border-radius: 6px;
                     font-size: 14px;
@@ -2692,51 +2692,51 @@ window.ClientsModule = {
                     transition: all 0.2s;
                 }
 
-                .estimate-modal-btn-cancel {
+                .clients-estimate-modal-btn-cancel {
                     background: transparent;
                     border: 1px solid var(--border);
                     color: var(--text-primary);
                 }
 
-                .estimate-modal-btn-cancel:hover {
+                .clients-estimate-modal-btn-cancel:hover {
                     background: var(--surface-hover);
                 }
 
-                .estimate-modal-btn-save {
+                .clients-estimate-modal-btn-save {
                     background: var(--primary);
                     border: none;
                     color: white;
                 }
 
-                .estimate-modal-btn-save:hover {
+                .clients-estimate-modal-btn-save:hover {
                     background: var(--primary-dark);
                 }
 
                 @media (max-width: 768px) {
-                    .estimate-form-row,
-                    .estimate-line-item-header,
-                    .estimate-line-item {
+                    .clients-estimate-form-row,
+                    .clients-estimate-line-item-header,
+                    .clients-estimate-line-item {
                         grid-template-columns: 1fr;
                     }
                 }
             </style>
-            <div class="estimate-modal">
-                <div class="estimate-modal-header">
+            <div class="clients-estimate-modal">
+                <div class="clients-estimate-modal-header">
                     <h2>Edit Estimate</h2>
-                    <button class="estimate-modal-close" data-action="close">×</button>
+                    <button class="clients-estimate-modal-close" data-action="close">×</button>
                 </div>
 
-                <div class="estimate-modal-body">
-                    <div class="estimate-form-section">
-                        <div class="estimate-form-section-title">Basic Information</div>
+                <div class="clients-estimate-modal-body">
+                    <div class="clients-estimate-form-section">
+                        <div class="clients-estimate-form-section-title">Basic Information</div>
 
-                        <div class="estimate-form-group">
+                        <div class="clients-estimate-form-group">
                             <label>Title *</label>
                             <input type="text" id="estimateTitle" placeholder="e.g., Kitchen Remodel" value="${this.escapeHtml(freshEstimate.title || '')}" maxlength="35" required>
                         </div>
 
-                        <div class="estimate-form-row">
-                            <div class="estimate-form-group">
+                        <div class="clients-estimate-form-row">
+                            <div class="clients-estimate-form-group">
                                 <label>Expires On</label>
                                 <input type="date" id="estimateExpiry" value="${expiryDate}" ${!freshEstimate.expires_at ? 'disabled' : ''}>
                                 <div style="margin-top: 0.5rem;">
@@ -2747,7 +2747,7 @@ window.ClientsModule = {
                                 </div>
                             </div>
 
-                            <div class="estimate-form-group">
+                            <div class="clients-estimate-form-group">
                                 <label>Status</label>
                                 <select id="estimateStatus">
                                     <option value="draft" ${freshEstimate.status === 'draft' ? 'selected' : ''}>Draft</option>
@@ -2759,16 +2759,16 @@ window.ClientsModule = {
                             </div>
                         </div>
 
-                        <div class="estimate-form-group">
+                        <div class="clients-estimate-form-group">
                             <label>Description</label>
                             <textarea id="estimateDescription" placeholder="Brief description..." maxlength="500">${this.escapeHtml(freshEstimate.description || '')}</textarea>
                         </div>
                     </div>
 
-                    <div class="estimate-form-section">
-                        <div class="estimate-form-section-title">Line Items</div>
-                        <div class="estimate-line-items">
-                            <div class="estimate-line-item-header">
+                    <div class="clients-estimate-form-section">
+                        <div class="clients-estimate-form-section-title">Line Items</div>
+                        <div class="clients-estimate-line-items">
+                            <div class="clients-estimate-line-item-header">
                                 <div>Description</div>
                                 <div>Qty</div>
                                 <div>Rate</div>
@@ -2776,43 +2776,43 @@ window.ClientsModule = {
                             </div>
                             <div id="lineItemsContainer">
                                 ${lineItems.map((item, i) => `
-                                    <div class="estimate-line-item">
-                                        <input type="text" class="line-item-description" placeholder="Description" value="${this.escapeHtml(item.description || '')}" data-field="description" maxlength="100">
-                                        <input type="number" class="line-item-quantity" placeholder="0" value="${item.quantity || 1}" data-field="quantity" min="0" step="0.01">
-                                        <input type="number" class="line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate" min="0" step="0.01">
-                                        <button type="button" class="line-item-remove" data-action="remove-line-item">×</button>
+                                    <div class="clients-estimate-line-item">
+                                        <input type="text" class="clients-line-item-description" placeholder="Description" value="${this.escapeHtml(item.description || '')}" data-field="description" maxlength="100">
+                                        <input type="number" class="clients-line-item-quantity" placeholder="0" value="${item.quantity || 1}" data-field="quantity" min="0" step="0.01">
+                                        <input type="number" class="clients-line-item-rate" placeholder="0.00" value="${item.rate || 0}" data-field="rate" min="0" step="0.01">
+                                        <button type="button" class="clients-line-item-remove" data-action="remove-line-item">×</button>
                                     </div>
                                 `).join('')}
                             </div>
-                            <button type="button" class="estimate-add-line-item" data-action="add-line-item">
+                            <button type="button" class="clients-estimate-add-line-item" data-action="add-line-item">
                                 + Add Line Item
                             </button>
 
-                            <div class="estimate-total-box">
-                                <div class="estimate-total-label">Total Estimate</div>
-                                <div class="estimate-total-value" id="estimateTotalDisplay">${this.formatCurrency(freshEstimate.total_price || 0)}</div>
+                            <div class="clients-estimate-total-box">
+                                <div class="clients-estimate-total-label">Total Estimate</div>
+                                <div class="clients-estimate-total-value" id="estimateTotalDisplay">${this.formatCurrency(freshEstimate.total_price || 0)}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="estimate-form-section">
-                        <div class="estimate-form-section-title">Terms & Conditions</div>
-                        <div class="estimate-form-group">
+                    <div class="clients-estimate-form-section">
+                        <div class="clients-estimate-form-section-title">Terms & Conditions</div>
+                        <div class="clients-estimate-form-group">
                             <textarea id="estimateTerms" placeholder="Payment terms, warranty, etc..." maxlength="1000">${this.escapeHtml(freshEstimate.terms || 'Payment due within 30 days of acceptance.\nEstimate valid for 30 days.')}</textarea>
                         </div>
                     </div>
 
-                    <div class="estimate-form-section">
-                        <div class="estimate-form-section-title">Internal Notes</div>
-                        <div class="estimate-form-group">
+                    <div class="clients-estimate-form-section">
+                        <div class="clients-estimate-form-section-title">Internal Notes</div>
+                        <div class="clients-estimate-form-group">
                             <textarea id="estimateNotes" placeholder="Internal notes..." maxlength="500">${this.escapeHtml(freshEstimate.notes || '')}</textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="estimate-modal-footer">
-                    <button class="estimate-modal-btn estimate-modal-btn-cancel" data-action="close">Cancel</button>
-                    <button class="estimate-modal-btn estimate-modal-btn-save" data-action="save">Save Estimate</button>
+                <div class="clients-estimate-modal-footer">
+                    <button class="clients-estimate-modal-btn clients-estimate-modal-btn-cancel" data-action="close">Cancel</button>
+                    <button class="clients-estimate-modal-btn clients-estimate-modal-btn-save" data-action="save">Save Estimate</button>
                 </div>
             </div>
         `;
@@ -2833,17 +2833,17 @@ window.ClientsModule = {
         // Add line item
         overlay.querySelector('[data-action="add-line-item"]').addEventListener('click', () => {
             const container = overlay.querySelector('#lineItemsContainer');
-            const currentItems = container.querySelectorAll('.estimate-line-item');
+            const currentItems = container.querySelectorAll('.clients-estimate-line-item');
             if (currentItems.length >= 50) {
                 alert('Maximum 50 line items');
                 return;
             }
             const newRow = `
-                <div class="estimate-line-item">
-                    <input type="text" class="line-item-description" placeholder="Description" value="" data-field="description" maxlength="100">
-                    <input type="number" class="line-item-quantity" placeholder="0" value="1" data-field="quantity" min="0" step="0.01">
-                    <input type="number" class="line-item-rate" placeholder="0.00" value="0" data-field="rate" min="0" step="0.01">
-                    <button type="button" class="line-item-remove" data-action="remove-line-item">×</button>
+                <div class="clients-estimate-line-item">
+                    <input type="text" class="clients-line-item-description" placeholder="Description" value="" data-field="description" maxlength="100">
+                    <input type="number" class="clients-line-item-quantity" placeholder="0" value="1" data-field="quantity" min="0" step="0.01">
+                    <input type="number" class="clients-line-item-rate" placeholder="0.00" value="0" data-field="rate" min="0" step="0.01">
+                    <button type="button" class="clients-line-item-remove" data-action="remove-line-item">×</button>
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', newRow);
@@ -2852,7 +2852,7 @@ window.ClientsModule = {
 
         // Line item changes
         overlay.addEventListener('input', (e) => {
-            if (e.target.closest('.estimate-line-item')) {
+            if (e.target.closest('.clients-estimate-line-item')) {
                 this.updateEstimateTotal();
             }
         });
@@ -2860,7 +2860,7 @@ window.ClientsModule = {
         // Remove line item
         overlay.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="remove-line-item"]')) {
-                e.target.closest('.estimate-line-item').remove();
+                e.target.closest('.clients-estimate-line-item').remove();
                 this.updateEstimateTotal();
             }
         });
@@ -2883,10 +2883,10 @@ window.ClientsModule = {
      * Update estimate total
      */
     updateEstimateTotal() {
-        const overlay = document.querySelector('.estimate-modal-overlay');
+        const overlay = document.querySelector('.clients-estimate-modal-overlay');
         if (!overlay) return;
 
-        const items = overlay.querySelectorAll('.estimate-line-item');
+        const items = overlay.querySelectorAll('.clients-estimate-line-item');
         let total = 0;
 
         items.forEach(item => {
@@ -2913,7 +2913,7 @@ window.ClientsModule = {
 
         // Collect line items
         const lineItems = [];
-        const itemRows = overlay.querySelectorAll('.estimate-line-item');
+        const itemRows = overlay.querySelectorAll('.clients-estimate-line-item');
         itemRows.forEach(row => {
             const description = row.querySelector('[data-field="description"]').value;
             const quantity = parseFloat(row.querySelector('[data-field="quantity"]').value) || 0;
@@ -2970,11 +2970,11 @@ window.ClientsModule = {
         }
 
         const overlay = document.createElement('div');
-        overlay.className = 'job-modal-overlay';
+        overlay.className = 'clients-job-modal-overlay';
         overlay.style.zIndex = '10001';
         overlay.innerHTML = `
             <style>
-                .job-modal-overlay {
+                .clients-job-modal-overlay {
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -2985,17 +2985,17 @@ window.ClientsModule = {
                     align-items: center;
                     justify-content: center;
                     z-index: 10001;
-                    animation: fadeIn 0.2s ease;
+                    animation: fadeInJob 0.2s ease;
                     overflow-y: auto;
                     padding: 2rem;
                 }
 
-                @keyframes fadeIn {
+                @keyframes fadeInJob {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
 
-                .job-modal {
+                .clients-job-modal {
                     background: var(--surface);
                     border-radius: 12px;
                     width: 100%;
@@ -3004,16 +3004,16 @@ window.ClientsModule = {
                     display: flex;
                     flex-direction: column;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    animation: slideUp 0.3s ease;
+                    animation: slideUpJob 0.3s ease;
                     margin: auto;
                 }
 
-                @keyframes slideUp {
+                @keyframes slideUpJob {
                     from { transform: translateY(20px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
 
-                .job-modal-header {
+                .clients-job-modal-header {
                     padding: 1.5rem 2rem;
                     border-bottom: 2px solid var(--border);
                     display: flex;
@@ -3021,14 +3021,14 @@ window.ClientsModule = {
                     justify-content: space-between;
                 }
 
-                .job-modal-header h2 {
+                .clients-job-modal-header h2 {
                     margin: 0;
                     font-size: 1.5rem;
                     font-weight: 700;
                     color: var(--text-primary);
                 }
 
-                .job-modal-close {
+                .clients-job-modal-close {
                     width: 2rem;
                     height: 2rem;
                     border-radius: 6px;
@@ -3043,22 +3043,22 @@ window.ClientsModule = {
                     font-size: 24px;
                 }
 
-                .job-modal-close:hover {
+                .clients-job-modal-close:hover {
                     background: var(--surface-hover);
                     color: var(--text-primary);
                 }
 
-                .job-modal-body {
+                .clients-job-modal-body {
                     flex: 1;
                     overflow-y: auto;
                     padding: 2rem;
                 }
 
-                .job-form-section {
+                .clients-job-form-section {
                     margin-bottom: 2rem;
                 }
 
-                .job-form-section-title {
+                .clients-job-form-section-title {
                     font-size: 0.875rem;
                     font-weight: 700;
                     color: var(--text-primary);
@@ -3069,32 +3069,32 @@ window.ClientsModule = {
                     border-bottom: 2px solid var(--border);
                 }
 
-                .job-form-row {
+                .clients-job-form-row {
                     display: grid;
                     grid-template-columns: repeat(2, 1fr);
                     gap: 1rem;
                     margin-bottom: 1rem;
                 }
 
-                .job-form-row.single {
+                .clients-job-form-row.single {
                     grid-template-columns: 1fr;
                 }
 
-                .job-form-group {
+                .clients-job-form-group {
                     display: flex;
                     flex-direction: column;
                     gap: 0.5rem;
                 }
 
-                .job-form-group label {
+                .clients-job-form-group label {
                     font-size: 0.875rem;
                     font-weight: 600;
                     color: var(--text-primary);
                 }
 
-                .job-form-group input,
-                .job-form-group select,
-                .job-form-group textarea {
+                .clients-job-form-group input,
+                .clients-job-form-group select,
+                .clients-job-form-group textarea {
                     padding: 10px 12px;
                     border: 1px solid var(--border);
                     border-radius: 6px;
@@ -3104,14 +3104,14 @@ window.ClientsModule = {
                     transition: all 0.2s;
                 }
 
-                .job-form-group input:focus,
-                .job-form-group select:focus,
-                .job-form-group textarea:focus {
+                .clients-job-form-group input:focus,
+                .clients-job-form-group select:focus,
+                .clients-job-form-group textarea:focus {
                     outline: none;
                     border-color: var(--primary);
                 }
 
-                .job-form-group select {
+                .clients-job-form-group select {
                     appearance: none;
                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                     background-repeat: no-repeat;
@@ -3121,13 +3121,13 @@ window.ClientsModule = {
                     cursor: pointer;
                 }
 
-                .job-form-group textarea {
+                .clients-job-form-group textarea {
                     resize: vertical;
                     min-height: 100px;
                     font-family: inherit;
                 }
 
-                .job-modal-footer {
+                .clients-job-modal-footer {
                     padding: 1.5rem 2rem;
                     border-top: 2px solid var(--border);
                     display: flex;
@@ -3135,7 +3135,7 @@ window.ClientsModule = {
                     gap: 1rem;
                 }
 
-                .job-modal-btn {
+                .clients-job-modal-btn {
                     padding: 0.75rem 1.5rem;
                     border-radius: 8px;
                     font-size: 0.9rem;
@@ -3145,60 +3145,60 @@ window.ClientsModule = {
                     border: none;
                 }
 
-                .job-modal-btn-cancel {
+                .clients-job-modal-btn-cancel {
                     background: transparent;
                     border: 2px solid var(--border);
                     color: var(--text-primary);
                 }
 
-                .job-modal-btn-cancel:hover {
+                .clients-job-modal-btn-cancel:hover {
                     background: var(--surface-hover);
                 }
 
-                .job-modal-btn-save {
+                .clients-job-modal-btn-save {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
                     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
                 }
 
-                .job-modal-btn-save:hover {
+                .clients-job-modal-btn-save:hover {
                     transform: translateY(-1px);
                     box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
                 }
 
                 @media (max-width: 768px) {
-                    .job-modal {
+                    .clients-job-modal {
                         max-width: 100%;
                         max-height: 100vh;
                         border-radius: 0;
                     }
-                    .job-form-row {
+                    .clients-job-form-row {
                         grid-template-columns: 1fr;
                     }
                 }
             </style>
-            <div class="job-modal">
-                <div class="job-modal-header">
+            <div class="clients-job-modal">
+                <div class="clients-job-modal-header">
                     <h2>Edit Job</h2>
-                    <button class="job-modal-close" data-action="close">×</button>
+                    <button class="clients-job-modal-close" data-action="close">×</button>
                 </div>
 
-                <div class="job-modal-body">
-                    <div class="job-form-section">
-                        <div class="job-form-section-title">Basic Information</div>
+                <div class="clients-job-modal-body">
+                    <div class="clients-job-form-section">
+                        <div class="clients-job-form-section-title">Basic Information</div>
 
-                        <div class="job-form-group">
+                        <div class="clients-job-form-group">
                             <label>Title *</label>
                             <input type="text" id="jobTitle" placeholder="e.g., Kitchen Installation" value="${this.escapeHtml(freshJob.title || '')}" maxlength="100" required>
                         </div>
 
-                        <div class="job-form-row">
-                            <div class="job-form-group">
+                        <div class="clients-job-form-row">
+                            <div class="clients-job-form-group">
                                 <label>Job Type</label>
                                 <input type="text" id="jobType" placeholder="e.g., Plumbing" value="${this.escapeHtml(freshJob.job_type || '')}" maxlength="50">
                             </div>
 
-                            <div class="job-form-group">
+                            <div class="clients-job-form-group">
                                 <label>Status</label>
                                 <select id="jobStatus">
                                     <option value="scheduled" ${freshJob.status === 'scheduled' ? 'selected' : ''}>Scheduled</option>
@@ -3210,61 +3210,61 @@ window.ClientsModule = {
                             </div>
                         </div>
 
-                        <div class="job-form-group">
+                        <div class="clients-job-form-group">
                             <label>Scheduled Date</label>
                             <input type="date" id="jobScheduledDate" value="${freshJob.scheduled_date ? freshJob.scheduled_date.split('T')[0] : ''}">
                         </div>
 
-                        <div class="job-form-group">
+                        <div class="clients-job-form-group">
                             <label>Description</label>
                             <textarea id="jobDescription" placeholder="Job details..." maxlength="1000">${this.escapeHtml(freshJob.description || '')}</textarea>
                         </div>
                     </div>
 
-                    <div class="job-form-section">
-                        <div class="job-form-section-title">Financial Details</div>
+                    <div class="clients-job-form-section">
+                        <div class="clients-job-form-section-title">Financial Details</div>
 
-                        <div class="job-form-row">
-                            <div class="job-form-group">
+                        <div class="clients-job-form-row">
+                            <div class="clients-job-form-group">
                                 <label>Material Cost</label>
                                 <input type="number" id="jobMaterialCost" placeholder="0.00" value="${freshJob.material_cost || ''}" min="0" step="0.01">
                             </div>
 
-                            <div class="job-form-group">
+                            <div class="clients-job-form-group">
                                 <label>Labor Rate ($/hr)</label>
                                 <input type="number" id="jobLaborRate" placeholder="0.00" value="${freshJob.labor_rate || ''}" min="0" step="0.01">
                             </div>
                         </div>
 
-                        <div class="job-form-row">
-                            <div class="job-form-group">
+                        <div class="clients-job-form-row">
+                            <div class="clients-job-form-group">
                                 <label>Estimated Labor Hours</label>
                                 <input type="number" id="jobLaborHours" placeholder="0" value="${freshJob.estimated_labor_hours || ''}" min="0" step="0.5">
                             </div>
 
-                            <div class="job-form-group">
+                            <div class="clients-job-form-group">
                                 <label>Other Expenses</label>
                                 <input type="number" id="jobOtherExpenses" placeholder="0.00" value="${freshJob.other_expenses || ''}" min="0" step="0.01">
                             </div>
                         </div>
 
-                        <div class="job-form-group">
+                        <div class="clients-job-form-group">
                             <label>Quoted Price</label>
                             <input type="number" id="jobQuotedPrice" placeholder="0.00" value="${freshJob.quoted_price || ''}" min="0" step="0.01">
                         </div>
                     </div>
 
-                    <div class="job-form-section">
-                        <div class="job-form-section-title">Internal Notes</div>
-                        <div class="job-form-group">
+                    <div class="clients-job-form-section">
+                        <div class="clients-job-form-section-title">Internal Notes</div>
+                        <div class="clients-job-form-group">
                             <textarea id="jobNotes" placeholder="Internal notes..." maxlength="1000">${this.escapeHtml(freshJob.notes || '')}</textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="job-modal-footer">
-                    <button class="job-modal-btn job-modal-btn-cancel" data-action="close">Cancel</button>
-                    <button class="job-modal-btn job-modal-btn-save" data-action="save">Save Job</button>
+                <div class="clients-job-modal-footer">
+                    <button class="clients-job-modal-btn clients-job-modal-btn-cancel" data-action="close">Cancel</button>
+                    <button class="clients-job-modal-btn clients-job-modal-btn-save" data-action="save">Save Job</button>
                 </div>
             </div>
         `;
