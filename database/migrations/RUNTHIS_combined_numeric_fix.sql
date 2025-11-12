@@ -10,16 +10,16 @@ ALTER TABLE jobs
     DROP COLUMN IF EXISTS profit,
     DROP COLUMN IF EXISTS profit_margin;
 
--- Update input fields to NUMERIC(10,2) - supports up to $99,999,999.99
+-- Update input fields to NUMERIC(12,2) - supports up to $9,999,999,999.99
 ALTER TABLE jobs
-    ALTER COLUMN estimated_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN actual_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN labor_rate TYPE NUMERIC(10, 2),
-    ALTER COLUMN material_cost TYPE NUMERIC(10, 2),
-    ALTER COLUMN other_expenses TYPE NUMERIC(10, 2),
-    ALTER COLUMN quoted_price TYPE NUMERIC(10, 2),
-    ALTER COLUMN final_price TYPE NUMERIC(10, 2),
-    ALTER COLUMN deposit_amount TYPE NUMERIC(10, 2);
+    ALTER COLUMN estimated_labor_hours TYPE NUMERIC(12, 2),
+    ALTER COLUMN actual_labor_hours TYPE NUMERIC(12, 2),
+    ALTER COLUMN labor_rate TYPE NUMERIC(12, 2),
+    ALTER COLUMN material_cost TYPE NUMERIC(12, 2),
+    ALTER COLUMN other_expenses TYPE NUMERIC(12, 2),
+    ALTER COLUMN quoted_price TYPE NUMERIC(12, 2),
+    ALTER COLUMN final_price TYPE NUMERIC(12, 2),
+    ALTER COLUMN deposit_amount TYPE NUMERIC(12, 2);
 
 -- Recreate calculated fields with NUMERIC(20,2) to handle multiplication overflow
 ALTER TABLE jobs
@@ -47,7 +47,7 @@ ALTER TABLE jobs
 
 -- === FIX ESTIMATES TABLE ===
 ALTER TABLE estimates
-    ALTER COLUMN total_price TYPE NUMERIC(10, 2);
+    ALTER COLUMN total_price TYPE NUMERIC(12, 2);
 
 COMMIT;
 

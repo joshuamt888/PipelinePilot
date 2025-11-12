@@ -3570,8 +3570,12 @@ window.JobsManagementModule = {
                 const container = overlay.querySelector('#materialRows');
                 const items = container.querySelectorAll('.job-line-item');
 
-                // Silently prevent deletion if only one item remains
+                // If only one item remains, clear it instead of deleting
                 if (items.length <= 1) {
+                    const inputs = items[0].querySelectorAll('input');
+                    inputs.forEach(input => input.value = '');
+                    this.jobs_updateMaterialsCounter(overlay);
+                    this.jobs_updateProfitCalculator();
                     return;
                 }
 
@@ -3588,6 +3592,7 @@ window.JobsManagementModule = {
                 });
 
                 this.jobs_updateMaterialsCounter(overlay);
+                this.jobs_updateProfitCalculator();
             }
         });
 
@@ -3617,8 +3622,12 @@ window.JobsManagementModule = {
                 const container = overlay.querySelector('#crewRows');
                 const items = container.querySelectorAll('.job-line-item');
 
-                // Silently prevent deletion if only one item remains
+                // If only one item remains, clear it instead of deleting
                 if (items.length <= 1) {
+                    const inputs = items[0].querySelectorAll('input');
+                    inputs.forEach(input => input.value = '');
+                    this.jobs_updateCrewCounter(overlay);
+                    this.jobs_updateProfitCalculator();
                     return;
                 }
 
@@ -3635,6 +3644,7 @@ window.JobsManagementModule = {
                 });
 
                 this.jobs_updateCrewCounter(overlay);
+                this.jobs_updateProfitCalculator();
             }
         });
 
@@ -3987,47 +3997,45 @@ window.JobsManagementModule = {
         };
 
         // Validate numeric limits to prevent database overflow
-        const MAX_COST = 99999999.99;      // $99,999,999.99
-        const MAX_PRICE = 999999999.99;    // $999,999,999.99
-        const MAX_HOURS = 99999.99;        // 99,999.99 hours
-        const MAX_RATE = 9999.99;          // $9,999.99/hr
+        // NUMERIC(12,2) = max 9,999,999,999.99 (almost 10 billion)
+        const MAX_VALUE = 9999999999.99;
 
-        if (jobData.material_cost > MAX_COST) {
-            window.SteadyUtils.showToast(`Material cost cannot exceed $${MAX_COST.toLocaleString()}`, 'error');
+        if (jobData.material_cost > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Material cost cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
             return;
         }
-        if (jobData.estimated_labor_hours > MAX_HOURS) {
-            window.SteadyUtils.showToast(`Labor hours cannot exceed ${MAX_HOURS.toLocaleString()} hours`, 'error');
+        if (jobData.estimated_labor_hours > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Labor hours cannot exceed ${MAX_VALUE.toLocaleString()} hours`, 'error');
             return;
         }
-        if (jobData.labor_rate > MAX_RATE) {
-            window.SteadyUtils.showToast(`Labor rate cannot exceed $${MAX_RATE.toLocaleString()}/hr`, 'error');
+        if (jobData.labor_rate > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Labor rate cannot exceed $${MAX_VALUE.toLocaleString()}/hr`, 'error');
             return;
         }
-        if (jobData.other_expenses > MAX_COST) {
-            window.SteadyUtils.showToast(`Other expenses cannot exceed $${MAX_COST.toLocaleString()}`, 'error');
+        if (jobData.other_expenses > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Other expenses cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
             return;
         }
-        if (jobData.quoted_price > MAX_PRICE) {
-            window.SteadyUtils.showToast(`Quoted price cannot exceed $${MAX_PRICE.toLocaleString()}`, 'error');
+        if (jobData.quoted_price > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Quoted price cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
             return;
         }
-        if (jobData.deposit_amount > MAX_PRICE) {
-            window.SteadyUtils.showToast(`Deposit cannot exceed $${MAX_PRICE.toLocaleString()}`, 'error');
+        if (jobData.deposit_amount > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Deposit cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
             return;
         }
 
         // Validate materials total doesn't exceed limit
         const materialTotal = materials.reduce((sum, m) => sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
-        if (materialTotal > MAX_COST) {
-            window.SteadyUtils.showToast(`Total materials cost cannot exceed $${MAX_COST.toLocaleString()}. Current total: $${materialTotal.toLocaleString()}`, 'error');
+        if (materialTotal > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Total materials cost cannot exceed $${MAX_VALUE.toLocaleString()}. Current total: $${materialTotal.toLocaleString()}`, 'error');
             return;
         }
 
         // Validate crew total doesn't exceed limit
         const crewTotal = crew_members.reduce((sum, c) => sum + ((c.hours || 0) * (c.rate || 0)), 0);
-        if (crewTotal > MAX_COST) {
-            window.SteadyUtils.showToast(`Total crew cost cannot exceed $${MAX_COST.toLocaleString()}. Current total: $${crewTotal.toLocaleString()}`, 'error');
+        if (crewTotal > MAX_VALUE) {
+            window.SteadyUtils.showToast(`Total crew cost cannot exceed $${MAX_VALUE.toLocaleString()}. Current total: $${crewTotal.toLocaleString()}`, 'error');
             return;
         }
 
