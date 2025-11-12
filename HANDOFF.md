@@ -285,7 +285,7 @@ ${goal.is_recurring && goal.completion_count > 0 ? `
 - Search and filtering
 - Status statistics
 
-**Recent Changes (Current Session):**
+**Recent Changes (Previous Session):**
 - ✅ Fixed view modal display (added missing overlay CSS)
 - ✅ Made modal 30% narrower (900px → 630px)
 - ✅ Added click-to-enlarge photo lightbox
@@ -342,6 +342,206 @@ updated_at      TIMESTAMPTZ
 - Jobs module can reference `estimate_id`
 - Convert-to-job workflow ready to implement
 - Photos can transfer to jobs as "before" photos
+
+---
+
+## 💼 JOBS MANAGEMENT MODULE - 100% COMPLETE ✅
+
+### Status: ✅ PRODUCTION READY
+
+**Features Implemented:**
+- Full CRUD operations (create, read, update, delete)
+- Lead linking with searchable dropdown
+- Materials table with dynamic rows (50 max)
+- Crew members table with dynamic rows (20 max)
+- Photo upload (3 max) with type selection (before/during/after)
+- Live profit calculator with real-time updates
+- Deposit tracking (amount + paid status)
+- Status workflow (draft → scheduled → in_progress → completed → invoiced → paid)
+- Financial summary with revenue, costs, profit, and margin
+- Comprehensive view modal with all job details
+- Silent value capping to prevent database overflow
+- Live totals that update when adding/deleting rows
+
+**Recent Changes (Current Session):**
+- ✅ Fixed materials unit field to show placeholder ("pcs") instead of default value
+- ✅ Updated currency formatting to show 2 decimal places for labor rates
+- ✅ Created comprehensive view modal with financial summary, materials, crew, photos
+- ✅ Fixed live totals to update immediately when deleting material/crew rows
+- ✅ Changed last row deletion behavior to clear inputs instead of removing row
+- ✅ Implemented silent value capping at $99,999,999.99 (no error messages)
+- ✅ Database migration: NUMERIC(12,2) for inputs, NUMERIC(20,2) for calculated fields
+- ✅ All numeric fields automatically cap at max value without blocking user
+
+**Database Numeric Precision:**
+```sql
+-- Input fields (user-entered values)
+material_cost            NUMERIC(12,2)  -- Max: $9,999,999,999.99
+labor_rate               NUMERIC(12,2)  -- Max: $9,999,999,999.99
+estimated_labor_hours    NUMERIC(12,2)  -- Max: 9,999,999,999.99 hours
+actual_labor_hours       NUMERIC(12,2)  -- Max: 9,999,999,999.99 hours
+other_expenses           NUMERIC(12,2)  -- Max: $9,999,999,999.99
+quoted_price             NUMERIC(12,2)  -- Max: $9,999,999,999.99
+deposit_amount           NUMERIC(12,2)  -- Max: $9,999,999,999.99
+
+-- Calculated fields (higher precision to handle multiplication)
+total_cost               NUMERIC(20,2)  -- Handles: material + (hours * rate) + expenses
+profit                   NUMERIC(20,2)  -- Handles: final_price - total_cost
+profit_margin            NUMERIC(6,2)   -- Percentage: -999.99% to 999.99%
+```
+
+**Frontend Value Capping:**
+- All numeric inputs silently cap at $99,999,999.99
+- No error messages shown to user
+- Values exceeding max are automatically reduced
+- Applies to: all direct job fields, material items, crew member hours/rates
+- Database has 10x headroom ($9,999,999,999.99) to handle edge cases
+
+**Key Implementation Files:**
+- `/dashboard/tiers/professional/scripts/JobsManagement.js` - Main jobs module (lines 3999-4028: value capping)
+- `/dashboard/shared/js/utils.js` - Updated formatCurrency to show 2 decimals (lines 115-123)
+- `/database/migrations/RUNTHIS_combined_numeric_fix.sql` - Database numeric precision fix
+
+---
+
+## 🔢 DATABASE VALIDATION & FRONTEND ALIGNMENT
+
+### Critical Principle: Match Database Constraints with Frontend Validators
+
+**The Problem:**
+- Database has hard limits (NUMERIC precision, VARCHAR length, etc.)
+- If frontend doesn't validate first, users hit cryptic database errors
+- Poor UX: "numeric field overflow" means nothing to users
+
+**The Solution:**
+- **Frontend validates BEFORE database** - catch issues early with friendly messages
+- **Frontend caps values silently when appropriate** - no disruption to workflow
+- **Database has buffer room** - frontend max < database max for safety margin
+
+### Examples from Jobs Module
+
+**Numeric Field Overflow (SOLVED):**
+```javascript
+// BEFORE: User hits database error
+// Input: 10,000,000,000 → Database: "precision 12, scale 2 must round to absolute value less than 10^10"
+
+// AFTER: Silent capping in frontend
+const MAX_VALUE = 99999999.99;  // Frontend cap
+const capValue = (value) => Math.min(Math.max(value, 0), MAX_VALUE);
+jobData.material_cost = capValue(jobData.material_cost);
+
+// Database: NUMERIC(12,2) = max $9,999,999,999.99 (10x buffer)
+// Result: User never sees error, value is safely capped
+```
+
+**Character Limits:**
+```javascript
+// Estimates: title max 50 chars
+<input maxlength="50" />  // Frontend
+title TEXT NOT NULL CHECK(length(title) <= 50)  // Database
+
+// Goals: title max 35 chars
+<input maxlength="35" />  // Frontend
+title TEXT NOT NULL CHECK(length(title) <= 35)  // Database
+```
+
+**Calculated Fields Need Higher Precision:**
+```sql
+-- WRONG: All fields same precision
+labor_hours   NUMERIC(10,2)  -- Max: $99,999,999.99
+labor_rate    NUMERIC(10,2)  -- Max: $99,999,999.99
+labor_cost    NUMERIC(10,2) GENERATED AS (labor_hours * labor_rate) STORED
+-- Problem: 99999999.99 * 99999999.99 = 9,999,999,998,000,000 (OVERFLOW!)
+
+-- RIGHT: Calculated fields have higher precision
+labor_hours   NUMERIC(12,2)  -- Input field
+labor_rate    NUMERIC(12,2)  -- Input field
+labor_cost    NUMERIC(20,2) GENERATED AS (labor_hours * labor_rate) STORED
+-- Solution: Can handle multiplication without overflow
+```
+
+### Best Practices Checklist
+
+When adding new fields with numeric/length constraints:
+
+- [ ] **Define database constraint first** - Know the hard limit
+- [ ] **Set frontend limit lower** - Leave buffer room (10-20% margin)
+- [ ] **Add frontend validation** - Friendly error messages or silent capping
+- [ ] **Test with max values** - Try to break it with extreme inputs
+- [ ] **Document both limits** - In code comments and handoff doc
+- [ ] **Consider calculated fields** - Do they need higher precision?
+- [ ] **Choose validation strategy:**
+  - **Blocking validation** - For critical fields (payment amounts)
+  - **Silent capping** - For non-critical fields (descriptions, quantities)
+  - **Warning messages** - For fields that should be reviewed
+
+### Validation Strategy by Field Type
+
+**Money/Currency:**
+- Strategy: Silent capping with generous buffer
+- Example: Frontend caps at $99,999,999.99, database allows $9,999,999,999.99
+- Reason: Users shouldn't see errors for large (but reasonable) amounts
+
+**Text/Descriptions:**
+- Strategy: Character limit with counter
+- Example: "Description (250/500 characters)"
+- Reason: Users need to know when they're approaching limit
+
+**Critical Financial Fields:**
+- Strategy: Blocking validation with clear error
+- Example: "Payment amount cannot exceed invoice total"
+- Reason: Mistakes here have real consequences
+
+**Counts/Quantities:**
+- Strategy: Min/max with friendly message
+- Example: "Please enter a value between 1 and 1000"
+- Reason: Unreasonable values indicate user error
+
+### Migration Pattern for Numeric Fixes
+
+```sql
+BEGIN;
+
+-- Drop generated columns (they reference columns we're changing)
+ALTER TABLE jobs
+    DROP COLUMN IF EXISTS total_cost,
+    DROP COLUMN IF EXISTS profit,
+    DROP COLUMN IF EXISTS profit_margin;
+
+-- Update input fields to desired precision
+ALTER TABLE jobs
+    ALTER COLUMN material_cost TYPE NUMERIC(12, 2),
+    ALTER COLUMN labor_rate TYPE NUMERIC(12, 2),
+    -- ... other input fields ...
+
+-- Recreate calculated fields with HIGHER precision
+ALTER TABLE jobs
+    ADD COLUMN total_cost NUMERIC(20, 2) GENERATED ALWAYS AS (
+        COALESCE(material_cost, 0) +
+        COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
+        COALESCE(other_expenses, 0)
+    ) STORED,
+    ADD COLUMN profit NUMERIC(20, 2) GENERATED ALWAYS AS (
+        COALESCE(final_price, 0) - total_cost
+    ) STORED;
+
+COMMIT;
+```
+
+### Summary
+
+**Remember:**
+1. **Frontend validates first** - Users see friendly messages, not database errors
+2. **Frontend max < Database max** - Always leave buffer room
+3. **Calculated fields need extra precision** - Account for multiplication/aggregation
+4. **Choose appropriate strategy** - Block, cap, or warn based on field criticality
+5. **Test with extreme values** - Try to break it before users do
+
+**The result:**
+- ✅ No cryptic database errors for users
+- ✅ Smooth, professional UX
+- ✅ Data integrity maintained
+- ✅ Easy to reason about limits in code
 
 ---
 
@@ -2447,25 +2647,24 @@ When an estimate is accepted:
 
 ## 📝 METADATA
 
-**Version:** 13.0
-**Subtitle:** JOBS HUB COMPLETE - NEW 3-SECTION ARCHITECTURE
-**Last Updated:** Jobs restructured as parent hub with Estimates, Jobs, and Clients sections
-**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% | Clients Placeholder | Settings 70% | Mobile not tested
+**Version:** 13.1
+**Subtitle:** JOBS MANAGEMENT COMPLETE + DATABASE VALIDATION BEST PRACTICES
+**Last Updated:** Jobs Management fully functional with silent value capping and live totals
+**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Clients Placeholder | Settings 70% | Mobile not tested
 **Philosophy:** Simple CRM + Smart Auto-Tracking + Clean Professional UI + Unified Project Hub
 **Next Action:** Settings Preferences (2-3 hours) → Mobile optimization (5-6 hours)
 **Launch ETA:** 7-9 hours remaining
 
-**Major Changes from v12.0:**
-- ✅ Jobs restructured as parent hub container with 3 sections
-- ✅ Created Jobs Hub (Jobs.js) - beautiful 3-block selector interface
-- ✅ Renamed original Jobs to JobsManagement.js - fully functional
-- ✅ Created Clients.js placeholder module with "Coming Soon" UI
-- ✅ Removed Estimates from top-level navigation
-- ✅ Estimates now accessible through Jobs Hub → Estimates
-- ✅ Unified project management: Estimates → Jobs → Clients workflow
-- ✅ Added "Back to Hub" navigation between sections
-- ✅ Beautiful gradient hover effects on hub blocks
-- ✅ Responsive 3-column grid layout for sections
+**Major Changes from v13.0:**
+- ✅ Jobs Management module fully functional and production-ready
+- ✅ Fixed materials unit field to show placeholder instead of default value
+- ✅ Updated currency formatting to show 2 decimal places
+- ✅ Created comprehensive view modal for jobs
+- ✅ Fixed live totals to update when deleting material/crew rows
+- ✅ Changed last row deletion behavior (clear instead of delete)
+- ✅ Implemented silent value capping at $99,999,999.99
+- ✅ Database migration for numeric precision (NUMERIC 12,2 → 20,2)
+- ✅ Added comprehensive database validation best practices section
 
 ---
 
