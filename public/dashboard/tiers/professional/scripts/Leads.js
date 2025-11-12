@@ -491,6 +491,7 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Lead Type</label>
                         <select name="type" class="addlead-form-select">
+                            <option value="">No temperature</option>
                             <option value="cold">Cold Lead</option>
                             <option value="warm">Warm Lead</option>
                         </select>
@@ -576,8 +577,8 @@ modal.addEventListener('mouseup', (e) => {
         const sourceIcon = this.addlead_getSourceIcon(lead.source || null);
         const safeSource = API.escapeHtml(this.addlead_formatSource(lead.source || null));
         const safeNotes = API.escapeHtml(lead.notes || '');
-        const typeIcon = lead.type === 'warm' ? 'flame' : 'snowflake';
-        const typeLabel = lead.type === 'warm' ? 'Warm Lead' : 'Cold Lead';
+        const typeIcon = lead.type === 'warm' ? 'flame' : lead.type === 'cold' ? 'snowflake' : 'minus';
+        const typeLabel = lead.type === 'warm' ? 'Warm Lead' : lead.type === 'cold' ? 'Cold Lead' : 'No temperature';
 
         const leadView = document.createElement('div');
         leadView.className = 'addlead-lead-view-overlay';
@@ -862,6 +863,7 @@ modal.addEventListener('mouseup', (e) => {
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Lead Type</label>
                         <select name="type" class="addlead-form-select">
+                            <option value="" ${!lead.type || lead.type === '' ? 'selected' : ''}>No temperature</option>
                             <option value="cold" ${lead.type === 'cold' ? 'selected' : ''}>Cold Lead</option>
                             <option value="warm" ${lead.type === 'warm' ? 'selected' : ''}>Warm Lead</option>
                         </select>
