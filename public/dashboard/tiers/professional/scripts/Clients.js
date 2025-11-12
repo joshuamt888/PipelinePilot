@@ -1138,13 +1138,31 @@ window.ClientsModule = {
         });
 
         // Edit estimate
-        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', () => {
+        overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
             overlay.style.opacity = '0';
-            setTimeout(() => {
+            setTimeout(async () => {
                 overlay.remove();
-                // Call the Estimates module's edit function
-                if (window.EstimatesModule && window.EstimatesModule.estimates_showCreateModal) {
-                    window.EstimatesModule.estimates_showCreateModal(estimate.id);
+
+                // Ensure EstimatesModule has data loaded
+                if (window.EstimatesModule) {
+                    try {
+                        // Load estimates and leads data into the module
+                        const [estimates, leadsData] = await Promise.all([
+                            API.getEstimates(),
+                            API.getLeads()
+                        ]);
+
+                        window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
+                        window.EstimatesModule.state.leads = leadsData?.all || [];
+
+                        // Now call the edit modal
+                        if (window.EstimatesModule.estimates_showCreateModal) {
+                            window.EstimatesModule.estimates_showCreateModal(estimate.id);
+                        }
+                    } catch (error) {
+                        console.error('Error loading estimate data:', error);
+                        alert('Failed to load estimate data');
+                    }
                 }
             }, 200);
         });
@@ -1955,13 +1973,31 @@ window.ClientsModule = {
         });
 
         // Edit job
-        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', () => {
+        overlay.querySelector('[data-action="edit-job"]').addEventListener('click', async () => {
             overlay.style.opacity = '0';
-            setTimeout(() => {
+            setTimeout(async () => {
                 overlay.remove();
-                // Call the Jobs module's edit function
-                if (window.JobsManagementModule && window.JobsManagementModule.jobs_showCreateModal) {
-                    window.JobsManagementModule.jobs_showCreateModal(job.id);
+
+                // Ensure JobsManagementModule has data loaded
+                if (window.JobsManagementModule) {
+                    try {
+                        // Load jobs and leads data into the module
+                        const [jobs, leadsData] = await Promise.all([
+                            API.getJobs(),
+                            API.getLeads()
+                        ]);
+
+                        window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
+                        window.JobsManagementModule.state.leads = leadsData?.all || [];
+
+                        // Now call the edit modal
+                        if (window.JobsManagementModule.jobs_showCreateModal) {
+                            window.JobsManagementModule.jobs_showCreateModal(job.id);
+                        }
+                    } catch (error) {
+                        console.error('Error loading job data:', error);
+                        alert('Failed to load job data');
+                    }
                 }
             }, 200);
         });
