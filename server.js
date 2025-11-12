@@ -197,7 +197,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'index.html'));
+  console.log('Dashboard route hit');
+  const filePath = path.join(__dirname, 'public', 'dashboard', 'index.html');
+  console.log('Serving file:', filePath);
+  res.sendFile(filePath);
 });
 
 // 404 handler
