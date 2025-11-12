@@ -3061,6 +3061,49 @@ window.JobsManagementModule = {
                     height: 16px;
                 }
 
+                .job-view-btn-download {
+                    background: #10b981;
+                    color: white;
+                }
+
+                .job-view-btn-download:hover {
+                    background: #059669;
+                    transform: translateY(-1px);
+                }
+
+                .job-view-actions {
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                }
+
+                .job-view-status-dropdown {
+                    padding: 10px 16px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    background: var(--background);
+                    color: var(--text-primary);
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    appearance: none;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-repeat: no-repeat;
+                    background-position: right 12px center;
+                    background-size: 16px;
+                    padding-right: 40px;
+                }
+
+                .job-view-status-dropdown:hover {
+                    border-color: var(--primary);
+                }
+
+                .job-view-status-dropdown:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+
                 .job-view-btn-delete {
                     background: transparent;
                     border: 2px solid #ef4444;
@@ -3273,12 +3316,26 @@ window.JobsManagementModule = {
                         Edit
                     </button>
 
-                    <button class="job-view-btn job-view-btn-delete" data-action="delete-job" data-id="${job.id}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Delete
+                    <button class="job-view-btn job-view-btn-download" data-action="download-client-copy" data-id="${job.id}">
+                        Download Client Copy
                     </button>
+
+                    <div class="job-view-actions">
+                        <select class="job-view-status-dropdown" data-action="update-status" data-id="${job.id}">
+                            ${this.STATUSES.map(status => `
+                                <option value="${status}" ${job.status === status ? 'selected' : ''}>
+                                    ${this.jobs_formatStatus(status)}
+                                </option>
+                            `).join('')}
+                        </select>
+
+                        <button class="job-view-btn job-view-btn-delete" data-action="delete-job" data-id="${job.id}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -3298,6 +3355,42 @@ window.JobsManagementModule = {
                 overlay.remove();
                 this.jobs_showCreateModal(job.id);
             }, 200);
+        });
+
+        // Download client copy
+        overlay.querySelector('[data-action="download-client-copy"]').addEventListener('click', () => {
+            this.jobs_downloadClientCopy(job, lead, materials, crew, photos, revenue);
+
+            // Close modal instantly like other actions
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+        });
+
+        // Update status
+        overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
+            const newStatus = e.target.value;
+
+            // Close modal immediately for instant feedback
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
+
+            // Update local state immediately
+            const j = this.state.jobs.find(j => j.id === job.id);
+            if (j) {
+                j.status = newStatus;
+            }
+
+            // Update UI immediately
+            this.jobs_calculateStats();
+            this.jobs_instantFilterChange();
+
+            // Update server in background
+            try {
+                await API.updateJob(job.id, { status: newStatus });
+            } catch (error) {
+                console.error('Update status error:', error);
+                window.SteadyUtils.showToast('Failed to update status', 'error');
+            }
         });
 
         // Delete job
@@ -4297,6 +4390,158 @@ window.JobsManagementModule = {
             };
             document.addEventListener('keydown', escHandler);
         });
+    },
+
+    /**
+     * Download professional client copy as printable PDF
+     */
+    async jobs_downloadClientCopy(job, lead, materials, crew, photos, revenue) {
+        // Load jsPDF library if not already loaded
+        if (!window.jspdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            document.head.appendChild(script);
+
+            // Wait for script to load
+            await new Promise((resolve) => {
+                script.onload = resolve;
+            });
+        }
+
+        // Helper to format currency
+        const formatMoney = (val) => {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+        };
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            unit: 'in',
+            format: 'letter',
+            orientation: 'portrait'
+        });
+
+        let y = 1; // Current Y position
+
+        // Title
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text(job.title || 'Job Details', 4.25, y, { align: 'center' });
+        y += 0.4;
+
+        // Job Info
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+
+        // Left column
+        doc.setFont('helvetica', 'bold');
+        doc.text('Job #:', 0.75, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(job.id?.toString() || 'N/A', 1.5, y);
+
+        // Right column
+        let yRight = y;
+        if (lead) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Client:', 4.75, yRight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(lead.name, 5.5, yRight);
+            yRight += 0.2;
+        }
+
+        if (job.scheduled_date) {
+            y += 0.2;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Scheduled:', 0.75, y);
+            doc.setFont('helvetica', 'normal');
+            const schedDate = new Date(job.scheduled_date);
+            doc.text(schedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 1.75, y);
+        }
+
+        if (job.scheduled_time) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Time:', 4.75, yRight);
+            doc.setFont('helvetica', 'normal');
+            doc.text(job.scheduled_time, 5.25, yRight);
+            yRight += 0.2;
+        }
+
+        y = Math.max(y, yRight) + 0.3;
+
+        // Description
+        if (job.description) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('JOB DESCRIPTION', 0.75, y);
+            y += 0.05;
+            doc.line(0.75, y, 7.75, y);
+            y += 0.25;
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            const descLines = doc.splitTextToSize(job.description, 6.5);
+            doc.text(descLines, 0.75, y);
+            y += (descLines.length * 0.15) + 0.3;
+        }
+
+        // Materials
+        if (materials && materials.length > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('MATERIALS', 0.75, y);
+            y += 0.05;
+            doc.line(0.75, y, 7.75, y);
+            y += 0.25;
+
+            // Table header
+            doc.setFillColor(51, 51, 51);
+            doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Description', 0.85, y);
+            doc.text('Qty', 4, y, { align: 'center' });
+            doc.text('Unit', 4.8, y, { align: 'center' });
+            doc.text('$/Unit', 5.8, y, { align: 'right' });
+            doc.text('Total', 7.5, y, { align: 'right' });
+            y += 0.25;
+
+            // Table rows
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            materials.forEach(item => {
+                const total = (item.quantity || 0) * (item.unit_price || 0);
+                doc.text(item.name || '', 0.85, y);
+                doc.text((item.quantity || 0).toString(), 4, y, { align: 'center' });
+                doc.text(item.unit || '', 4.8, y, { align: 'center' });
+                doc.text(formatMoney(item.unit_price || 0), 5.8, y, { align: 'right' });
+                doc.text(formatMoney(total), 7.5, y, { align: 'right' });
+                y += 0.2;
+            });
+
+            y += 0.2;
+        }
+
+        // Total
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(102, 126, 234);
+        doc.rect(5.75, y - 0.1, 2, 0.3, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text('TOTAL:', 5.95, y + 0.05);
+        doc.text(formatMoney(revenue), 7.55, y + 0.05, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+        y += 0.5;
+
+        // Footer
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('This document is for your records. Thank you for your business!', 4.25, 10.5, { align: 'center' });
+
+        // Save PDF
+        const filename = `Job-${job.id || 'draft'}.pdf`;
+        doc.save(filename);
+
+        window.SteadyUtils.showToast('PDF downloaded successfully', 'success');
     },
 
     /**
