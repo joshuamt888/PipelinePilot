@@ -224,11 +224,6 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
-// BYPASS ROUTE - Direct access to professional dashboard (for debugging)
-app.get('/dash', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', 'professional', 'index.html'));
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'), (err) => {
@@ -306,6 +301,8 @@ app.listen(PORT, () => {
   console.log('Auth handled by Supabase');
   console.log('Cron jobs active');
 
-// Auto-open browser
-open(`http://localhost:${PORT}`);
+  // Auto-open browser (local development only)
+  if (process.env.NODE_ENV !== 'production' && !process.env.RAILWAY_ENVIRONMENT) {
+    open(`http://localhost:${PORT}`);
+  }
 });
