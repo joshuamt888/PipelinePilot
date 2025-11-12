@@ -2490,7 +2490,7 @@ window.ClientsModule = {
                 }
 
                 .stat-card {
-                    background: var(--surface-primary);
+                    background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
@@ -2565,7 +2565,7 @@ window.ClientsModule = {
                 .search-input {
                     width: 100%;
                     padding: 0.75rem 1rem 0.75rem 3rem;
-                    background: var(--surface-primary);
+                    background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: 8px;
                     color: var(--text-primary);
