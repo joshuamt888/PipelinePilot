@@ -188,8 +188,8 @@ window.ClientsModule = {
 
                 <!-- Stats Cards -->
                 <div class="clients-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">
+                    <div class="clients-stat-card">
+                        <div class="clients-stat-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
                                 <circle cx="9" cy="7" r="4"/>
@@ -197,27 +197,27 @@ window.ClientsModule = {
                                 <path d="M16 3.13a4 4 0 010 7.75"/>
                             </svg>
                         </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Total Clients</div>
-                            <div class="stat-value">${stats.totalClients}</div>
+                        <div class="clients-stat-content">
+                            <div class="clients-stat-label">Total Clients</div>
+                            <div class="clients-stat-value">${stats.totalClients}</div>
                         </div>
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-icon stat-icon-jobs">
+                    <div class="clients-stat-card">
+                        <div class="clients-stat-icon clients-stat-icon-jobs">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
                                 <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
                             </svg>
                         </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Total Jobs</div>
-                            <div class="stat-value">${stats.totalJobs}</div>
+                        <div class="clients-stat-content">
+                            <div class="clients-stat-label">Total Jobs</div>
+                            <div class="clients-stat-value">${stats.totalJobs}</div>
                         </div>
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-icon stat-icon-estimates">
+                    <div class="clients-stat-card">
+                        <div class="clients-stat-icon clients-stat-icon-estimates">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                                 <polyline points="14 2 14 8 20 8"/>
@@ -225,9 +225,9 @@ window.ClientsModule = {
                                 <line x1="16" y1="17" x2="8" y2="17"/>
                             </svg>
                         </div>
-                        <div class="stat-content">
-                            <div class="stat-label">Total Estimates</div>
-                            <div class="stat-value">${stats.totalEstimates}</div>
+                        <div class="clients-stat-content">
+                            <div class="clients-stat-label">Total Estimates</div>
+                            <div class="clients-stat-value">${stats.totalEstimates}</div>
                         </div>
                     </div>
                 </div>
@@ -407,16 +407,16 @@ window.ClientsModule = {
                 ${client.estimates.length > 0 ? `
                     <div class="modal-section">
                         <div class="modal-section-title">Estimates (${client.estimates.length})</div>
-                        <div class="item-cards">
+                        <div class="clients-item-cards">
                             ${client.estimates.map(est => `
-                                <div class="item-card" data-estimate-id="${est.id}">
-                                    <div class="item-card-header">
-                                        <div class="item-card-title">${this.escapeHtml(est.title || 'Untitled')}</div>
+                                <div class="clients-item-card" data-estimate-id="${est.id}">
+                                    <div class="clients-item-card-header">
+                                        <div class="clients-item-card-title">${this.truncateText(est.title || 'Untitled', 35)}</div>
                                         <span class="status-badge status-${est.status}">${this.formatStatus(est.status)}</span>
                                     </div>
-                                    <div class="item-card-meta">
-                                        <span class="item-price">${this.formatCurrency(est.total_price)}</span>
-                                        <span class="item-date">${this.getRelativeTime(est.created_at)}</span>
+                                    <div class="clients-item-card-meta">
+                                        <span class="clients-item-price">${this.formatCurrency(est.total_price)}</span>
+                                        <span class="clients-item-date">${this.getRelativeTime(est.created_at)}</span>
                                     </div>
                                 </div>
                             `).join('')}
@@ -428,16 +428,16 @@ window.ClientsModule = {
                 ${client.jobs.length > 0 ? `
                     <div class="modal-section">
                         <div class="modal-section-title">Jobs (${client.jobs.length})</div>
-                        <div class="item-cards">
+                        <div class="clients-item-cards">
                             ${client.jobs.map(job => `
-                                <div class="item-card" data-job-id="${job.id}">
-                                    <div class="item-card-header">
-                                        <div class="item-card-title">${this.escapeHtml(job.title || 'Untitled')}</div>
+                                <div class="clients-item-card" data-job-id="${job.id}">
+                                    <div class="clients-item-card-header">
+                                        <div class="clients-item-card-title">${this.truncateText(job.title || 'Untitled', 35)}</div>
                                         <span class="status-badge status-${job.status}">${this.formatStatus(job.status)}</span>
                                     </div>
-                                    <div class="item-card-meta">
-                                        <span class="item-price">${this.formatCurrency(job.final_price || job.quoted_price || 0)}</span>
-                                        <span class="item-date">${this.getRelativeTime(job.created_at)}</span>
+                                    <div class="clients-item-card-meta">
+                                        <span class="clients-item-price">${this.formatCurrency(job.final_price || job.quoted_price || 0)}</span>
+                                        <span class="clients-item-date">${this.getRelativeTime(job.created_at)}</span>
                                     </div>
                                 </div>
                             `).join('')}
@@ -448,7 +448,7 @@ window.ClientsModule = {
         `;
 
         // Add click handlers for estimate/job cards
-        modalBody.querySelectorAll('.item-card[data-estimate-id]').forEach(card => {
+        modalBody.querySelectorAll('.clients-item-card[data-estimate-id]').forEach(card => {
             card.addEventListener('click', () => {
                 const estimateId = card.getAttribute('data-estimate-id');
                 // Don't hide client modal - let view modal layer on top with higher z-index
@@ -456,7 +456,7 @@ window.ClientsModule = {
             });
         });
 
-        modalBody.querySelectorAll('.item-card[data-job-id]').forEach(card => {
+        modalBody.querySelectorAll('.clients-item-card[data-job-id]').forEach(card => {
             card.addEventListener('click', () => {
                 const jobId = card.getAttribute('data-job-id');
                 // Don't hide client modal - let view modal layer on top with higher z-index
@@ -606,6 +606,16 @@ window.ClientsModule = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    /**
+     * Truncate text to max length with ellipsis
+     */
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        const escaped = this.escapeHtml(text);
+        if (escaped.length <= maxLength) return escaped;
+        return escaped.substring(0, maxLength) + '...';
     },
 
     // ==================== CONSTANTS ====================
@@ -2513,7 +2523,7 @@ window.ClientsModule = {
                     margin-bottom: 2rem;
                 }
 
-                .stat-card {
+                .clients-stat-card {
                     background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: 12px;
@@ -2524,7 +2534,7 @@ window.ClientsModule = {
                     transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
 
-                .stat-icon {
+                .clients-stat-icon {
                     width: 48px;
                     height: 48px;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -2535,31 +2545,31 @@ window.ClientsModule = {
                     flex-shrink: 0;
                 }
 
-                .stat-icon-jobs {
+                .clients-stat-icon-jobs {
                     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
                 }
 
-                .stat-icon-estimates {
+                .clients-stat-icon-estimates {
                     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
                 }
 
-                .stat-icon svg {
+                .clients-stat-icon svg {
                     width: 24px;
                     height: 24px;
                     stroke: white;
                 }
 
-                .stat-content {
+                .clients-stat-content {
                     flex: 1;
                 }
 
-                .stat-label {
+                .clients-stat-label {
                     font-size: 0.875rem;
                     color: var(--text-secondary);
                     margin-bottom: 0.25rem;
                 }
 
-                .stat-value {
+                .clients-stat-value {
                     font-size: 2rem;
                     font-weight: 700;
                     color: var(--text-primary);
@@ -2825,13 +2835,13 @@ window.ClientsModule = {
                 }
 
                 /* Item Cards (clickable estimate/job cards) */
-                .item-cards {
+                .clients-item-cards {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
                     gap: 0.875rem;
                 }
 
-                .item-card {
+                .clients-item-card {
                     background: var(--background);
                     border: 2px solid var(--border);
                     border-radius: 10px;
@@ -2840,17 +2850,17 @@ window.ClientsModule = {
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 }
 
-                .item-card:hover {
+                .clients-item-card:hover {
                     border-color: var(--primary);
                     transform: translateY(-4px);
                     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
                 }
 
-                .item-card:active {
+                .clients-item-card:active {
                     transform: translateY(-2px);
                 }
 
-                .item-card-header {
+                .clients-item-card-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
@@ -2858,7 +2868,7 @@ window.ClientsModule = {
                     margin-bottom: 0.875rem;
                 }
 
-                .item-card-title {
+                .clients-item-card-title {
                     font-size: 1rem;
                     font-weight: 600;
                     color: var(--text-primary);
@@ -2866,7 +2876,7 @@ window.ClientsModule = {
                     line-height: 1.3;
                 }
 
-                .item-card-meta {
+                .clients-item-card-meta {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -2876,13 +2886,13 @@ window.ClientsModule = {
                     border-top: 1px solid var(--border);
                 }
 
-                .item-price {
+                .clients-item-price {
                     font-weight: 700;
                     font-size: 1.1rem;
                     color: var(--success);
                 }
 
-                .item-date {
+                .clients-item-date {
                     color: var(--text-tertiary);
                     font-size: 0.8rem;
                 }
@@ -2942,7 +2952,7 @@ window.ClientsModule = {
                         width: 90vw;
                     }
 
-                    .item-cards {
+                    .clients-item-cards {
                         grid-template-columns: 1fr;
                     }
 
