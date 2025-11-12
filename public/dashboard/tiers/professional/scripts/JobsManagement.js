@@ -3996,48 +3996,36 @@ window.JobsManagementModule = {
             notes: formData.get('notes') || null
         };
 
-        // Validate numeric limits to prevent database overflow
-        // NUMERIC(12,2) = max 9,999,999,999.99 (almost 10 billion)
-        const MAX_VALUE = 9999999999.99;
+        // Cap all numeric values to prevent database overflow
+        // NUMERIC(12,2) = max $9,999,999,999.99
+        const MAX_VALUE = 99999999.99;
 
-        if (jobData.material_cost > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Material cost cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
-            return;
-        }
-        if (jobData.estimated_labor_hours > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Labor hours cannot exceed ${MAX_VALUE.toLocaleString()} hours`, 'error');
-            return;
-        }
-        if (jobData.labor_rate > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Labor rate cannot exceed $${MAX_VALUE.toLocaleString()}/hr`, 'error');
-            return;
-        }
-        if (jobData.other_expenses > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Other expenses cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
-            return;
-        }
-        if (jobData.quoted_price > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Quoted price cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
-            return;
-        }
-        if (jobData.deposit_amount > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Deposit cannot exceed $${MAX_VALUE.toLocaleString()}`, 'error');
-            return;
-        }
+        const capValue = (value) => {
+            if (isNaN(value) || value === null || value === undefined) return 0;
+            return Math.min(Math.max(value, 0), MAX_VALUE);
+        };
 
-        // Validate materials total doesn't exceed limit
-        const materialTotal = materials.reduce((sum, m) => sum + ((m.quantity || 0) * (m.unit_price || 0)), 0);
-        if (materialTotal > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Total materials cost cannot exceed $${MAX_VALUE.toLocaleString()}. Current total: $${materialTotal.toLocaleString()}`, 'error');
-            return;
-        }
+        // Cap all direct job fields
+        jobData.material_cost = capValue(jobData.material_cost);
+        jobData.estimated_labor_hours = capValue(jobData.estimated_labor_hours);
+        jobData.labor_rate = capValue(jobData.labor_rate);
+        jobData.other_expenses = capValue(jobData.other_expenses);
+        jobData.quoted_price = capValue(jobData.quoted_price);
+        jobData.deposit_amount = capValue(jobData.deposit_amount);
 
-        // Validate crew total doesn't exceed limit
-        const crewTotal = crew_members.reduce((sum, c) => sum + ((c.hours || 0) * (c.rate || 0)), 0);
-        if (crewTotal > MAX_VALUE) {
-            window.SteadyUtils.showToast(`Total crew cost cannot exceed $${MAX_VALUE.toLocaleString()}. Current total: $${crewTotal.toLocaleString()}`, 'error');
-            return;
-        }
+        // Cap all material item values
+        jobData.materials = jobData.materials.map(m => ({
+            ...m,
+            quantity: capValue(m.quantity),
+            unit_price: capValue(m.unit_price)
+        }));
+
+        // Cap all crew member values
+        jobData.crew_members = jobData.crew_members.map(c => ({
+            ...c,
+            hours: capValue(c.hours),
+            rate: capValue(c.rate)
+        }));
 
         try {
             let result;
