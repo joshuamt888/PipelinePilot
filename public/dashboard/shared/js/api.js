@@ -2498,6 +2498,72 @@ static async getTaskGoalProgress(goalId) {
     // Generic fallback
     return error.message || 'Something went wrong. Please try again.';
   }
+
+  // =====================================================
+  // CLIENTS - Leads with both Estimates and Jobs
+  // =====================================================
+
+  /**
+   * Get clients (leads that have BOTH estimates AND jobs)
+   * @returns {Promise<Array>} Array of client objects with enriched data
+   */
+  static async getClients() {
+    try {
+      // Fetch all data in parallel
+      const [leadsData, estimates, jobs] = await Promise.all([
+        this.getLeads(),
+        this.getEstimates(),
+        this.getJobs()
+      ]);
+
+      const allLeads = leadsData.all || [];
+
+      // Filter leads that have BOTH estimates AND jobs
+      const clients = allLeads.filter(lead => {
+        const hasEstimate = estimates.some(e => e.lead_id === lead.id);
+        const hasJob = jobs.some(j => j.lead_id === lead.id);
+        return hasEstimate && hasJob;
+      });
+
+      // Enrich each client with their data
+      return clients.map(client => {
+        const clientEstimates = estimates.filter(e => e.lead_id === client.id);
+        const clientJobs = jobs.filter(j => j.lead_id === client.id);
+
+        // Calculate revenue
+        const estimateRevenue = clientEstimates
+          .filter(e => e.status === 'accepted')
+          .reduce((sum, e) => sum + (parseFloat(e.total_amount) || 0), 0);
+
+        const jobRevenue = clientJobs
+          .filter(j => j.status === 'completed' || j.status === 'paid')
+          .reduce((sum, j) => sum + (parseFloat(j.final_price || j.quoted_price) || 0), 0);
+
+        // Find last activity
+        const allDates = [
+          ...clientEstimates.map(e => e.updated_at || e.created_at),
+          ...clientJobs.map(j => j.updated_at || j.created_at)
+        ].filter(Boolean).map(d => new Date(d));
+
+        const lastActivity = allDates.length > 0
+          ? new Date(Math.max(...allDates)).toISOString()
+          : client.created_at;
+
+        return {
+          ...client,
+          estimatesCount: clientEstimates.length,
+          jobsCount: clientJobs.length,
+          totalRevenue: estimateRevenue + jobRevenue,
+          lastActivity: lastActivity,
+          estimates: clientEstimates,
+          jobs: clientJobs
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get clients:', error);
+      throw error;
+    }
+  }
 }
 
 // Export
