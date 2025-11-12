@@ -4,6 +4,7 @@ const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 const cron = require('node-cron');
+const open = require('open').default;
 
 // VALIDATION - Add this block
 const requiredEnvVars = [
@@ -304,4 +305,7 @@ app.listen(PORT, () => {
   console.log('Stripe webhooks ready');
   console.log('Auth handled by Supabase');
   console.log('Cron jobs active');
+
+// Auto-open browser
+open(`http://localhost:${PORT}`);
 });
