@@ -1139,32 +1139,49 @@ window.ClientsModule = {
 
         // Edit estimate
         overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
-            overlay.style.opacity = '0';
-            setTimeout(async () => {
-                overlay.remove();
+            // Don't close the Clients modal - just hide it temporarily
+            overlay.style.display = 'none';
 
-                // Ensure EstimatesModule has data loaded
-                if (window.EstimatesModule) {
-                    try {
-                        // Load estimates and leads data into the module
-                        const [estimates, leadsData] = await Promise.all([
-                            API.getEstimates(),
-                            API.getLeads()
-                        ]);
+            // Ensure EstimatesModule has data loaded
+            if (window.EstimatesModule) {
+                try {
+                    // Load estimates and leads data into the module
+                    const [estimates, leadsData] = await Promise.all([
+                        API.getEstimates(),
+                        API.getLeads()
+                    ]);
 
-                        window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
-                        window.EstimatesModule.state.leads = leadsData?.all || [];
+                    window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
+                    window.EstimatesModule.state.leads = leadsData?.all || [];
 
-                        // Now call the edit modal
-                        if (window.EstimatesModule.estimates_showCreateModal) {
-                            window.EstimatesModule.estimates_showCreateModal(estimate.id);
-                        }
-                    } catch (error) {
-                        console.error('Error loading estimate data:', error);
-                        alert('Failed to load estimate data');
+                    // Now call the edit modal
+                    if (window.EstimatesModule.estimates_showCreateModal) {
+                        window.EstimatesModule.estimates_showCreateModal(estimate.id);
+
+                        // Watch for when the estimate modal closes, then show Clients modal again
+                        const checkEstimateModalClosed = setInterval(() => {
+                            const estimateModal = document.querySelector('.estimate-modal-overlay');
+                            if (!estimateModal) {
+                                clearInterval(checkEstimateModalClosed);
+                                // Reload Clients data and show modal again
+                                this.loadData().then(() => {
+                                    overlay.style.display = 'flex';
+                                    // Update the modal content with fresh data
+                                    const updatedClient = this.state.clients.find(c => c.id === this.state.selectedClient?.id);
+                                    if (updatedClient) {
+                                        this.openViewModal(updatedClient.id);
+                                        overlay.remove(); // Remove old overlay
+                                    }
+                                });
+                            }
+                        }, 100);
                     }
+                } catch (error) {
+                    console.error('Error loading estimate data:', error);
+                    alert('Failed to load estimate data');
+                    overlay.style.display = 'flex';
                 }
-            }, 200);
+            }
         });
 
         // Download client copy
@@ -1955,32 +1972,49 @@ window.ClientsModule = {
 
         // Edit job
         overlay.querySelector('[data-action="edit-job"]').addEventListener('click', async () => {
-            overlay.style.opacity = '0';
-            setTimeout(async () => {
-                overlay.remove();
+            // Don't close the Clients modal - just hide it temporarily
+            overlay.style.display = 'none';
 
-                // Ensure JobsManagementModule has data loaded
-                if (window.JobsManagementModule) {
-                    try {
-                        // Load jobs and leads data into the module
-                        const [jobs, leadsData] = await Promise.all([
-                            API.getJobs(),
-                            API.getLeads()
-                        ]);
+            // Ensure JobsManagementModule has data loaded
+            if (window.JobsManagementModule) {
+                try {
+                    // Load jobs and leads data into the module
+                    const [jobs, leadsData] = await Promise.all([
+                        API.getJobs(),
+                        API.getLeads()
+                    ]);
 
-                        window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
-                        window.JobsManagementModule.state.leads = leadsData?.all || [];
+                    window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
+                    window.JobsManagementModule.state.leads = leadsData?.all || [];
 
-                        // Now call the edit modal
-                        if (window.JobsManagementModule.jobs_showCreateModal) {
-                            window.JobsManagementModule.jobs_showCreateModal(job.id);
-                        }
-                    } catch (error) {
-                        console.error('Error loading job data:', error);
-                        alert('Failed to load job data');
+                    // Now call the edit modal
+                    if (window.JobsManagementModule.jobs_showCreateModal) {
+                        window.JobsManagementModule.jobs_showCreateModal(job.id);
+
+                        // Watch for when the job modal closes, then show Clients modal again
+                        const checkJobModalClosed = setInterval(() => {
+                            const jobModal = document.querySelector('.job-modal-overlay');
+                            if (!jobModal) {
+                                clearInterval(checkJobModalClosed);
+                                // Reload Clients data and show modal again
+                                this.loadData().then(() => {
+                                    overlay.style.display = 'flex';
+                                    // Update the modal content with fresh data
+                                    const updatedClient = this.state.clients.find(c => c.id === this.state.selectedClient?.id);
+                                    if (updatedClient) {
+                                        this.openViewModal(updatedClient.id);
+                                        overlay.remove(); // Remove old overlay
+                                    }
+                                });
+                            }
+                        }, 100);
                     }
+                } catch (error) {
+                    console.error('Error loading job data:', error);
+                    alert('Failed to load job data');
+                    overlay.style.display = 'flex';
                 }
-            }, 200);
+            }
         });
 
         // Update status
