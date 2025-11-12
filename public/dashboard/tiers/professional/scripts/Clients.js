@@ -1213,8 +1213,13 @@ window.ClientsModule = {
         // Update status
         overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
             const newStatus = e.target.value;
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
+
+            // Close both modals immediately
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
 
             try {
                 await API.updateEstimate(estimate.id, { status: newStatus });
@@ -2008,8 +2013,13 @@ window.ClientsModule = {
         // Update status
         overlay.querySelector('[data-action="update-status"]').addEventListener('change', async (e) => {
             const newStatus = e.target.value;
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
+
+            // Close both modals immediately
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
 
             try {
                 await API.updateJob(job.id, { status: newStatus });
