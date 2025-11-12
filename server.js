@@ -223,6 +223,11 @@ app.get('/dashboard', (req, res) => {
   });
 });
 
+// BYPASS ROUTE - Direct access to professional dashboard (for debugging)
+app.get('/dash', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'tiers', 'professional', 'index.html'));
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'), (err) => {
