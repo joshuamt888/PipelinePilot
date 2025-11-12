@@ -837,6 +837,17 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
 
+            // Update limit bar
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const limitBar = container.querySelector('.jobs-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+            }
+
             window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
@@ -3385,6 +3396,17 @@ window.JobsManagementModule = {
             // Update UI immediately
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
+
+            // Update limit bar
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const limitBar = container.querySelector('.jobs-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+            }
 
             // Delete from server in background
             try {

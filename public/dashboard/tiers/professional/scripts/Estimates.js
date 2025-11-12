@@ -2144,7 +2144,7 @@ estimates_showViewModal(estimateId) {
         this.estimates_calculateStats();
         this.estimates_instantFilterChange();
 
-        // Update stats section in DOM
+        // Update stats section and limit bar in DOM
         const container = document.getElementById(this.state.container);
         if (container) {
             const statsSection = container.querySelector('.estimates-stats');
@@ -2152,6 +2152,14 @@ estimates_showViewModal(estimateId) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = this.estimates_renderStats();
                 statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+            }
+
+            // Update limit bar
+            const limitBar = container.querySelector('.estimates-limit-bar');
+            if (limitBar) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.estimates_renderLimitBar();
+                limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
             }
         }
 
@@ -3552,6 +3560,17 @@ estimates_formatStatus(status) {
             // Instant UI update without reload
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
+
+            // Update limit bar
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const limitBar = container.querySelector('.estimates-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+            }
 
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
