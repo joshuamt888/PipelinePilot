@@ -810,6 +810,43 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
 
+            // Update stats tabs, limit bar, and reset batch mode UI
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const statsSection = container.querySelector('.jobs-status-filters');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                const limitBar = container.querySelector('.jobs-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                // Reset batch mode button to "Edit Multiple"
+                const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+                if (batchBtn) {
+                    batchBtn.classList.remove('active');
+                    batchBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Edit Multiple
+                    `;
+                }
+
+                // Remove batch actions bar
+                const batchActions = container.querySelector('.jobs-batch-actions');
+                if (batchActions) batchActions.remove();
+
+                // Remove checkboxes
+                container.querySelectorAll('.jobs-card-checkbox').forEach(cb => cb.remove());
+            }
+
             window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} updated to ${this.jobs_formatStatus(newStatus)}`, 'success');
         } catch (error) {
             console.error('Batch change status error:', error);
@@ -846,15 +883,41 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
 
-            // Update limit bar
+            // Update stats tabs, limit bar, and reset batch mode UI
             const container = document.getElementById(this.state.container);
             if (container) {
+                const statsSection = container.querySelector('.jobs-status-filters');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
                 const limitBar = container.querySelector('.jobs-limit-bar');
                 if (limitBar) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = this.jobs_renderLimitBar();
                     limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
                 }
+
+                // Reset batch mode button to "Edit Multiple"
+                const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+                if (batchBtn) {
+                    batchBtn.classList.remove('active');
+                    batchBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Edit Multiple
+                    `;
+                }
+
+                // Remove batch actions bar
+                const batchActions = container.querySelector('.jobs-batch-actions');
+                if (batchActions) batchActions.remove();
+
+                // Remove checkboxes
+                container.querySelectorAll('.jobs-card-checkbox').forEach(cb => cb.remove());
             }
 
             window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} deleted`, 'success');
@@ -3372,6 +3435,24 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange(newStatus);
 
+            // Update stats tabs and limit bar in DOM
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const statsSection = container.querySelector('.jobs-status-filters');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                const limitBar = container.querySelector('.jobs-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+            }
+
             // Update server in background
             try {
                 await API.updateJob(job.id, { status: newStatus });
@@ -3406,9 +3487,16 @@ window.JobsManagementModule = {
             this.jobs_calculateStats();
             this.jobs_instantFilterChange();
 
-            // Update limit bar
+            // Update stats tabs and limit bar
             const container = document.getElementById(this.state.container);
             if (container) {
+                const statsSection = container.querySelector('.jobs-status-filters');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.jobs_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
                 const limitBar = container.querySelector('.jobs-limit-bar');
                 if (limitBar) {
                     const tempDiv = document.createElement('div');

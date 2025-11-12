@@ -2196,7 +2196,7 @@ estimates_showViewModal(estimateId) {
         this.estimates_calculateStats();
         this.estimates_instantFilterChange(newStatus);
 
-        // Update stats section in DOM
+        // Update stats section and limit bar in DOM
         const container = document.getElementById(this.state.container);
         if (container) {
             const statsSection = container.querySelector('.estimates-stats');
@@ -2204,6 +2204,13 @@ estimates_showViewModal(estimateId) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = this.estimates_renderStats();
                 statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+            }
+
+            const limitBar = container.querySelector('.estimates-limit-bar');
+            if (limitBar) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.estimates_renderLimitBar();
+                limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
             }
         }
 
@@ -3532,6 +3539,43 @@ estimates_formatStatus(status) {
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
+            // Update stats tabs, limit bar, and reset batch mode UI
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const statsSection = container.querySelector('.estimates-stats');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                const limitBar = container.querySelector('.estimates-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                // Reset batch mode button to "Edit Multiple"
+                const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+                if (batchBtn) {
+                    batchBtn.classList.remove('active');
+                    batchBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Edit Multiple
+                    `;
+                }
+
+                // Remove batch actions bar
+                const batchActions = container.querySelector('.estimates-batch-actions');
+                if (batchActions) batchActions.remove();
+
+                // Remove checkboxes
+                container.querySelectorAll('.estimates-card-checkbox').forEach(cb => cb.remove());
+            }
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
         } catch (error) {
             console.error('Batch change status error:', error);
@@ -3570,15 +3614,41 @@ estimates_formatStatus(status) {
             this.estimates_calculateStats();
             this.estimates_instantFilterChange();
 
-            // Update limit bar
+            // Update stats tabs, limit bar, and reset batch mode UI
             const container = document.getElementById(this.state.container);
             if (container) {
+                const statsSection = container.querySelector('.estimates-stats');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
                 const limitBar = container.querySelector('.estimates-limit-bar');
                 if (limitBar) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = this.estimates_renderLimitBar();
                     limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
                 }
+
+                // Reset batch mode button to "Edit Multiple"
+                const batchBtn = container.querySelector('[data-action="toggle-batch"]');
+                if (batchBtn) {
+                    batchBtn.classList.remove('active');
+                    batchBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Edit Multiple
+                    `;
+                }
+
+                // Remove batch actions bar
+                const batchActions = container.querySelector('.estimates-batch-actions');
+                if (batchActions) batchActions.remove();
+
+                // Remove checkboxes
+                container.querySelectorAll('.estimates-card-checkbox').forEach(cb => cb.remove());
             }
 
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
