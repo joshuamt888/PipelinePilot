@@ -875,7 +875,7 @@ window.ClientsModule = {
                 }
 
                 .modal-content {
-                    background: var(--surface-primary);
+                    background: var(--surface);
                     border-radius: 12px;
                     max-width: 700px;
                     width: 100%;
