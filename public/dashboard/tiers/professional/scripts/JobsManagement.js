@@ -4061,6 +4061,7 @@ window.JobsManagementModule = {
         jobData.other_expenses = capValue(jobData.other_expenses);
         jobData.quoted_price = capValue(jobData.quoted_price);
         jobData.deposit_amount = capValue(jobData.deposit_amount);
+        jobData.duration_hours = capValue(jobData.duration_hours);
 
         // Cap all material item values
         jobData.materials = jobData.materials.map(m => ({
