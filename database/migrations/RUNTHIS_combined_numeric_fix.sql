@@ -1,24 +1,16 @@
--- Fix Jobs Table Numeric Field Precision
--- Issue: NUMERIC(5,2) only allows values up to $999.99
--- Solution: Use NUMERIC(10,2) for input fields, NUMERIC(20,2) for calculated fields
-
--- Frontend validation limits (enforced in Jobs.js):
--- - Material cost: max $99,999,999.99
--- - Labor hours: max 99,999.99 hours
--- - Labor rate: max $9,999.99/hr
--- - Other expenses: max $99,999,999.99
--- - Quoted/Final price: max $999,999,999.99
--- - Deposit: max $999,999,999.99
+-- COMBINED MIGRATION: Fix Numeric Precision for Jobs & Estimates
+-- Run this single query in your Supabase SQL Editor
 
 BEGIN;
 
--- Step 1: Drop generated columns (they'll be recreated with larger precision)
+-- === FIX JOBS TABLE ===
+-- Drop generated columns first (they'll be recreated with larger precision)
 ALTER TABLE jobs
     DROP COLUMN IF EXISTS total_cost,
     DROP COLUMN IF EXISTS profit,
     DROP COLUMN IF EXISTS profit_margin;
 
--- Step 2: Update input fields to NUMERIC(10,2) - supports up to $99,999,999.99
+-- Update input fields to NUMERIC(10,2) - supports up to $99,999,999.99
 ALTER TABLE jobs
     ALTER COLUMN estimated_labor_hours TYPE NUMERIC(10, 2),
     ALTER COLUMN actual_labor_hours TYPE NUMERIC(10, 2),
@@ -29,8 +21,7 @@ ALTER TABLE jobs
     ALTER COLUMN final_price TYPE NUMERIC(10, 2),
     ALTER COLUMN deposit_amount TYPE NUMERIC(10, 2);
 
--- Step 3: Recreate calculated fields with NUMERIC(20,2) to handle multiplication overflow
--- (e.g., 99,999,999.99 hours × $9,999.99/hr = ~$1 trillion)
+-- Recreate calculated fields with NUMERIC(20,2) to handle multiplication overflow
 ALTER TABLE jobs
     ADD COLUMN total_cost NUMERIC(20, 2) GENERATED ALWAYS AS (
         COALESCE(material_cost, 0) +
@@ -54,23 +45,11 @@ ALTER TABLE jobs
         ELSE 0 END
     ) STORED;
 
+-- === FIX ESTIMATES TABLE ===
+ALTER TABLE estimates
+    ALTER COLUMN total_price TYPE NUMERIC(10, 2);
+
 COMMIT;
 
--- Verify the changes
-SELECT column_name, data_type, numeric_precision, numeric_scale, is_generated
-FROM information_schema.columns
-WHERE table_name = 'jobs'
-  AND column_name IN (
-    'estimated_labor_hours',
-    'actual_labor_hours',
-    'labor_rate',
-    'material_cost',
-    'other_expenses',
-    'quoted_price',
-    'final_price',
-    'deposit_amount',
-    'total_cost',
-    'profit',
-    'profit_margin'
-  )
-ORDER BY column_name;
+-- Verify success
+SELECT 'SUCCESS: Migration completed!' as status;
