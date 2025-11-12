@@ -556,6 +556,7 @@ window.PipelineModule = {
             type: [
                 { value: '', label: 'All Temperatures', clear: true },
                 { value: '', label: '──────────', divider: true },
+                { value: '', label: 'No Temperature', icon: 'minus' },
                 { value: 'cold', label: 'Cold Leads', icon: 'snowflake' },
                 { value: 'warm', label: 'Warm Leads', icon: 'flame' }
             ],
