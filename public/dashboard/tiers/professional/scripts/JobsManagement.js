@@ -3112,16 +3112,6 @@ window.JobsManagementModule = {
                     height: 16px;
                 }
 
-                .job-view-btn-download {
-                    background: #10b981;
-                    color: white;
-                }
-
-                .job-view-btn-download:hover {
-                    background: #059669;
-                    transform: translateY(-1px);
-                }
-
                 .job-view-actions {
                     display: flex;
                     gap: 12px;
@@ -3367,10 +3357,6 @@ window.JobsManagementModule = {
                         Edit
                     </button>
 
-                    <button class="job-view-btn job-view-btn-download" data-action="download-client-copy" data-id="${job.id}">
-                        Download Copy
-                    </button>
-
                     <div class="job-view-actions">
                         <select class="job-view-status-dropdown" data-action="update-status" data-id="${job.id}">
                             ${this.STATUSES.map(status => `
@@ -3406,15 +3392,6 @@ window.JobsManagementModule = {
                 overlay.remove();
                 this.jobs_showCreateModal(job.id);
             }, 200);
-        });
-
-        // Download client copy
-        overlay.querySelector('[data-action="download-client-copy"]').addEventListener('click', () => {
-            this.jobs_downloadClientCopy(job, lead, materials, crew, photos, revenue);
-
-            // Close modal instantly like other actions
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 200);
         });
 
         // Update status
@@ -4556,210 +4533,6 @@ window.JobsManagementModule = {
             };
             document.addEventListener('keydown', escHandler);
         });
-    },
-
-    /**
-     * Download internal work order as printable PDF
-     */
-    async jobs_downloadClientCopy(job, lead, materials, crew, photos, revenue) {
-        // Load jsPDF library if not already loaded
-        if (!window.jspdf) {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            document.head.appendChild(script);
-            await new Promise((resolve) => { script.onload = resolve; });
-        }
-
-        const formatMoney = (val) => {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
-        };
-
-        const { jsPDF} = window.jspdf;
-        const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
-        let y = 1;
-
-        // Title
-        doc.setFontSize(24);
-        doc.setFont('helvetica', 'bold');
-        doc.text(job.title || 'Work Order', 4.25, y, { align: 'center' });
-        y += 0.5;
-
-        // Line
-        doc.setLineWidth(0.02);
-        doc.line(0.75, y, 7.75, y);
-        y += 0.4;
-
-        // Client Info (Left) and Job Info (Right)
-        doc.setFontSize(10);
-        if (lead) {
-            doc.setFont('helvetica', 'bold');
-            doc.text('CLIENT:', 0.75, y);
-            doc.setFont('helvetica', 'normal');
-            doc.text(lead.name || '', 1.5, y);
-            y += 0.2;
-
-            if (lead.phone) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('PHONE:', 0.75, y);
-                doc.setFont('helvetica', 'normal');
-                doc.text(lead.phone, 1.5, y);
-                y += 0.2;
-            }
-        }
-
-        // Job info on right
-        let yRight = 1.9;
-        doc.setFont('helvetica', 'bold');
-        doc.text('JOB #:', 5, yRight);
-        doc.setFont('helvetica', 'normal');
-        doc.text(job.id?.toString() || 'N/A', 5.6, yRight);
-        yRight += 0.2;
-
-        if (job.scheduled_date) {
-            doc.setFont('helvetica', 'bold');
-            doc.text('SCHEDULED:', 5, yRight);
-            doc.setFont('helvetica', 'normal');
-            const schedDate = new Date(job.scheduled_date);
-            doc.text(schedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), 6.1, yRight);
-            yRight += 0.2;
-        }
-
-        y = Math.max(y, yRight) + 0.2;
-
-        // Description
-        if (job.description) {
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('JOB DESCRIPTION', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.25;
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            const descLines = doc.splitTextToSize(job.description, 6.5);
-            doc.text(descLines, 0.75, y);
-            y += (descLines.length * 0.15) + 0.3;
-        }
-
-        // Materials Table
-        if (materials && materials.length > 0) {
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('MATERIALS', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.3;
-
-            // Table header
-            doc.setFillColor(51, 51, 51);
-            doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Description', 0.85, y);
-            doc.text('Qty', 4.5, y, { align: 'center' });
-            doc.text('Supplier', 5.5, y);
-            doc.text('Amount', 7.5, y, { align: 'right' });
-            y += 0.25;
-
-            // Table rows
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'normal');
-            materials.forEach(item => {
-                const total = (item.quantity || 0) * (item.unit_price || 0);
-                doc.text(item.name || '-', 0.85, y);
-                doc.text(String(item.quantity || 0), 4.5, y, { align: 'center' });
-                doc.text(item.supplier || '-', 5.5, y);
-                doc.setFont('helvetica', 'bold');
-                doc.text(formatMoney(total), 7.5, y, { align: 'right' });
-                doc.setFont('helvetica', 'normal');
-                y += 0.2;
-            });
-
-            y += 0.2;
-        }
-
-        // Crew Table
-        if (crew && crew.length > 0) {
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('CREW', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.3;
-
-            // Table header
-            doc.setFillColor(51, 51, 51);
-            doc.rect(0.75, y - 0.15, 7, 0.25, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Name', 0.85, y);
-            doc.text('Role', 3.5, y);
-            doc.text('Hours', 5.5, y, { align: 'center' });
-            doc.text('Labor Cost', 7.5, y, { align: 'right' });
-            y += 0.25;
-
-            // Table rows
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'normal');
-            crew.forEach(member => {
-                const cost = (member.hours || 0) * (member.rate || 0);
-                doc.text(member.name || '-', 0.85, y);
-                doc.text(member.role || '-', 3.5, y);
-                doc.text(String(member.hours || 0), 5.5, y, { align: 'center' });
-                doc.setFont('helvetica', 'bold');
-                doc.text(formatMoney(cost), 7.5, y, { align: 'right' });
-                doc.setFont('helvetica', 'normal');
-                y += 0.2;
-            });
-
-            y += 0.2;
-        }
-
-        // Total box (matching Estimates exactly)
-        doc.setFillColor(245, 245, 245);
-        doc.setDrawColor(51, 51, 51);
-        doc.setLineWidth(0.02);
-        doc.rect(0.75, y, 7, 0.6, 'FD');
-        y += 0.2;
-
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL', 0.85, y);
-        y += 0.25;
-
-        doc.setFontSize(22);
-        doc.text(formatMoney(job.quoted_price || revenue), 0.85, y);
-        y += 0.4;
-
-        // Internal Notes
-        if (job.notes) {
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('INTERNAL NOTES', 0.75, y);
-            y += 0.05;
-            doc.line(0.75, y, 7.75, y);
-            y += 0.25;
-
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            const notesLines = doc.splitTextToSize(job.notes, 6.5);
-            doc.text(notesLines, 0.75, y);
-            y += (notesLines.length * 0.12) + 0.3;
-        }
-
-        // Footer
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Internal work order for crew reference. Not for client distribution.', 4.25, 10.5, { align: 'center' });
-
-        // Save PDF
-        const filename = `WorkOrder-${job.id || 'draft'}.pdf`;
-        doc.save(filename);
-
-        window.SteadyUtils.showToast('Work order downloaded successfully', 'success');
     },
 
     /**
