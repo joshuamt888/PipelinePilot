@@ -1155,8 +1155,12 @@ window.ClientsModule = {
 
         // Edit estimate
         overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
-            // Close view modal instantly
+            // Close all popups instantly
             overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
 
             // Ensure EstimatesModule has data loaded
             if (window.EstimatesModule) {
@@ -1999,48 +2003,51 @@ window.ClientsModule = {
 
         // Edit job
         overlay.querySelector('[data-action="edit-job"]').addEventListener('click', async () => {
-            // Close view modal with animation
-            overlay.style.opacity = '0';
-            setTimeout(async () => {
-                overlay.remove();
+            // Close all popups instantly
+            overlay.remove();
+            const clientModal = document.getElementById('clientViewModal');
+            if (clientModal) {
+                clientModal.remove();
+            }
 
-                // Give a moment before opening edit modal (like native Estimates/Jobs)
-                setTimeout(async () => {
-                    // Ensure JobsManagementModule has data loaded
-                    if (window.JobsManagementModule) {
-                        try {
-                            // Load jobs and leads data into the module
-                            const [jobs, leadsData] = await Promise.all([
-                                API.getJobs(),
-                                API.getLeads()
-                            ]);
+            // Ensure JobsManagementModule has data loaded
+            if (window.JobsManagementModule) {
+                try {
+                    // Load jobs and leads data into the module
+                    const [jobs, leadsData] = await Promise.all([
+                        API.getJobs(),
+                        API.getLeads()
+                    ]);
 
-                            window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
-                            window.JobsManagementModule.state.leads = leadsData?.all || [];
+                    window.JobsManagementModule.state.jobs = Array.isArray(jobs) ? jobs : [];
+                    window.JobsManagementModule.state.leads = leadsData?.all || [];
 
-                            // Now call the edit modal
-                            if (window.JobsManagementModule.jobs_showCreateModal) {
-                                window.JobsManagementModule.jobs_showCreateModal(job.id);
+                    // Now call the edit modal
+                    if (window.JobsManagementModule.jobs_showCreateModal) {
+                        window.JobsManagementModule.jobs_showCreateModal(job.id);
 
-                                // Watch for when edit modal closes, then reload Clients data
-                                const checkEditModalClosed = setInterval(() => {
-                                    const editModal = document.querySelector('.job-modal-overlay');
-                                    if (!editModal) {
-                                        clearInterval(checkEditModalClosed);
-                                        // Reload Clients data to show updated job
-                                        this.loadData().then(() => {
-                                            this.render();
-                                        });
-                                    }
-                                }, 100);
+                        // Keep Clients module visible
+                        requestAnimationFrame(() => {
+                            this.render();
+                        });
+
+                        // Watch for when edit modal closes, then reload Clients data
+                        const checkEditModalClosed = setInterval(() => {
+                            const editModal = document.querySelector('.job-modal-overlay');
+                            if (!editModal) {
+                                clearInterval(checkEditModalClosed);
+                                // Reload Clients data to show updated job
+                                this.loadData().then(() => {
+                                    this.render();
+                                });
                             }
-                        } catch (error) {
-                            console.error('Error loading job data:', error);
-                            alert('Failed to load job data');
-                        }
+                        }, 50);
                     }
-                }, 150);
-            }, 200);
+                } catch (error) {
+                    console.error('Error loading job data:', error);
+                    alert('Failed to load job data');
+                }
+            }
         });
 
         // Update status
