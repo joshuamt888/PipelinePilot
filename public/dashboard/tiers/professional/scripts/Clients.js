@@ -877,8 +877,9 @@ window.ClientsModule = {
                 .modal-content {
                     background: var(--surface);
                     border-radius: 12px;
-                    max-width: 700px;
-                    width: 100%;
+                    max-width: 600px;
+                    width: fit-content;
+                    min-width: 500px;
                     max-height: 90vh;
                     display: flex;
                     flex-direction: column;
@@ -912,11 +913,13 @@ window.ClientsModule = {
                     align-items: center;
                     justify-content: center;
                     border-radius: 6px;
-                    transition: background-color 0.2s ease;
+                    transition: all 0.2s ease;
                 }
 
                 .modal-close:hover {
-                    background: var(--surface-secondary);
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                    transform: scale(1.1);
                 }
 
                 .modal-body {
@@ -945,49 +948,85 @@ window.ClientsModule = {
                 .contact-info {
                     display: flex;
                     flex-direction: column;
-                    gap: 0.5rem;
+                    gap: 0.75rem;
+                    background: var(--background);
+                    padding: 1rem;
+                    border-radius: 8px;
+                    border: 1px solid var(--border);
                 }
 
                 .contact-item {
                     font-size: 0.9rem;
                     color: var(--text-primary);
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .contact-item strong {
+                    min-width: 80px;
+                    color: var(--text-secondary);
+                    font-weight: 600;
                 }
 
                 /* Item Cards (clickable estimate/job cards) */
                 .item-cards {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                    gap: 0.75rem;
+                    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                    gap: 0.875rem;
                 }
 
                 .item-card {
-                    background: var(--surface);
+                    background: var(--background);
                     border: 2px solid var(--border);
-                    border-radius: 8px;
-                    padding: 1rem;
+                    border-radius: 10px;
+                    padding: 1.25rem;
                     cursor: pointer;
-                    transition: all 0.2s ease;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .item-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 3px;
+                    background: var(--primary);
+                    transform: scaleX(0);
+                    transition: transform 0.3s ease;
                 }
 
                 .item-card:hover {
                     border-color: var(--primary);
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+                }
+
+                .item-card:hover::before {
+                    transform: scaleX(1);
+                }
+
+                .item-card:active {
                     transform: translateY(-2px);
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
                 }
 
                 .item-card-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
-                    gap: 0.5rem;
-                    margin-bottom: 0.5rem;
+                    gap: 0.75rem;
+                    margin-bottom: 0.875rem;
                 }
 
                 .item-card-title {
-                    font-size: 0.95rem;
+                    font-size: 1rem;
                     font-weight: 600;
                     color: var(--text-primary);
                     flex: 1;
+                    line-height: 1.3;
                 }
 
                 .item-card-meta {
@@ -996,15 +1035,19 @@ window.ClientsModule = {
                     align-items: center;
                     font-size: 0.875rem;
                     color: var(--text-secondary);
+                    padding-top: 0.5rem;
+                    border-top: 1px solid var(--border);
                 }
 
                 .item-price {
-                    font-weight: 600;
-                    color: var(--text-primary);
+                    font-weight: 700;
+                    font-size: 1.1rem;
+                    color: var(--success);
                 }
 
                 .item-date {
                     color: var(--text-tertiary);
+                    font-size: 0.8rem;
                 }
 
                 /* Status Badges */
@@ -1054,6 +1097,20 @@ window.ClientsModule = {
 
                     .clients-grid {
                         grid-template-columns: 1fr;
+                    }
+
+                    .modal-content {
+                        min-width: 90vw;
+                        max-width: 90vw;
+                        width: 90vw;
+                    }
+
+                    .item-cards {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .modal-overlay {
+                        padding: 1rem;
                     }
                 }
             </style>
