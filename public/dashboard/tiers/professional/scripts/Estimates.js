@@ -455,12 +455,18 @@ window.EstimatesModule = {
                 <div class="estimates-batch-actions-right">
                     <div class="estimates-batch-status-group">
                         <label for="batchStatusSelect">Change all status to:</label>
-                        <select id="batchStatusSelect" class="estimates-batch-status-select" data-action="batch-change-status">
+                        <select id="batchStatusSelect" class="estimates-batch-status-select">
                             <option value="">Select status...</option>
                             ${this.STATUSES.map(status => `
                                 <option value="${status}">${this.estimates_formatStatus(status)}</option>
                             `).join('')}
                         </select>
+                        <button class="estimates-batch-btn estimates-batch-btn-confirm" data-action="batch-confirm-status">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Confirm
+                        </button>
                     </div>
                     <button class="estimates-batch-btn delete" data-action="batch-delete">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -3259,12 +3265,15 @@ estimates_formatStatus(status) {
                     const filter = target.dataset.filter;
                     this.estimates_instantFilterChange(filter);
                     break;
-                case 'batch-change-status':
-                    const newStatus = target.value;
+                case 'batch-confirm-status':
+                    const dropdown = container.querySelector('#batchStatusSelect');
+                    const newStatus = dropdown?.value;
                     if (newStatus) {
                         await this.estimates_batchChangeStatus(newStatus);
                         // Reset dropdown
-                        target.value = '';
+                        dropdown.value = '';
+                    } else {
+                        window.SteadyUtils.showToast('Please select a status first', 'warning');
                     }
                     break;
                 case 'batch-delete':
@@ -4808,6 +4817,22 @@ estimates_formatStatus(status) {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.estimates-batch-btn-confirm {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.estimates-batch-btn-confirm:hover {
+    background: #059669;
+    border-color: #059669;
+}
+
+.estimates-batch-btn-confirm svg {
+    width: 1rem;
+    height: 1rem;
 }
 
 /* EMPTY STATE */

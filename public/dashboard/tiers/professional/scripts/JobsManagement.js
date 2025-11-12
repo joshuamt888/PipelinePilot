@@ -493,12 +493,18 @@ window.JobsManagementModule = {
                 <div class="jobs-batch-actions-right">
                     <div class="jobs-batch-status-group">
                         <label for="batchStatusSelect">Change all status to:</label>
-                        <select id="batchStatusSelect" class="jobs-batch-status-select" data-action="batch-change-status">
+                        <select id="batchStatusSelect" class="jobs-batch-status-select">
                             <option value="">Select status...</option>
                             ${this.STATUSES.map(status => `
                                 <option value="${status}">${this.jobs_formatStatus(status)}</option>
                             `).join('')}
                         </select>
+                        <button class="jobs-batch-btn jobs-batch-btn-confirm" data-action="batch-confirm-status">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Confirm
+                        </button>
                     </div>
                     <button class="jobs-batch-btn delete" data-action="batch-delete">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -543,12 +549,15 @@ window.JobsManagementModule = {
                     const filter = target.dataset.filter;
                     this.jobs_instantFilterChange(filter);
                     break;
-                case 'batch-change-status':
-                    const newStatus = target.value;
+                case 'batch-confirm-status':
+                    const dropdown = container.querySelector('#batchStatusSelect');
+                    const newStatus = dropdown?.value;
                     if (newStatus) {
                         await this.jobs_batchChangeStatus(newStatus);
                         // Reset dropdown
-                        target.value = '';
+                        dropdown.value = '';
+                    } else {
+                        window.SteadyUtils.showToast('Please select a status first', 'warning');
                     }
                     break;
                 case 'batch-delete':
@@ -5214,6 +5223,22 @@ window.JobsManagementModule = {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.jobs-batch-btn-confirm {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.jobs-batch-btn-confirm:hover {
+    background: #059669;
+    border-color: #059669;
+}
+
+.jobs-batch-btn-confirm svg {
+    width: 1rem;
+    height: 1rem;
 }
 
 /* EMPTY STATE */
