@@ -138,7 +138,7 @@ window.DashboardModule = {
                     </div>
                 </div>
 
-                <div class="dashboard-metric-card dashboard-metric-3 ${totalTasksDue > 0 ? 'dashboard-metric-highlight' : ''}" data-action="drill-tasks">
+                <div class="dashboard-metric-card dashboard-metric-3" data-action="drill-tasks">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
                         <i data-lucide="check-circle" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
@@ -1153,15 +1153,12 @@ window.DashboardModule = {
                              data-action="view-task-detail"
                              data-id="${task.id}">
                             <div class="dashboard-modal-task-header">
-                                <div class="dashboard-task-status-icon">
-                                    <i data-lucide="${task.status === 'completed' ? 'check-circle' : isOverdue ? 'alert-triangle' : isToday ? 'clock' : 'clipboard'}" style="width: 20px; height: 20px;"></i>
-                                </div>
                                 <div class="dashboard-modal-task-info">
                                     <div class="dashboard-modal-task-title">${safeTitle}</div>
                                     ${task.description ? `<div class="dashboard-modal-task-description">${API.escapeHtml(task.description.substring(0, 100))}${task.description.length > 100 ? '...' : ''}</div>` : ''}
                                 </div>
                             </div>
-                            
+
                             <div class="dashboard-modal-task-meta">
                                 ${task.due_date ? `
                                     <div class="dashboard-task-meta-item">
