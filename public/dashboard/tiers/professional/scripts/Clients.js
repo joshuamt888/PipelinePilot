@@ -2804,30 +2804,12 @@ window.ClientsModule = {
                     padding: 1.25rem;
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .item-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 3px;
-                    background: var(--primary);
-                    transform: scaleX(0);
-                    transition: transform 0.3s ease;
                 }
 
                 .item-card:hover {
                     border-color: var(--primary);
                     transform: translateY(-4px);
                     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-                }
-
-                .item-card:hover::before {
-                    transform: scaleX(1);
                 }
 
                 .item-card:active {
