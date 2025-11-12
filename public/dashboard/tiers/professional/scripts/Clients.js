@@ -1167,6 +1167,18 @@ window.ClientsModule = {
                             // Now call the edit modal
                             if (window.EstimatesModule.estimates_showCreateModal) {
                                 window.EstimatesModule.estimates_showCreateModal(estimate.id);
+
+                                // Watch for when edit modal closes, then reload Clients data
+                                const checkEditModalClosed = setInterval(() => {
+                                    const editModal = document.querySelector('.estimate-modal-overlay');
+                                    if (!editModal) {
+                                        clearInterval(checkEditModalClosed);
+                                        // Reload Clients data to show updated estimate
+                                        this.loadData().then(() => {
+                                            this.render();
+                                        });
+                                    }
+                                }, 100);
                             }
                         } catch (error) {
                             console.error('Error loading estimate data:', error);
@@ -2000,6 +2012,18 @@ window.ClientsModule = {
                             // Now call the edit modal
                             if (window.JobsManagementModule.jobs_showCreateModal) {
                                 window.JobsManagementModule.jobs_showCreateModal(job.id);
+
+                                // Watch for when edit modal closes, then reload Clients data
+                                const checkEditModalClosed = setInterval(() => {
+                                    const editModal = document.querySelector('.job-modal-overlay');
+                                    if (!editModal) {
+                                        clearInterval(checkEditModalClosed);
+                                        // Reload Clients data to show updated job
+                                        this.loadData().then(() => {
+                                            this.render();
+                                        });
+                                    }
+                                }, 100);
                             }
                         } catch (error) {
                             console.error('Error loading job data:', error);
