@@ -108,16 +108,18 @@ window.PipelineModule = {
     // Calculate all analytics in one pass
     getAnalytics() {
         const organized = this.getOrganizedLeads();
+        const qualifiedLeads = organized.qualified || [];
         const closedLeads = organized.closed || [];
         const lostLeads = organized.lost || [];
-        
-        const totalValue = this.state.leads.reduce((sum, l) => 
+
+        const totalValue = this.state.leads.reduce((sum, l) =>
             sum + (l.potential_value || 0), 0
         );
-        
-        const totalOutcome = closedLeads.length + lostLeads.length;
-        const conversionRate = totalOutcome > 0 ? 
-            Math.round((closedLeads.length / totalOutcome) * 100) : 0;
+
+        const totalWins = qualifiedLeads.length + closedLeads.length;
+        const totalOutcome = totalWins + lostLeads.length;
+        const conversionRate = totalOutcome > 0 ?
+            Math.round((totalWins / totalOutcome) * 100) : 0;
         
         const reasonCounts = {};
         lostLeads.forEach(lead => {
@@ -448,7 +450,7 @@ window.PipelineModule = {
                         </div>
                         <div class="card-content-analytics">
                             <div class="primary-metric">${analytics.conversionRate}%</div>
-                            <div class="metric-detail">Closed vs Lost</div>
+                            <div class="metric-detail">Wins vs Lost</div>
                         </div>
                     </div>
 
@@ -827,7 +829,7 @@ window.PipelineModule = {
                 btn.disabled = true;
                 
                 await API.updateLead(lead.id, {
-                    type: document.getElementById('editType').value,
+                    type: document.getElementById('editType').value || null,
                     quality_score: parseInt(document.getElementById('editScore').value),
                     notes: document.getElementById('editNotes').value.trim() || null
                 });
