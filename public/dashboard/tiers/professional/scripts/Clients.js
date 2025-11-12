@@ -59,7 +59,7 @@ window.ClientsModule = {
             ]);
 
             console.log('[Clients] Raw data:', {
-                leads: leads?.length || 0,
+                leads: leads?.all?.length || 0,
                 estimates: estimates?.length || 0,
                 jobs: jobs?.length || 0
             });
@@ -68,7 +68,8 @@ window.ClientsModule = {
             this.state.jobs = Array.isArray(jobs) ? jobs : [];
 
             // Filter leads to only include those with estimates or jobs
-            const allLeads = Array.isArray(leads) ? leads : [];
+            // API.getLeads() returns { cold, warm, all }, so use leads.all
+            const allLeads = Array.isArray(leads?.all) ? leads.all : [];
             const leadsWithProjects = allLeads.filter(lead => {
                 const hasEstimates = this.state.estimates.some(est => est.lead_id === lead.id);
                 const hasJobs = this.state.jobs.some(job => job.lead_id === lead.id);
