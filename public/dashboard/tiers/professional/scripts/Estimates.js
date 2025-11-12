@@ -3097,9 +3097,27 @@ async estimates_handleSave(overlay, button) {
                 this.state.estimates.unshift(savedEstimate);
             }
 
-            // Silently update UI
+            // Update UI immediately (like Jobs)
             this.estimates_calculateStats();
-            this.estimates_render();
+            this.estimates_instantFilterChange();
+
+            // Update stats tabs and limit bar without full re-render
+            const container = document.getElementById(this.state.container);
+            if (container) {
+                const statsSection = container.querySelector('.estimates-stats');
+                if (statsSection) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderStats();
+                    statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+
+                const limitBar = container.querySelector('.estimates-limit-bar');
+                if (limitBar) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.estimates_renderLimitBar();
+                    limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                }
+            }
 
             // Reset flag after successful save
             this.state.isSaving = false;
