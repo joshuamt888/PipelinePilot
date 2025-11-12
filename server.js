@@ -303,6 +303,9 @@ app.listen(PORT, () => {
 
   // Auto-open browser (local development only)
   if (process.env.NODE_ENV !== 'production' && !process.env.RAILWAY_ENVIRONMENT) {
+    console.log('Opening browser at http://localhost:' + PORT);
     open(`http://localhost:${PORT}`);
+  } else {
+    console.log('Skipping browser auto-open (NODE_ENV=' + process.env.NODE_ENV + ', RAILWAY=' + process.env.RAILWAY_ENVIRONMENT + ')');
   }
 });
