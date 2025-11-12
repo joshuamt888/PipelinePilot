@@ -1155,48 +1155,47 @@ window.ClientsModule = {
 
         // Edit estimate
         overlay.querySelector('[data-action="edit-estimate"]').addEventListener('click', async () => {
-            // Close view modal with animation
-            overlay.style.opacity = '0';
-            setTimeout(async () => {
-                overlay.remove();
+            // Close view modal instantly
+            overlay.remove();
 
-                // Give a moment before opening edit modal (like native Estimates/Jobs)
-                setTimeout(async () => {
-                    // Ensure EstimatesModule has data loaded
-                    if (window.EstimatesModule) {
-                        try {
-                            // Load estimates and leads data into the module
-                            const [estimates, leadsData] = await Promise.all([
-                                API.getEstimates(),
-                                API.getLeads()
-                            ]);
+            // Ensure EstimatesModule has data loaded
+            if (window.EstimatesModule) {
+                try {
+                    // Load estimates and leads data into the module
+                    const [estimates, leadsData] = await Promise.all([
+                        API.getEstimates(),
+                        API.getLeads()
+                    ]);
 
-                            window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
-                            window.EstimatesModule.state.leads = leadsData?.all || [];
+                    window.EstimatesModule.state.estimates = Array.isArray(estimates) ? estimates : [];
+                    window.EstimatesModule.state.leads = leadsData?.all || [];
 
-                            // Now call the edit modal
-                            if (window.EstimatesModule.estimates_showCreateModal) {
-                                window.EstimatesModule.estimates_showCreateModal(estimate.id);
+                    // Now call the edit modal
+                    if (window.EstimatesModule.estimates_showCreateModal) {
+                        window.EstimatesModule.estimates_showCreateModal(estimate.id);
 
-                                // Watch for when edit modal closes, then reload Clients data
-                                const checkEditModalClosed = setInterval(() => {
-                                    const editModal = document.querySelector('.estimate-modal-overlay');
-                                    if (!editModal) {
-                                        clearInterval(checkEditModalClosed);
-                                        // Reload Clients data to show updated estimate
-                                        this.loadData().then(() => {
-                                            this.render();
-                                        });
-                                    }
-                                }, 100);
+                        // Keep Clients module visible
+                        requestAnimationFrame(() => {
+                            this.render();
+                        });
+
+                        // Watch for when edit modal closes, then reload Clients data
+                        const checkEditModalClosed = setInterval(() => {
+                            const editModal = document.querySelector('.estimate-modal-overlay');
+                            if (!editModal) {
+                                clearInterval(checkEditModalClosed);
+                                // Reload Clients data to show updated estimate
+                                this.loadData().then(() => {
+                                    this.render();
+                                });
                             }
-                        } catch (error) {
-                            console.error('Error loading estimate data:', error);
-                            alert('Failed to load estimate data');
-                        }
+                        }, 50);
                     }
-                }, 150);
-            }, 200);
+                } catch (error) {
+                    console.error('Error loading estimate data:', error);
+                    alert('Failed to load estimate data');
+                }
+            }
         });
 
         // Download client copy
