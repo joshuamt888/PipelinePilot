@@ -260,24 +260,6 @@ window.ClientsModule = {
                 <!-- Empty State -->
                 ${this.state.filteredClients.length === 0 ? this.renderEmptyState() : ''}
             </div>
-
-            <!-- View Modal -->
-            <div id="clientViewModal" class="modal-overlay" style="display: none;">
-                <div class="modal-content modal-large">
-                    <div class="modal-header">
-                        <h3 class="modal-title" id="viewModalTitle">Client Details</h3>
-                        <button class="modal-close" id="closeViewModal">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="modal-body" id="viewModalBody">
-                        <!-- Populated when viewing a client -->
-                    </div>
-                </div>
-            </div>
         `;
 
         this.attachEventListeners();
@@ -377,172 +359,6 @@ window.ClientsModule = {
         }
     },
 
-    /**
-     * Open view modal for a specific client
-     */
-    openViewModal(clientId) {
-        const client = this.state.clients.find(c => c.id === clientId);
-        if (!client) return;
-
-        this.state.selectedClient = client;
-
-        const modal = document.getElementById('clientViewModal');
-        const modalBody = document.getElementById('viewModalBody');
-        const modalTitle = document.getElementById('viewModalTitle');
-
-        if (!modal || !modalBody || !modalTitle) return;
-
-        modalTitle.textContent = client.name || 'Client Details';
-
-        // Get recent estimates and jobs
-        const recentEstimates = client.estimates
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3);
-
-        const recentJobs = client.jobs
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3);
-
-        // Calculate job stats
-        const completedJobs = client.jobs.filter(j => j.status === 'completed' || j.status === 'paid').length;
-        const activeJobs = client.jobs.filter(j => j.status === 'in_progress' || j.status === 'scheduled').length;
-
-        modalBody.innerHTML = `
-            <!-- Contact Information -->
-            <div class="view-section">
-                <div class="view-section-header">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-                    </svg>
-                    <h4>Contact Information</h4>
-                </div>
-                <div class="view-section-content">
-                    <div class="info-row">
-                        <span class="info-label">Email:</span>
-                        <span class="info-value">${this.escapeHtml(client.email || 'Not provided')}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Phone:</span>
-                        <span class="info-value">${this.formatPhone(client.phone)}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Address:</span>
-                        <span class="info-value">${this.formatAddress(client)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Project Summary -->
-            <div class="view-section">
-                <div class="view-section-header">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                        <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
-                    </svg>
-                    <h4>Project Summary</h4>
-                </div>
-                <div class="view-section-content">
-                    <div class="summary-grid">
-                        <div class="summary-item">
-                            <div class="summary-label">Total Estimates</div>
-                            <div class="summary-value">${client.estimateCount}</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-label">Total Jobs</div>
-                            <div class="summary-value">${client.jobCount}</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-label">Completed Jobs</div>
-                            <div class="summary-value">${completedJobs}</div>
-                        </div>
-                        <div class="summary-item">
-                            <div class="summary-label">Active Jobs</div>
-                            <div class="summary-value">${activeJobs}</div>
-                        </div>
-                        <div class="summary-item summary-item-revenue">
-                            <div class="summary-label">Total Revenue</div>
-                            <div class="summary-value">${this.formatCurrency(client.totalRevenue)}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Estimates -->
-            ${client.estimates.length > 0 ? `
-                <div class="view-section">
-                    <div class="view-section-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                        <h4>Recent Estimates</h4>
-                    </div>
-                    <div class="view-section-content">
-                        ${recentEstimates.map(est => `
-                            <div class="list-item">
-                                <div class="list-item-left">
-                                    <div class="list-item-title">${this.escapeHtml(est.title || 'Untitled')}</div>
-                                    <div class="list-item-meta">${this.formatCurrency(est.total_price)} • ${this.getRelativeTime(est.created_at)}</div>
-                                </div>
-                                <div class="list-item-right">
-                                    <span class="status-badge status-${est.status}">${this.formatStatus(est.status)}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${client.estimates.length > 3 ? `
-                            <div class="view-more">
-                                And ${client.estimates.length - 3} more estimate${client.estimates.length - 3 !== 1 ? 's' : ''}
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- Recent Jobs -->
-            ${client.jobs.length > 0 ? `
-                <div class="view-section">
-                    <div class="view-section-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                            <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>
-                        </svg>
-                        <h4>Recent Jobs</h4>
-                    </div>
-                    <div class="view-section-content">
-                        ${recentJobs.map(job => `
-                            <div class="list-item">
-                                <div class="list-item-left">
-                                    <div class="list-item-title">${this.escapeHtml(job.title || 'Untitled')}</div>
-                                    <div class="list-item-meta">${this.formatCurrency(job.final_price || job.quoted_price || 0)} • ${this.getRelativeTime(job.created_at)}</div>
-                                </div>
-                                <div class="list-item-right">
-                                    <span class="status-badge status-${job.status}">${this.formatStatus(job.status)}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                        ${client.jobs.length > 3 ? `
-                            <div class="view-more">
-                                And ${client.jobs.length - 3} more job${client.jobs.length - 3 !== 1 ? 's' : ''}
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            ` : ''}
-        `;
-
-        modal.style.display = 'flex';
-    },
-
-    /**
-     * Close view modal
-     */
-    closeViewModal() {
-        const modal = document.getElementById('clientViewModal');
-        if (modal) {
-            modal.style.display = 'none';
-            this.state.selectedClient = null;
-        }
-    },
 
     /**
      * Attach event listeners
@@ -555,37 +371,6 @@ window.ClientsModule = {
                 this.filterClients(e.target.value);
             });
         }
-
-        // Client card clicks
-        document.querySelectorAll('.client-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const clientId = card.getAttribute('data-client-id');
-                this.openViewModal(clientId);
-            });
-        });
-
-        // Close modal button
-        const closeModalBtn = document.getElementById('closeViewModal');
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => this.closeViewModal());
-        }
-
-        // Close modal on overlay click
-        const modal = document.getElementById('clientViewModal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeViewModal();
-                }
-            });
-        }
-
-        // Close modal on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.state.selectedClient) {
-                this.closeViewModal();
-            }
-        });
     },
 
     // ==================== UTILITY FUNCTIONS ====================
@@ -680,6 +465,12 @@ window.ClientsModule = {
     renderStyles() {
         return `
             <style>
+                /* Container fade-in transition */
+                #clients-content,
+                #jobs-section-content {
+                    transition: opacity 0.6s ease-in-out;
+                }
+
                 /* Container */
                 .clients-container {
                     padding: 2rem;
@@ -813,14 +604,6 @@ window.ClientsModule = {
                     border: 2px solid var(--border);
                     border-radius: 12px;
                     padding: 1.5rem;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                }
-
-                .client-card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-                    border-color: var(--primary);
                 }
 
                 .client-card-header {
@@ -913,268 +696,6 @@ window.ClientsModule = {
                     font-size: 1rem;
                 }
 
-                /* Modal */
-                .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                    padding: 2rem;
-                }
-
-                .modal-content {
-                    background: var(--surface-primary);
-                    border-radius: 12px;
-                    max-width: 600px;
-                    width: 100%;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-                }
-
-                .modal-large {
-                    max-width: 800px;
-                }
-
-                .modal-header {
-                    padding: 1.5rem;
-                    border-bottom: 1px solid var(--border);
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .modal-title {
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin: 0;
-                }
-
-                .modal-close {
-                    width: 32px;
-                    height: 32px;
-                    border: none;
-                    background: transparent;
-                    color: var(--text-secondary);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 6px;
-                    transition: background-color 0.2s ease;
-                }
-
-                .modal-close:hover {
-                    background: var(--surface-secondary);
-                }
-
-                .modal-close svg {
-                    width: 20px;
-                    height: 20px;
-                    stroke: currentColor;
-                }
-
-                .modal-body {
-                    padding: 1.5rem;
-                    overflow-y: auto;
-                }
-
-                /* View Section - Form-like gray background */
-                .view-section {
-                    margin-bottom: 1.5rem;
-                }
-
-                .view-section:last-child {
-                    margin-bottom: 0;
-                }
-
-                .view-section-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    margin-bottom: 0.75rem;
-                }
-
-                .view-section-header svg {
-                    width: 20px;
-                    height: 20px;
-                    stroke: var(--primary);
-                }
-
-                .view-section-header h4 {
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    color: var(--text-secondary);
-                    margin: 0;
-                }
-
-                .view-section-content {
-                    background: var(--surface);
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    padding: 1.25rem;
-                }
-
-                /* Info Rows */
-                .info-row {
-                    display: flex;
-                    padding: 0.875rem 0;
-                    border-bottom: 1px solid var(--border);
-                }
-
-                .info-row:first-child {
-                    padding-top: 0;
-                }
-
-                .info-row:last-child {
-                    border-bottom: none;
-                    padding-bottom: 0;
-                }
-
-                .info-label {
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                    min-width: 120px;
-                }
-
-                .info-value {
-                    font-size: 0.875rem;
-                    color: var(--text-primary);
-                    flex: 1;
-                }
-
-                /* Summary Grid */
-                .summary-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                    gap: 0.75rem;
-                }
-
-                .summary-item {
-                    background: var(--background);
-                    border: 1px solid var(--border);
-                    border-radius: 8px;
-                    padding: 1rem;
-                    text-align: center;
-                }
-
-                .summary-item-revenue {
-                    grid-column: span 2;
-                }
-
-                .summary-label {
-                    font-size: 0.75rem;
-                    color: var(--text-secondary);
-                    margin-bottom: 0.5rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-
-                .summary-value {
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                }
-
-                .summary-item-revenue .summary-value {
-                    color: var(--success);
-                }
-
-                /* List Items */
-                .list-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1rem;
-                    background: var(--background);
-                    border: 1px solid var(--border);
-                    border-radius: 8px;
-                    margin-bottom: 0.75rem;
-                }
-
-                .list-item:first-child {
-                    margin-top: 0;
-                }
-
-                .list-item:last-child {
-                    margin-bottom: 0;
-                }
-
-                .list-item-left {
-                    flex: 1;
-                }
-
-                .list-item-title {
-                    font-weight: 600;
-                    color: var(--text-primary);
-                    margin-bottom: 0.25rem;
-                }
-
-                .list-item-meta {
-                    font-size: 0.875rem;
-                    color: var(--text-secondary);
-                }
-
-                .list-item-right {
-                    margin-left: 1rem;
-                }
-
-                /* Status Badges */
-                .status-badge {
-                    display: inline-block;
-                    padding: 0.25rem 0.75rem;
-                    border-radius: 12px;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    text-transform: capitalize;
-                }
-
-                .status-draft {
-                    background: rgba(156, 163, 175, 0.2);
-                    color: #6b7280;
-                }
-
-                .status-sent, .status-scheduled {
-                    background: rgba(59, 130, 246, 0.2);
-                    color: #3b82f6;
-                }
-
-                .status-accepted, .status-completed, .status-paid {
-                    background: rgba(16, 185, 129, 0.2);
-                    color: #10b981;
-                }
-
-                .status-rejected {
-                    background: rgba(239, 68, 68, 0.2);
-                    color: #ef4444;
-                }
-
-                .status-in_progress {
-                    background: rgba(245, 158, 11, 0.2);
-                    color: #f59e0b;
-                }
-
-                /* View More */
-                .view-more {
-                    text-align: center;
-                    padding: 0.75rem;
-                    color: var(--text-secondary);
-                    font-size: 0.875rem;
-                    font-style: italic;
-                }
-
                 /* Responsive */
                 @media (max-width: 768px) {
                     .clients-container {
@@ -1187,10 +708,6 @@ window.ClientsModule = {
 
                     .clients-grid {
                         grid-template-columns: 1fr;
-                    }
-
-                    .summary-item-revenue {
-                        grid-column: span 1;
                     }
                 }
             </style>
