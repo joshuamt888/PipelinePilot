@@ -1550,7 +1550,7 @@ estimates_initModalEvents(overlay) {
 
     // Save estimate
     overlay.querySelectorAll('[data-action="save-estimate"]').forEach(btn => {
-        btn.addEventListener('click', () => this.estimates_handleSave(overlay));
+        btn.addEventListener('click', (e) => this.estimates_handleSave(overlay, e.currentTarget));
     });
 
     // Lead search button
@@ -2952,10 +2952,17 @@ estimates_updatePhotoCounter(overlay) {
 /**
  * Handle estimate save
  */
-async estimates_handleSave(overlay) {
+async estimates_handleSave(overlay, button) {
     // Prevent duplicate submissions
     if (this.state.isSaving) return;
     this.state.isSaving = true;
+
+    // Disable button immediately to prevent rapid clicks
+    if (button) {
+        button.disabled = true;
+        button.style.opacity = '0.6';
+        button.style.cursor = 'not-allowed';
+    }
 
     try {
         // Gather form data
@@ -3006,8 +3013,13 @@ async estimates_handleSave(overlay) {
                 titleInput.removeEventListener('input', clearError);
             }, { once: true });
 
-            // Reset flag on validation failure
+            // Reset flag and button on validation failure
             this.state.isSaving = false;
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '';
+                button.style.cursor = '';
+            }
             return;
         }
 
