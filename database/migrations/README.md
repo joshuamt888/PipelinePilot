@@ -4,7 +4,9 @@
 
 **Problem:** The `jobs` and `estimates` tables have monetary fields with `NUMERIC(5,2)` precision, which only allows values up to $999.99. This is too restrictive for real-world jobs and estimates.
 
-**Solution:** Run the migration scripts below in your Supabase SQL Editor to increase precision to `NUMERIC(12,2)`, allowing values up to $9,999,999,999.99.
+**Solution:** Run the migration scripts below in your Supabase SQL Editor to increase precision to `NUMERIC(15,2)`, allowing values up to $9,999,999,999,999.99.
+
+**⚠️ IMPORTANT:** The migration will temporarily drop and recreate generated columns (total_cost, profit, profit_margin) to handle existing data safely.
 
 ### How to Apply Migrations
 
@@ -18,15 +20,21 @@
 #### 1. `fix_jobs_numeric_precision.sql` (REQUIRED)
 **Run this first!** Fixes the `jobs` table to support realistic job values.
 
-Updates these fields from `NUMERIC(5,2)` to larger precision:
-- `estimated_labor_hours` → `NUMERIC(10,2)` (up to 99,999,999.99 hours)
-- `actual_labor_hours` → `NUMERIC(10,2)`
-- `labor_rate` → `NUMERIC(10,2)` (up to $99,999,999.99/hr)
-- `material_cost` → `NUMERIC(12,2)` (up to $9,999,999,999.99)
-- `other_expenses` → `NUMERIC(12,2)`
-- `quoted_price` → `NUMERIC(12,2)`
-- `final_price` → `NUMERIC(12,2)`
-- `deposit_amount` → `NUMERIC(12,2)`
+This migration safely:
+1. Drops generated columns (total_cost, profit, profit_margin)
+2. Cleans up NULL values
+3. Updates all base columns to `NUMERIC(15,2)`
+4. Recreates generated columns with proper constraints
+
+Updated fields:
+- `estimated_labor_hours` → `NUMERIC(15,2)` (up to 9,999,999,999,999.99 hours)
+- `actual_labor_hours` → `NUMERIC(15,2)`
+- `labor_rate` → `NUMERIC(15,2)` (up to $9,999,999,999,999.99/hr)
+- `material_cost` → `NUMERIC(15,2)` (up to $9,999,999,999,999.99)
+- `other_expenses` → `NUMERIC(15,2)`
+- `quoted_price` → `NUMERIC(15,2)`
+- `final_price` → `NUMERIC(15,2)`
+- `deposit_amount` → `NUMERIC(15,2)`
 
 #### 2. `fix_estimates_numeric_precision.sql` (RECOMMENDED)
 Fixes the `estimates` table to support realistic estimate values.
@@ -34,47 +42,9 @@ Fixes the `estimates` table to support realistic estimate values.
 Updates:
 - `total_price` → `NUMERIC(12,2)` (up to $9,999,999,999.99)
 
-### Alternative: Combined Migration
+### Recommended: Run Jobs Migration Only
 
-If you prefer to run both migrations at once, use this combined SQL:
-
-```sql
--- Combined Migration: Fix Numeric Precision for Jobs and Estimates
-
-BEGIN;
-
--- Fix Jobs table
-ALTER TABLE jobs
-    ALTER COLUMN estimated_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN actual_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN labor_rate TYPE NUMERIC(10, 2),
-    ALTER COLUMN material_cost TYPE NUMERIC(12, 2),
-    ALTER COLUMN other_expenses TYPE NUMERIC(12, 2),
-    ALTER COLUMN quoted_price TYPE NUMERIC(12, 2),
-    ALTER COLUMN final_price TYPE NUMERIC(12, 2),
-    ALTER COLUMN deposit_amount TYPE NUMERIC(12, 2);
-
--- Fix Estimates table
-ALTER TABLE estimates
-    ALTER COLUMN total_price TYPE NUMERIC(12, 2);
-
-COMMIT;
-
--- Verify the changes
-SELECT 'jobs' as table_name, column_name, data_type, numeric_precision, numeric_scale
-FROM information_schema.columns
-WHERE table_name = 'jobs'
-  AND column_name IN (
-    'estimated_labor_hours', 'actual_labor_hours', 'labor_rate',
-    'material_cost', 'other_expenses', 'quoted_price', 'final_price', 'deposit_amount'
-  )
-UNION ALL
-SELECT 'estimates' as table_name, column_name, data_type, numeric_precision, numeric_scale
-FROM information_schema.columns
-WHERE table_name = 'estimates'
-  AND column_name = 'total_price'
-ORDER BY table_name, column_name;
-```
+**Just copy and paste the contents of `fix_jobs_numeric_precision.sql`** into the Supabase SQL Editor and run it. The estimates table doesn't need fixing unless you're also getting errors there.
 
 ### After Running Migration
 
@@ -88,8 +58,11 @@ After running the migration successfully, you should be able to:
 ### Verification
 
 The verification query at the end will show you the new precision values:
-- `numeric_precision: 10` = up to 99,999,999.99
-- `numeric_precision: 12` = up to 9,999,999,999.99
+- `numeric_precision: 15` = up to 9,999,999,999,999.99 (almost 10 trillion)
+- `numeric_precision: 6` = up to 9,999.99 (for profit_margin percentage)
 - `numeric_scale: 2` = 2 decimal places (cents)
 
-All columns should show `numeric_scale: 2` for proper currency formatting.
+All monetary columns should show:
+- `numeric_precision: 15`
+- `numeric_scale: 2`
+- `is_generated: NEVER` (for base columns) or `ALWAYS` (for computed columns)

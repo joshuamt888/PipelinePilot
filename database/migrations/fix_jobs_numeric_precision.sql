@@ -1,39 +1,76 @@
 -- Fix Jobs Table Numeric Field Precision
 -- Issue: NUMERIC(5,2) only allows values up to $999.99
--- Solution: Increase precision to NUMERIC(12,2) to support up to $9,999,999,999.99
+-- Solution: Increase precision to NUMERIC(15,2) to support realistic job values
 
--- This migration increases the precision of all monetary fields in the jobs table
--- to support realistic job values (tens or hundreds of thousands of dollars)
+-- This migration safely handles existing data by:
+-- 1. Dropping generated columns that might have overflow values
+-- 2. Cleaning up any bad data
+-- 3. Updating base column types to larger precision
+-- 4. Recreating generated columns with proper constraints
 
 BEGIN;
 
--- Financial - Labor fields
+-- Step 1: Drop generated columns (they'll be recreated)
 ALTER TABLE jobs
-    ALTER COLUMN estimated_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN actual_labor_hours TYPE NUMERIC(10, 2),
-    ALTER COLUMN labor_rate TYPE NUMERIC(10, 2);
+    DROP COLUMN IF EXISTS total_cost,
+    DROP COLUMN IF EXISTS profit,
+    DROP COLUMN IF EXISTS profit_margin;
 
--- Financial - Cost fields
+-- Step 2: Clean up any NULL or invalid values in base columns
+UPDATE jobs SET
+    estimated_labor_hours = 0 WHERE estimated_labor_hours IS NULL,
+    actual_labor_hours = 0 WHERE actual_labor_hours IS NULL,
+    labor_rate = 0 WHERE labor_rate IS NULL,
+    material_cost = 0 WHERE material_cost IS NULL,
+    other_expenses = 0 WHERE other_expenses IS NULL,
+    quoted_price = 0 WHERE quoted_price IS NULL,
+    final_price = 0 WHERE final_price IS NULL,
+    deposit_amount = 0 WHERE deposit_amount IS NULL;
+
+-- Step 3: Update all monetary fields to larger precision
+-- Using NUMERIC(15,2) to support up to $9,999,999,999,999.99
 ALTER TABLE jobs
-    ALTER COLUMN material_cost TYPE NUMERIC(12, 2),
-    ALTER COLUMN other_expenses TYPE NUMERIC(12, 2);
+    ALTER COLUMN estimated_labor_hours TYPE NUMERIC(15, 2),
+    ALTER COLUMN actual_labor_hours TYPE NUMERIC(15, 2),
+    ALTER COLUMN labor_rate TYPE NUMERIC(15, 2),
+    ALTER COLUMN material_cost TYPE NUMERIC(15, 2),
+    ALTER COLUMN other_expenses TYPE NUMERIC(15, 2),
+    ALTER COLUMN quoted_price TYPE NUMERIC(15, 2),
+    ALTER COLUMN final_price TYPE NUMERIC(15, 2),
+    ALTER COLUMN deposit_amount TYPE NUMERIC(15, 2);
 
--- Financial - Revenue fields
+-- Step 4: Recreate generated columns with proper logic
 ALTER TABLE jobs
-    ALTER COLUMN quoted_price TYPE NUMERIC(12, 2),
-    ALTER COLUMN final_price TYPE NUMERIC(12, 2);
+    ADD COLUMN total_cost NUMERIC(15, 2) GENERATED ALWAYS AS (
+        COALESCE(material_cost, 0) +
+        COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
+        COALESCE(other_expenses, 0)
+    ) STORED;
 
--- Deposits
 ALTER TABLE jobs
-    ALTER COLUMN deposit_amount TYPE NUMERIC(12, 2);
+    ADD COLUMN profit NUMERIC(15, 2) GENERATED ALWAYS AS (
+        COALESCE(final_price, 0) - (
+            COALESCE(material_cost, 0) +
+            COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
+            COALESCE(other_expenses, 0)
+        )
+    ) STORED;
 
--- Note: Generated columns (total_cost, profit, profit_margin) will automatically
--- adapt to the new precision since they're computed from the updated columns
+ALTER TABLE jobs
+    ADD COLUMN profit_margin NUMERIC(6, 2) GENERATED ALWAYS AS (
+        CASE WHEN COALESCE(final_price, 0) > 0
+        THEN ((COALESCE(final_price, 0) - (
+            COALESCE(material_cost, 0) +
+            COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
+            COALESCE(other_expenses, 0)
+        )) / COALESCE(final_price, 1)) * 100
+        ELSE 0 END
+    ) STORED;
 
 COMMIT;
 
 -- Verify the changes
-SELECT column_name, data_type, numeric_precision, numeric_scale
+SELECT column_name, data_type, numeric_precision, numeric_scale, is_generated
 FROM information_schema.columns
 WHERE table_name = 'jobs'
   AND column_name IN (
@@ -44,6 +81,9 @@ WHERE table_name = 'jobs'
     'other_expenses',
     'quoted_price',
     'final_price',
-    'deposit_amount'
+    'deposit_amount',
+    'total_cost',
+    'profit',
+    'profit_margin'
   )
 ORDER BY column_name;
