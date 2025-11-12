@@ -200,6 +200,7 @@ app.get('/dashboard', (req, res) => {
   console.log('Dashboard route hit');
   const filePath = path.join(__dirname, 'public', 'dashboard', 'index.html');
   console.log('Serving file:', filePath);
+  res.setHeader('Content-Type', 'text/html');
   res.sendFile(filePath);
 });
 
