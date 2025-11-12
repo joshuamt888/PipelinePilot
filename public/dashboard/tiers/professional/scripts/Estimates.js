@@ -383,7 +383,7 @@ window.EstimatesModule = {
                     <div class="estimate-card-header">
                         <div class="estimate-header-left">
                             <div class="estimate-number">${estimate.estimate_number || 'EST-???'}</div>
-                            <h3 class="estimate-title">${this.estimates_truncate(estimate.title || 'Untitled', 50)}</h3>
+                            <h3 class="estimate-title">${this.estimates_truncate(estimate.title || 'Untitled', 35)}</h3>
                         </div>
                         ${this.estimates_renderStatusBadge(estimate.status)}
                     </div>
