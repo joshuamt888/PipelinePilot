@@ -823,16 +823,18 @@ window.PipelineModule = {
             if (btn.disabled) return;
             btn.disabled = true;
 
+            // Capture form values BEFORE closing modal
+            const updateData = {
+                type: document.getElementById('editType').value || null,
+                quality_score: parseInt(document.getElementById('editScore').value),
+                notes: document.getElementById('editNotes').value.trim() || null
+            };
+
             // Close modal immediately
             modal.remove();
 
             try {
-                await API.updateLead(lead.id, {
-                    type: document.getElementById('editType').value || null,
-                    quality_score: parseInt(document.getElementById('editScore').value),
-                    notes: document.getElementById('editNotes').value.trim() || null
-                });
-
+                await API.updateLead(lead.id, updateData);
                 await this.loadData();
                 this.render();
                 this.notify('Lead updated successfully', 'success');
