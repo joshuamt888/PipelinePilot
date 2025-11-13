@@ -44,6 +44,498 @@
 
 ---
 
+## 🚀 PRE-LAUNCH REFACTOR & SECURITY LOCKDOWN
+
+**STATUS:** 🔴 CRITICAL - Must complete before launch
+**TIMELINE:** 16-20 hours total
+**PRIORITY:** This is the "lock in" phase - fun's over, time to ship it right
+
+### Why This Matters
+Current state: **105,000 lines of duplicated code** across 3 tier folders (free/professional/admin)
+Target state: **~40,000 lines total** with shared core + tier-specific additions
+Bug fixes currently need: **3 separate edits**
+Bug fixes after refactor: **1 edit**
+
+---
+
+## PHASE 0: TIER CONSOLIDATION (FOUNDATION) ⏱️ 6-8 hours
+
+### New Folder Structure
+```
+/dashboard/
+  ├── index.html              ← Smart loader (tier detection)
+  ├── /core/                  ← Everyone gets this (FREE + PRO)
+  │   ├── Dashboard.js
+  │   ├── AddLead.js
+  │   ├── Pipeline.js
+  │   ├── Scheduling.js
+  │   └── Settings.js
+  ├── /pro/                   ← PRO+ tier additions only
+  │   ├── Goals.js
+  │   ├── Estimates.js
+  │   └── Jobs.js
+  ├── /business/              ← Future (empty - team features)
+  │   └── .gitkeep
+  └── /enterprise/            ← Future (empty - SSO/audit)
+      └── .gitkeep
+```
+
+### How Smart Loading Works
+**index.html detects tier and loads appropriate modules:**
+```javascript
+// Step 1: Everyone loads core
+<script src="/dashboard/core/Dashboard.js"></script>
+<script src="/dashboard/core/Pipeline.js"></script>
+<script src="/dashboard/core/Settings.js"></script>
+
+// Step 2: Pro+ loads additional features
+if (userType in ['professional', 'professional_trial', 'business', 'enterprise', 'admin']) {
+  <script src="/dashboard/pro/Goals.js"></script>
+  <script src="/dashboard/pro/Estimates.js"></script>
+  <script src="/dashboard/pro/Jobs.js"></script>
+}
+
+// Step 3: Business+ loads team features (future)
+if (userType in ['business', 'enterprise', 'admin']) {
+  // Future: <script src="/dashboard/business/TeamManagement.js"></script>
+}
+
+// Step 4: Enterprise loads SSO/audit (future)
+if (userType === 'enterprise' || userType === 'admin') {
+  // Future: <script src="/dashboard/enterprise/SSO.js"></script>
+}
+```
+
+### Migration Checklist
+- [ ] **Move to /core/**: Dashboard.js, Pipeline.js, Scheduling.js, Settings.js, AddLead.js
+- [ ] **Move to /pro/**: Goals.js, Estimates.js, Jobs.js, JobsManagement.js
+- [ ] **Update index.html**: Implement smart tier-based loading
+- [ ] **Add tier gates in Settings.js**: Free users see "Upgrade" prompts for pro features
+- [ ] **Test all tiers**: Verify free sees core only, pro sees core + pro modules
+- [ ] **Delete old /tiers/ folders**: Once migration verified
+
+### Feature Gating Pattern (In Settings.js)
+```javascript
+renderSecurityTab() {
+    const { user_type } = this.state.profile;
+
+    return `
+        <!-- Everyone gets password change -->
+        ${this.renderPasswordSection()}
+
+        <!-- Pro+ gets MFA -->
+        ${this.isProTier(user_type)
+            ? this.renderMFASection()
+            : this.renderUpgradePrompt('MFA', 'Secure your account with two-factor authentication')
+        }
+
+        <!-- Everyone gets data export -->
+        ${this.renderDataExportSection()}
+    `;
+}
+
+isProTier(userType) {
+    return ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(userType);
+}
+```
+
+---
+
+## PHASE 1: SECURITY LOCKDOWN (GO HARD) ⏱️ 4-5 hours
+
+**"Time to lock in - this is where we go hard on ourselves"**
+
+### 1.1 Input Validation & Injection Prevention
+- [ ] **Text inputs**: Set max length to 1,000 chars across ALL forms
+- [ ] **Number inputs**: Validate to 12,2 decimal format
+- [ ] **Match frontend validators**: Backend limits must match frontend exactly
+- [ ] **Check every form**: Lead forms, task forms, estimate forms, job forms, settings forms
+- [ ] **SQL injection audit**: Review all `.select()`, `.insert()`, `.update()` calls
+- [ ] **CSS injection prevention**: Sanitize any user content rendered as styles
+
+### 1.2 XSS Protection Deep Dive
+- [ ] **Audit API.escapeHtml**: Is it comprehensive or a "janky excuse"?
+- [ ] **Test injection vectors**: Try `<script>alert('xss')</script>` in all text fields
+- [ ] **DOM manipulation**: All `.innerHTML` must use escaped content or `.textContent`
+- [ ] **URL validation**: Whitelist internal URLs in redirects (already done in register.html:686-693)
+- [ ] **Content Security Policy**: Verify CSP headers block inline scripts
+
+**Example fixes needed:**
+```javascript
+// BAD - XSS vulnerable
+element.innerHTML = userInput;
+
+// GOOD - Safe
+element.textContent = userInput;
+// OR
+element.innerHTML = API.escapeHtml(userInput);
+```
+
+### 1.3 Notification Security Check
+- [ ] **Audit toast notifications**: Do they escape user data?
+- [ ] **Error messages**: Do they expose sensitive info (DB errors, file paths)?
+- [ ] **Success messages**: Do they reflect user input safely?
+
+### 1.4 Authentication Security
+- [ ] **Session validation**: Check both at login AND on page refresh
+- [ ] **Trial expiration**: Enforce at index.html load + auth check (dual validation)
+- [ ] **Token refresh**: Verify Supabase auto-refresh works correctly
+- [ ] **Logout everywhere**: Test session invalidation
+
+---
+
+## PHASE 2: PERFORMANCE & API OPTIMIZATION ⏱️ 3-4 hours
+
+### 2.1 Batch Operation Audit
+**Goal**: Find every place we make multiple API calls that could be one batch call
+
+- [ ] **Review api.js**: Look for opportunities to add more batch functions
+- [ ] **Check Dashboard.js**: Are stats fetched separately or in one query?
+- [ ] **Check Pipeline.js**: Drag-and-drop updates - can we batch them?
+- [ ] **Check Scheduling.js**: Task list loads - N+1 query issue?
+- [ ] **Check Goals.js**: Progress updates - batchable?
+- [ ] **Check Estimates.js**: Line item updates - batchable?
+- [ ] **Check Jobs.js**: Material/crew updates - batchable?
+
+**Example optimization:**
+```javascript
+// BAD - 10 separate API calls
+for (const taskId of taskIds) {
+    await API.updateTask(taskId, { status: 'completed' });
+}
+
+// GOOD - 1 batch call
+await API.batchUpdateTasks(taskIds, { status: 'completed' });
+```
+
+### 2.2 Supabase Slow Query Analysis
+- [ ] **Check Supabase Dashboard**: Database → Query Performance
+- [ ] **Identify slow queries**: Look for >500ms queries
+- [ ] **Add missing indexes**: user_id, status, created_at, lead_id, etc.
+- [ ] **Review RLS policies**: Are they causing sequential scans?
+- [ ] **Use EXPLAIN ANALYZE**: On slow queries to find bottlenecks
+
+### 2.3 Fix VS Code Problems
+- [ ] **Open Problems panel**: Fix the 2 existing issues
+- [ ] **Document what they were**: Add to this section after fixing
+
+---
+
+## PHASE 3: TIER LIMITS & TRIAL ENFORCEMENT ⏱️ 2-3 hours
+
+### 3.1 Resource Limits by Tier
+
+**FREE TIER LIMITS:**
+- Leads: 50 max
+- Estimates: 10 max (photo storage limit)
+- Jobs: 10 max (photo storage limit)
+- Tasks: 10,000 max (shared with Pro)
+- Goals: Not available (upgrade prompt)
+
+**PRO TIER LIMITS:**
+- Leads: 5,000 max
+- Estimates: 10 max (photo storage limit - same as free)
+- Jobs: 10 max (photo storage limit - same as free)
+- Tasks: 10,000 max
+- Goals: Unlimited
+
+**CRITICAL RULE:** On downgrade from Pro → Free:
+- User KEEPS all existing data (50+ leads, etc.)
+- User CANNOT ADD new data beyond free limits
+- Show "Upgrade to add more" message when limit hit
+
+### 3.2 Implement Limit Checks
+- [ ] **Update createLead()**: Check tier limit before insert
+- [ ] **Update createEstimate()**: Check 10-estimate limit
+- [ ] **Update createJob()**: Check 10-job limit
+- [ ] **Update createGoal()**: Block for free tier (show upgrade prompt)
+- [ ] **Add helpful errors**: "You've hit the free tier limit. Upgrade to Pro for 5,000 leads!"
+
+**Example pattern:**
+```javascript
+async createEstimate(estimateData) {
+    const profile = await this.getProfile();
+    const { data: estimates } = await supabase
+        .from('estimates')
+        .select('id', { count: 'exact', head: true });
+
+    if (estimates.count >= 10) {
+        throw new Error('ESTIMATE_LIMIT:You\'ve reached the estimate limit (10 max). Delete old estimates or upgrade for more storage.');
+    }
+
+    // Continue with creation...
+}
+```
+
+### 3.3 Trial Enforcement (REMOVE CRON JOB)
+
+**Old way (fragile):**
+- Cron job runs daily at 2AM
+- Checks trial_end_date, downgrades users
+- Misses users who log in between checks
+
+**New way (bulletproof):**
+```javascript
+// In index.html - runs on EVERY page load
+async function checkTrialStatus() {
+    const profile = await API.getProfile();
+
+    if (profile.user_type === 'professional_trial') {
+        const now = new Date();
+        const trialEnd = new Date(profile.trial_end_date);
+
+        if (now > trialEnd) {
+            // Auto-downgrade to free
+            await supabase.rpc('downgrade_trial_to_free');
+
+            // Show modal: "Your trial has ended. Upgrade to keep Pro features!"
+            showTrialExpiredModal();
+
+            // Reload page to reflect new tier
+            window.location.reload();
+        }
+    }
+}
+```
+
+- [ ] **Remove cron job**: Delete daily trial check
+- [ ] **Add index.html check**: Trial validation on page load
+- [ ] **Add auth check**: Also validate on login flow (backup)
+- [ ] **Test trial expiration**: Manually set trial_end_date to yesterday, verify downgrade
+
+### 3.4 Upgrade CTA for Free Users
+
+**Add to Settings.js (FREE users only):**
+- [ ] **New tab**: "Upgrade" (only visible to free tier)
+- [ ] **Floating nav button**: "Upgrade to Pro!" or "Start your free 2-week trial!"
+- [ ] **Dynamic text**: Changes if user already used trial
+  - Never used trial: "Start your free 2-week trial!"
+  - Already used trial: "Upgrade to Pro!"
+
+**Example:**
+```javascript
+renderTabs() {
+    const { user_type, trial_end_date } = this.state.profile;
+    const isFree = user_type === 'free';
+    const hasUsedTrial = trial_end_date !== null;
+
+    return `
+        ${this.renderTab('account', 'Account')}
+        ${this.renderTab('preferences', 'Preferences')}
+        ${this.renderTab('security', 'Security')}
+        ${isFree ? this.renderTab('upgrade', 'Upgrade ⭐') : ''}
+    `;
+}
+
+renderUpgradeTab() {
+    const hasUsedTrial = this.state.profile.trial_end_date !== null;
+    const ctaText = hasUsedTrial ? 'Upgrade to Pro!' : 'Start your free 2-week trial!';
+
+    return `
+        <div class="upgrade-cta">
+            <h2>Unlock Pro Features</h2>
+            <ul>
+                <li>5,000 leads (vs 50)</li>
+                <li>Goals tracking</li>
+                <li>Estimates & Jobs</li>
+                <li>Priority support</li>
+            </ul>
+            <button class="upgrade-btn">${ctaText}</button>
+        </div>
+    `;
+}
+```
+
+---
+
+## PHASE 4: STYLING & CROSS-PLATFORM FIX ⏱️ 1-2 hours
+
+### 4.1 Fix Windows Color Breakage
+
+**Problem**: Colors work on Mac, broken on Windows
+**Root cause**: CSS variables not shared via utils.js
+**Solution**: Centralize ALL color definitions in utils.js
+
+- [ ] **Move colors to utils.js**: Extract all `--primary`, `--secondary`, etc.
+- [ ] **Use CSS variables everywhere**: Replace hardcoded colors
+- [ ] **Test on Windows**: Verify colors render correctly
+- [ ] **Test on Mac**: Ensure no regression
+
+**Pattern:**
+```javascript
+// utils.js - Define colors ONCE
+:root {
+    --primary: #667eea;
+    --primary-dark: #4f46e5;
+    --secondary: #764ba2;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --text-primary: #1a202c;
+    --text-secondary: #6b7280;
+    --surface: #ffffff;
+    --surface-hover: #f9fafb;
+    --border: #e5e7eb;
+}
+
+// All modules reference these variables
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+```
+
+---
+
+## PHASE 5: CODE CLEANUP & TESTING ⏱️ 2-3 hours
+
+### 5.1 Remove Artificial Comments
+**Goal**: Make code look professional and intentional, not AI-generated
+
+- [ ] **Find and remove**: `// version AMAZING NICE`, `// THIS IS SO COOL`, etc.
+- [ ] **Keep explanatory comments**: Business logic, security notes, edge cases
+- [ ] **Remove commented-out code**: Clean up old experiments
+- [ ] **Standardize format**: Use JSDoc for functions
+
+**BAD comments to remove:**
+```javascript
+// THIS IS FIRE 🔥🔥🔥
+// AMAZING FEATURE!!!
+// v2.0 LETS GOOO
+```
+
+**GOOD comments to keep:**
+```javascript
+// RLS policy prevents users from accessing other users' data
+// Edge case: If trial_end_date is null, user has never trialed
+// SECURITY: Whitelist internal URLs only to prevent open redirect
+```
+
+### 5.2 Auth Flow Testing
+- [ ] **Test registration**: Create account, verify email works
+- [ ] **Test login**: Email/password, wrong credentials, unverified account
+- [ ] **Test password reset**: Request reset, receive email, set new password
+- [ ] **Test trial flow**: Start trial, verify features unlock, test expiration
+- [ ] **Test downgrade**: Pro → Free, verify limits enforced
+- [ ] **Test upgrade**: Free → Pro, verify features unlock
+
+### 5.3 Module Testing
+- [ ] **Test Dashboard**: Stats load correctly, no console errors
+- [ ] **Test Pipeline**: Drag-and-drop, lead editing, stage changes
+- [ ] **Test Scheduling**: Task creation, completion, deletion
+- [ ] **Test Goals**: Creation, progress tracking, recurring goals
+- [ ] **Test Estimates**: PDF export, photo upload, acceptance flow
+- [ ] **Test Jobs**: Material tracking, crew management, completion
+
+---
+
+## PHASE 6: ANALYTICS & SEO SETUP ⏱️ 2-3 hours
+
+### 6.1 Implement Analytics Tracking
+- [ ] **Read analytics.md**: Review tracking requirements
+- [ ] **Set up user metrics**: Page views, feature usage, conversion events
+- [ ] **Add cookie consent**: GDPR-compliant banner
+- [ ] **Test tracking**: Verify events fire correctly
+- [ ] **Privacy policy update**: Document what data we collect
+
+### 6.2 Static Pages & Content
+- [ ] **Create static pages**: Features, pricing, about, contact, blog
+- [ ] **Add YouTube videos**: Private link embeds showing feature demos
+- [ ] **Optimize images**: Compress, add alt text for SEO
+- [ ] **Add meta tags**: title, description, og:image for social sharing
+
+### 6.3 SEO Optimization
+- [ ] **Get SEMrush trial**: Sign up for free trial
+- [ ] **Audit every page**: Run SEO score on all static pages
+- [ ] **Fix SEO issues**: Title tags, meta descriptions, heading hierarchy
+- [ ] **Page speed test**: Use Lighthouse, aim for >90 score
+- [ ] **Mobile responsiveness**: Test on real devices
+- [ ] **Sitemap.xml**: Generate and submit to Google Search Console
+
+---
+
+## PHASE 7: DOCUMENTATION & ADMIN TOOLS ⏱️ 2-3 hours
+
+### 7.1 Admin Commands Documentation
+**Create .env.example with admin SQL commands**
+
+```bash
+# ============================================
+# ADMIN COMMANDS - Tier Management
+# ============================================
+
+# Upgrade user to Pro (manual override)
+# UPDATE users SET user_type = 'professional', current_lead_limit = 5000 WHERE email = 'user@example.com';
+
+# Start 14-day trial
+# UPDATE users SET user_type = 'professional_trial', trial_start_date = NOW(), trial_end_date = NOW() + INTERVAL '14 days', current_lead_limit = 5000 WHERE email = 'user@example.com';
+
+# Downgrade user to Free
+# UPDATE users SET user_type = 'free', current_lead_limit = 50 WHERE email = 'user@example.com';
+
+# Check user tier status
+# SELECT email, user_type, current_lead_limit, current_leads, trial_end_date FROM users WHERE email = 'user@example.com';
+
+# ============================================
+# TIER LIMITS REFERENCE
+# ============================================
+# FREE TIER:
+#   - Leads: 50
+#   - Estimates: 10
+#   - Jobs: 10
+#   - Tasks: 10,000
+#   - Goals: Locked
+#
+# PRO TIER:
+#   - Leads: 5,000
+#   - Estimates: 10 (photo storage limit)
+#   - Jobs: 10 (photo storage limit)
+#   - Tasks: 10,000
+#   - Goals: Unlimited
+```
+
+### 7.2 Database Structure Documentation
+- [ ] **Document all tables**: Schema, columns, indexes, triggers
+- [ ] **Document RLS policies**: What each policy protects
+- [ ] **Document functions**: What each DB function does
+- [ ] **Document triggers**: Auto-tracking triggers and their purpose
+- [ ] **Document unused features**: What's in the schema but not used yet
+
+**Example:**
+```markdown
+## Database Tables
+
+### users
+- **Purpose**: Core user profiles and tier management
+- **Columns**: id, email, user_type, current_lead_limit, current_leads, trial_end_date
+- **Indexes**: id (primary), email (unique), user_type
+- **RLS**: Users can only read/update their own row
+- **Triggers**: None
+
+### leads
+- **Purpose**: Lead/contact management
+- **Columns**: id, user_id, name, email, phone, company, status, type, created_at
+- **Indexes**: id (primary), user_id, status, type, created_at
+- **RLS**: Users can only see their own leads
+- **Triggers**: Auto-update current_leads counter on users table
+
+### estimates (Pro tier only)
+- **Purpose**: Quote/proposal management
+- **Columns**: id, user_id, lead_id, title, total_amount, status, photos (JSONB)
+- **Indexes**: id (primary), user_id, lead_id, status
+- **RLS**: Users can only see their own estimates
+- **Triggers**: None
+- **Storage limit**: 10 estimates max (photo storage constraint)
+```
+
+### 7.3 Feature Usage Audit
+- [ ] **Review all DB tables**: What's actively used vs planned for future
+- [ ] **Document feature status**: Live, planned, deprecated
+- [ ] **Clean up unused code**: Remove features that won't ship
+- [ ] **Update HANDOFF.md**: Reflect actual vs planned features
+
+---
+
 ## 🗂️ SUPABASE PERFORMANCE CHECKLIST
 
 Run this checklist periodically to optimize database performance, security, and reduce API calls:
