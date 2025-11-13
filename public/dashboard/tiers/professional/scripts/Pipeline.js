@@ -670,194 +670,14 @@ window.PipelineModule = {
         try {
             const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
             if (!lead || lead.status === newStatus) return;
-
-            const oldStatus = lead.status;
-
-            // Optimistically update the UI
+            
             lead.status = newStatus;
-            this.updateLeadCardPosition(leadId, oldStatus, newStatus);
-
-            // Sync with backend in background
             await API.updateLead(leadId, { status: newStatus });
-
-            // If moved to lost and no loss reason, prompt for it
-            if (newStatus === 'lost' && !lead.lost_reason) {
-                setTimeout(() => this.addLossReason(leadId), 300);
-            }
-
+            this.render();
+            
         } catch (error) {
             console.error('Failed to update lead status:', error);
             this.notify('Failed to update lead status', 'error');
-
-            // Revert on error
-            lead.status = oldStatus;
-            this.render();
-        }
-    },
-
-    updateLeadCardPosition(leadId, oldStatus, newStatus) {
-        // Find the card and columns
-        const card = document.querySelector(`[data-lead-id="${leadId}"]`);
-        const oldColumn = document.querySelector(`[data-stage-content="${oldStatus}"]`);
-        const newColumn = document.querySelector(`[data-stage-content="${newStatus}"]`);
-
-        if (!card || !oldColumn || !newColumn) {
-            // Fallback to full render if elements not found
-            this.render();
-            return;
-        }
-
-        // Move the card with smooth animation
-        card.style.transition = 'opacity 0.2s ease';
-        card.style.opacity = '0';
-
-        setTimeout(() => {
-            newColumn.appendChild(card);
-            card.style.opacity = '1';
-
-            // Update all UI elements
-            this.updateAllUI();
-        }, 200);
-    },
-
-    updateStageCounts() {
-        const organized = this.getOrganizedLeads();
-
-        this.stages.forEach(stage => {
-            const countElement = document.querySelector(`[data-stage="${stage.id}"] .stage-count`);
-            if (countElement) {
-                const count = organized[stage.id]?.length || 0;
-                countElement.textContent = count;
-            }
-        });
-    },
-
-    updateSectionTotals() {
-        const organized = this.getOrganizedLeads();
-
-        // Update Active Pipeline
-        const activeCount = ['new', 'contacted', 'negotiation']
-            .reduce((sum, id) => sum + organized[id].length, 0);
-        const activeValue = ['new', 'contacted', 'negotiation']
-            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
-
-        const activeBadge = document.querySelector('.pipeline-section:nth-child(1) .section-badge');
-        const activeValueEl = document.querySelector('.pipeline-section:nth-child(1) .section-value');
-        if (activeBadge) activeBadge.textContent = `${activeCount} leads`;
-        if (activeValueEl) activeValueEl.textContent = `$${activeValue.toLocaleString()}`;
-
-        // Update Sales Outcomes
-        const outcomeCount = ['qualified', 'closed', 'lost']
-            .reduce((sum, id) => sum + organized[id].length, 0);
-        const outcomeValue = ['qualified', 'closed', 'lost']
-            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
-
-        const outcomeBadge = document.querySelector('.pipeline-section:nth-child(2) .section-badge');
-        const outcomeValueEl = document.querySelector('.pipeline-section:nth-child(2) .section-value');
-        if (outcomeBadge) outcomeBadge.textContent = `${outcomeCount} leads`;
-        if (outcomeValueEl) outcomeValueEl.textContent = `$${outcomeValue.toLocaleString()}`;
-    },
-
-    updateStageValues() {
-        const organized = this.getOrganizedLeads();
-        this.stages.forEach(stage => {
-            const value = organized[stage.id].reduce((sum, l) => sum + (l.potential_value || 0), 0);
-            const valueElement = document.querySelector(`[data-stage="${stage.id}"] .stage-value`);
-            if (valueElement) {
-                valueElement.textContent = `$${value.toLocaleString()}`;
-            }
-        });
-    },
-
-    updateAllUI() {
-        this.updateStageCounts();
-        this.updateStageValues();
-        this.updateSectionTotals();
-    },
-
-    updateLeadCard(leadId, updates) {
-        const card = document.querySelector(`[data-lead-id="${leadId}"]`);
-        if (!card) {
-            this.render();
-            return;
-        }
-
-        // Update temperature icon
-        if (updates.type !== undefined) {
-            const tempBadge = card.querySelector('.temp-badge');
-            if (tempBadge) {
-                const typeIcon = updates.type === 'warm' ? 'flame' : updates.type === 'cold' ? 'snowflake' : 'minus';
-                const iconEl = tempBadge.querySelector('i');
-                if (iconEl) {
-                    iconEl.setAttribute('data-lucide', typeIcon);
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                }
-            }
-        }
-
-        // Update quality score
-        if (updates.quality_score !== undefined) {
-            const scoreBadge = card.querySelector('.score-badge');
-            if (scoreBadge) {
-                const scoreColor = updates.quality_score >= 8 ? 'var(--primary)' :
-                                  updates.quality_score >= 6 ? 'var(--success)' :
-                                  updates.quality_score >= 4 ? 'var(--warning)' : 'var(--danger)';
-                scoreBadge.textContent = updates.quality_score;
-                scoreBadge.style.background = scoreColor;
-            }
-        }
-
-        // Update notes preview (if visible)
-        if (updates.notes !== undefined) {
-            const notesEl = card.querySelector('.card-notes');
-            if (notesEl) {
-                if (updates.notes) {
-                    const truncated = updates.notes.length > 100 ? updates.notes.substring(0, 100) + '...' : updates.notes;
-                    notesEl.textContent = truncated;
-                    notesEl.style.display = 'block';
-                } else {
-                    notesEl.style.display = 'none';
-                }
-            }
-        }
-    },
-
-    updateDealValueInCard(leadId, value) {
-        const card = document.querySelector(`[data-lead-id="${leadId}"]`);
-        if (!card) {
-            this.render();
-            return;
-        }
-
-        // Check if deal value display already exists
-        let valueDisplay = card.querySelector('.deal-value-display');
-        const addButton = card.querySelector('.deal-value-btn');
-
-        if (value && value > 0) {
-            if (!valueDisplay) {
-                // Create new deal value display
-                const cardFooter = card.querySelector('.card-footer');
-                if (cardFooter) {
-                    const html = `
-                        <div class="deal-value-display">
-                            <span class="value-icon">💰</span>
-                            <span class="value-amount">$${value.toLocaleString()}</span>
-                            <button class="value-edit-btn" onclick="PipelineModule.editDealValue('${leadId}')" title="Edit">✏️</button>
-                        </div>
-                    `;
-                    if (addButton) {
-                        addButton.outerHTML = html;
-                    } else {
-                        cardFooter.insertAdjacentHTML('beforeend', html);
-                    }
-                }
-            } else {
-                // Update existing value
-                const amountEl = valueDisplay.querySelector('.value-amount');
-                if (amountEl) {
-                    amountEl.textContent = `$${value.toLocaleString()}`;
-                }
-            }
         }
     },
 
@@ -988,34 +808,14 @@ window.PipelineModule = {
             modal.remove();
 
             try {
-                // Store old values for revert
-                const oldData = {
-                    type: lead.type,
-                    quality_score: lead.quality_score,
-                    notes: lead.notes
-                };
-
-                // Optimistically update state
-                lead.type = updateData.type;
-                lead.quality_score = updateData.quality_score;
-                lead.notes = updateData.notes;
-
-                // Update card visually
-                this.updateLeadCard(lead.id, updateData);
-
-                // Sync with backend
                 await API.updateLead(lead.id, updateData);
+                await this.loadData();
+                this.render();
                 this.notify('Lead updated successfully', 'success');
 
             } catch (error) {
                 console.error('Failed to update lead:', error);
                 this.notify('Failed to update lead', 'error');
-
-                // Revert on error
-                lead.type = oldData.type;
-                lead.quality_score = oldData.quality_score;
-                lead.notes = oldData.notes;
-                this.render();
             }
         };
     },
@@ -1194,26 +994,15 @@ window.PipelineModule = {
             modal.remove();
 
             try {
-                const oldValue = lead.potential_value;
-
-                // Optimistically update state
+                await API.updateLead(leadId, { potential_value: value });
                 lead.potential_value = value;
 
-                // Update card and all UI
-                this.updateDealValueInCard(leadId, value);
-                this.updateAllUI();
-
-                // Sync with backend
-                await API.updateLead(leadId, { potential_value: value });
+                this.render();
                 this.notify(`Deal value added: $${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'success');
 
             } catch (error) {
                 console.error('Failed to add deal value:', error);
                 this.notify('Failed to add deal value', 'error');
-
-                // Revert on error
-                lead.potential_value = oldValue;
-                this.render();
             }
         };
         
