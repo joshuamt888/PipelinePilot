@@ -146,6 +146,8 @@ window.PipelineModule = {
         const analytics = this.getAnalytics();
         const activeCount = ['new', 'contacted', 'negotiation']
             .reduce((sum, id) => sum + organized[id].length, 0);
+        const activeValue = ['new', 'contacted', 'negotiation']
+            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
         const outcomeCount = ['qualified', 'closed', 'lost']
             .reduce((sum, id) => sum + organized[id].length, 0);
         const outcomeValue = ['qualified', 'closed', 'lost']
@@ -164,6 +166,7 @@ window.PipelineModule = {
                             <h2 class="section-title"><i data-lucide="target" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;"></i>Active Pipeline</h2>
                             <div class="section-badge">${activeCount} leads</div>
                         </div>
+                        <div class="section-value">$${activeValue.toLocaleString()}</div>
                     </div>
                     <div class="stages-grid">
                         ${this.stages.filter(s => s.row === 'active')
