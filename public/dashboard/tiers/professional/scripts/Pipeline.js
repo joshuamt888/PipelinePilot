@@ -108,7 +108,6 @@ window.PipelineModule = {
     // Calculate all analytics in one pass
     getAnalytics() {
         const organized = this.getOrganizedLeads();
-        const qualifiedLeads = organized.qualified || [];
         const closedLeads = organized.closed || [];
         const lostLeads = organized.lost || [];
 
@@ -116,10 +115,9 @@ window.PipelineModule = {
             sum + (l.potential_value || 0), 0
         );
 
-        const totalWins = qualifiedLeads.length + closedLeads.length;
-        const totalOutcome = totalWins + lostLeads.length;
+        const totalOutcome = closedLeads.length + lostLeads.length;
         const conversionRate = totalOutcome > 0 ?
-            Math.round((totalWins / totalOutcome) * 100) : 0;
+            Math.round((closedLeads.length / totalOutcome) * 100) : 0;
         
         const reasonCounts = {};
         lostLeads.forEach(lead => {
@@ -450,7 +448,7 @@ window.PipelineModule = {
                         </div>
                         <div class="card-content-analytics">
                             <div class="primary-metric">${analytics.conversionRate}%</div>
-                            <div class="metric-detail">Wins vs Lost</div>
+                            <div class="metric-detail">Closed vs Lost</div>
                         </div>
                     </div>
 

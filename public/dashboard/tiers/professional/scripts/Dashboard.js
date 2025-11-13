@@ -95,12 +95,10 @@ window.DashboardModule = {
             new Date(l.created_at) >= weekAgo
         ).length;
         
-        const totalQualified = this.state.leads.filter(l => l.status === 'qualified').length;
         const totalClosed = this.state.leads.filter(l => l.status === 'closed').length;
         const totalLost = this.state.leads.filter(l => l.status === 'lost').length;
-        const totalWins = totalQualified + totalClosed;
-        const totalOutcome = totalWins + totalLost;
-        const conversionRate = totalOutcome > 0 ? Math.round((totalWins / totalOutcome) * 100) : 0;
+        const totalOutcome = totalClosed + totalLost;
+        const conversionRate = totalOutcome > 0 ? Math.round((totalClosed / totalOutcome) * 100) : 0;
         
         const today = new Date().toISOString().split('T')[0];
         const todayTasks = this.state.tasks.filter(t =>
@@ -168,7 +166,7 @@ window.DashboardModule = {
                     </div>
                     <div class="dashboard-metric-value">${conversionRate}<span class="dashboard-metric-sub">%</span></div>
                     <div class="dashboard-metric-footer">
-                        <span class="dashboard-metric-detail">${totalWins} wins, ${totalLost} lost • Click for details</span>
+                        <span class="dashboard-metric-detail">${totalClosed} won, ${totalLost} lost • Click for details</span>
                     </div>
                 </div>
             </div>
