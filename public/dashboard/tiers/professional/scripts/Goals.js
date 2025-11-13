@@ -2241,24 +2241,22 @@ goals_attachEvents() {
             return false;
         }
 
-        if (!activePeriod || !startDate || !endDate) {
+        if (!activePeriod) {
             // Highlight period pills if no period selected
-            if (!activePeriod) {
-                const periodPills = document.querySelector('.goals-period-pills');
-                if (periodPills) {
-                    periodPills.style.border = '2px solid var(--danger)';
-                    periodPills.style.borderRadius = 'var(--radius-lg)';
-                    periodPills.style.padding = '0.5rem';
+            const periodPills = document.querySelector('.goals-period-pills');
+            if (periodPills) {
+                periodPills.style.border = '2px solid var(--danger)';
+                periodPills.style.borderRadius = 'var(--radius-lg)';
+                periodPills.style.padding = '0.5rem';
 
-                    // Remove error styling when a period is selected
-                    document.querySelectorAll('.goals-period-pill').forEach(pill => {
-                        pill.addEventListener('click', function clearPeriodError() {
-                            periodPills.style.border = '';
-                            periodPills.style.borderRadius = '';
-                            periodPills.style.padding = '';
-                        }, { once: true });
-                    });
-                }
+                // Remove error styling when a period is selected
+                document.querySelectorAll('.goals-period-pill').forEach(pill => {
+                    pill.addEventListener('click', function clearPeriodError() {
+                        periodPills.style.border = '';
+                        periodPills.style.borderRadius = '';
+                        periodPills.style.padding = '';
+                    }, { once: true });
+                });
             }
 
             return false;
@@ -2269,8 +2267,8 @@ goals_attachEvents() {
             title: title,
             description: description || null,
             period: activePeriod,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: startDate || null,
+            end_date: endDate || null,
             status: 'active',
             is_recurring: isRecurring,
             color: selectedColor || null
