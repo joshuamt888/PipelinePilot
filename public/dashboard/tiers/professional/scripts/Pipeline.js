@@ -766,10 +766,7 @@ window.PipelineModule = {
                             <button type="button" class="btn-danger" onclick="PipelineModule.deleteLead('${lead.id}')"><i data-lucide="trash-2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Delete</button>
                             <div class="form-actions-right">
                                 <button type="button" class="btn-secondary" onclick="document.getElementById('pipelineEditModal').remove()">Cancel</button>
-                                <button type="submit" class="btn-primary">
-                                    <span class="btn-text">Save Changes</span>
-                                    <span class="btn-loading" style="display: none;">⏳</span>
-                                </button>
+                                <button type="submit" class="btn-primary">Save Changes</button>
                             </div>
                         </div>
                     </form>
@@ -821,31 +818,28 @@ window.PipelineModule = {
         form.onsubmit = async (e) => {
             e.preventDefault();
             const btn = form.querySelector('.btn-primary');
-            const btnText = btn.querySelector('.btn-text');
-            const btnLoading = btn.querySelector('.btn-loading');
-            
+
+            // Prevent double submission
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            // Close modal immediately
+            modal.remove();
+
             try {
-                btnText.style.display = 'none';
-                btnLoading.style.display = 'inline-block';
-                btn.disabled = true;
-                
                 await API.updateLead(lead.id, {
                     type: document.getElementById('editType').value || null,
                     quality_score: parseInt(document.getElementById('editScore').value),
                     notes: document.getElementById('editNotes').value.trim() || null
                 });
-                
+
                 await this.loadData();
                 this.render();
-                modal.remove();
                 this.notify('Lead updated successfully', 'success');
-                
+
             } catch (error) {
                 console.error('Failed to update lead:', error);
                 this.notify('Failed to update lead', 'error');
-                btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
-                btn.disabled = false;
             }
         };
     },
@@ -929,10 +923,7 @@ window.PipelineModule = {
                         
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('dealValueModal').remove()">Cancel</button>
-                            <button type="submit" class="btn-primary">
-                                <span class="btn-text">Add Value</span>
-                                <span class="btn-loading" style="display: none;">⏳</span>
-                            </button>
+                            <button type="submit" class="btn-primary">Add Value</button>
                         </div>
                     </form>
                 </div>
@@ -1016,30 +1007,26 @@ window.PipelineModule = {
             e.preventDefault();
             const raw = input.value.replace(/[^0-9.]/g, '');
             const value = parseFloat(raw);
-            
+
             if (isNaN(value) || value < 0.01 || value > 99999999.99) return;
-            
-            const btnText = btn.querySelector('.btn-text');
-            const btnLoading = btn.querySelector('.btn-loading');
-            
+
+            // Prevent double submission
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            // Close modal immediately
+            modal.remove();
+
             try {
-                btnText.style.display = 'none';
-                btnLoading.style.display = 'inline-block';
-                btn.disabled = true;
-                
                 await API.updateLead(leadId, { potential_value: value });
                 lead.potential_value = value;
-                
-                modal.remove();
+
                 this.render();
                 this.notify(`Deal value added: $${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'success');
-                
+
             } catch (error) {
                 console.error('Failed to add deal value:', error);
                 this.notify('Failed to add deal value', 'error');
-                btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
-                btn.disabled = false;
             }
         };
         
@@ -1110,10 +1097,7 @@ window.PipelineModule = {
                         
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('lossReasonModal').remove()">Cancel</button>
-                            <button type="submit" class="btn-primary" disabled>
-                                <span class="btn-text">Add Reason</span>
-                                <span class="btn-loading" style="display: none;">⏳</span>
-                            </button>
+                            <button type="submit" class="btn-primary" disabled>Add Reason</button>
                         </div>
                     </form>
                 </div>
@@ -1188,28 +1172,24 @@ window.PipelineModule = {
             e.preventDefault();
             const reason = select.value === 'other' ? customInput.value.trim() : select.value;
             if (!reason) return;
-            
-            const btnText = btn.querySelector('.btn-text');
-            const btnLoading = btn.querySelector('.btn-loading');
-            
+
+            // Prevent double submission
+            if (btn.disabled) return;
+            btn.disabled = true;
+
+            // Close modal immediately
+            modal.remove();
+
             try {
-                btnText.style.display = 'none';
-                btnLoading.style.display = 'inline-block';
-                btn.disabled = true;
-                
                 await API.updateLead(leadId, { lost_reason: reason });
                 lead.lost_reason = reason;
-                
-                modal.remove();
+
                 this.render();
                 this.notify(`Loss reason added: ${reason}`, 'success');
-                
+
             } catch (error) {
                 console.error('Failed to add loss reason:', error);
                 this.notify('Failed to add loss reason', 'error');
-                btnText.style.display = 'inline-block';
-                btnLoading.style.display = 'none';
-                btn.disabled = false;
             }
         };
     },
