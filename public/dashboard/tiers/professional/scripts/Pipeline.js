@@ -204,11 +204,6 @@ window.PipelineModule = {
 
     // Render header with progress
     renderHeader() {
-        const { currentLeads, currentLeadLimit } = this.state.stats;
-        const percentage = Math.min((currentLeads / currentLeadLimit) * 100, 100);
-        const isNear = percentage > 80;
-        const isAt = percentage >= 100;
-        
         return `
             <div class="pipeline-header">
                 <div class="header-brand">
@@ -217,27 +212,6 @@ window.PipelineModule = {
                         <span class="title-text">Sales Pipeline</span>
                     </h1>
                     <p class="pipeline-subtitle">Track leads from first contact to closed deals</p>
-                </div>
-                
-                <div class="monthly-progress">
-                    <div class="progress-header">
-                        <span class="progress-title">Lead Progress</span>
-                        <span class="progress-stats">
-                            <span class="current-count">${currentLeads}</span>
-                            <span class="separator">/</span>
-                            <span class="limit-count">${currentLeadLimit}</span>
-                            <span class="leads-text">leads</span>
-                        </span>
-                    </div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-track">
-                            <div class="progress-bar-fill ${isAt ? 'at-limit' : isNear ? 'near-limit' : ''}" 
-                                 style="width: ${percentage}%"></div>
-                        </div>
-                        <span class="progress-percentage">${Math.round(percentage)}%</span>
-                    </div>
-                    ${isAt ? '<div class="progress-warning at-limit"><i data-lucide="alert-triangle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Monthly limit reached</div>' :
-                      isNear ? '<div class="progress-warning near-limit"><i data-lucide="bell" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Approaching limit</div>' : ''}
                 </div>
             </div>
         `;
