@@ -680,6 +680,11 @@ window.PipelineModule = {
             // Sync with backend in background
             await API.updateLead(leadId, { status: newStatus });
 
+            // If moved to lost and no loss reason, prompt for it
+            if (newStatus === 'lost' && !lead.lost_reason) {
+                setTimeout(() => this.addLossReason(leadId), 300);
+            }
+
         } catch (error) {
             console.error('Failed to update lead status:', error);
             this.notify('Failed to update lead status', 'error');
@@ -710,9 +715,8 @@ window.PipelineModule = {
             newColumn.appendChild(card);
             card.style.opacity = '1';
 
-            // Update counts
-            this.updateStageCounts();
-            this.updateSectionTotals();
+            // Update all UI elements
+            this.updateAllUI();
         }, 200);
     },
 
@@ -752,6 +756,23 @@ window.PipelineModule = {
         const outcomeValueEl = document.querySelector('.pipeline-section:nth-child(2) .section-value');
         if (outcomeBadge) outcomeBadge.textContent = `${outcomeCount} leads`;
         if (outcomeValueEl) outcomeValueEl.textContent = `$${outcomeValue.toLocaleString()}`;
+    },
+
+    updateStageValues() {
+        const organized = this.getOrganizedLeads();
+        this.stages.forEach(stage => {
+            const value = organized[stage.id].reduce((sum, l) => sum + (l.potential_value || 0), 0);
+            const valueElement = document.querySelector(`[data-stage="${stage.id}"] .stage-value`);
+            if (valueElement) {
+                valueElement.textContent = `$${value.toLocaleString()}`;
+            }
+        });
+    },
+
+    updateAllUI() {
+        this.updateStageCounts();
+        this.updateStageValues();
+        this.updateSectionTotals();
     },
 
     updateLeadCard(leadId, updates) {
@@ -1178,9 +1199,9 @@ window.PipelineModule = {
                 // Optimistically update state
                 lead.potential_value = value;
 
-                // Update card and totals
+                // Update card and all UI
                 this.updateDealValueInCard(leadId, value);
-                this.updateSectionTotals();
+                this.updateAllUI();
 
                 // Sync with backend
                 await API.updateLead(leadId, { potential_value: value });
