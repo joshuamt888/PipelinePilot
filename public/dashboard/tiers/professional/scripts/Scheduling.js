@@ -208,13 +208,10 @@ window.SchedulingModule = {
                         <button class="scheduling-back-btn" onclick="SchedulingModule.scheduling_showDashboard()">
                             ← Back to Dashboard
                         </button>
-                        <h2 class="scheduling-table-title">All Tasks (${filteredTasks.length})</h2>
+                        <h2 class="scheduling-table-title">${totalTasks}/${this.scheduling_state.taskLimit} tasks</h2>
                     </div>
                     <div class="scheduling-table-header-right">
                         ${totalTasks > 0 ? `
-                            <div class="scheduling-task-counter">
-                                ${totalTasks} / ${this.scheduling_state.taskLimit}
-                            </div>
                             <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
                                     onclick="SchedulingModule.scheduling_toggleBatchMode()">
                                 ${this.scheduling_state.batchEditMode ?
@@ -2495,18 +2492,22 @@ modal.addEventListener('mouseup', (e) => {
         const count = this.scheduling_state.selectedTaskIds.length;
         return `
             <div class="scheduling-batch-actions-bar">
-                <div class="scheduling-batch-actions-content">
-                    <span class="scheduling-batch-count">${count} task${count !== 1 ? 's' : ''} selected</span>
-                    <div class="scheduling-batch-buttons">
-                        <button class="scheduling-batch-btn scheduling-batch-complete"
-                                onclick="SchedulingModule.scheduling_batchComplete()">
-                            Complete Selected
-                        </button>
-                        <button class="scheduling-batch-btn scheduling-batch-delete"
-                                onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
-                            Delete Selected
-                        </button>
-                    </div>
+                <div class="scheduling-batch-actions-left">
+                    <div class="scheduling-batch-selected">${count} selected</div>
+                </div>
+                <div class="scheduling-batch-actions-right">
+                    <button class="scheduling-batch-btn scheduling-batch-complete" onclick="SchedulingModule.scheduling_batchComplete()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Complete
+                    </button>
+                    <button class="scheduling-batch-btn scheduling-batch-delete" onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete
+                    </button>
                 </div>
             </div>
         `;
@@ -5076,55 +5077,83 @@ modal.addEventListener('mouseup', (e) => {
     background: #dc2626;
 }
 
+/* BATCH ACTIONS - Floating Style */
 .scheduling-batch-actions-bar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-}
-
-.scheduling-batch-actions-content {
+    position: sticky;
+    bottom: 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    margin-top: 1rem;
 }
 
-.scheduling-batch-count {
-    color: white;
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-.scheduling-batch-buttons {
+.scheduling-batch-actions-left {
     display: flex;
+    align-items: center;
     gap: 0.75rem;
 }
 
+.scheduling-batch-selected {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.scheduling-batch-actions-right {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .scheduling-batch-btn {
-    padding: 0.75rem 1.5rem;
-    border: 2px solid white;
-    background: rgba(255, 255, 255, 0.15);
-    color: white;
-    border-radius: 8px;
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(10px);
-    text-align: center;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .scheduling-batch-btn:hover {
-    background: white;
-    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+}
+
+.scheduling-batch-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.scheduling-batch-btn.scheduling-batch-complete {
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.scheduling-batch-btn.scheduling-batch-complete:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+}
+
+.scheduling-batch-btn.scheduling-batch-delete {
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .scheduling-batch-btn.scheduling-batch-delete:hover {
-    background: #ef4444;
-    border-color: #ef4444;
-    color: white;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger);
 }
 
 /* Delete Modal - Dark/Light Mode Adaptive */

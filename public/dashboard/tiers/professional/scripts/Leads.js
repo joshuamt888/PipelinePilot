@@ -196,13 +196,10 @@ window.AddLeadModule = {
                         <button class="addlead-back-btn" onclick="AddLeadModule.addlead_showDashboard()">
                             ← Back to Dashboard
                         </button>
-                        <h2 class="addlead-table-title">All Leads (${filteredLeads.length})</h2>
+                        <h2 class="addlead-table-title">${totalLeads}/${this.addlead_state.leadLimit} leads</h2>
                     </div>
                     <div class="addlead-table-header-right">
                         ${totalLeads > 0 ? `
-                            <div class="addlead-lead-counter">
-                                ${totalLeads} / ${this.addlead_state.leadLimit}
-                            </div>
                             <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
                                     onclick="AddLeadModule.addlead_toggleBatchMode()">
                                 ${this.addlead_state.batchEditMode ?
@@ -438,14 +435,23 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Company</label>
-                        <input type="text" 
-                               name="company" 
+                        <input type="text"
+                               name="company"
                                class="addlead-form-input"
                                maxlength="50"
                                data-validate="company">
                         <div class="addlead-input-feedback" id="addlead_companyFeedback"></div>
                     </div>
-                    
+
+                    <div class="addlead-form-group">
+                        <label class="addlead-form-label">Position</label>
+                        <input type="text"
+                               name="position"
+                               class="addlead-form-input"
+                               maxlength="50"
+                               placeholder="Job title or role">
+                    </div>
+
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Email</label>
                         <input type="email" 
@@ -572,6 +578,7 @@ modal.addEventListener('mouseup', (e) => {
         const safeEmail = API.escapeHtml(lead.email || '');
         const safePhone = API.escapeHtml(lead.phone || '');
         const safeJobTitle = API.escapeHtml(lead.job_title || '');
+        const safePosition = API.escapeHtml(lead.position || '');
         const safeWebsite = API.escapeHtml(lead.website || '');
         const safeLinkedIn = API.escapeHtml(lead.linkedin_url || '');
         const sourceIcon = this.addlead_getSourceIcon(lead.source || null);
@@ -594,6 +601,7 @@ modal.addEventListener('mouseup', (e) => {
                         <div class="addlead-lead-header-info">
                             <h2 class="addlead-main-lead-name">${safeName}</h2>
                             ${safeCompany ? `<div class="addlead-lead-company-text">${safeCompany}</div>` : ''}
+                            ${safePosition ? `<div class="addlead-lead-job-title">${safePosition}</div>` : ''}
                             ${safeJobTitle ? `<div class="addlead-lead-job-title">${safeJobTitle}</div>` : ''}
                             <div class="addlead-lead-status-display">
                                 <span class="addlead-status-badge ${statusClass}">${this.addlead_formatStatus(lead.status)}</span>
@@ -783,6 +791,7 @@ modal.addEventListener('mouseup', (e) => {
     addlead_renderEditForm(lead) {
         const safeName = API.escapeHtml(lead.name || '');
         const safeCompany = API.escapeHtml(lead.company || '');
+        const safePosition = API.escapeHtml(lead.position || '');
         const safeEmail = API.escapeHtml(lead.email || '');
         const safePhone = API.escapeHtml(lead.phone || '');
         const safeSource = API.escapeHtml(lead.source || '');
@@ -806,15 +815,25 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Company</label>
-                        <input type="text" 
-                               name="company" 
+                        <input type="text"
+                               name="company"
                                class="addlead-form-input"
                                value="${safeCompany}"
                                maxlength="50"
                                data-validate="company">
                         <div class="addlead-input-feedback" id="addlead_edit_companyFeedback"></div>
                     </div>
-                    
+
+                    <div class="addlead-form-group">
+                        <label class="addlead-form-label">Position</label>
+                        <input type="text"
+                               name="position"
+                               class="addlead-form-input"
+                               value="${safePosition}"
+                               maxlength="50"
+                               placeholder="Job title or role">
+                    </div>
+
                     <div class="addlead-form-group">
                         <label class="addlead-form-label">Email</label>
                         <input type="email" 
@@ -2695,14 +2714,16 @@ addlead_showCustomSourceInput(targetInput) {
         const count = this.addlead_state.selectedLeadIds.length;
         return `
             <div class="addlead-batch-actions-bar">
-                <div class="addlead-batch-actions-content">
-                    <span class="addlead-batch-count">${count} lead${count !== 1 ? 's' : ''} selected</span>
-                    <div class="addlead-batch-buttons">
-                        <button class="addlead-batch-btn addlead-batch-delete"
-                                onclick="AddLeadModule.addlead_showBatchDeleteModal()">
-                            Delete Selected
-                        </button>
-                    </div>
+                <div class="addlead-batch-actions-left">
+                    <div class="addlead-batch-selected">${count} selected</div>
+                </div>
+                <div class="addlead-batch-actions-right">
+                    <button class="addlead-batch-btn addlead-batch-delete" onclick="AddLeadModule.addlead_showBatchDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Delete
+                    </button>
                 </div>
             </div>
         `;
@@ -4524,55 +4545,73 @@ addlead_showCustomSourceInput(targetInput) {
                 background: #dc2626;
             }
 
+            /* BATCH ACTIONS - Floating Style */
             .addlead-batch-actions-bar {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                padding: 1rem;
-                border-radius: 12px;
-                margin-bottom: 1rem;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
-            }
-
-            .addlead-batch-actions-content {
+                position: sticky;
+                bottom: 2rem;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                flex-wrap: wrap;
                 gap: 1rem;
+                padding: 1.5rem;
+                background: var(--surface);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                z-index: 100;
+                margin-top: 1rem;
             }
 
-            .addlead-batch-count {
-                color: white;
-                font-weight: 700;
-                font-size: 1rem;
-            }
-
-            .addlead-batch-buttons {
+            .addlead-batch-actions-left {
                 display: flex;
+                align-items: center;
                 gap: 0.75rem;
             }
 
+            .addlead-batch-selected {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--primary);
+            }
+
+            .addlead-batch-actions-right {
+                display: flex;
+                gap: 0.5rem;
+            }
+
             .addlead-batch-btn {
-                padding: 0.75rem 1.5rem;
-                border: 2px solid white;
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                border-radius: 8px;
+                padding: 0.625rem 1rem;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--surface);
+                color: var(--text-primary);
+                font-size: 0.85rem;
                 font-weight: 600;
                 cursor: pointer;
-                transition: all 0.2s ease;
-                backdrop-filter: blur(10px);
-                text-align: center;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
             }
 
             .addlead-batch-btn:hover {
-                background: white;
-                color: #667eea;
+                background: rgba(102, 126, 234, 0.1);
+                border-color: var(--primary);
+            }
+
+            .addlead-batch-btn svg {
+                width: 1rem;
+                height: 1rem;
+            }
+
+            .addlead-batch-btn.addlead-batch-delete {
+                color: var(--danger);
+                border-color: rgba(239, 68, 68, 0.3);
             }
 
             .addlead-batch-btn.addlead-batch-delete:hover {
-                background: #ef4444;
-                border-color: #ef4444;
-                color: white;
+                background: rgba(239, 68, 68, 0.1);
+                border-color: var(--danger);
             }
 
             /* Delete Modal - Dark/Light Mode Adaptive */
