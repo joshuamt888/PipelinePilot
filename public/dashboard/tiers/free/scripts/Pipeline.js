@@ -1257,8 +1257,7 @@ window.PipelineModule = {
                                 Cancel
                             </button>
                             <button type="button" class="btn-danger" id="confirmDeleteBtn">
-                                <span class="btn-text">Delete Lead</span>
-                                <span class="btn-loading" style="display: none;">⏳</span>
+                                Delete Lead
                             </button>
                         </div>
                     </div>
@@ -1296,27 +1295,23 @@ window.PipelineModule = {
     async confirmDeleteLead(leadId) {
         const modal = document.getElementById('pipelineDeleteModal');
         const btn = document.getElementById('confirmDeleteBtn');
-        const btnText = btn.querySelector('.btn-text');
-        const btnLoading = btn.querySelector('.btn-loading');
-        
+
+        // Prevent double clicks
+        if (btn.disabled) return;
+        btn.disabled = true;
+
+        // Close modal immediately
+        document.getElementById('pipelineEditModal')?.remove();
+        modal.remove();
+
         try {
-            btnText.style.display = 'none';
-            btnLoading.style.display = 'inline-block';
-            btn.disabled = true;
-            
             await API.deleteLead(leadId);
             this.state.leads = this.state.leads.filter(l => l.id.toString() !== leadId.toString());
-            
-            document.getElementById('pipelineEditModal')?.remove();
-            modal.remove();
             this.render();
             this.notify('Lead deleted successfully', 'success');
         } catch (error) {
             console.error('Failed to delete lead:', error);
             this.notify('Failed to delete lead', 'error');
-            btnText.style.display = 'inline-block';
-            btnLoading.style.display = 'none';
-            btn.disabled = false;
         }
     },
 
