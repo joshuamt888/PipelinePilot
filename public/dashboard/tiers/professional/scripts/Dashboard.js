@@ -101,9 +101,13 @@ window.DashboardModule = {
         const conversionRate = totalOutcome > 0 ? Math.round((totalClosed / totalOutcome) * 100) : 0;
         
         const today = new Date().toISOString().split('T')[0];
-        const todayTasks = this.state.tasks.filter(t => 
+        const todayTasks = this.state.tasks.filter(t =>
             t.due_date === today && t.status === 'pending'
         ).length;
+        const overdueTasks = this.state.tasks.filter(t =>
+            t.due_date && t.due_date < today && t.status === 'pending'
+        ).length;
+        const totalTasksDue = todayTasks + overdueTasks;
         
         return `
             <div class="dashboard-metrics">
@@ -134,17 +138,21 @@ window.DashboardModule = {
                     </div>
                 </div>
 
-                <div class="dashboard-metric-card dashboard-metric-3 ${todayTasks > 0 ? 'dashboard-metric-highlight' : ''}" data-action="drill-tasks">
+                <div class="dashboard-metric-card dashboard-metric-3" data-action="drill-tasks">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
                         <i data-lucide="check-circle" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
                         <span class="dashboard-metric-label">Tasks Due</span>
                     </div>
-                    <div class="dashboard-metric-value">${todayTasks}</div>
+                    <div class="dashboard-metric-value">${totalTasksDue}</div>
                     <div class="dashboard-metric-footer">
                         <span class="dashboard-metric-detail">
-                            ${stats.overdueTasks > 0 ?
-                                `${stats.overdueTasks} overdue • Click to view` :
+                            ${todayTasks > 0 && overdueTasks > 0 ?
+                                `${todayTasks} today, ${overdueTasks} overdue • Click to view` :
+                                todayTasks > 0 ?
+                                `${todayTasks} today • Click to view` :
+                                overdueTasks > 0 ?
+                                `${overdueTasks} overdue • Click to view` :
                                 'All caught up!'}
                         </span>
                     </div>
@@ -1145,15 +1153,12 @@ window.DashboardModule = {
                              data-action="view-task-detail"
                              data-id="${task.id}">
                             <div class="dashboard-modal-task-header">
-                                <div class="dashboard-task-status-icon">
-                                    <i data-lucide="${task.status === 'completed' ? 'check-circle' : isOverdue ? 'alert-triangle' : isToday ? 'clock' : 'clipboard'}" style="width: 20px; height: 20px;"></i>
-                                </div>
                                 <div class="dashboard-modal-task-info">
                                     <div class="dashboard-modal-task-title">${safeTitle}</div>
                                     ${task.description ? `<div class="dashboard-modal-task-description">${API.escapeHtml(task.description.substring(0, 100))}${task.description.length > 100 ? '...' : ''}</div>` : ''}
                                 </div>
                             </div>
-                            
+
                             <div class="dashboard-modal-task-meta">
                                 ${task.due_date ? `
                                     <div class="dashboard-task-meta-item">
@@ -1279,14 +1284,20 @@ window.DashboardModule = {
 
     dashboard_formatDate(dateString) {
         if (!dateString) return '';
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-        
+        // Normalize to YYYY-MM-DD format to avoid timezone issues
+        const taskDate = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+        const today = new Date().toISOString().split('T')[0];
+
+        // Calculate tomorrow's date
+        const tomorrowDate = new Date();
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrow = tomorrowDate.toISOString().split('T')[0];
+
+        if (taskDate === today) return 'Today';
+        if (taskDate === tomorrow) return 'Tomorrow';
+
+        // Format the date for display
+        const date = new Date(taskDate + 'T00:00:00');
         return date.toLocaleDateString('en-US', { month:'short', day: 'numeric' });
     },
 

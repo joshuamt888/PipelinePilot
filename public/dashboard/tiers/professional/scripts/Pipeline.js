@@ -47,7 +47,7 @@ window.PipelineModule = {
             status: lead.status || 'new',
             potential_value: lead.potential_value || 0,
             quality_score: lead.quality_score || 5,
-            type: lead.type || 'cold'
+            type: lead.type || ''
         }));
         
         this.state.stats = {
@@ -110,13 +110,13 @@ window.PipelineModule = {
         const organized = this.getOrganizedLeads();
         const closedLeads = organized.closed || [];
         const lostLeads = organized.lost || [];
-        
-        const totalValue = this.state.leads.reduce((sum, l) => 
+
+        const totalValue = this.state.leads.reduce((sum, l) =>
             sum + (l.potential_value || 0), 0
         );
-        
+
         const totalOutcome = closedLeads.length + lostLeads.length;
-        const conversionRate = totalOutcome > 0 ? 
+        const conversionRate = totalOutcome > 0 ?
             Math.round((closedLeads.length / totalOutcome) * 100) : 0;
         
         const reasonCounts = {};
@@ -322,7 +322,7 @@ window.PipelineModule = {
 
     // Render lead card with 40-line note truncation
     renderLeadCard(lead, stage) {
-        const typeIcon = lead.type === 'warm' ? 'flame' : 'snowflake';
+        const typeIcon = lead.type === 'warm' ? 'flame' : lead.type === 'cold' ? 'snowflake' : 'minus';
         const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' :
                           lead.quality_score >= 6 ? 'var(--success)' :
                           lead.quality_score >= 4 ? 'var(--warning)' : 'var(--danger)';
@@ -556,6 +556,7 @@ window.PipelineModule = {
             type: [
                 { value: '', label: 'All Temperatures', clear: true },
                 { value: '', label: '──────────', divider: true },
+                { value: '', label: 'No Temperature', icon: 'minus' },
                 { value: 'cold', label: 'Cold Leads', icon: 'snowflake' },
                 { value: 'warm', label: 'Warm Leads', icon: 'flame' }
             ],
@@ -732,10 +733,11 @@ window.PipelineModule = {
                         <div class="form-section">
                             <label class="form-label">Lead Temperature</label>
                             <div class="temperature-toggle">
+                                <button type="button" class="temp-btn ${!lead.type || lead.type === '' ? 'active' : ''}" data-temp=""><i data-lucide="minus" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>None</button>
                                 <button type="button" class="temp-btn ${lead.type === 'cold' ? 'active' : ''}" data-temp="cold"><i data-lucide="snowflake" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Cold</button>
                                 <button type="button" class="temp-btn ${lead.type === 'warm' ? 'active' : ''}" data-temp="warm"><i data-lucide="flame" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Warm</button>
                             </div>
-                            <input type="hidden" id="editType" value="${lead.type || 'cold'}">
+                            <input type="hidden" id="editType" value="${lead.type || ''}">
                         </div>
 
                         <div class="form-section">
@@ -825,7 +827,7 @@ window.PipelineModule = {
                 btn.disabled = true;
                 
                 await API.updateLead(lead.id, {
-                    type: document.getElementById('editType').value,
+                    type: document.getElementById('editType').value || null,
                     quality_score: parseInt(document.getElementById('editScore').value),
                     notes: document.getElementById('editNotes').value.trim() || null
                 });
