@@ -670,15 +670,88 @@ window.PipelineModule = {
         try {
             const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
             if (!lead || lead.status === newStatus) return;
-            
+
+            const oldStatus = lead.status;
+
+            // Optimistically update the UI
             lead.status = newStatus;
+            this.updateLeadCardPosition(leadId, oldStatus, newStatus);
+
+            // Sync with backend in background
             await API.updateLead(leadId, { status: newStatus });
-            this.render();
-            
+
         } catch (error) {
             console.error('Failed to update lead status:', error);
             this.notify('Failed to update lead status', 'error');
+
+            // Revert on error
+            lead.status = oldStatus;
+            this.render();
         }
+    },
+
+    updateLeadCardPosition(leadId, oldStatus, newStatus) {
+        // Find the card and columns
+        const card = document.querySelector(`[data-lead-id="${leadId}"]`);
+        const oldColumn = document.querySelector(`[data-stage-content="${oldStatus}"]`);
+        const newColumn = document.querySelector(`[data-stage-content="${newStatus}"]`);
+
+        if (!card || !oldColumn || !newColumn) {
+            // Fallback to full render if elements not found
+            this.render();
+            return;
+        }
+
+        // Move the card with smooth animation
+        card.style.transition = 'opacity 0.2s ease';
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            newColumn.appendChild(card);
+            card.style.opacity = '1';
+
+            // Update counts
+            this.updateStageCounts();
+            this.updateSectionTotals();
+        }, 200);
+    },
+
+    updateStageCounts() {
+        const organized = this.getOrganizedLeads();
+
+        this.stages.forEach(stage => {
+            const countElement = document.querySelector(`[data-stage="${stage.id}"] .stage-count`);
+            if (countElement) {
+                const count = organized[stage.id]?.length || 0;
+                countElement.textContent = count;
+            }
+        });
+    },
+
+    updateSectionTotals() {
+        const organized = this.getOrganizedLeads();
+
+        // Update Active Pipeline
+        const activeCount = ['new', 'contacted', 'negotiation']
+            .reduce((sum, id) => sum + organized[id].length, 0);
+        const activeValue = ['new', 'contacted', 'negotiation']
+            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
+
+        const activeBadge = document.querySelector('.pipeline-section:nth-child(1) .section-badge');
+        const activeValueEl = document.querySelector('.pipeline-section:nth-child(1) .section-value');
+        if (activeBadge) activeBadge.textContent = `${activeCount} leads`;
+        if (activeValueEl) activeValueEl.textContent = `$${activeValue.toLocaleString()}`;
+
+        // Update Sales Outcomes
+        const outcomeCount = ['qualified', 'closed', 'lost']
+            .reduce((sum, id) => sum + organized[id].length, 0);
+        const outcomeValue = ['qualified', 'closed', 'lost']
+            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
+
+        const outcomeBadge = document.querySelector('.pipeline-section:nth-child(2) .section-badge');
+        const outcomeValueEl = document.querySelector('.pipeline-section:nth-child(2) .section-value');
+        if (outcomeBadge) outcomeBadge.textContent = `${outcomeCount} leads`;
+        if (outcomeValueEl) outcomeValueEl.textContent = `$${outcomeValue.toLocaleString()}`;
     },
 
     pipeline_cleanup() {
