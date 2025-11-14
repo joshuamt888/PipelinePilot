@@ -233,8 +233,250 @@ class SteadyUtils {
                     min-width: auto;
                 }
             }
+
+            /* Skeleton Loading */
+            @keyframes shimmer {
+                0% { background-position: -1000px 0; }
+                100% { background-position: 1000px 0; }
+            }
+
+            .skeleton {
+                background: linear-gradient(
+                    90deg,
+                    var(--surface) 0%,
+                    var(--surface-hover) 50%,
+                    var(--surface) 100%
+                );
+                background-size: 1000px 100%;
+                animation: shimmer 2s infinite linear;
+                border-radius: var(--radius);
+            }
+
+            .skeleton-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+                gap: 1.5rem;
+                padding: 1rem 0;
+            }
+
+            .skeleton-card {
+                background: var(--surface);
+                border-radius: 12px;
+                padding: 1.5rem;
+                border: 2px solid var(--border);
+            }
+
+            .skeleton-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+
+            .skeleton-title {
+                height: 24px;
+                width: 60%;
+                border-radius: 6px;
+            }
+
+            .skeleton-badge {
+                height: 24px;
+                width: 80px;
+                border-radius: 12px;
+            }
+
+            .skeleton-text {
+                height: 16px;
+                width: 100%;
+                border-radius: 4px;
+                margin: 0.5rem 0;
+            }
+
+            .skeleton-text.short {
+                width: 40%;
+            }
+
+            .skeleton-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .skeleton-stat-box {
+                background: var(--surface);
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                padding: 1.5rem;
+            }
+
+            .skeleton-stat-value {
+                height: 32px;
+                width: 60%;
+                border-radius: 6px;
+                margin-bottom: 0.5rem;
+            }
+
+            .skeleton-stat-label {
+                height: 16px;
+                width: 40%;
+                border-radius: 4px;
+            }
+
+            .skeleton-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .skeleton-table td {
+                padding: 1rem;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .skeleton-table-cell {
+                height: 16px;
+                border-radius: 4px;
+            }
+
+            .skeleton-dashboard {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            .skeleton-section {
+                background: var(--surface);
+                border: 2px solid var(--border);
+                border-radius: 12px;
+                padding: 1.5rem;
+            }
+
+            .skeleton-section-header {
+                /* Uses base skeleton class for shimmer */
+            }
+
+            .skeleton-fade-out {
+                animation: fadeOut 0.3s ease forwards;
+            }
+
+            @keyframes fadeOut {
+                to { opacity: 0; }
+            }
         `;
         document.head.appendChild(style);
+    }
+
+    // =================================================================
+    // SKELETON LOADING
+    // =================================================================
+
+    /**
+     * Show skeleton loading for stats boxes
+     * @param {string} containerId - Container element ID
+     * @param {number} count - Number of stat boxes
+     */
+    showSkeletonStats(containerId, count = 4) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const skeletonHTML = `
+            <div class="skeleton-stats" data-skeleton>
+                ${Array(count).fill().map(() => `
+                    <div class="skeleton-stat-box">
+                        <div class="skeleton skeleton-stat-value"></div>
+                        <div class="skeleton skeleton-stat-label"></div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        container.innerHTML = skeletonHTML;
+    }
+
+    /**
+     * Show skeleton loading for table layout
+     * @param {string} containerId - Container element ID
+     * @param {number} rows - Number of table rows
+     * @param {number} cols - Number of columns
+     */
+    showSkeletonTable(containerId, rows = 10, cols = 6) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const skeletonHTML = `
+            <table class="skeleton-table" data-skeleton>
+                <tbody>
+                    ${Array(rows).fill().map(() => `
+                        <tr>
+                            ${Array(cols).fill().map(() => `
+                                <td><div class="skeleton skeleton-table-cell"></div></td>
+                            `).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        container.innerHTML = skeletonHTML;
+    }
+
+    /**
+     * Show skeleton loading for Dashboard layout
+     * @param {string} containerId - Container element ID
+     */
+    showSkeletonDashboard(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const skeletonHTML = `
+            <div class="skeleton-dashboard" data-skeleton>
+                <!-- Stats Row -->
+                <div class="skeleton-stats">
+                    ${Array(4).fill().map(() => `
+                        <div class="skeleton-stat-box">
+                            <div class="skeleton skeleton-stat-value"></div>
+                            <div class="skeleton skeleton-stat-label"></div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Pipeline Section -->
+                <div class="skeleton-section" style="margin-top: 1.5rem; height: 200px;">
+                    <div class="skeleton skeleton-section-header" style="height: 24px; width: 200px; margin-bottom: 1rem;"></div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; height: 140px;">
+                        ${Array(3).fill().map(() => `<div class="skeleton" style="height: 100%;"></div>`).join('')}
+                    </div>
+                </div>
+
+                <!-- Lists Split -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
+                    ${Array(2).fill().map(() => `
+                        <div class="skeleton-section">
+                            <div class="skeleton skeleton-section-header" style="height: 24px; width: 150px; margin-bottom: 1rem;"></div>
+                            ${Array(5).fill().map(() => `
+                                <div class="skeleton skeleton-text" style="margin: 0.5rem 0;"></div>
+                            `).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = skeletonHTML;
+    }
+
+    /**
+     * Remove skeleton loading with fade out animation
+     * @param {string} containerId - Container element ID
+     */
+    hideSkeletons(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const skeletons = container.querySelectorAll('[data-skeleton]');
+        skeletons.forEach(skeleton => {
+            skeleton.classList.add('skeleton-fade-out');
+            setTimeout(() => skeleton.remove(), 300);
+        });
     }
 }
 

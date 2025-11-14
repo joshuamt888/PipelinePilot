@@ -1,3 +1,8 @@
+// ========================================
+// PRO FEATURE: Jobs Management Module
+// Available to: Professional, Admin tiers
+// Free tier: Hidden in Settings (future)
+// ========================================
 /**
  * JOBS MODULE - Complete Implementation v2.0
  * Track projects, calculate profit, manage workflows
@@ -41,7 +46,10 @@ window.JobsManagementModule = {
 
         // Custom job type
         customJobType: '',
-        showCustomJobType: false
+        showCustomJobType: false,
+
+        // Init flag
+        hasInitialized: false  // Track if module has loaded before
     },
 
     STATUSES: ['draft', 'scheduled', 'in_progress', 'completed', 'invoiced', 'paid', 'cancelled'],
@@ -54,7 +62,6 @@ window.JobsManagementModule = {
      */
     async init(targetContainer = 'jobs-content') {
         this.state.container = targetContainer;
-        this.jobs_showLoading();
 
         try {
             const [jobs, leadsData] = await Promise.all([
@@ -70,6 +77,7 @@ window.JobsManagementModule = {
 
             this.jobs_calculateStats();
             this.jobs_render();
+            this.state.hasInitialized = true;
         } catch (error) {
             console.error('Error initializing Jobs:', error);
             this.jobs_showError('Failed to load jobs');
@@ -83,6 +91,7 @@ window.JobsManagementModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        const isFirstLoad = !this.state.hasInitialized;
         this.jobs_applyFilters();
 
         container.innerHTML = `
@@ -96,12 +105,48 @@ window.JobsManagementModule = {
             </div>
         `;
 
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
+        // Use requestAnimationFrame for smoother rendering
+        requestAnimationFrame(() => {
+            // Apply animations based on load state
+            if (isFirstLoad) {
+                // First load: Staggered wave animation
+                const header = container.querySelector('.jobs-header');
+                if (header) {
+                    header.classList.add('jobs-wave-in');
+                    header.style.animationDelay = '0s';
+                }
+
+                const limitBar = container.querySelector('.jobs-limit-bar');
+                if (limitBar) {
+                    limitBar.classList.add('jobs-wave-in');
+                    limitBar.style.animationDelay = '0.1s';
+                }
+
+                const statusBoxes = container.querySelectorAll('.jobs-status-box');
+                statusBoxes.forEach((box, i) => {
+                    box.classList.add('jobs-wave-in');
+                    box.style.animationDelay = `${0.15 + (i * 0.06)}s`;
+                });
+
+                const toolbar = container.querySelector('.jobs-toolbar');
+                if (toolbar) {
+                    toolbar.classList.add('jobs-wave-in');
+                    toolbar.style.animationDelay = `${0.15 + (statusBoxes.length * 0.06)}s`;
+                }
+
+                const cards = container.querySelectorAll('.jobs-card');
+                cards.forEach((card, i) => {
+                    card.classList.add('jobs-wave-in');
+                    card.style.animationDelay = `${0.25 + (Math.min(i, 6) * 0.06)}s`;
+                });
+            } else {
+                // Subsequent loads: Fast fade
+                const allElements = container.querySelectorAll('.jobs-header, .jobs-limit-bar, .jobs-status-box, .jobs-toolbar, .jobs-card');
+                allElements.forEach(el => el.classList.add('jobs-fade-in'));
+            }
+
             this.jobs_attachEvents();
-        }, 50);
+        });
     },
 
     /**
@@ -138,6 +183,10 @@ window.JobsManagementModule = {
             if (this.state.batchMode) {
                 this.jobs_applyBatchMode();
             }
+
+            // Re-attach event listeners and re-render icons
+            this.jobs_attachEvents();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
         console.log(`[Jobs] Filtered: ${this.state.filteredJobs.length} results (search: "${this.state.searchQuery}")`);
@@ -868,12 +917,14 @@ window.JobsManagementModule = {
 
         if (!confirmed) return;
 
-        try {
-            await API.batchDeleteJobs(this.state.selectedJobIds);
+        // Store backup for rollback
+        const idsToDelete = [...this.state.selectedJobIds];
+        const jobsBackup = this.state.jobs.filter(j => idsToDelete.includes(j.id));
 
-            // Remove from local state
+        try {
+            // Optimistically remove from local state
             this.state.jobs = this.state.jobs.filter(
-                j => !this.state.selectedJobIds.includes(j.id)
+                j => !idsToDelete.includes(j.id)
             );
 
             // Clear selections and exit batch mode
@@ -920,10 +971,20 @@ window.JobsManagementModule = {
                 container.querySelectorAll('.jobs-card-checkbox').forEach(cb => cb.remove());
             }
 
+            // Make API call in background
+            await API.batchDeleteJobs(idsToDelete);
+
             window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
             window.SteadyUtils.showToast('Failed to delete jobs', 'error');
+
+            // Rollback: restore deleted jobs
+            if (jobsBackup.length > 0) {
+                this.state.jobs.push(...jobsBackup);
+                this.jobs_calculateStats();
+                this.jobs_instantFilterChange();
+            }
         }
     },
 
@@ -1045,7 +1106,7 @@ window.JobsManagementModule = {
                     display: flex;
                     flex-direction: column;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    animation: slideUp 0.3s ease;
+                    animation: scaleIn 0.2s ease;
                     margin: auto;
                 }
 
@@ -1298,7 +1359,7 @@ window.JobsManagementModule = {
                     display: flex;
                     flex-direction: column;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    animation: slideUp 0.3s ease;
+                    animation: scaleIn 0.2s ease;
                 }
 
                 .job-search-modal-header {
@@ -1443,7 +1504,7 @@ window.JobsManagementModule = {
                     width: 90%;
                     max-width: 450px;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    animation: slideUp 0.3s ease;
+                    animation: scaleIn 0.2s ease;
                 }
 
                 .job-photo-type-header {
@@ -2022,6 +2083,22 @@ window.JobsManagementModule = {
                 .job-modal-btn-save:hover {
                     transform: translateY(-1px);
                     box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                @keyframes scaleIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
                 }
 
                 @media (max-width: 768px) {
@@ -2707,6 +2784,17 @@ window.JobsManagementModule = {
                     to { opacity: 1; }
                 }
 
+                @keyframes scaleIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+
                 .job-view-modal {
                     background: var(--surface);
                     border-radius: 12px;
@@ -2715,18 +2803,7 @@ window.JobsManagementModule = {
                     max-height: 90vh;
                     overflow-y: auto;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    animation: slideUp 0.3s ease;
-                }
-
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    animation: scaleIn 0.2s ease;
                 }
 
                 .job-view-header {
@@ -3436,6 +3513,9 @@ window.JobsManagementModule = {
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 200);
 
+            // Store backup for rollback
+            const jobBackup = {...job};
+
             // Remove from local state immediately
             const index = this.state.jobs.findIndex(j => j.id === job.id);
             if (index !== -1) {
@@ -3472,10 +3552,30 @@ window.JobsManagementModule = {
                 console.error('Error deleting job:', error);
                 window.SteadyUtils.showToast('Failed to delete job', 'error');
 
-                // Restore job on error
-                this.state.jobs.splice(index, 0, job);
-                this.jobs_calculateStats();
-                this.jobs_instantFilterChange();
+                // Rollback: restore deleted job
+                if (jobBackup) {
+                    this.state.jobs.push(jobBackup);
+                    this.jobs_calculateStats();
+                    this.jobs_instantFilterChange();
+
+                    // Re-update stats and limit bar
+                    const container = document.getElementById(this.state.container);
+                    if (container) {
+                        const statsSection = container.querySelector('.jobs-status-filters');
+                        if (statsSection) {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = this.jobs_renderStats();
+                            statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                        }
+
+                        const limitBar = container.querySelector('.jobs-limit-bar');
+                        if (limitBar) {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = this.jobs_renderLimitBar();
+                            limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                        }
+                    }
+                }
             }
         });
 
@@ -4197,7 +4297,7 @@ window.JobsManagementModule = {
             priority: formData.get('priority'),
             scheduled_date: formData.get('scheduled_date') || null,
             scheduled_time: formData.get('scheduled_time') || null,
-            duration_hours: parseFloat(formData.get('duration_hours')) || null,
+            duration_hours: parseFloat(formData.get('duration_hours')) || null, // Allow null duration
             description: formData.get('description') || null,
             material_cost: parseFloat(formData.get('material_cost')) || 0,
             labor_rate: parseFloat(formData.get('labor_rate')) || 0,
@@ -4244,46 +4344,62 @@ window.JobsManagementModule = {
             rate: capValue(c.rate)
         }));
 
-        try {
-            // Close modal immediately for instant feedback
-            this.jobs_closeModal();
+        // Variables for rollback (must be in outer scope)
+        let backup = null;
+        let tempJob = null;
 
+        try {
             let result;
             if (this.state.editingJobId) {
-                // Update in background
-                result = await API.updateJob(this.state.editingJobId, jobData);
+                // Update optimistically
                 const index = this.state.jobs.findIndex(j => j.id === this.state.editingJobId);
+                backup = index !== -1 ? {...this.state.jobs[index]} : null;
+
+                if (index !== -1) {
+                    this.state.jobs[index] = { ...this.state.jobs[index], ...jobData };
+                }
+
+                // Update UI immediately
+                this.jobs_calculateStats();
+                this.jobs_instantFilterChange();
+
+                // Update stats tabs and limit bar
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.jobs-status-filters');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.jobs-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.jobs_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+
+                // Make API call
+                result = await API.updateJob(this.state.editingJobId, jobData);
+
+                // Update with actual saved data
                 if (index !== -1) {
                     this.state.jobs[index] = result;
                 }
 
-                // Update UI immediately
-                this.jobs_calculateStats();
-                this.jobs_instantFilterChange();
-
-                // Update stats tabs and limit bar
-                const container = document.getElementById(this.state.container);
-                if (container) {
-                    const statsSection = container.querySelector('.jobs-status-filters');
-                    if (statsSection) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = this.jobs_renderStats();
-                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
-                    }
-
-                    const limitBar = container.querySelector('.jobs-limit-bar');
-                    if (limitBar) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = this.jobs_renderLimitBar();
-                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
-                    }
-                }
-
+                // Success - close modal and show toast
+                this.jobs_closeModal();
                 window.SteadyUtils.showToast('Job updated successfully', 'success');
             } else {
-                // Create in background
-                result = await API.createJob(jobData);
-                this.state.jobs.unshift(result);
+                // Create optimistically with temp data
+                tempJob = {
+                    id: `temp-${Date.now()}`,
+                    ...jobData,
+                    created_at: new Date().toISOString()
+                };
+                this.state.jobs.unshift(tempJob);
 
                 // Update UI immediately
                 this.jobs_calculateStats();
@@ -4307,6 +4423,20 @@ window.JobsManagementModule = {
                     }
                 }
 
+                // Make API call
+                result = await API.createJob(jobData);
+
+                // Replace temp job with real one
+                const tempIndex = this.state.jobs.findIndex(j => j.id === tempJob.id);
+                if (tempIndex !== -1) {
+                    this.state.jobs[tempIndex] = result;
+                }
+
+                // Update UI to replace temp ID with real ID
+                this.jobs_instantFilterChange();
+
+                // Success - close modal and show toast
+                this.jobs_closeModal();
                 window.SteadyUtils.showToast('Job created successfully', 'success');
             }
 
@@ -4316,8 +4446,28 @@ window.JobsManagementModule = {
             console.error('Error saving job:', error);
             window.SteadyUtils.showToast('Failed to save job', 'error');
 
-            // Reset flag after error
+            // Reset flag and re-enable button
             this.state.isSaving = false;
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '';
+                button.style.cursor = '';
+            }
+
+            // Rollback: Restore backup state
+            if (this.state.editingJobId && backup) {
+                const index = this.state.jobs.findIndex(j => j.id === this.state.editingJobId);
+                if (index !== -1) {
+                    this.state.jobs[index] = backup;
+                }
+            } else if (tempJob) {
+                // Remove temp job on create failure
+                this.state.jobs = this.state.jobs.filter(j => j.id !== tempJob.id);
+            }
+
+            // Update UI to reflect rollback
+            this.jobs_calculateStats();
+            this.jobs_instantFilterChange();
         }
     },
 
@@ -4369,7 +4519,7 @@ window.JobsManagementModule = {
                         width: 90%;
                         max-width: 480px;
                         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                        animation: slideUp 0.3s ease;
+                        animation: scaleIn 0.2s ease;
                     }
 
                     .job-confirm-header {
@@ -4527,12 +4677,6 @@ window.JobsManagementModule = {
 .jobs-container {
     max-width: 1400px;
     margin: 0 auto;
-    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* HEADER */
@@ -4744,7 +4888,7 @@ window.JobsManagementModule = {
     padding: 0.75rem 1rem 0.75rem 2.75rem;
     border: 2px solid var(--border);
     border-radius: 999px;
-    background: var(--bg);
+    background: var(--background);
     color: var(--text-primary);
     font-size: 0.9rem;
     transition: all 0.2s;
@@ -4781,7 +4925,7 @@ window.JobsManagementModule = {
     padding: 0.75rem 2.5rem 0.75rem 1rem;
     border: 2px solid var(--border);
     border-radius: 999px;
-    background: var(--bg);
+    background: var(--background);
     color: var(--text-primary);
     font-size: 0.875rem;
     font-weight: 600;
@@ -5273,6 +5417,33 @@ window.JobsManagementModule = {
     .jobs-search {
         max-width: none;
     }
+}
+
+/* Module-level animations */
+@keyframes jobsWaveIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes jobsFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.jobs-wave-in {
+    animation: jobsWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.jobs-fade-in {
+    animation: jobsFadeIn 0.3s ease forwards;
+    opacity: 0;
 }
 </style>`;
     }

@@ -5,20 +5,22 @@ window.DashboardModule = {
         tasks: [],
         stats: null,
         profile: null,
+        subscriptionInfo: null,
         container: 'dashboard-content',
-        modalSearchTerm: ''
+        modalSearchTerm: '',
+        hasInitialized: false  // Track if module has loaded before
     },
 
     // INIT - Sharp and direct
     async dashboard_init(targetContainer = 'dashboard-content') {
         console.log('Dashboard module loading');
-        
+
         this.state.container = targetContainer;
-        this.dashboard_showLoading();
-        
+
         try {
             await this.dashboard_loadData();
             this.dashboard_render();
+            this.state.hasInitialized = true;
             console.log('Dashboard module ready');
         } catch (error) {
             console.error('Dashboard init failed:', error);
@@ -51,16 +53,20 @@ window.DashboardModule = {
     },
 
     // RENDER - Single innerHTML write like Pipeline
-    dashboard_render() {
+    async dashboard_render() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
         const isFreeTier = this.state.profile.user_type === 'free';
-        
+        const isFirstLoad = !this.state.hasInitialized;
+
+        // Await async render functions first
+        const metricsHtml = await this.dashboard_renderMetrics();
+
         container.innerHTML = `
             ${this.dashboard_renderStyles()}
             <div class="dashboard-container">
-                ${this.dashboard_renderMetrics()}
+                ${metricsHtml}
                 ${this.dashboard_renderPipeline()}
                 <div class="dashboard-split">
                     ${this.dashboard_renderLeadsList()}
@@ -71,21 +77,44 @@ window.DashboardModule = {
             </div>
         `;
 
-        // Sharp fade-in like Pipeline
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
-            this.dashboard_attachEvents();
-        }, 50);
+        // Apply animations based on load state
+        if (isFirstLoad) {
+            // First load: Staggered wave animation
+            requestAnimationFrame(() => {
+                const metrics = container.querySelectorAll('.dashboard-metric-card');
+                metrics.forEach((metric, i) => {
+                    metric.classList.add('dash-wave-in');
+                    metric.style.animationDelay = `${i * 0.1}s`;
+                });
+
+                const sections = container.querySelectorAll('.dashboard-pipeline, .dashboard-split > div, .dashboard-activity');
+                sections.forEach((section, i) => {
+                    section.classList.add('dash-wave-in');
+                    section.style.animationDelay = `${(metrics.length * 0.1) + (i * 0.1)}s`;
+                });
+            });
+        } else {
+            // Subsequent loads: Fast fade
+            requestAnimationFrame(() => {
+                const allElements = container.querySelectorAll('.dashboard-metric-card, .dashboard-pipeline, .dashboard-split > div, .dashboard-activity');
+                allElements.forEach(el => el.classList.add('dash-fade-in'));
+            });
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_attachEvents();
     },
 
     // METRICS - Clean and efficient with value cap
-    dashboard_renderMetrics() {
+    async dashboard_renderMetrics() {
         const stats = this.state.stats;
         const profile = this.state.profile;
-        const currentLeads = profile.current_leads || 0;
-        const leadLimit = profile.current_lead_limit || 50;
+
+        // Get actual lead count from API (counts ALL leads, not just loaded ones)
+        const subscriptionInfo = await API.getUserSubscriptionInfo();
+        this.state.subscriptionInfo = subscriptionInfo; // Cache it for modals
+        const currentLeads = subscriptionInfo.currentLeads;
+        const leadLimit = subscriptionInfo.leadLimit;
         const percentage = Math.round((currentLeads / leadLimit) * 100);
         
         const weekAgo = new Date();
@@ -100,16 +129,20 @@ window.DashboardModule = {
         const conversionRate = totalOutcome > 0 ? Math.round((totalClosed / totalOutcome) * 100) : 0;
         
         const today = new Date().toISOString().split('T')[0];
-        const todayTasks = this.state.tasks.filter(t => 
+        const todayTasks = this.state.tasks.filter(t =>
             t.due_date === today && t.status === 'pending'
         ).length;
+        const overdueTasks = this.state.tasks.filter(t =>
+            t.due_date && t.due_date < today && t.status === 'pending'
+        ).length;
+        const totalTasksDue = todayTasks + overdueTasks;
         
         return `
             <div class="dashboard-metrics">
                 <div class="dashboard-metric-card dashboard-metric-1 ${percentage > 90 ? 'dashboard-metric-warning' : ''}" data-action="drill-capacity">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
-                        <span class="dashboard-metric-icon">📊</span>
+                        <i data-lucide="bar-chart-3" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
                         <span class="dashboard-metric-label">Total Leads</span>
                     </div>
                     <div class="dashboard-metric-value">${currentLeads}<span class="dashboard-metric-sub">/${leadLimit}</span></div>
@@ -120,11 +153,11 @@ window.DashboardModule = {
                         <span class="dashboard-metric-detail">${percentage}% capacity • Click for breakdown</span>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-metric-card dashboard-metric-2" data-action="drill-recent">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
-                        <span class="dashboard-metric-icon">📈</span>
+                        <i data-lucide="trending-up" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
                         <span class="dashboard-metric-label">This Week</span>
                     </div>
                     <div class="dashboard-metric-value">+${weekLeads}</div>
@@ -132,27 +165,31 @@ window.DashboardModule = {
                         <span class="dashboard-metric-detail">New leads added • Click to view</span>
                     </div>
                 </div>
-                
-                <div class="dashboard-metric-card dashboard-metric-3 ${todayTasks > 0 ? 'dashboard-metric-highlight' : ''}" data-action="drill-tasks">
+
+                <div class="dashboard-metric-card dashboard-metric-3" data-action="drill-tasks">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
-                        <span class="dashboard-metric-icon">✅</span>
+                        <i data-lucide="check-circle" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
                         <span class="dashboard-metric-label">Tasks Due</span>
                     </div>
-                    <div class="dashboard-metric-value">${todayTasks}</div>
+                    <div class="dashboard-metric-value">${totalTasksDue}</div>
                     <div class="dashboard-metric-footer">
                         <span class="dashboard-metric-detail">
-                            ${stats.overdueTasks > 0 ? 
-                                `${stats.overdueTasks} overdue • Click to view` : 
+                            ${todayTasks > 0 && overdueTasks > 0 ?
+                                `${todayTasks} today, ${overdueTasks} overdue • Click to view` :
+                                todayTasks > 0 ?
+                                `${todayTasks} today • Click to view` :
+                                overdueTasks > 0 ?
+                                `${overdueTasks} overdue • Click to view` :
                                 'All caught up!'}
                         </span>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-metric-card dashboard-metric-4" data-action="drill-winrate">
                     <div class="dashboard-metric-glow"></div>
                     <div class="dashboard-metric-header">
-                        <span class="dashboard-metric-icon">🎯</span>
+                        <i data-lucide="target" class="dashboard-metric-icon" style="width: 24px; height: 24px;"></i>
                         <span class="dashboard-metric-label">Win Rate</span>
                     </div>
                     <div class="dashboard-metric-value">${conversionRate}<span class="dashboard-metric-sub">%</span></div>
@@ -167,12 +204,12 @@ window.DashboardModule = {
     // PIPELINE OVERVIEW - With value formatting
     dashboard_renderPipeline() {
         const stages = [
-            { id: 'new', name: 'New', icon: '🆕', color: '#06b6d4' },
-            { id: 'contacted', name: 'Contacted', icon: '📞', color: '#f59e0b' },
-            { id: 'qualified', name: 'Qualified', icon: '✅', color: '#8b5cf6' },
-            { id: 'negotiation', name: 'Negotiation', icon: '🤝', color: '#f97316' },
-            { id: 'closed', name: 'Closed', icon: '🎉', color: '#10b981' },
-            { id: 'lost', name: 'Lost', icon: '❌', color: '#ef4444' }
+            { id: 'new', name: 'New', icon: 'sparkles', color: '#06b6d4' },
+            { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b' },
+            { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6' },
+            { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#f97316' },
+            { id: 'closed', name: 'Closed', icon: 'trophy', color: '#10b981' },
+            { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444' }
         ];
         
         const stageData = stages.map(stage => {
@@ -188,19 +225,19 @@ window.DashboardModule = {
             <div class="dashboard-pipeline">
                 <div class="dashboard-section-header">
                     <h2 class="dashboard-section-title">
-                        <span class="dashboard-section-icon">🌿</span>
+                        <i data-lucide="git-branch" class="dashboard-section-icon" style="width: 20px; height: 20px;"></i>
                         Pipeline Overview
                     </h2>
                 </div>
-                
+
                 <div class="dashboard-pipeline-stages">
                     ${stageData.map((stage, i) => `
-                        <div class="dashboard-pipeline-stage dashboard-stage-${i + 1}" 
+                        <div class="dashboard-pipeline-stage dashboard-stage-${i + 1}"
                              data-action="view-stage"
                              data-stage="${stage.id}"
                              data-stage-name="${API.escapeHtml(stage.name)}">
                             <div class="dashboard-stage-glow"></div>
-                            <div class="dashboard-stage-icon-lg">${stage.icon}</div>
+                            <i data-lucide="${stage.icon}" class="dashboard-stage-icon-lg" style="width: 32px; height: 32px;"></i>
                             <div class="dashboard-stage-name">${stage.name}</div>
                             <div class="dashboard-stage-count">${stage.count}</div>
                             ${stage.value > 0 ? `
@@ -222,7 +259,7 @@ window.DashboardModule = {
             <div class="dashboard-section">
                 <div class="dashboard-section-header">
                     <h3 class="dashboard-section-title">
-                        <span class="dashboard-section-icon">👥</span>
+                        <i data-lucide="users" class="dashboard-section-icon" style="width: 20px; height: 20px;"></i>
                         Recent Leads (${recentLeads.length})
                     </h3>
                     <button class="dashboard-view-btn" data-action="view-all-leads">
@@ -283,14 +320,14 @@ window.DashboardModule = {
             <div class="dashboard-section">
                 <div class="dashboard-section-header">
                     <h3 class="dashboard-section-title">
-                        <span class="dashboard-section-icon">📋</span>
+                        <i data-lucide="list-checks" class="dashboard-section-icon" style="width: 20px; height: 20px;"></i>
                         Upcoming Tasks (${pendingTasks.length})
                     </h3>
                     <button class="dashboard-view-btn" data-action="view-all-tasks">
                         View All →
                     </button>
                 </div>
-                
+
                 <div class="dashboard-list-container">
                     ${pendingTasks.length > 0 ?
                         pendingTasks.map(task => this.dashboard_renderTaskItem(task, today)).join('') :
@@ -311,11 +348,11 @@ window.DashboardModule = {
         const formattedTime = task.due_time ? this.dashboard_formatTime(task.due_time) : '';
         
         return `
-            <div class="dashboard-list-item ${isOverdue ? 'dashboard-item-overdue' : ''}" 
-                 data-action="view-task-detail" 
+            <div class="dashboard-list-item ${isOverdue ? 'dashboard-item-overdue' : ''}"
+                 data-action="view-task-detail"
                  data-id="${task.id}">
                 <div class="dashboard-task-status-icon">
-                    ${isOverdue ? '⚠️' : isToday ? '⏰' : '📋'}
+                    <i data-lucide="${isOverdue ? 'alert-triangle' : isToday ? 'clock' : 'clipboard'}" style="width: 20px; height: 20px;"></i>
                 </div>
                 <div class="dashboard-item-content">
                     <div class="dashboard-item-title">${safeTitle}</div>
@@ -338,15 +375,15 @@ window.DashboardModule = {
             <div class="dashboard-activity">
                 <div class="dashboard-section-header">
                     <h3 class="dashboard-section-title">
-                        <span class="dashboard-section-icon">📊</span>
+                        <i data-lucide="activity" class="dashboard-section-icon" style="width: 20px; height: 20px;"></i>
                         Recent Activity
                     </h3>
                 </div>
-                
+
                 <div class="dashboard-activity-timeline">
                     ${activities.slice(0, 10).map(activity => `
                         <div class="dashboard-activity-item">
-                            <div class="dashboard-activity-icon">${activity.icon}</div>
+                            <i data-lucide="${activity.icon}" class="dashboard-activity-icon" style="width: 18px; height: 18px;"></i>
                             <div class="dashboard-activity-content">
                                 <div class="dashboard-activity-text">${activity.text}</div>
                                 <div class="dashboard-activity-time">${activity.time}</div>
@@ -365,26 +402,26 @@ window.DashboardModule = {
             const safeName = API.escapeHtml(lead.name);
             const safeCompany = lead.company ? ' from ' + API.escapeHtml(lead.company) : '';
             activities.push({
-                icon: '👤',
+                icon: 'user-plus',
                 text: `Lead added: ${safeName}${safeCompany}`,
                 time: this.dashboard_formatTimeAgo(lead.created_at),
                 timestamp: new Date(lead.created_at)
             });
         });
-        
+
         this.state.tasks
             .filter(t => t.status === 'completed')
             .slice(0, 5)
             .forEach(task => {
                 const safeTitle = API.escapeHtml(task.title);
                 activities.push({
-                    icon: '✅',
+                    icon: 'check-circle',
                     text: `Task completed: ${safeTitle}`,
                     time: this.dashboard_formatTimeAgo(task.completed_at || task.updated_at),
                     timestamp: new Date(task.completed_at || task.updated_at)
                 });
             });
-        
+
         this.state.leads
             .filter(l => l.status === 'closed')
             .slice(0, 3)
@@ -392,7 +429,7 @@ window.DashboardModule = {
                 const value = lead.potential_value ? ` (${this.dashboard_formatValue(lead.potential_value)})` : '';
                 const safeName = API.escapeHtml(lead.name);
                 activities.push({
-                    icon: '🎉',
+                    icon: 'trophy',
                     text: `Deal closed: ${safeName}${value}`,
                     time: this.dashboard_formatTimeAgo(lead.updated_at),
                     timestamp: new Date(lead.updated_at)
@@ -408,7 +445,7 @@ window.DashboardModule = {
             <div class="dashboard-upgrade">
                 <div class="dashboard-upgrade-glow"></div>
                 <div class="dashboard-upgrade-content">
-                    <div class="dashboard-upgrade-icon">🚀</div>
+                    <i data-lucide="rocket" class="dashboard-upgrade-icon" style="width: 32px; height: 32px;"></i>
                     <div class="dashboard-upgrade-text">
                         <h3 class="dashboard-upgrade-title">Ready to scale?</h3>
                         <p class="dashboard-upgrade-subtitle">Upgrade to Pro for 5,000 leads and advanced analytics</p>
@@ -521,7 +558,7 @@ window.DashboardModule = {
                                class="search-input" 
                                placeholder="Search ${stageName.toLowerCase()} leads..."
                                data-search="leads">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -530,8 +567,9 @@ window.DashboardModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal, 'leads', stageLeads);
     },
 
@@ -560,17 +598,18 @@ window.DashboardModule = {
         `;
         
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal);
     },
 
     dashboard_showTaskDetailModal(taskId) {
         const task = this.state.tasks.find(t => t.id === taskId);
         if (!task) return;
-        
+
         const lead = task.lead_id ? this.state.leads.find(l => l.id === task.lead_id) : null;
         const today = new Date().toISOString().split('T')[0];
         const isOverdue = task.due_date && task.due_date < today;
-        
+
         const modal = document.createElement('div');
         modal.className = 'dashboard-modal-overlay show';
         modal.innerHTML = `
@@ -586,15 +625,24 @@ window.DashboardModule = {
                     </div>
                     <button class="dashboard-modal-close">×</button>
                 </div>
-                
+
                 <div class="dashboard-modal-body">
                     ${this.dashboard_renderTaskDetails(task, lead, isOverdue)}
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_openTaskFromLead(taskId) {
+        // Close the current lead detail modal
+        document.querySelector('.dashboard-modal-overlay')?.remove();
+
+        // Open the task detail modal
+        this.dashboard_showTaskDetailModal(taskId);
     },
 
     dashboard_showAllLeadsModal() {
@@ -618,7 +666,7 @@ window.DashboardModule = {
                                class="search-input" 
                                placeholder="Search all leads..."
                                data-search="leads">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -653,7 +701,7 @@ window.DashboardModule = {
                                class="search-input" 
                                placeholder="Search all tasks..."
                                data-search="tasks">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -668,19 +716,25 @@ window.DashboardModule = {
     },
 
     dashboard_showCapacityModal() {
-        const profile = this.state.profile;
-        const currentLeads = profile.current_leads || 0;
-        const leadLimit = profile.current_lead_limit || 50;
+        // Prevent multiple modals from opening
+        if (document.querySelector('.dashboard-modal-overlay')) return;
+
+        // Use cached subscription info (already loaded in render)
+        const subscriptionInfo = this.state.subscriptionInfo;
+        if (!subscriptionInfo) return;
+
+        const currentLeads = subscriptionInfo.currentLeads;
+        const leadLimit = subscriptionInfo.leadLimit;
         const remaining = leadLimit - currentLeads;
         const percentage = Math.round((currentLeads / leadLimit) * 100);
-        
+
         const bySource = {};
         this.state.leads.forEach(lead => {
             const source = lead.source || 'Unknown';
             if (!bySource[source]) bySource[source] = [];
             bySource[source].push(lead);
         });
-        
+
         const sources = Object.entries(bySource)
             .map(([source, leads]) => ({
                 source,
@@ -688,7 +742,7 @@ window.DashboardModule = {
                 percentage: Math.round((leads.length / currentLeads) * 100)
             }))
             .sort((a, b) => b.count - a.count);
-        
+
         const modal = document.createElement('div');
         modal.className = 'dashboard-modal-overlay show';
         modal.innerHTML = `
@@ -700,7 +754,7 @@ window.DashboardModule = {
                     </div>
                     <button class="dashboard-modal-close">×</button>
                 </div>
-                
+
                 <div class="dashboard-modal-body">
                     <div class="dashboard-capacity-overview">
                         <div class="dashboard-capacity-stats">
@@ -718,7 +772,7 @@ window.DashboardModule = {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="dashboard-capacity-breakdown">
                         <h3 class="dashboard-capacity-breakdown-title">Leads by Source</h3>
                         <div class="dashboard-source-list">
@@ -738,8 +792,9 @@ window.DashboardModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal);
     },
 
@@ -769,7 +824,7 @@ window.DashboardModule = {
                                class="search-input" 
                                placeholder="Search recent leads..."
                                data-search="leads">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -812,7 +867,7 @@ window.DashboardModule = {
                                class="search-input" 
                                placeholder="Search due tasks..."
                                data-search="tasks">
-                        <span class="search-icon">🔍</span>
+                        <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
                 
@@ -847,16 +902,16 @@ window.DashboardModule = {
                 <div class="dashboard-modal-body">
                     <div class="dashboard-winrate-stats">
                         <div class="dashboard-winrate-card dashboard-winrate-won">
-                            <div class="dashboard-winrate-icon">🎉</div>
+                            <i data-lucide="trophy" class="dashboard-winrate-icon" style="width: 48px; height: 48px; min-width: 48px; margin-right: 20px;"></i>
                             <div class="dashboard-winrate-content">
                                 <div class="dashboard-winrate-label">Won</div>
                                 <div class="dashboard-winrate-count">${closedLeads.length}</div>
                                 <div class="dashboard-winrate-value">${this.dashboard_formatValue(closedValue)}</div>
                             </div>
                         </div>
-                        
+
                         <div class="dashboard-winrate-card dashboard-winrate-lost">
-                            <div class="dashboard-winrate-icon">❌</div>
+                            <i data-lucide="x-circle" class="dashboard-winrate-icon" style="width: 48px; height: 48px; min-width: 48px; margin-right: 20px;"></i>
                             <div class="dashboard-winrate-content">
                                 <div class="dashboard-winrate-label">Lost</div>
                                 <div class="dashboard-winrate-count">${lostLeads.length}</div>
@@ -889,6 +944,7 @@ window.DashboardModule = {
         `;
         
         document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal);
     },
 
@@ -897,7 +953,7 @@ window.DashboardModule = {
         if (leads.length === 0) {
             return `
                 <div class="dashboard-modal-empty-state">
-                    <div class="dashboard-empty-icon">🔍</div>
+                    <i data-lucide="search" class="dashboard-empty-icon" style="width: 48px; height: 48px;"></i>
                     <div class="dashboard-empty-text">No leads found</div>
                 </div>
             `;
@@ -930,9 +986,9 @@ window.DashboardModule = {
                 </div>
                 
                 <div class="dashboard-modal-card-details">
-                    ${lead.email ? `<div class="dashboard-modal-detail-row">📧 ${safeEmail}</div>` : ''}
-                    ${lead.phone ? `<div class="dashboard-modal-detail-row">📞 ${API.escapeHtml(lead.phone)}</div>` : ''}
-                    ${lead.potential_value ? `<div class="dashboard-modal-detail-row">💰 ${this.dashboard_formatValue(lead.potential_value)}</div>` : ''}
+                    ${lead.email ? `<div class="dashboard-modal-detail-row"><i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${safeEmail}</div>` : ''}
+                    ${lead.phone ? `<div class="dashboard-modal-detail-row"><i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${API.escapeHtml(lead.phone)}</div>` : ''}
+                    ${lead.potential_value ? `<div class="dashboard-modal-detail-row"><i data-lucide="dollar-sign" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;"></i>${this.dashboard_formatValue(lead.potential_value)}</div>` : ''}
                 </div>
                 
                 <div class="dashboard-modal-card-footer">
@@ -1095,11 +1151,12 @@ window.DashboardModule = {
     dashboard_renderTaskInDetail(task) {
         const safeTaskTitle = API.escapeHtml(task.title);
         const isOverdue = task.due_date && task.due_date < new Date().toISOString().split('T')[0];
-        
+
         return `
-            <div class="dashboard-detail-task-item ${task.status === 'completed' ? 'dashboard-task-completed' : ''}">
+            <div class="dashboard-detail-task-item dashboard-detail-task-clickable ${task.status === 'completed' ? 'dashboard-task-completed' : ''}"
+                 onclick="DashboardModule.dashboard_openTaskFromLead('${task.id}')">
                 <div class="dashboard-task-status-icon">
-                    ${task.status === 'completed' ? '✅' : isOverdue ? '⚠️' : '📋'}
+                    <i data-lucide="${task.status === 'completed' ? 'check-circle' : isOverdue ? 'alert-triangle' : 'clipboard'}" style="width: 20px; height: 20px;"></i>
                 </div>
                 <div class="dashboard-task-info">
                     <div class="dashboard-task-title">${safeTaskTitle}</div>
@@ -1121,33 +1178,30 @@ window.DashboardModule = {
         if (tasks.length === 0) {
             return `
                 <div class="dashboard-modal-empty-state">
-                    <div class="dashboard-empty-icon">📋</div>
+                    <i data-lucide="clipboard" class="dashboard-empty-icon" style="width: 48px; height: 48px;"></i>
                     <div class="dashboard-empty-text">No tasks found</div>
                 </div>
             `;
         }
-        
+
         return `
             <div class="dashboard-modal-tasks-list">
                 ${tasks.map(task => {
                     const isOverdue = task.due_date && task.due_date < today;
                     const isToday = task.due_date === today;
                     const safeTitle = API.escapeHtml(task.title);
-                    
+
                     return `
-                        <div class="dashboard-modal-task-card ${task.status === 'completed' ? 'dashboard-task-completed' : ''}" 
-                             data-action="view-task-detail" 
+                        <div class="dashboard-modal-task-card ${task.status === 'completed' ? 'dashboard-task-completed' : ''}"
+                             data-action="view-task-detail"
                              data-id="${task.id}">
                             <div class="dashboard-modal-task-header">
-                                <div class="dashboard-task-status-icon">
-                                    ${task.status === 'completed' ? '✅' : isOverdue ? '⚠️' : isToday ? '⏰' : '📋'}
-                                </div>
                                 <div class="dashboard-modal-task-info">
                                     <div class="dashboard-modal-task-title">${safeTitle}</div>
                                     ${task.description ? `<div class="dashboard-modal-task-description">${API.escapeHtml(task.description.substring(0, 100))}${task.description.length > 100 ? '...' : ''}</div>` : ''}
                                 </div>
                             </div>
-                            
+
                             <div class="dashboard-modal-task-meta">
                                 ${task.due_date ? `
                                     <div class="dashboard-task-meta-item">
@@ -1273,14 +1327,20 @@ window.DashboardModule = {
 
     dashboard_formatDate(dateString) {
         if (!dateString) return '';
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        if (date.toDateString() === today.toDateString()) return 'Today';
-        if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-        
+        // Normalize to YYYY-MM-DD format to avoid timezone issues
+        const taskDate = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+        const today = new Date().toISOString().split('T')[0];
+
+        // Calculate tomorrow's date
+        const tomorrowDate = new Date();
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrow = tomorrowDate.toISOString().split('T')[0];
+
+        if (taskDate === today) return 'Today';
+        if (taskDate === tomorrow) return 'Tomorrow';
+
+        // Format the date for display
+        const date = new Date(taskDate + 'T00:00:00');
         return date.toLocaleDateString('en-US', { month:'short', day: 'numeric' });
     },
 
@@ -1341,12 +1401,13 @@ window.DashboardModule = {
         if (container) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
-                    <div style="font-size: 4rem; margin-bottom: 2rem; opacity: 0.6;">⚠️</div>
+                    <div style="margin-bottom: 2rem; opacity: 0.6;"><i data-lucide="alert-triangle" style="width: 64px; height: 64px; color: var(--warning);"></i></div>
                     <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem;">Dashboard Error</h2>
                     <p style="margin-bottom: 2rem; font-size: 1.125rem; color: var(--text-secondary);">${API.escapeHtml(message)}</p>
-                    <button onclick="DashboardModule.dashboard_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;">🔄 Try Again</button>
+                    <button onclick="DashboardModule.dashboard_init()" style="padding: 1rem 2rem; background: var(--primary); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600; font-size: 1rem;"><i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Try Again</button>
                 </div>
             `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     },
 
@@ -1358,7 +1419,6 @@ window.DashboardModule = {
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
-    transition: opacity 0.3s ease;
 }
 
 /* METRICS - Beautiful gradients and animations preserved */
@@ -1386,10 +1446,32 @@ window.DashboardModule = {
     border-color: var(--primary);
 }
 
-.dashboard-metric-1 { animation: dashSlideUp 0.5s ease 0.1s backwards; }
-.dashboard-metric-2 { animation: dashSlideUp 0.5s ease 0.15s backwards; }
-.dashboard-metric-3 { animation: dashSlideUp 0.5s ease 0.2s backwards; }
-.dashboard-metric-4 { animation: dashSlideUp 0.5s ease 0.25s backwards; }
+/* ANIMATIONS - Wave for first load, fade for subsequent */
+@keyframes dashWaveIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes dashFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.dash-wave-in {
+    animation: dashWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.dash-fade-in {
+    animation: dashFadeIn 0.3s ease forwards;
+    opacity: 0;
+}
 
 .dashboard-metric-glow {
     position: absolute;
@@ -1484,7 +1566,6 @@ window.DashboardModule = {
     border-radius: var(--radius-lg);
     padding: 2rem;
     margin-bottom: 2rem;
-    animation: dashSlideUp 0.6s ease 0.3s backwards;
 }
 
 .dashboard-section-header {
@@ -1612,7 +1693,6 @@ window.DashboardModule = {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 1.75rem;
-    animation: dashSlideUp 0.6s ease;
 }
 
 /* LIST ITEMS */
@@ -1679,13 +1759,14 @@ window.DashboardModule = {
 }
 
 .dashboard-task-status-icon {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.25rem;
     flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .dashboard-item-content {
@@ -1736,7 +1817,6 @@ window.DashboardModule = {
     border-radius: var(--radius-lg);
     padding: 1.75rem;
     margin-bottom: 2rem;
-    animation: dashSlideUp 0.6s ease 0.4s backwards;
 }
 
 .dashboard-activity-timeline {
@@ -1791,14 +1871,12 @@ window.DashboardModule = {
     align-items: center;
     position: relative;
     overflow: hidden;
-    animation: dashSlideUp 0.6s ease 0.5s backwards;
 }
 
 .dashboard-upgrade-glow {
     position: absolute;
     inset: -50%;
     background: radial-gradient(circle, rgba(102, 126, 234, 0.3), transparent);
-    animation: dashGlow 3s infinite;
 }
 
 .dashboard-upgrade-content {
@@ -2252,10 +2330,13 @@ window.DashboardModule = {
     border-radius: var(--radius);
     cursor: pointer;
     transition: var(--transition);
+    border: 2px solid transparent;
 }
 
-.dashboard-detail-task-item:hover {
+.dashboard-detail-task-item.dashboard-detail-task-clickable:hover {
     background: var(--surface-hover);
+    border-color: var(--primary);
+    transform: translateX(4px);
 }
 
 .dashboard-detail-task-item.dashboard-task-completed {
@@ -2512,22 +2593,7 @@ window.DashboardModule = {
     color: var(--text-secondary);
 }
 
-/* ANIMATIONS */
-@keyframes dashSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes dashGlow {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.6; }
-}
+/* ANIMATIONS - Removed (skeleton handles first load) */
 
 /* RESPONSIVE */
 @media (max-width: 1200px) {

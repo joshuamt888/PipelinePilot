@@ -85,22 +85,33 @@ window.SettingsModule = {
         `;
     },
 
-    renderAccountTab() {
-        const { email, user_type, created_at, current_leads, current_lead_limit } = this.state.profile;
+    async renderAccountTab() {
+        const { email, user_type, created_at } = this.state.profile;
 
+        // Get lead counts from API
+        const subscriptionInfo = await API.getUserSubscriptionInfo();
+        const leadsUsed = subscriptionInfo.currentLeads;
+        const leadsLimit = subscriptionInfo.leadLimit;
+
+        // ========================================
+        // TIER FEATURE GATES
+        // Free: Basic modules only (Dashboard, Pipeline, Leads, Scheduling)
+        // PRO: + Goals, Estimates, Jobs (implemented)
+        // BUSINESS FEATURE: Team collaboration (future)
+        // ENTERPRISE FEATURE: SSO, audit logs, custom integrations (future)
+        // ADMIN FEATURE: Platform analytics, user management (implemented)
+        // ========================================
         const tierConfig = {
             'free': { name: 'Free Plan', color: '#6b7280', gradient: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' },
             'professional': { name: 'Professional', color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
             'professional_trial': { name: 'Pro Trial', color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
-            'business': { name: 'Business', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
-            'enterprise': { name: 'Enterprise', color: '#667eea', gradient: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)' },
+            'business': { name: 'Business', color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }, // FUTURE
+            'enterprise': { name: 'Enterprise', color: '#667eea', gradient: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)' }, // FUTURE
             'admin': { name: 'Admin', color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }
         };
 
         const tier = tierConfig[user_type] || tierConfig['free'];
         const memberSince = this.formatDate(created_at);
-        const leadsUsed = current_leads || 0;
-        const leadsLimit = current_lead_limit || 50;
         const leadsPercent = Math.min(Math.round((leadsUsed / leadsLimit) * 100), 100);
 
         return `
@@ -596,7 +607,11 @@ window.SettingsModule = {
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     },
 
-    deleteAccount() {
+    async deleteAccount() {
+        // Get lead count from API
+        const subscriptionInfo = await API.getUserSubscriptionInfo();
+        const leadCount = subscriptionInfo.currentLeads;
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.id = 'deleteModal';
@@ -614,7 +629,7 @@ window.SettingsModule = {
                             This will permanently delete your account and remove all associated data including:
                         </p>
                         <ul class="warning-list">
-                            <li>All leads (${this.state.profile.current_leads || 0} leads)</li>
+                            <li>All leads (${leadCount} leads)</li>
                             <li>All tasks and schedules</li>
                             <li>All account settings</li>
                             <li>All historical data</li>

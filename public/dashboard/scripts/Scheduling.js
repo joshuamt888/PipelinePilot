@@ -21,34 +21,31 @@ window.SchedulingModule = {
             types: [],
             priorities: [],
             date: ''
-        }
+        },
+        batchEditMode: false,
+        selectedTaskIds: [],
+        taskLimit: 5000,
+        hasInitialized: false  // Track if module has loaded before
     },
 
     // Init with fade-in
     async init(targetContainer = 'tasks-content') {
         console.log('Scheduling module loading');
-        
+
         try {
             this.scheduling_state.targetContainer = targetContainer;
             this.scheduling_state.isLoading = true;
-            
+
             const container = document.getElementById(targetContainer);
-            if (container) {
-                container.style.opacity = '0';
-                container.style.transition = 'opacity 0.3s ease';
-            }
-            
+
             await this.scheduling_loadTasks();
             await this.scheduling_loadLeads();
             this.scheduling_render();
-            
-            // Fade in
-            setTimeout(() => {
-                if (container) container.style.opacity = '1';
-            }, 50);
-            
+
+            // Slide-in animation happens via CSS
+            this.scheduling_state.hasInitialized = true;
             console.log('Scheduling module ready');
-            
+
         } catch (error) {
             console.error('Scheduling init failed:', error);
             this.scheduling_renderError(error.message);
@@ -86,18 +83,54 @@ window.SchedulingModule = {
         const container = document.getElementById(this.scheduling_state.targetContainer);
         if (!container) return;
 
+        const isFirstLoad = !this.scheduling_state.hasInitialized;
+
         container.innerHTML = `
             <div class="scheduling-container">
-                ${this.scheduling_state.currentView === 'table' ? 
-                    this.scheduling_renderTableView() : 
+                ${this.scheduling_state.currentView === 'table' ?
+                    this.scheduling_renderTableView() :
                     this.scheduling_renderDashboardView()}
                 ${this.scheduling_renderStyles()}
             </div>
         `;
 
+        // Apply animations based on load state
+        if (isFirstLoad) {
+            // First load: Staggered wave animation
+            requestAnimationFrame(() => {
+                const bubbles = container.querySelectorAll('.scheduling-action-bubble');
+                bubbles.forEach((bubble, i) => {
+                    bubble.classList.add('sched-wave-in');
+                    bubble.style.animationDelay = `${i * 0.15}s`;
+                });
+
+                const calendarSection = container.querySelector('.scheduling-calendar-section');
+                if (calendarSection) {
+                    calendarSection.classList.add('sched-wave-in');
+                    calendarSection.style.animationDelay = `${bubbles.length * 0.15}s`;
+                }
+
+                // For table view
+                const tableElements = container.querySelectorAll('.scheduling-table-header, .scheduling-table-container');
+                tableElements.forEach((el, i) => {
+                    el.classList.add('sched-wave-in');
+                    el.style.animationDelay = `${i * 0.1}s`;
+                });
+            });
+        } else {
+            // Subsequent loads: Fast fade
+            requestAnimationFrame(() => {
+                const allElements = container.querySelectorAll('.scheduling-action-bubble, .scheduling-calendar-section, .scheduling-table-header, .scheduling-table-container');
+                allElements.forEach(el => el.classList.add('sched-fade-in'));
+            });
+        }
+
         this.scheduling_setupEventListeners();
         this.scheduling_updateHeaderIndicators();
         this.scheduling_updateActiveFiltersPanel();
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     // Dashboard View
@@ -119,7 +152,7 @@ window.SchedulingModule = {
                 </div>
                 
                 <div class="scheduling-action-bubble scheduling-bubble-secondary" onclick="SchedulingModule.scheduling_showTableView()">
-                    <div class="scheduling-bubble-icon">📊</div>
+                    <div class="scheduling-bubble-icon"><i data-lucide="list-checks" style="width: 48px; height: 48px;"></i></div>
                     <div class="scheduling-bubble-content">
                         <h2 class="scheduling-bubble-title">Manage Tasks</h2>
                         <p class="scheduling-bubble-subtitle">View, edit and organize your complete task database</p>
@@ -192,7 +225,9 @@ window.SchedulingModule = {
     // Table View
     scheduling_renderTableView() {
         const filteredTasks = this.scheduling_getFilteredAndSortedTasks();
-        
+        const totalTasks = this.scheduling_state.tasks.length;
+        const selectedCount = this.scheduling_state.selectedTaskIds.length;
+
         return `
             <div class="scheduling-table-view">
                 <div class="scheduling-table-header">
@@ -200,14 +235,26 @@ window.SchedulingModule = {
                         <button class="scheduling-back-btn" onclick="SchedulingModule.scheduling_showDashboard()">
                             ← Back to Dashboard
                         </button>
-                        <h2 class="scheduling-table-title">All Tasks (${filteredTasks.length})</h2>
                     </div>
                     <div class="scheduling-table-header-right">
-                        <button class="scheduling-refresh-table-btn" onclick="SchedulingModule.scheduling_refreshTable()">
-                            🔄 Refresh
-                        </button>
+                        ${totalTasks > 0 ? `
+                            <div class="scheduling-task-counter">
+                                ${totalTasks} / ${this.scheduling_state.taskLimit} tasks
+                            </div>
+                            <button class="scheduling-btn-batch-edit ${this.scheduling_state.batchEditMode ? 'active' : ''}"
+                                    onclick="SchedulingModule.scheduling_toggleBatchMode()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    ${this.scheduling_state.batchEditMode ?
+                                        `<path d="M6 18L18 6M6 6l12 12"/>` :
+                                        `<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>`
+                                    }
+                                </svg>
+                                ${this.scheduling_state.batchEditMode ?
+                                    `Cancel (${selectedCount} selected)` :
+                                    'Edit Multiple'}
+                            </button>
+                        ` : ''}
                         <div class="scheduling-search-box">
-                            <span class="scheduling-search-icon">🔍</span>
                             <input type="text"
                                    class="scheduling-search-input"
                                    placeholder="Search tasks..."
@@ -219,13 +266,15 @@ window.SchedulingModule = {
                         </button>
                     </div>
                 </div>
-                
+
                 ${this.scheduling_renderActiveFiltersPanel()}
-                
+
                 <div class="scheduling-table-container">
-                    ${filteredTasks.length > 0 ? 
-                        this.scheduling_renderTasksTable(filteredTasks) : 
+                    ${filteredTasks.length > 0 ?
+                        this.scheduling_renderTasksTable(filteredTasks) :
                         this.scheduling_renderEmptyState()}
+                    ${this.scheduling_state.batchEditMode && selectedCount > 0 ?
+                        this.scheduling_renderBatchActionsBar() : ''}
                 </div>
             </div>
         `;
@@ -270,24 +319,40 @@ window.SchedulingModule = {
         const typeIcon = this.scheduling_getTaskTypeIcon(task.task_type);
         const priorityIcon = this.scheduling_getPriorityIcon(task.priority);
         const formattedDate = this.scheduling_formatTaskDate(task.due_date);
-        
+        const isSelected = this.scheduling_state.selectedTaskIds.includes(task.id);
+
         const safeTitle = API.escapeHtml(task.title);
         const safeLeadName = API.escapeHtml(leadName || '-');
         const safeTime = task.due_time ? API.escapeHtml(this.scheduling_formatTime(task.due_time)) : '';
-        
+
         return `
-            <tr class="scheduling-task-row ${isCompleted ? 'scheduling-completed' : ''} ${isOverdue ? 'scheduling-overdue' : ''} scheduling-clickable-row"
+            <tr class="scheduling-task-row ${isCompleted ? 'scheduling-completed' : ''} ${isOverdue ? 'scheduling-overdue' : ''} ${this.scheduling_state.batchEditMode ? 'batch-mode' : 'scheduling-clickable-row'} ${isSelected ? 'selected' : ''}"
                 data-priority="${task.priority || 'medium'}"
-                onclick="SchedulingModule.scheduling_showTaskView('${task.id}')">
-                <td class="scheduling-checkbox-col" onclick="event.stopPropagation()">
-                    <input type="checkbox" 
-                           class="scheduling-task-checkbox"
-                           ${isCompleted ? 'checked' : ''}
-                           onchange="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', this.checked)">
+                data-task-id="${task.id}"
+                onclick="${this.scheduling_state.batchEditMode ? `SchedulingModule.scheduling_toggleTaskSelection('${task.id}')` : `SchedulingModule.scheduling_showTaskView('${task.id}')`}">
+                <td class="scheduling-checkbox-col" onclick="${this.scheduling_state.batchEditMode ? `event.stopPropagation(); SchedulingModule.scheduling_toggleTaskSelection('${task.id}')` : 'event.stopPropagation()'}">
+                    ${this.scheduling_state.batchEditMode ? `
+                        <div class="scheduling-checkbox-wrapper">
+                            <input type="checkbox"
+                                   class="scheduling-checkbox-input"
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="SchedulingModule.scheduling_toggleTaskSelection('${task.id}')">
+                            <div class="scheduling-checkbox-custom">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                        </div>
+                    ` : `
+                        <input type="checkbox"
+                               class="scheduling-task-checkbox"
+                               ${isCompleted ? 'checked' : ''}
+                               onchange="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', this.checked)">
+                    `}
                 </td>
                 <td class="scheduling-task-cell">
                     <div class="scheduling-task-title ${isCompleted ? 'scheduling-completed-text' : ''}">${safeTitle}</div>
-                    ${safeTime ? `<div class="scheduling-task-time">⏰ ${safeTime}</div>` : ''}
+                    ${safeTime ? `<div class="scheduling-task-time"><i data-lucide="clock" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeTime}</div>` : ''}
                 </td>
                 <td class="scheduling-lead-cell">
                     <span class="scheduling-lead-name">${safeLeadName}</span>
@@ -347,17 +412,21 @@ modal.addEventListener('mouseup', (e) => {
 });
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Setup form functionality after insertion
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
-            
+            this.scheduling_setupCustomTaskTypeToggle('add');
+
             const form = document.getElementById('scheduling_form');
             if (form) {
                 form.onsubmit = (e) => this.scheduling_handleSubmit(e);
             }
-            
+
             const firstInput = modal.querySelector('input[name="title"]');
             if (firstInput) firstInput.focus();
         }, 10);
@@ -396,12 +465,12 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Date</label>
-                        <input type="date" name="due_date" class="scheduling-form-input" value="${selectedDate}">
+                        <input type="date" name="due_date" id="scheduling_dueDate" class="scheduling-form-input">
                     </div>
-                    
+
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Time</label>
-                        <input type="time" name="due_time" class="scheduling-form-input">
+                        <input type="time" name="due_time" id="scheduling_dueTime" class="scheduling-form-input">
                     </div>
                     
                     <div class="scheduling-form-group">
@@ -418,19 +487,28 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
-                        <select name="task_type" class="scheduling-form-select">
-                            <option value="follow_up">📋 Follow-up</option>
-                            <option value="call">📞 Call</option>
-                            <option value="email">📧 Email</option>
-                            <option value="meeting">🤝 Meeting</option>
-                            <option value="demo">🎥 Demo</option>
-                            <option value="research">🔍 Research</option>
-                            <option value="proposal">📊 Proposal</option>
-                            <option value="contract">📄 Contract</option>
-                            <option value="task">📝 Task</option>
+                        <select name="task_type" class="scheduling-form-select" id="scheduling_taskTypeSelect">
+                            <option value="follow_up">Follow-up</option>
+                            <option value="call">Call</option>
+                            <option value="email">Email</option>
+                            <option value="meeting">Meeting</option>
+                            <option value="demo">Demo</option>
+                            <option value="research">Research</option>
+                            <option value="estimate">Proposal</option>
+                            <option value="contract">Contract</option>
+                            <option value="task">Task</option>
+                            <option value="custom">Custom Task Type</option>
                         </select>
                     </div>
-                    
+
+                    <div class="scheduling-form-group scheduling-custom-task-input scheduling-full-width" id="scheduling_customTaskTypeInput" style="display: none;">
+                        <label class="scheduling-form-label">Custom Task Type Name</label>
+                        <input type="text" id="scheduling_customTaskType" class="scheduling-form-input"
+                               placeholder="e.g., Site Visit, Installation, Training..."
+                               maxlength="20">
+                        <span class="scheduling-input-hint" id="scheduling_customTaskTypeCounter">20 characters remaining</span>
+                    </div>
+
                     <div class="scheduling-form-group scheduling-full-width">
                         <label class="scheduling-form-label">Notes</label>
                         <textarea name="description" 
@@ -459,9 +537,9 @@ modal.addEventListener('mouseup', (e) => {
     scheduling_editTask(taskId) {
         const task = this.scheduling_state.tasks.find(t => t.id.toString() === taskId.toString());
         if (!task) return;
-        
+
         this.scheduling_state.currentEditTask = task;
-        
+
         // Remove any existing edit modals
         document.getElementById('scheduling_editModal')?.remove();
         
@@ -496,12 +574,16 @@ modal.addEventListener('mouseup', (e) => {
 });
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         // Setup form functionality after insertion
         setTimeout(() => {
             this.scheduling_setupInputValidation();
             this.scheduling_setupPriorityGlow();
-            
+            this.scheduling_setupCustomTaskTypeToggle('edit');
+
             const editForm = document.getElementById('scheduling_editForm');
             if (editForm) {
                 editForm.onsubmit = (e) => this.scheduling_handleEditSubmit(e);
@@ -542,12 +624,12 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Date</label>
-                        <input type="date" name="due_date" class="scheduling-form-input" value="${taskDate}">
+                        <input type="date" name="due_date" id="scheduling_edit_dueDate" class="scheduling-form-input" value="${taskDate}">
                     </div>
-                    
+
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Due Time</label>
-                        <input type="time" name="due_time" class="scheduling-form-input" value="${task.due_time || ''}">
+                        <input type="time" name="due_time" id="scheduling_edit_dueTime" class="scheduling-form-input" value="${task.due_time || ''}">
                     </div>
                     
                     <div class="scheduling-form-group">
@@ -564,19 +646,29 @@ modal.addEventListener('mouseup', (e) => {
                     
                     <div class="scheduling-form-group">
                         <label class="scheduling-form-label">Task Type</label>
-                        <select name="task_type" class="scheduling-form-select">
-                            <option value="follow_up" ${task.task_type === 'follow_up' ? 'selected' : ''}>📋 Follow-up</option>
-                            <option value="call" ${task.task_type === 'call' ? 'selected' : ''}>📞 Call</option>
-                            <option value="email" ${task.task_type === 'email' ? 'selected' : ''}>📧 Email</option>
-                            <option value="meeting" ${task.task_type === 'meeting' ? 'selected' : ''}>🤝 Meeting</option>
-                            <option value="demo" ${task.task_type === 'demo' ? 'selected' : ''}>🎥 Demo</option>
-                            <option value="research" ${task.task_type === 'research' ? 'selected' : ''}>🔍 Research</option>
-                            <option value="proposal" ${task.task_type === 'proposal' ? 'selected' : ''}>📊 Proposal</option>
-                            <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>📄 Contract</option>
-                            <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>📝 Task</option>
+                        <select name="task_type" class="scheduling-form-select" id="scheduling_edit_taskTypeSelect">
+                            <option value="follow_up" ${task.task_type === 'follow_up' ? 'selected' : ''}>Follow-up</option>
+                            <option value="call" ${task.task_type === 'call' ? 'selected' : ''}>Call</option>
+                            <option value="email" ${task.task_type === 'email' ? 'selected' : ''}>Email</option>
+                            <option value="meeting" ${task.task_type === 'meeting' ? 'selected' : ''}>Meeting</option>
+                            <option value="demo" ${task.task_type === 'demo' ? 'selected' : ''}>Demo</option>
+                            <option value="research" ${task.task_type === 'research' ? 'selected' : ''}>Research</option>
+                            <option value="estimate" ${task.task_type === 'estimate' ? 'selected' : ''}>Proposal</option>
+                            <option value="contract" ${task.task_type === 'contract' ? 'selected' : ''}>Contract</option>
+                            <option value="task" ${task.task_type === 'task' ? 'selected' : ''}>Task</option>
+                            <option value="custom" ${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? 'selected' : ''}>Custom Task Type</option>
                         </select>
                     </div>
-                    
+
+                    <div class="scheduling-form-group scheduling-custom-task-input scheduling-full-width" id="scheduling_edit_customTaskTypeInput" style="display: ${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? 'flex' : 'none'};">
+                        <label class="scheduling-form-label">Custom Task Type Name</label>
+                        <input type="text" id="scheduling_edit_customTaskType" class="scheduling-form-input"
+                               placeholder="e.g., Site Visit, Installation, Training..."
+                               maxlength="20"
+                               value="${!['follow_up', 'call', 'email', 'meeting', 'demo', 'research', 'estimate', 'contract', 'task'].includes(task.task_type) ? API.escapeHtml(task.task_type) : ''}">
+                        <span class="scheduling-input-hint" id="scheduling_edit_customTaskTypeCounter">20 characters remaining</span>
+                    </div>
+
                     <div class="scheduling-form-group scheduling-full-width">
                         <label class="scheduling-form-label">Notes</label>
                         <textarea name="description" 
@@ -590,7 +682,7 @@ modal.addEventListener('mouseup', (e) => {
                 
                 <div class="scheduling-form-actions">
                     <button type="button" class="scheduling-btn-danger" onclick="SchedulingModule.scheduling_showDeleteConfirmation('${task.id}')">
-                        🗑️ Delete
+                        Delete Task
                     </button>
                     <div class="scheduling-form-actions-right">
                         <button type="button" class="scheduling-btn-secondary" onclick="SchedulingModule.scheduling_hideEditTaskModal()">
@@ -744,7 +836,7 @@ modal.addEventListener('mouseup', (e) => {
                     dropdown.classList.remove('scheduling-priority-low', 'scheduling-priority-medium', 'scheduling-priority-high', 'scheduling-priority-urgent');
                     dropdown.classList.add(`scheduling-priority-${value}`);
                 }
-                
+
                 dropdown.addEventListener('change', () => {
                     const newValue = dropdown.value;
                     dropdown.classList.remove('scheduling-priority-low', 'scheduling-priority-medium', 'scheduling-priority-high', 'scheduling-priority-urgent');
@@ -756,21 +848,78 @@ modal.addEventListener('mouseup', (e) => {
         }, 100);
     },
 
-    // Form Submission
+    // Custom task type toggle and counter
+    scheduling_setupCustomTaskTypeToggle(mode) {
+        const selectId = mode === 'edit' ? 'scheduling_edit_taskTypeSelect' : 'scheduling_taskTypeSelect';
+        const inputId = mode === 'edit' ? 'scheduling_edit_customTaskTypeInput' : 'scheduling_customTaskTypeInput';
+        const textInputId = mode === 'edit' ? 'scheduling_edit_customTaskType' : 'scheduling_customTaskType';
+        const counterId = mode === 'edit' ? 'scheduling_edit_customTaskTypeCounter' : 'scheduling_customTaskTypeCounter';
+
+        const taskTypeSelect = document.getElementById(selectId);
+        const customInput = document.getElementById(inputId);
+        const customTextInput = document.getElementById(textInputId);
+        const counter = document.getElementById(counterId);
+
+        if (taskTypeSelect && customInput && customTextInput && counter) {
+            // Character counter function
+            const updateCounter = () => {
+                let value = customTextInput.value;
+                if (value.length > 20) {
+                    value = value.substring(0, 20);
+                    customTextInput.value = value;
+                }
+
+                const remaining = 20 - value.length;
+                counter.textContent = remaining === 1
+                    ? '1 character remaining'
+                    : `${remaining} characters remaining`;
+
+                if (remaining === 0) {
+                    counter.textContent = 'Max reached';
+                    counter.style.color = 'var(--danger)';
+                    counter.style.fontWeight = '700';
+                } else if (remaining <= 5) {
+                    counter.style.color = 'var(--warning)';
+                    counter.style.fontWeight = '600';
+                } else {
+                    counter.style.color = 'var(--text-tertiary)';
+                    counter.style.fontWeight = '400';
+                }
+            };
+
+            // Initialize counter on load
+            updateCounter();
+
+            // Update counter on input
+            customTextInput.addEventListener('input', updateCounter);
+
+            // Toggle visibility based on selection
+            taskTypeSelect.addEventListener('change', () => {
+                if (taskTypeSelect.value === 'custom') {
+                    customInput.style.display = 'flex';
+                    setTimeout(() => customTextInput.focus(), 100);
+                } else {
+                    customInput.style.display = 'none';
+                    customTextInput.value = '';
+                    updateCounter();
+                }
+            });
+        }
+    },
+
+    // Form Submission - OPTIMISTIC UI
     async scheduling_handleSubmit(e) {
         e.preventDefault();
-        
+
         try {
             if (this.scheduling_state.tasks.length >= 10000) {
                 this.scheduling_showNotification('Task limit reached (10,000 max)', 'error');
                 return;
             }
-            
-            this.scheduling_setLoadingState(true);
-            
+
             const formData = new FormData(e.target);
             const taskData = {};
-            
+
             for (let [key, value] of formData.entries()) {
                 if (key === 'lead_id') {
                     const trimmed = value ? value.trim() : '';
@@ -781,43 +930,93 @@ modal.addEventListener('mouseup', (e) => {
                     taskData[key] = value.trim() || null;
                 }
             }
-            
+
+            // Handle custom task type
+            if (taskData.task_type === 'custom') {
+                const customTaskTypeInput = document.getElementById('scheduling_customTaskType');
+                const customTaskType = customTaskTypeInput ? customTaskTypeInput.value.trim() : '';
+                if (!customTaskType) {
+                    this.scheduling_showNotification('Custom task type is required', 'error');
+                    if (customTaskTypeInput) {
+                        customTaskTypeInput.style.borderColor = 'var(--danger)';
+                        customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                        customTaskTypeInput.focus();
+                    }
+                    return;
+                }
+                taskData.task_type = customTaskType;
+            }
+
             if (!taskData.title) {
                 throw new Error('Title is required');
             }
-            
-            const newTask = await API.createTask(taskData);
-            
-            await this.scheduling_loadTasks();
-            
+
+            // Create optimistic task with temporary ID
+            const optimisticTask = {
+                ...taskData,
+                id: `temp-${Date.now()}`,
+                status: 'pending',
+                completed_at: null,
+                created_at: new Date().toISOString()
+            };
+
+            // CLOSE MODAL IMMEDIATELY
             this.scheduling_hideAddTaskModal();
-            this.scheduling_render();
-            
-            this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" created successfully!`, 'success');
-            
-        } catch (error) {
-            console.error('Failed to create task:', error);
-            
-            if (error.message.includes('Task limit reached')) {
-                this.scheduling_showUpgradePrompt();
-                return;
+
+            // UPDATE STATE
+            this.scheduling_state.tasks.unshift(optimisticTask);
+
+            // UPDATE UI BASED ON CURRENT VIEW
+            if (this.scheduling_state.currentView === 'table') {
+                this.scheduling_updateTableContent();
+            } else {
+                this.scheduling_updateDashboard();
             }
-            
-            this.scheduling_showNotification(API.handleAPIError(error, 'CreateTask'), 'error');
-        } finally {
-            this.scheduling_setLoadingState(false);
+
+            // API CALL IN BACKGROUND
+            try {
+                const newTask = await API.createTask(taskData);
+
+                // Replace optimistic task with real task
+                const taskIndex = this.scheduling_state.tasks.findIndex(t => t.id === optimisticTask.id);
+                if (taskIndex !== -1) {
+                    this.scheduling_state.tasks[taskIndex] = newTask;
+                }
+
+                this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" created successfully!`, 'success');
+            } catch (error) {
+                console.error('Failed to create task:', error);
+
+                // ROLLBACK ON ERROR
+                this.scheduling_state.tasks = this.scheduling_state.tasks.filter(t => t.id !== optimisticTask.id);
+
+                if (this.scheduling_state.currentView === 'table') {
+                    this.scheduling_updateTableContent();
+                } else {
+                    this.scheduling_updateDashboard();
+                }
+
+                if (error.message.includes('Task limit reached')) {
+                    this.scheduling_showUpgradePrompt();
+                    return;
+                }
+
+                this.scheduling_showNotification(API.handleAPIError(error, 'CreateTask'), 'error');
+            }
+
+        } catch (error) {
+            console.error('Form validation failed:', error);
+            this.scheduling_showNotification('Please check all required fields', 'error');
         }
     },
 
     async scheduling_handleEditSubmit(e) {
         e.preventDefault();
-        
+
         try {
-            this.scheduling_setEditLoadingState(true);
-            
             const formData = new FormData(e.target);
             const taskData = {};
-            
+
             for (let [key, value] of formData.entries()) {
                 if (key === 'lead_id') {
                     const trimmed = value ? value.trim() : '';
@@ -828,21 +1027,69 @@ modal.addEventListener('mouseup', (e) => {
                     taskData[key] = value.trim() || null;
                 }
             }
-            
-            await API.updateTask(this.scheduling_state.currentEditTask.id, taskData);
-            
-            await this.scheduling_loadTasks();
-            
+
+            // Handle custom task type
+            if (taskData.task_type === 'custom') {
+                const customTaskTypeInput = document.getElementById('scheduling_edit_customTaskType');
+                const customTaskType = customTaskTypeInput ? customTaskTypeInput.value.trim() : '';
+                if (!customTaskType) {
+                    this.scheduling_showNotification('Custom task type is required', 'error');
+                    if (customTaskTypeInput) {
+                        customTaskTypeInput.style.borderColor = 'var(--danger)';
+                        customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                        customTaskTypeInput.focus();
+                    }
+                    return;
+                }
+                taskData.task_type = customTaskType;
+            }
+
+            const taskId = this.scheduling_state.currentEditTask.id;
+            const originalTask = { ...this.scheduling_state.currentEditTask };
+
+            // CLOSE MODAL IMMEDIATELY
             this.scheduling_hideEditTaskModal();
-            this.scheduling_render();
-            
-            this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" updated successfully!`, 'success');
-            
+
+            // UPDATE STATE
+            const taskIndex = this.scheduling_state.tasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                this.scheduling_state.tasks[taskIndex] = {
+                    ...this.scheduling_state.tasks[taskIndex],
+                    ...taskData
+                };
+            }
+
+            // UPDATE UI BASED ON CURRENT VIEW
+            if (this.scheduling_state.currentView === 'table') {
+                this.scheduling_updateTableContent();
+            } else {
+                this.scheduling_updateDashboard();
+            }
+
+            // API CALL IN BACKGROUND
+            try {
+                await API.updateTask(taskId, taskData);
+                this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" updated successfully!`, 'success');
+            } catch (error) {
+                console.error('Failed to update task:', error);
+
+                // ROLLBACK ON ERROR
+                if (taskIndex !== -1) {
+                    this.scheduling_state.tasks[taskIndex] = originalTask;
+                }
+
+                if (this.scheduling_state.currentView === 'table') {
+                    this.scheduling_updateTableContent();
+                } else {
+                    this.scheduling_updateDashboard();
+                }
+
+                this.scheduling_showNotification(API.handleAPIError(error, 'UpdateTask'), 'error');
+            }
+
         } catch (error) {
-            console.error('Failed to update task:', error);
-            this.scheduling_showNotification(API.handleAPIError(error, 'UpdateTask'), 'error');
-        } finally {
-            this.scheduling_setEditLoadingState(false);
+            console.error('Form validation failed:', error);
+            this.scheduling_showNotification('Please check all required fields', 'error');
         }
     },
 
@@ -867,12 +1114,19 @@ modal.addEventListener('mouseup', (e) => {
         try {
             if (isCompleted) {
                 await API.completeTask(taskId, 'Completed from scheduling module');
+                // Check if any active goals should be completed
+                await API.checkGoalCompletion();
             } else {
-                await API.updateTask(taskId, { 
+                await API.updateTask(taskId, {
                     status: 'pending',
                     completed_at: null
                 });
+                // DB trigger automatically handles updating task_list goals when tasks change status
+                // No need to manually check - goal status is always calculated dynamically
             }
+
+            // Notify Goals module that task status changed so it can refresh percentages
+            document.dispatchEvent(new CustomEvent('taskStatusChanged', { detail: { taskId } }));
         } catch (error) {
             this.scheduling_revertTaskVisually(taskId, !isCompleted);
             console.error('Task toggle failed:', error);
@@ -937,7 +1191,6 @@ modal.addEventListener('mouseup', (e) => {
         confirmModal.innerHTML = `
             <div class="scheduling-delete-confirm-modal">
                 <div class="scheduling-confirm-header">
-                    <div class="scheduling-confirm-icon">⚠️</div>
                     <h3 class="scheduling-confirm-title">Delete Task</h3>
                 </div>
                 
@@ -972,7 +1225,10 @@ modal.addEventListener('mouseup', (e) => {
         `;
 
         document.body.appendChild(confirmModal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         confirmModal.querySelector('.scheduling-btn-cancel-delete').onclick = () => confirmModal.remove();
         confirmModal.querySelector('.scheduling-btn-confirm-delete').onclick = () => {
             this.scheduling_confirmDelete(taskId);
@@ -987,63 +1243,60 @@ modal.addEventListener('mouseup', (e) => {
         const task = this.scheduling_state.tasks.find(t => t.id.toString() === taskId.toString());
         if (!task) return;
 
+        const deletedTask = { ...task };
+
+        // CLOSE MODAL IMMEDIATELY
+        this.scheduling_hideAllModals();
+
+        // UPDATE STATE
+        this.scheduling_state.tasks = this.scheduling_state.tasks.filter(t => t.id.toString() !== taskId.toString());
+
+        // UPDATE UI BASED ON CURRENT VIEW
+        if (this.scheduling_state.currentView === 'table') {
+            this.scheduling_updateTableContent();
+        } else {
+            this.scheduling_updateDashboard();
+        }
+
+        // API CALL IN BACKGROUND
         try {
             await API.deleteTask(taskId);
-            
-            this.scheduling_state.tasks = this.scheduling_state.tasks.filter(t => t.id.toString() !== taskId.toString());
-            
-            this.scheduling_hideAllModals();
-            this.scheduling_render();
-            
-            this.scheduling_showNotification(`Task "${API.escapeHtml(task.title)}" deleted successfully`, 'success');
-            
+            this.scheduling_showNotification(`Task "${API.escapeHtml(deletedTask.title)}" deleted successfully`, 'success');
         } catch (error) {
             console.error('Failed to delete task:', error);
+
+            // ROLLBACK ON ERROR
+            this.scheduling_state.tasks.push(deletedTask);
+
+            if (this.scheduling_state.currentView === 'table') {
+                this.scheduling_updateTableContent();
+            } else {
+                this.scheduling_updateDashboard();
+            }
+
             this.scheduling_showNotification(API.handleAPIError(error, 'DeleteTask'), 'error');
         }
     },
 
-    // View Management WITH FADE
+    // View Management - INSTANT transitions
     scheduling_showDashboard() {
         if (this.scheduling_state.isTransitioning) return;
         this.scheduling_state.isTransitioning = true;
-        
-        const container = document.getElementById(this.scheduling_state.targetContainer);
-        if (container) {
-            container.style.opacity = '0';
-            
-            setTimeout(() => {
-                this.scheduling_state.currentView = 'dashboard';
-                this.scheduling_hideAllModals();
-                this.scheduling_render();
-                
-                setTimeout(() => {
-                    container.style.opacity = '1';
-                    this.scheduling_state.isTransitioning = false;
-                }, 50);
-            }, 300);
-        }
+
+        this.scheduling_state.currentView = 'dashboard';
+        this.scheduling_hideAllModals();
+        this.scheduling_render();
+        this.scheduling_state.isTransitioning = false;
     },
 
     scheduling_showTableView() {
         if (this.scheduling_state.isTransitioning) return;
         this.scheduling_state.isTransitioning = true;
-        
-        const container = document.getElementById(this.scheduling_state.targetContainer);
-        if (container) {
-            container.style.opacity = '0';
-            
-            setTimeout(() => {
-                this.scheduling_state.currentView = 'table';
-                this.scheduling_hideAllModals();
-                this.scheduling_render();
-                
-                setTimeout(() => {
-                    container.style.opacity = '1';
-                    this.scheduling_state.isTransitioning = false;
-                }, 50);
-            }, 300);
-        }
+
+        this.scheduling_state.currentView = 'table';
+        this.scheduling_hideAllModals();
+        this.scheduling_render();
+        this.scheduling_state.isTransitioning = false;
     },
 
     // Modal controls
@@ -1069,15 +1322,15 @@ modal.addEventListener('mouseup', (e) => {
         popup.innerHTML = `
             <div class="scheduling-day-popup" onclick="event.stopPropagation()">
                 <div class="scheduling-popup-header">
-                    <h3 class="scheduling-popup-title">📅 ${this.scheduling_formatPopupDate(date)}</h3>
+                    <h3 class="scheduling-popup-title"><i data-lucide="calendar" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>${this.scheduling_formatPopupDate(date)}</h3>
                     <button class="scheduling-popup-close" onclick="SchedulingModule.scheduling_closeDayPopup()">×</button>
                 </div>
-                
+
                 <div class="scheduling-popup-body">
-                    ${dayTasks.length > 0 ? 
+                    ${dayTasks.length > 0 ?
                         dayTasks.map(task => this.scheduling_renderPopupTaskItem(task)).join('') :
                         `<div class="scheduling-empty-day">
-                            <div class="scheduling-empty-icon">🗓️</div>
+                            <div class="scheduling-empty-icon"><i data-lucide="calendar-days" style="width: 64px; height: 64px; opacity: 0.3;"></i></div>
                             <div class="scheduling-empty-message">No tasks scheduled for this day</div>
                         </div>`
                     }
@@ -1086,8 +1339,11 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         popup.onclick = () => this.scheduling_closeDayPopup();
-        
+
         document.body.appendChild(popup);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     scheduling_renderPopupTaskItem(task) {
@@ -1215,17 +1471,17 @@ modal.addEventListener('mouseup', (e) => {
                         <div class="scheduling-quick-actions-grid">
                             ${lead?.phone ? `
                                 <button class="scheduling-quick-action-btn scheduling-call" onclick="SchedulingModule.scheduling_quickCall('${lead.id}')">
-                                    📞 Call
+                                    <i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Call
                                 </button>
                             ` : ''}
                             ${lead?.email ? `
                                 <button class="scheduling-quick-action-btn scheduling-email" onclick="SchedulingModule.scheduling_quickEmail('${lead.id}')">
-                                    📧 Email
+                                    <i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Email
                                 </button>
                             ` : ''}
-                            <button class="scheduling-quick-action-btn scheduling-complete ${isCompleted ? 'scheduling-undo' : ''}" 
-                                    onclick="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', ${!isCompleted})">
-                                ${isCompleted ? '↩️ Mark Pending' : '✅ Mark Complete'}
+                            <button class="scheduling-quick-action-btn scheduling-complete ${isCompleted ? 'scheduling-undo' : ''}"
+                                    onclick="SchedulingModule.scheduling_toggleTaskComplete('${task.id}', ${!isCompleted}); SchedulingModule.scheduling_closeTaskView();">
+                                ${isCompleted ? '<i data-lucide="rotate-ccw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Mark Pending' : '<i data-lucide="check-circle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Mark Complete'}
                             </button>
                         </div>
                     </div>
@@ -1243,8 +1499,11 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         taskView.onclick = () => this.scheduling_closeTaskView();
-        
+
         document.body.appendChild(taskView);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
         // Attach handlers after insertion
         document.getElementById('taskViewEditBtn').onclick = () => {
@@ -1322,18 +1581,21 @@ modal.addEventListener('mouseup', (e) => {
                 </div>
                 
                 <div class="scheduling-lead-picker-actions">
-                    <button class="scheduling-lead-picker-btn scheduling-secondary" 
+                    <button class="scheduling-lead-picker-btn scheduling-secondary"
                             onclick="SchedulingModule.scheduling_selectLead(null, '${formType}')">
-                        ❌ Clear Selection
+                        <i data-lucide="x-circle" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Clear Selection
                     </button>
                 </div>
             </div>
         `;
         
         picker.onclick = () => this.scheduling_closeLeadPicker();
-        
+
         this.scheduling_state.currentLeadPickerType = formType;
         document.body.appendChild(picker);
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         
         // Disable parent modal
         const addModal = document.getElementById('scheduling_addModal');
@@ -1356,15 +1618,21 @@ modal.addEventListener('mouseup', (e) => {
             .sort((a, b) => a.name.localeCompare(b.name))
             .map(lead => {
                 const statusColor = API.getStatusColor(lead.status);
-                const typeIcon = API.getTypeIcon(lead.type);
-                
+                // Use Lucide icons instead of emojis for lead type
+                const typeIconMap = {
+                    'cold': '<i data-lucide="snowflake" style="width: 16px; height: 16px; color: #3b82f6;"></i>',
+                    'warm': '<i data-lucide="flame" style="width: 16px; height: 16px; color: #f59e0b;"></i>',
+                    'hot': '<i data-lucide="zap" style="width: 16px; height: 16px; color: #ef4444;"></i>'
+                };
+                const typeIcon = typeIconMap[lead.type?.toLowerCase()] || '';
+
                 const safeName = API.escapeHtml(lead.name);
                 const safeCompany = lead.company ? API.escapeHtml(lead.company) : '';
                 const safeEmail = lead.email ? API.escapeHtml(lead.email) : '';
                 const safeStatus = API.escapeHtml(lead.status || 'new');
-                
+
                 return `
-                    <div class="scheduling-lead-picker-item" 
+                    <div class="scheduling-lead-picker-item"
                          data-lead-id="${lead.id}"
                          onclick="SchedulingModule.scheduling_handleLeadClick(this)">
                         <div class="scheduling-lead-item-main">
@@ -1486,32 +1754,32 @@ modal.addEventListener('mouseup', (e) => {
     // Filters
     scheduling_showTypeFilter(event) {
         this.scheduling_showMultiFilterDropdown('types', event, [
-            { value: '', label: '📋 All Types', action: 'clear' },
+            { value: '', label: 'All Types', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'call', label: '📞 Call' },
-            { value: 'email', label: '📧 Email' },
-            { value: 'meeting', label: '🤝 Meeting' },
-            { value: 'follow_up', label: '📋 Follow-up' },
-            { value: 'demo', label: '🎥 Demo' },
-            { value: 'research', label: '🔍 Research' },
-            { value: 'proposal', label: '📊 Proposal' },
-            { value: 'contract', label: '📄 Contract' },
-            { value: 'task', label: '📝 Task' }
+            { value: 'call', label: 'Call' },
+            { value: 'email', label: 'Email' },
+            { value: 'meeting', label: 'Meeting' },
+            { value: 'follow_up', label: 'Follow-up' },
+            { value: 'demo', label: 'Demo' },
+            { value: 'research', label: 'Research' },
+            { value: 'estimate', label: 'Estimate' },
+            { value: 'contract', label: 'Contract' },
+            { value: 'task', label: 'Task' }
         ]);
     },
 
     scheduling_showDateFilter(event) {
         this.scheduling_showSingleFilterDropdown('date', event, [
-            { value: '', label: '📅 All Tasks', action: 'clear' },
+            { value: '', label: 'All Tasks', action: 'clear' },
             { value: '', label: '──────────', divider: true },
-            { value: 'completed_only', label: '✅ Completed Only' },
-            { value: 'pending_only', label: '⏳ Pending Only' }
+            { value: 'completed_only', label: 'Completed Only' },
+            { value: 'pending_only', label: 'Pending Only' }
         ]);
     },
 
     scheduling_showPriorityFilter(event) {
         this.scheduling_showMultiFilterDropdown('priorities', event, [
-            { value: '', label: '⚡ All Priorities', action: 'clear' },
+            { value: '', label: 'All Priorities', action: 'clear' },
             { value: '', label: '──────────', divider: true },
             { value: 'urgent', label: 'Urgent' },
             { value: 'high', label: 'High' },
@@ -1522,9 +1790,17 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_showMultiFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.scheduling-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('scheduling-active')) {
+            this.scheduling_hideAllFilterDropdowns();
+            return;
+        }
+
         this.scheduling_hideAllFilterDropdowns();
-        
-        event.target.closest('.scheduling-header-filter').classList.add('scheduling-active');
+        filterElement.classList.add('scheduling-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'scheduling-filter-dropdown scheduling-multi-select scheduling-show';
@@ -1575,9 +1851,17 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_showSingleFilterDropdown(column, event, options) {
         if (event) event.stopPropagation();
+
+        const filterElement = event.target.closest('.scheduling-header-filter');
+
+        // If already open, close it and return
+        if (filterElement.classList.contains('scheduling-active')) {
+            this.scheduling_hideAllFilterDropdowns();
+            return;
+        }
+
         this.scheduling_hideAllFilterDropdowns();
-        
-        event.target.closest('.scheduling-header-filter').classList.add('scheduling-active');
+        filterElement.classList.add('scheduling-active');
         
         const dropdown = document.createElement('div');
         dropdown.className = 'scheduling-filter-dropdown scheduling-multi-select scheduling-show';
@@ -1894,18 +2178,79 @@ modal.addEventListener('mouseup', (e) => {
         const tableContainer = document.querySelector('.scheduling-table-container');
         if (tableContainer) {
             const filteredTasks = this.scheduling_getFilteredAndSortedTasks();
-            tableContainer.innerHTML = filteredTasks.length > 0 ? 
-                this.scheduling_renderTasksTable(filteredTasks) : 
+            const selectedCount = this.scheduling_state.selectedTaskIds.length;
+
+            tableContainer.innerHTML = filteredTasks.length > 0 ?
+                this.scheduling_renderTasksTable(filteredTasks) :
                 this.scheduling_renderEmptyState();
-            
+
+            // Add batch actions bar if needed
+            if (this.scheduling_state.batchEditMode && selectedCount > 0) {
+                tableContainer.insertAdjacentHTML('beforeend', this.scheduling_renderBatchActionsBar());
+            }
+
             const tableTitle = document.querySelector('.scheduling-table-title');
             if (tableTitle) {
-                tableTitle.textContent = `All Tasks (${filteredTasks.length})`;
+                tableTitle.textContent = `Tasks`;
             }
         }
-        
+
+        // Update task counter in header
+        const taskCounter = document.querySelector('.scheduling-task-counter');
+        if (taskCounter) {
+            const totalTasks = this.scheduling_state.tasks.length;
+            taskCounter.textContent = `${totalTasks} / ${this.scheduling_state.taskLimit} tasks`;
+        }
+
+        // Update batch edit button text if in batch mode
+        const batchBtn = document.querySelector('.scheduling-btn-batch-edit');
+        if (batchBtn && this.scheduling_state.batchEditMode) {
+            const selectedCount = this.scheduling_state.selectedTaskIds.length;
+            const btnText = batchBtn.querySelector('button') || batchBtn;
+            btnText.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Cancel (${selectedCount} selected)
+            `;
+        }
+
         this.scheduling_updateActiveFiltersPanel();
         this.scheduling_updateHeaderIndicators();
+
+        // Re-initialize Lucide icons for updated content
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    scheduling_updateDashboard() {
+        const bubblesContainer = document.querySelector('.scheduling-action-bubbles');
+        if (bubblesContainer) {
+            const tasksCount = this.scheduling_state.tasks.length;
+            const secondBubble = bubblesContainer.querySelector('.scheduling-bubble-secondary .scheduling-bubble-button span');
+            if (secondBubble) {
+                secondBubble.textContent = `View All Tasks (${tasksCount})`;
+            }
+        }
+
+        this.scheduling_updateCalendar();
+    },
+
+    scheduling_updateCalendar() {
+        const calendarGrid = document.querySelector('.scheduling-calendar-grid');
+        if (!calendarGrid) return;
+
+        const monthDays = this.scheduling_getMonthDays(this.scheduling_state.currentDate);
+
+        // Re-render all calendar days
+        const dayElements = calendarGrid.querySelectorAll('.scheduling-calendar-day');
+        dayElements.forEach((dayElement, index) => {
+            if (monthDays[index]) {
+                dayElement.outerHTML = this.scheduling_renderCalendarDay(monthDays[index]);
+            }
+        });
+
+        // Re-initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     scheduling_refreshTable() {
@@ -1974,11 +2319,11 @@ modal.addEventListener('mouseup', (e) => {
             container.innerHTML = `
                 <div class="scheduling-container">
                     <div class="scheduling-error-container">
-                        <div class="scheduling-error-icon">⚠️</div>
+                        <div class="scheduling-error-icon"><i data-lucide="alert-triangle" style="width: 64px; height: 64px; color: var(--warning);"></i></div>
                         <h2 class="scheduling-error-title">Connection Error</h2>
                         <p class="scheduling-error-message">${safeMessage}</p>
                         <button onclick="SchedulingModule.init()" class="scheduling-retry-btn">
-                            <span>🔄 Try Again</span>
+                            <span><i data-lucide="refresh-cw" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Try Again</span>
                         </button>
                     </div>
                 </div>
@@ -2012,7 +2357,7 @@ modal.addEventListener('mouseup', (e) => {
         modal.innerHTML = `
             <div class="scheduling-upgrade-prompt">
                 <div class="scheduling-upgrade-header">
-                    <div class="scheduling-upgrade-icon">🚀</div>
+                    <div class="scheduling-upgrade-icon"><i data-lucide="alert-circle" style="width: 48px; height: 48px; color: var(--primary);"></i></div>
                     <h3>Task Limit Reached</h3>
                 </div>
                 <div class="scheduling-upgrade-content">
@@ -2028,7 +2373,10 @@ modal.addEventListener('mouseup', (e) => {
         `;
         
         document.body.appendChild(modal);
-        
+
+        // Initialize Lucide icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
         modal.querySelector('.scheduling-btn-secondary').onclick = () => modal.remove();
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
@@ -2060,17 +2408,18 @@ modal.addEventListener('mouseup', (e) => {
 
     scheduling_getTaskTypeIcon(type) {
         const iconMap = {
-            'call': '📞',
-            'email': '📧',
-            'meeting': '🤝',
-            'demo': '🎥',
-            'follow_up': '📋',
-            'research': '🔍',
-            'proposal': '📊',
-            'contract': '📄',
-            'task': '📝'
+            'call': '<i data-lucide="phone" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'email': '<i data-lucide="mail" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'meeting': '<i data-lucide="users" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'demo': '<i data-lucide="video" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'follow_up': '<i data-lucide="clipboard-list" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'research': '<i data-lucide="search" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'proposal': '<i data-lucide="bar-chart" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'estimate': '<i data-lucide="bar-chart" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'contract': '<i data-lucide="file-text" style="width: 16px; height: 16px; vertical-align: middle;"></i>',
+            'task': '<i data-lucide="check-square" style="width: 16px; height: 16px; vertical-align: middle;"></i>'
         };
-        return iconMap[type] || '📋';
+        return iconMap[type] || '<i data-lucide="star" style="width: 16px; height: 16px; vertical-align: middle;"></i>';
     },
 
     scheduling_formatTaskType(type) {
@@ -2081,11 +2430,16 @@ modal.addEventListener('mouseup', (e) => {
             'demo': 'Demo',
             'follow_up': 'Follow-up',
             'research': 'Research',
-            'proposal': 'Proposal',
+            'estimate': 'Proposal',
             'contract': 'Contract',
             'task': 'Task'
         };
-        return typeMap[type] || 'Task';
+        // Return custom task type as-is if not in the map (capitalize first letter)
+        if (typeMap[type]) {
+            return typeMap[type];
+        }
+        // Capitalize first letter of custom types and escape for XSS protection
+        return type ? API.escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) : 'Task';
     },
 
     scheduling_getPriorityIcon(priority) {
@@ -2268,6 +2622,176 @@ modal.addEventListener('mouseup', (e) => {
                 };
                 this.scheduling_state.searchTerm = '';
             }
+        }
+    },
+
+    // Batch Operations
+    scheduling_toggleBatchMode() {
+        this.scheduling_state.batchEditMode = !this.scheduling_state.batchEditMode;
+        if (!this.scheduling_state.batchEditMode) {
+            this.scheduling_state.selectedTaskIds = [];
+        }
+        this.scheduling_render();
+    },
+
+    scheduling_toggleTaskSelection(taskId) {
+        const index = this.scheduling_state.selectedTaskIds.indexOf(taskId);
+        if (index > -1) {
+            this.scheduling_state.selectedTaskIds.splice(index, 1);
+        } else {
+            this.scheduling_state.selectedTaskIds.push(taskId);
+        }
+        this.scheduling_render();
+    },
+
+    scheduling_renderBatchActionsBar() {
+        const count = this.scheduling_state.selectedTaskIds.length;
+        return `
+            <div class="scheduling-batch-actions-bar">
+                <div class="scheduling-batch-actions-left">
+                    <div class="scheduling-batch-selected">${count} selected</div>
+                </div>
+                <div class="scheduling-batch-actions-right">
+                    <button class="scheduling-batch-btn scheduling-batch-btn-complete"
+                            onclick="SchedulingModule.scheduling_batchComplete()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        Complete
+                    </button>
+                    <button class="scheduling-batch-btn delete"
+                            onclick="SchedulingModule.scheduling_showBatchDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    scheduling_showBatchDeleteModal() {
+        const count = this.scheduling_state.selectedTaskIds.length;
+        if (count === 0) return;
+
+        const modal = document.createElement('div');
+        modal.className = 'scheduling-delete-modal-overlay';
+        modal.innerHTML = `
+            <div class="scheduling-delete-modal">
+                <div class="scheduling-delete-modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
+                <h2 class="scheduling-delete-modal-title">Delete ${count} Task${count > 1 ? 's' : ''}?</h2>
+                <p class="scheduling-delete-modal-text">
+                    This will permanently delete ${count} task${count > 1 ? 's' : ''}. This action cannot be undone.
+                </p>
+                <div class="scheduling-delete-modal-actions">
+                    <button class="scheduling-delete-modal-btn scheduling-delete-modal-cancel"
+                            onclick="this.closest('.scheduling-delete-modal-overlay').remove()">
+                        Cancel
+                    </button>
+                    <button class="scheduling-delete-modal-btn scheduling-delete-modal-confirm"
+                            onclick="SchedulingModule.scheduling_confirmBatchDelete()">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        setTimeout(() => modal.classList.add('show'), 10);
+    },
+
+    async scheduling_batchComplete() {
+        const count = this.scheduling_state.selectedTaskIds.length;
+        if (count === 0) return;
+
+        const selectedIds = [...this.scheduling_state.selectedTaskIds];
+        const originalTasks = this.scheduling_state.tasks.map(task => ({ ...task }));
+
+        // UPDATE STATE IMMEDIATELY
+        const now = new Date().toISOString();
+        this.scheduling_state.tasks = this.scheduling_state.tasks.map(task => {
+            if (selectedIds.includes(task.id)) {
+                return { ...task, status: 'completed', completed_at: now };
+            }
+            return task;
+        });
+
+        // Exit batch mode
+        this.scheduling_state.batchEditMode = false;
+        this.scheduling_state.selectedTaskIds = [];
+
+        // UPDATE UI
+        if (this.scheduling_state.currentView === 'table') {
+            this.scheduling_updateTableContent();
+        } else {
+            this.scheduling_updateDashboard();
+        }
+
+        // API CALL IN BACKGROUND
+        try {
+            await API.batchCompleteTasks(selectedIds);
+            this.scheduling_showNotification(`${count} task${count > 1 ? 's' : ''} marked as complete`, 'success');
+        } catch (error) {
+            console.error('Batch complete error:', error);
+
+            // ROLLBACK ON ERROR
+            this.scheduling_state.tasks = originalTasks;
+
+            if (this.scheduling_state.currentView === 'table') {
+                this.scheduling_updateTableContent();
+            } else {
+                this.scheduling_updateDashboard();
+            }
+
+            this.scheduling_showNotification('Failed to complete tasks', 'error');
+        }
+    },
+
+    async scheduling_confirmBatchDelete() {
+        // Close modal
+        document.querySelector('.scheduling-delete-modal-overlay')?.remove();
+        if (this.scheduling_state.selectedTaskIds.length === 0) return;
+
+        const count = this.scheduling_state.selectedTaskIds.length;
+        const selectedIds = [...this.scheduling_state.selectedTaskIds];
+        const deletedTasks = this.scheduling_state.tasks.filter(t => selectedIds.includes(t.id));
+
+        // UPDATE STATE IMMEDIATELY
+        this.scheduling_state.tasks = this.scheduling_state.tasks.filter(t => !selectedIds.includes(t.id));
+        this.scheduling_state.selectedTaskIds = [];
+        this.scheduling_state.batchEditMode = false;
+
+        // UPDATE UI
+        if (this.scheduling_state.currentView === 'table') {
+            this.scheduling_updateTableContent();
+        } else {
+            this.scheduling_updateDashboard();
+        }
+
+        // API CALL IN BACKGROUND
+        try {
+            await API.batchDeleteTasks(selectedIds);
+            this.scheduling_showNotification(`Deleted ${count} task(s)`, 'success');
+        } catch (error) {
+            console.error('Batch delete error:', error);
+
+            // ROLLBACK ON ERROR
+            this.scheduling_state.tasks.push(...deletedTasks);
+
+            if (this.scheduling_state.currentView === 'table') {
+                this.scheduling_updateTableContent();
+            } else {
+                this.scheduling_updateDashboard();
+            }
+
+            this.scheduling_showNotification('Failed to delete tasks', 'error');
         }
     },
 
@@ -2890,7 +3414,6 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-task-title.scheduling-completed-text {
-                    text-decoration: line-through;
                     opacity: 0.7;
                     color: #777;
                 }
@@ -3152,7 +3675,7 @@ modal.addEventListener('mouseup', (e) => {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.3);
+                    background: rgba(0, 0, 0, 0.6);
                     z-index: 10000;
                     display: flex;
                     align-items: center;
@@ -3174,8 +3697,8 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-modal {
                     background: var(--surface);
-                    border-radius: var(--radius-lg);
-                    box-shadow: var(--shadow-xl);
+                    border-radius: 12px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                     width: 100%;
                     max-width: 600px;
                     max-height: 90vh;
@@ -3185,12 +3708,16 @@ modal.addEventListener('mouseup', (e) => {
                     border: 1px solid var(--border);
                 }
 
+                .scheduling-modal-small {
+                    max-width: 450px;
+                }
+
                 .scheduling-modal-overlay.scheduling-show .scheduling-modal {
                     transform: scale(1) translateY(0);
                 }
 
                 .scheduling-modal-header {
-                    padding: 2rem 2rem 1rem;
+                    padding: 24px;
                     border-bottom: 1px solid var(--border);
                     display: flex;
                     justify-content: space-between;
@@ -3198,31 +3725,34 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-modal-title {
-                    font-size: 1.5rem;
-                    font-weight: 700;
+                    font-size: 24px;
+                    font-weight: 600;
                     color: var(--text-primary);
                     margin: 0;
                 }
 
                 .scheduling-modal-close {
-                    background: none;
+                    background: transparent;
                     border: none;
-                    font-size: 1.5rem;
+                    font-size: 28px;
                     color: var(--text-secondary);
                     cursor: pointer;
-                    width: 2rem;
-                    height: 2rem;
-                    border-radius: var(--radius);
-                    transition: all 0.3s ease;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s;
                 }
 
                 .scheduling-modal-close:hover {
-                    background: var(--danger);
-                    color: white;
+                    background: var(--surface-hover);
+                    color: var(--text-primary);
                 }
 
                 .scheduling-modal-body {
-                    padding: 2rem;
+                    padding: 24px;
                     overflow-y: auto;
                     max-height: 60vh;
                 }
@@ -3243,28 +3773,34 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-form-group {
                     display: flex;
                     flex-direction: column;
-                    gap: 0.5rem;
+                    gap: 8px;
                 }
 
                 .scheduling-form-group.scheduling-full-width {
                     grid-column: 1 / -1;
                 }
 
+                .scheduling-custom-task-input {
+                    margin-top: 12px;
+                    padding-top: 12px;
+                    border-top: 1px solid var(--border);
+                }
+
                 .scheduling-form-label {
-                    font-weight: 600;
+                    font-weight: 500;
                     color: var(--text-primary);
-                    font-size: 0.9rem;
+                    font-size: 14px;
                 }
 
                 .scheduling-form-input,
                 .scheduling-form-textarea {
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s ease;
+                    transition: all 0.2s;
                     font-family: inherit;
                 }
 
@@ -3272,7 +3808,6 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-form-textarea:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 }
 
                 .scheduling-input-warning {
@@ -3308,36 +3843,33 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-form-select {
-                    padding: 0.875rem 3rem 0.875rem 1.25rem;
-                    border: 2px solid var(--border);
-                    border-radius: 12px;
-                    font-size: 0.95rem;
+                    padding: 10px 12px;
+                    padding-right: 40px !important;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    font-size: 14px;
                     background: var(--background);
                     color: var(--text-primary);
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: all 0.2s;
                     font-family: inherit;
                     font-weight: 500;
                     cursor: pointer;
                     appearance: none;
                     -webkit-appearance: none;
                     -moz-appearance: none;
-                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-                    background-position: right 1rem center;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                     background-repeat: no-repeat;
-                    background-size: 1.25rem;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    background-position: right 12px center;
+                    background-size: 16px;
                 }
 
                 .scheduling-form-select:hover {
                     border-color: var(--primary);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
                 }
 
                 .scheduling-form-select:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
                 }
 
                 /* Priority Glow */
@@ -3377,12 +3909,12 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-lead-selector-display {
-                    padding: 0.875rem 1rem;
-                    border: 2px solid var(--border);
-                    border-radius: var(--radius);
+                    padding: 10px 12px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
                     background: var(--background);
                     cursor: pointer;
-                    transition: all 0.3s ease;
+                    transition: all 0.2s;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -3390,8 +3922,6 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-lead-selector-display:hover {
                     border-color: var(--primary);
-                    background: var(--surface-hover);
-                    transform: translateY(-1px);
                 }
 
                 .scheduling-selected-lead {
@@ -4076,21 +4606,6 @@ modal.addEventListener('mouseup', (e) => {
                     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
                     color: white;
                     padding: 2rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 1.5rem;
-                }
-
-                .scheduling-confirm-icon {
-                    width: 50px;
-                    height: 50px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: rgba(255, 255, 255, 0.2);
-                    border-radius: 50%;
-                    flex-shrink: 0;
-                    font-size: 1.5rem;
                 }
 
                 .scheduling-confirm-title {
@@ -4217,13 +4732,13 @@ modal.addEventListener('mouseup', (e) => {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding-top: 1rem;
+                    padding-top: 20px;
                     border-top: 1px solid var(--border);
                 }
 
                 .scheduling-form-actions-right {
                     display: flex;
-                    gap: 1rem;
+                    gap: 12px;
                 }
 
                 .scheduling-btn-primary,
@@ -4238,18 +4753,18 @@ modal.addEventListener('mouseup', (e) => {
                     border: none;
                     display: flex;
                     align-items: center;
+                    justify-content: center;
                     gap: 0.5rem;
                 }
 
                 .scheduling-btn-primary {
-                    background: var(--primary);
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
                 }
 
                 .scheduling-btn-primary:hover:not(:disabled) {
-                    background: var(--primary-dark);
-                    transform: translateY(-1px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
                 }
 
                 .scheduling-btn-primary:disabled {
@@ -4258,15 +4773,13 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-btn-secondary {
-                    background: var(--surface-hover);
+                    background: transparent;
                     color: var(--text-primary);
                     border: 1px solid var(--border);
                 }
 
                 .scheduling-btn-secondary:hover {
-                    background: var(--border);
-                    border-color: var(--primary);
-                    color: var(--primary);
+                    background: var(--surface-hover);
                 }
 
                 .scheduling-btn-danger {
@@ -4756,6 +5269,323 @@ modal.addEventListener('mouseup', (e) => {
     }
 }
 
+/* Batch Operations Styles */
+.scheduling-task-counter {
+    padding: 0.5rem 1rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.scheduling-btn-batch-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--background);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.scheduling-btn-batch-edit svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+}
+
+.scheduling-btn-batch-edit:hover {
+    border-color: #667eea;
+    color: #667eea;
+    transform: translateY(-1px);
+}
+
+.scheduling-btn-batch-edit.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.scheduling-btn-batch-edit.active:hover {
+    background: #5568d3;
+    border-color: #5568d3;
+    transform: translateY(-1px);
+}
+
+.scheduling-batch-actions-bar {
+    position: sticky;
+    bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.scheduling-batch-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.scheduling-batch-selected {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.scheduling-batch-actions-right {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.scheduling-batch-btn {
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.scheduling-batch-btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.scheduling-batch-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #667eea;
+}
+
+.scheduling-batch-btn.delete {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.scheduling-batch-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+/* Delete Modal - Dark/Light Mode Adaptive */
+.scheduling-delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.scheduling-delete-modal-overlay.show {
+    opacity: 1;
+}
+
+.scheduling-delete-modal {
+    background: var(--surface, #ffffff);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    padding: 2rem;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+}
+
+.scheduling-delete-modal-overlay.show .scheduling-delete-modal {
+    transform: scale(1) translateY(0);
+}
+
+.scheduling-delete-modal-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scheduling-delete-modal-icon svg {
+    width: 32px;
+    height: 32px;
+    color: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal {
+        background: #1f2937;
+    }
+    .scheduling-delete-modal-icon {
+        background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    }
+    .scheduling-delete-modal-icon svg {
+        color: #fca5a5;
+    }
+}
+
+.scheduling-delete-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #111827);
+    margin: 0 0 1rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-title {
+        color: #f9fafb;
+    }
+}
+
+.scheduling-delete-modal-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #6b7280);
+    margin: 0 0 2rem 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-text {
+        color: #9ca3af;
+    }
+}
+
+.scheduling-delete-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.scheduling-delete-modal-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.scheduling-delete-modal-cancel {
+    background: var(--background, #f3f4f6);
+    color: var(--text-primary, #374151);
+}
+
+.scheduling-delete-modal-cancel:hover {
+    background: var(--surface, #e5e7eb);
+    transform: translateY(-1px);
+}
+
+@media (prefers-color-scheme: dark) {
+    .scheduling-delete-modal-cancel {
+        background: #374151;
+        color: #f9fafb;
+    }
+    .scheduling-delete-modal-cancel:hover {
+        background: #4b5563;
+    }
+}
+
+.scheduling-delete-modal-confirm {
+    background: #ef4444;
+    color: white;
+}
+
+.scheduling-delete-modal-confirm:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.scheduling-task-row.batch-mode {
+    cursor: pointer;
+}
+
+.scheduling-task-row.selected {
+    /* No visual change - checkbox is enough */
+}
+
+.scheduling-checkbox-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.scheduling-checkbox-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.scheduling-checkbox-custom {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.scheduling-checkbox-custom svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s;
+}
+
+.scheduling-checkbox-input:checked + .scheduling-checkbox-custom {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.scheduling-checkbox-input:checked + .scheduling-checkbox-custom svg {
+    opacity: 1;
+    transform: scale(1);
+    stroke: white;
+}
+
+.scheduling-checkbox-custom:hover {
+    border-color: #667eea;
+}
+
 /* Extra Small Mobile - Stack Everything */
 @media (max-width: 480px) {
     .scheduling-table-header-right {
@@ -4769,6 +5599,33 @@ modal.addEventListener('mouseup', (e) => {
     .scheduling-add-task-btn {
         grid-column: 1;
     }
+}
+
+/* Module-level animations */
+@keyframes schedWaveIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes schedFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.sched-wave-in {
+    animation: schedWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.sched-fade-in {
+    animation: schedFadeIn 0.3s ease forwards;
+    opacity: 0;
 }
             </style>
         `;

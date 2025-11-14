@@ -1,3 +1,8 @@
+// ========================================
+// PRO FEATURE: Jobs Hub Module
+// Available to: Professional, Admin tiers
+// Free tier: Hidden in Settings (future)
+// ========================================
 /**
  * JOBS PARENT MODULE - Container for Estimates, Jobs, and Clients
  * Acts as a hub with 3 main sections

@@ -16,36 +16,29 @@ window.AddLeadModule = {
         },
         batchEditMode: false,
         selectedLeadIds: [],
-        leadLimit: 5000
+        leadLimit: 5000,
+        hasInitialized: false  // Track if module has loaded before
     },
 
     // Init with fade-in
     async init(targetContainer = 'leads-content') {
         console.log('AddLead module loading');
-        
+
         try {
             this.addlead_state.targetContainer = targetContainer;
             this.addlead_state.isLoading = true;
-            
+
             const container = document.getElementById(targetContainer);
-            if (container) {
-                container.style.opacity = '0';
-                container.style.transition = 'opacity 0.3s ease';
-            }
-            
+
             await this.addlead_loadLeads();
             this.addlead_render();
-            
-            // Fade in
-            setTimeout(() => {
-                if (container) {
-                    container.style.opacity = '1';
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                }
-            }, 50);
-            
+
+            // Slide-in animation happens via CSS
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            this.addlead_state.hasInitialized = true;
             console.log('AddLead module ready');
-            
+
         } catch (error) {
             console.error('AddLead init failed:', error);
             this.addlead_renderError(error.message);
@@ -83,14 +76,47 @@ window.AddLeadModule = {
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (!container) return;
 
+        const isFirstLoad = !this.addlead_state.hasInitialized;
+
         container.innerHTML = `
             <div class="addlead-container">
-                ${this.addlead_state.currentView === 'table' ? 
-                    this.addlead_renderTableView() : 
+                ${this.addlead_state.currentView === 'table' ?
+                    this.addlead_renderTableView() :
                     this.addlead_renderDashboardView()}
                 ${this.addlead_renderStyles()}
             </div>
         `;
+
+        // Apply animations based on load state
+        if (isFirstLoad) {
+            // First load: Staggered wave animation
+            requestAnimationFrame(() => {
+                const bubbles = container.querySelectorAll('.addlead-action-bubble');
+                bubbles.forEach((bubble, i) => {
+                    bubble.classList.add('addlead-wave-in');
+                    bubble.style.animationDelay = `${i * 0.15}s`;
+                });
+
+                const recentSection = container.querySelector('.addlead-recent-section');
+                if (recentSection) {
+                    recentSection.classList.add('addlead-wave-in');
+                    recentSection.style.animationDelay = `${bubbles.length * 0.15}s`;
+                }
+
+                // For table view
+                const tableElements = container.querySelectorAll('.addlead-table-header, .addlead-table-container');
+                tableElements.forEach((el, i) => {
+                    el.classList.add('addlead-wave-in');
+                    el.style.animationDelay = `${i * 0.1}s`;
+                });
+            });
+        } else {
+            // Subsequent loads: Fast fade
+            requestAnimationFrame(() => {
+                const allElements = container.querySelectorAll('.addlead-action-bubble, .addlead-recent-section, .addlead-table-header, .addlead-table-container');
+                allElements.forEach(el => el.classList.add('addlead-fade-in'));
+            });
+        }
 
         this.addlead_setupEventListeners();
         this.addlead_updateHeaderIndicators();
@@ -196,12 +222,20 @@ window.AddLeadModule = {
                         <button class="addlead-back-btn" onclick="AddLeadModule.addlead_showDashboard()">
                             ← Back to Dashboard
                         </button>
-                        <h2 class="addlead-table-title">${totalLeads}/${this.addlead_state.leadLimit} leads</h2>
                     </div>
                     <div class="addlead-table-header-right">
                         ${totalLeads > 0 ? `
+                            <div class="addlead-lead-counter">
+                                ${totalLeads} / ${this.addlead_state.leadLimit} leads
+                            </div>
                             <button class="addlead-btn-batch-edit ${this.addlead_state.batchEditMode ? 'active' : ''}"
                                     onclick="AddLeadModule.addlead_toggleBatchMode()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    ${this.addlead_state.batchEditMode ?
+                                        `<path d="M6 18L18 6M6 6l12 12"/>` :
+                                        `<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>`
+                                    }
+                                </svg>
                                 ${this.addlead_state.batchEditMode ?
                                     `Cancel (${selectedCount} selected)` :
                                     'Edit Multiple'}
@@ -213,7 +247,6 @@ window.AddLeadModule = {
                                    placeholder="Search leads..."
                                    value="${API.escapeHtml(this.addlead_state.searchTerm)}"
                                    id="addlead_searchInput">
-                            <i data-lucide="search" class="addlead-search-icon" style="width: 18px; height: 18px;"></i>
                         </div>
                         <button class="addlead-add-btn" onclick="AddLeadModule.addlead_showAddLeadModal()">
                             + Add Lead
@@ -221,13 +254,12 @@ window.AddLeadModule = {
                     </div>
                 </div>
 
-                ${this.addlead_state.batchEditMode && selectedCount > 0 ?
-                    this.addlead_renderBatchActionsBar() : ''}
-
                 <div class="addlead-table-container">
                     ${filteredLeads.length > 0 ?
                         this.addlead_renderTable(filteredLeads) :
                         this.addlead_renderEmptyState()}
+                    ${this.addlead_state.batchEditMode && selectedCount > 0 ?
+                        this.addlead_renderBatchActionsBar() : ''}
                 </div>
             </div>
         `;
@@ -288,11 +320,18 @@ window.AddLeadModule = {
                 data-lead-id="${lead.id}"
                 onclick="${this.addlead_state.batchEditMode ? `AddLeadModule.addlead_toggleLeadSelection('${lead.id}')` : `AddLeadModule.addlead_showLeadView('${lead.id}')`}">
                 ${this.addlead_state.batchEditMode ? `
-                    <td class="addlead-checkbox-col" onclick="event.stopPropagation()">
-                        <input type="checkbox"
-                               class="addlead-batch-checkbox"
-                               ${isSelected ? 'checked' : ''}
-                               onchange="AddLeadModule.addlead_toggleLeadSelection('${lead.id}')">
+                    <td class="addlead-checkbox-col" onclick="event.stopPropagation(); AddLeadModule.addlead_toggleLeadSelection('${lead.id}')">
+                        <div class="addlead-checkbox-wrapper">
+                            <input type="checkbox"
+                                   class="addlead-checkbox-input"
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="AddLeadModule.addlead_toggleLeadSelection('${lead.id}')">
+                            <div class="addlead-checkbox-custom">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                        </div>
                     </td>
                 ` : ''}
                 <td class="addlead-lead-cell">
@@ -448,8 +487,9 @@ modal.addEventListener('mouseup', (e) => {
                         <input type="text"
                                name="position"
                                class="addlead-form-input"
-                               maxlength="50"
-                               placeholder="Job title or role">
+                               maxlength="30"
+                               data-validate="position">
+                        <div class="addlead-input-feedback" id="addlead_positionFeedback"></div>
                     </div>
 
                     <div class="addlead-form-group">
@@ -628,6 +668,13 @@ modal.addEventListener('mouseup', (e) => {
                             </div>
                         ` : ''}
 
+                        ${safePosition ? `
+                            <div class="addlead-detail-item">
+                                <div class="addlead-detail-label">Position:</div>
+                                <div class="addlead-detail-value">${safePosition}</div>
+                            </div>
+                        ` : ''}
+
                         ${safeWebsite ? `
                             <div class="addlead-detail-item">
                                 <div class="addlead-detail-label">Website:</div>
@@ -791,7 +838,6 @@ modal.addEventListener('mouseup', (e) => {
     addlead_renderEditForm(lead) {
         const safeName = API.escapeHtml(lead.name || '');
         const safeCompany = API.escapeHtml(lead.company || '');
-        const safePosition = API.escapeHtml(lead.position || '');
         const safeEmail = API.escapeHtml(lead.email || '');
         const safePhone = API.escapeHtml(lead.phone || '');
         const safeSource = API.escapeHtml(lead.source || '');
@@ -829,9 +875,10 @@ modal.addEventListener('mouseup', (e) => {
                         <input type="text"
                                name="position"
                                class="addlead-form-input"
-                               value="${safePosition}"
-                               maxlength="50"
-                               placeholder="Job title or role">
+                               value="${API.escapeHtml(lead.position || '')}"
+                               maxlength="30"
+                               data-validate="position">
+                        <div class="addlead-input-feedback" id="addlead_edit_positionFeedback"></div>
                     </div>
 
                     <div class="addlead-form-group">
@@ -999,7 +1046,7 @@ modal.addEventListener('mouseup', (e) => {
             });
 
             input.addEventListener('focus', () => {
-                if (['name', 'company', 'notes'].includes(validateType)) {
+                if (['name', 'company', 'position', 'notes'].includes(validateType)) {
                     feedback.style.display = 'block';
                 }
             });
@@ -1013,6 +1060,7 @@ modal.addEventListener('mouseup', (e) => {
         const limits = {
             name: 35,
             company: 50,
+            position: 30,
             notes: 500,
             email: 50
         };
@@ -1020,7 +1068,7 @@ modal.addEventListener('mouseup', (e) => {
         const limit = limits[type];
         
         // Character counter for text inputs
-        if (['name', 'company', 'notes'].includes(type)) {
+        if (['name', 'company', 'position', 'notes'].includes(type)) {
             if (length === 0 && !isBlur) {
                 feedback.textContent = '';
                 feedback.className = 'addlead-input-feedback';
@@ -1481,16 +1529,16 @@ addlead_showCustomSourceInput(targetInput) {
 
             // Create lead
             const newLead = await API.createLead(leadData);
-            
+
             this.addlead_state.leads.unshift(newLead);
             this.addlead_hideAddLeadModal();
-            
+
             if (this.addlead_state.currentView === 'table') {
                 this.addlead_updateTableContent();
             } else {
-                this.addlead_render();
+                this.addlead_updateDashboard();
             }
-            
+
             this.addlead_showNotification(`Lead "${API.escapeHtml(leadData.name)}" added successfully!`, 'success');
             
         } catch (error) {
@@ -1546,64 +1594,74 @@ addlead_showCustomSourceInput(targetInput) {
         });
     },
 
-    // Edit lead submit
+    // Edit lead submit with optimistic UI
     async addlead_handleEditSubmit(e) {
         e.preventDefault();
-        
-        try {
-            this.addlead_setEditLoadingState(true);
-            
-            const formData = new FormData(e.target);
-            const leadData = {};
-            
-            for (let [key, value] of formData.entries()) {
-                if (key === 'potential_value') {
-                    const rawValue = e.target.querySelector('[name="potential_value"]').getAttribute('data-raw-value');
-                    leadData[key] = parseFloat(rawValue) || 0;
-                } else if (key === 'quality_score') {
-                    leadData[key] = parseInt(value) || 5;
-                } else if (key === 'email') {
-                    leadData[key] = value.trim().toLowerCase() || null;
-                } else if (key === 'phone') {
-                    leadData[key] = value.trim() || null;
-                } else {
-                    leadData[key] = value.trim() || null;
-                }
-            }
-            
-            await API.updateLead(this.addlead_state.currentEditLead.id, leadData);
-            
-            const leadIndex = this.addlead_state.leads.findIndex(l => l.id === this.addlead_state.currentEditLead.id);
-            if (leadIndex !== -1) {
-                this.addlead_state.leads[leadIndex] = { 
-                    ...this.addlead_state.leads[leadIndex], 
-                    ...leadData 
-                };
-            }
-            
-            this.addlead_hideEditLeadModal();
-            
-            if (this.addlead_state.currentView === 'table') {
-                this.addlead_updateTableContent();
+
+        const formData = new FormData(e.target);
+        const leadData = {};
+
+        for (let [key, value] of formData.entries()) {
+            if (key === 'potential_value') {
+                const rawValue = e.target.querySelector('[name="potential_value"]').getAttribute('data-raw-value');
+                leadData[key] = parseFloat(rawValue) || 0;
+            } else if (key === 'quality_score') {
+                leadData[key] = parseInt(value) || 5;
+            } else if (key === 'email') {
+                leadData[key] = value.trim().toLowerCase() || null;
+            } else if (key === 'phone') {
+                leadData[key] = value.trim() || null;
             } else {
-                this.addlead_render();
+                leadData[key] = value.trim() || null;
             }
-            
+        }
+
+        // OPTIMISTIC UI: Close modal immediately
+        this.addlead_hideEditLeadModal();
+
+        // OPTIMISTIC UI: Store old lead data for rollback
+        const leadIndex = this.addlead_state.leads.findIndex(l => l.id === this.addlead_state.currentEditLead.id);
+        if (leadIndex === -1) return;
+
+        const oldLead = { ...this.addlead_state.leads[leadIndex] };
+
+        // OPTIMISTIC UI: Update state immediately
+        this.addlead_state.leads[leadIndex] = {
+            ...this.addlead_state.leads[leadIndex],
+            ...leadData
+        };
+
+        // OPTIMISTIC UI: Update UI immediately
+        if (this.addlead_state.currentView === 'table') {
+            this.addlead_updateTableContent();
+        } else {
+            this.addlead_updateDashboard();
+        }
+
+        // OPTIMISTIC UI: Make API call in background
+        try {
+            await API.updateLead(this.addlead_state.currentEditLead.id, leadData);
+
             if (window.PipelineModule?.pipeline_init) {
-                // Reload pipeline if it's loaded
                 const pipelineContainer = document.getElementById('pipeline-content');
                 if (pipelineContainer && pipelineContainer.classList.contains('active')) {
                     window.PipelineModule.pipeline_init('pipeline-content');
                 }
             }
-            
+
             this.addlead_showNotification(`Lead "${API.escapeHtml(leadData.name)}" updated successfully!`, 'success');
-            
+
         } catch (error) {
             console.error('Failed to update lead:', error);
             this.addlead_showNotification(API.handleAPIError(error, 'UpdateLead'), 'error');
-        } finally {
-            this.addlead_setEditLoadingState(false);
+
+            // OPTIMISTIC UI: Rollback on error
+            this.addlead_state.leads[leadIndex] = oldLead;
+            if (this.addlead_state.currentView === 'table') {
+                this.addlead_updateTableContent();
+            } else {
+                this.addlead_updateDashboard();
+            }
         }
     },
 
@@ -1658,31 +1716,46 @@ addlead_showCustomSourceInput(targetInput) {
         const lead = this.addlead_state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
 
+        // OPTIMISTIC UI: Close modal immediately
+        this.addlead_hideEditLeadModal();
+
+        // OPTIMISTIC UI: Store old state for rollback
+        const oldLeads = [...this.addlead_state.leads];
+
+        // OPTIMISTIC UI: Update state immediately
+        this.addlead_state.leads = this.addlead_state.leads.filter(l => l.id.toString() !== leadId.toString());
+
+        // OPTIMISTIC UI: Update UI immediately
+        if (this.addlead_state.currentView === 'table') {
+            this.addlead_updateTableContent();
+        } else {
+            this.addlead_updateDashboard();
+        }
+
+        // OPTIMISTIC UI: Make API call in background
         try {
             await API.deleteLead(leadId);
-            
-            this.addlead_state.leads = this.addlead_state.leads.filter(l => l.id.toString() !== leadId.toString());
-            
-            this.addlead_hideEditLeadModal();
-            
-            if (this.addlead_state.currentView === 'table') {
-                this.addlead_updateTableContent();
-            } else {
-                this.addlead_render();
-            }
-            
+
             if (window.PipelineModule?.pipeline_init) {
                 const pipelineContainer = document.getElementById('pipeline-content');
                 if (pipelineContainer && pipelineContainer.classList.contains('active')) {
                     window.PipelineModule.pipeline_init('pipeline-content');
                 }
             }
-            
+
             this.addlead_showNotification(`${API.escapeHtml(lead.name)} deleted successfully`, 'success');
-            
+
         } catch (error) {
             console.error('Failed to delete lead:', error);
             this.addlead_showNotification(API.handleAPIError(error, 'DeleteLead'), 'error');
+
+            // OPTIMISTIC UI: Rollback on error
+            this.addlead_state.leads = oldLeads;
+            if (this.addlead_state.currentView === 'table') {
+                this.addlead_updateTableContent();
+            } else {
+                this.addlead_updateDashboard();
+            }
         }
     },
 
@@ -2287,8 +2360,110 @@ addlead_showCustomSourceInput(targetInput) {
 
             this.addlead_updateActiveFiltersPanel();
             this.addlead_updateHeaderIndicators();
+            this.addlead_updateLeadCounter();
+            this.addlead_updateBatchEditButton();
+            this.addlead_updateBatchActionsBar();
 
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    },
+
+    addlead_updateLeadCounter() {
+        const counter = document.querySelector('.addlead-lead-counter');
+        if (counter) {
+            const totalLeads = this.addlead_state.leads.length;
+            counter.textContent = `${totalLeads} / ${this.addlead_state.leadLimit} leads`;
+        }
+    },
+
+    addlead_updateBatchEditButton() {
+        const batchBtn = document.querySelector('.addlead-btn-batch-edit');
+        if (batchBtn) {
+            const selectedCount = this.addlead_state.selectedLeadIds.length;
+            const isActive = this.addlead_state.batchEditMode;
+
+            // Update button active state
+            if (isActive) {
+                batchBtn.classList.add('active');
+            } else {
+                batchBtn.classList.remove('active');
+            }
+
+            // Update button icon
+            const svg = batchBtn.querySelector('svg');
+            if (svg) {
+                svg.innerHTML = isActive ?
+                    `<path d="M6 18L18 6M6 6l12 12"/>` :
+                    `<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>`;
+            }
+
+            // Update button text
+            const textNodes = Array.from(batchBtn.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
+            if (textNodes.length > 0) {
+                const textContent = isActive ?
+                    `Cancel (${selectedCount} selected)` :
+                    'Edit Multiple';
+                textNodes[textNodes.length - 1].textContent = textContent;
+            }
+        }
+    },
+
+    addlead_updateBatchActionsBar() {
+        const tableView = document.querySelector('.addlead-table-view');
+        const existingBar = document.querySelector('.addlead-batch-actions-bar');
+        const selectedCount = this.addlead_state.selectedLeadIds.length;
+        const shouldShow = this.addlead_state.batchEditMode && selectedCount > 0;
+
+        if (shouldShow && !existingBar && tableView) {
+            // Add batch actions bar
+            const barHTML = this.addlead_renderBatchActionsBar();
+            tableView.insertAdjacentHTML('beforeend', barHTML);
+        } else if (!shouldShow && existingBar) {
+            // Remove batch actions bar
+            existingBar.remove();
+        } else if (shouldShow && existingBar) {
+            // Update existing bar
+            const countElement = existingBar.querySelector('.addlead-batch-selected');
+            if (countElement) {
+                countElement.textContent = `${selectedCount} selected`;
+            }
+        }
+    },
+
+    // Incremental dashboard view update (no full re-render)
+    addlead_updateDashboard() {
+        const container = document.getElementById(this.addlead_state.targetContainer);
+        if (!container) return;
+
+        // Update lead count in "View All Leads" button
+        const viewAllBtn = container.querySelector('.addlead-bubble-button span');
+        if (viewAllBtn && viewAllBtn.textContent.includes('View All Leads')) {
+            viewAllBtn.textContent = `View All Leads (${this.addlead_state.leads.length})`;
+        }
+
+        // Update recent leads section
+        const recentSection = container.querySelector('.addlead-recent-section');
+        if (recentSection) {
+            if (this.addlead_state.leads.length > 0) {
+                const recentList = recentSection.querySelector('.addlead-recent-list');
+                if (recentList) {
+                    const recentLeads = [...this.addlead_state.leads]
+                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                        .slice(0, 5);
+                    recentList.innerHTML = recentLeads.map(lead => this.addlead_renderRecentItem(lead)).join('');
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            } else {
+                // No leads - remove recent section
+                recentSection.remove();
+            }
+        } else if (this.addlead_state.leads.length > 0) {
+            // Recent section doesn't exist but we have leads - add it
+            const actionBubbles = container.querySelector('.addlead-action-bubbles');
+            if (actionBubbles) {
+                actionBubbles.insertAdjacentHTML('afterend', this.addlead_renderRecentLeads());
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
         }
     },
 
@@ -2297,42 +2472,20 @@ addlead_showCustomSourceInput(targetInput) {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
 
-        const container = document.getElementById(this.addlead_state.targetContainer);
-        if (container) {
-            container.style.opacity = '0';
-
-            setTimeout(() => {
-                this.addlead_state.currentView = 'dashboard';
-                this.addlead_hideAllModals();
-                this.addlead_render();
-
-                setTimeout(() => {
-                    container.style.opacity = '1';
-                    this.addlead_state.isTransitioning = false;
-                }, 50);
-            }, 50);
-        }
+        this.addlead_state.currentView = 'dashboard';
+        this.addlead_hideAllModals();
+        this.addlead_render();
+        this.addlead_state.isTransitioning = false;
     },
 
     addlead_showTableView() {
         if (this.addlead_state.isTransitioning) return;
         this.addlead_state.isTransitioning = true;
 
-        const container = document.getElementById(this.addlead_state.targetContainer);
-        if (container) {
-            container.style.opacity = '0';
-
-            setTimeout(() => {
-                this.addlead_state.currentView = 'table';
-                this.addlead_hideAllModals();
-                this.addlead_render();
-
-                setTimeout(() => {
-                    container.style.opacity = '1';
-                    this.addlead_state.isTransitioning = false;
-                }, 50);
-            }, 50);
-        }
+        this.addlead_state.currentView = 'table';
+        this.addlead_hideAllModals();
+        this.addlead_render();
+        this.addlead_state.isTransitioning = false;
     },
 
     // Modal controls
@@ -2675,12 +2828,34 @@ addlead_showCustomSourceInput(targetInput) {
                 from { opacity: 0; }
                 to { opacity: 1; }
             }
-            
+
             @keyframes addlead-scaleIn {
                 from { opacity: 0; transform: scale(0.8) translateY(20px); }
                 to { opacity: 1; transform: scale(1) translateY(0); }
             }
-            
+
+            /* Module-level animations */
+            @keyframes addleadWaveIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px) scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            .addlead-wave-in {
+                animation: addleadWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                opacity: 0;
+            }
+
+            .addlead-fade-in {
+                animation: addlead-fadeIn 0.3s ease forwards;
+                opacity: 0;
+            }
+
             @media (max-width: 768px) {
                 .addlead-source-grid {
                     grid-template-columns: 1fr;
@@ -2697,7 +2872,8 @@ addlead_showCustomSourceInput(targetInput) {
         if (!this.addlead_state.batchEditMode) {
             this.addlead_state.selectedLeadIds = [];
         }
-        this.addlead_render();
+        // Batch mode toggle requires table structure change (checkbox column)
+        this.addlead_updateTableContent();
     },
 
     addlead_toggleLeadSelection(leadId) {
@@ -2707,7 +2883,8 @@ addlead_showCustomSourceInput(targetInput) {
         } else {
             this.addlead_state.selectedLeadIds.push(leadId);
         }
-        this.addlead_render();
+        // Just update table content to reflect selection changes
+        this.addlead_updateTableContent();
     },
 
     addlead_renderBatchActionsBar() {
@@ -2718,15 +2895,86 @@ addlead_showCustomSourceInput(targetInput) {
                     <div class="addlead-batch-selected">${count} selected</div>
                 </div>
                 <div class="addlead-batch-actions-right">
-                    <button class="addlead-batch-btn addlead-batch-delete" onclick="AddLeadModule.addlead_showBatchDeleteModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <div class="addlead-batch-status-group">
+                        <label for="addlead_batchStatusSelect">Change all status to:</label>
+                        <select id="addlead_batchStatusSelect" class="addlead-batch-status-select">
+                            <option value="">Select status...</option>
+                            <option value="new">New Lead</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="negotiation">Negotiation</option>
+                            <option value="closed">Closed Won</option>
+                            <option value="lost">Lost</option>
+                        </select>
+                        <button class="addlead-batch-btn addlead-batch-btn-confirm"
+                                onclick="AddLeadModule.addlead_batchChangeStatus()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Confirm
+                        </button>
+                    </div>
+                    <button class="addlead-batch-btn delete"
+                            onclick="AddLeadModule.addlead_showBatchDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
                         Delete
                     </button>
                 </div>
             </div>
         `;
+    },
+
+    async addlead_batchChangeStatus() {
+        const select = document.getElementById('addlead_batchStatusSelect');
+        const newStatus = select?.value;
+
+        if (!newStatus) {
+            this.addlead_showNotification('Please select a status', 'error');
+            return;
+        }
+
+        const count = this.addlead_state.selectedLeadIds.length;
+        if (count === 0) return;
+
+        // OPTIMISTIC UI: Store old state for rollback
+        const oldLeads = [...this.addlead_state.leads];
+        const oldBatchMode = this.addlead_state.batchEditMode;
+        const oldSelectedIds = [...this.addlead_state.selectedLeadIds];
+
+        // OPTIMISTIC UI: Update state immediately
+        this.addlead_state.leads = this.addlead_state.leads.map(lead => {
+            if (this.addlead_state.selectedLeadIds.includes(lead.id)) {
+                return { ...lead, status: newStatus };
+            }
+            return lead;
+        });
+
+        // OPTIMISTIC UI: Exit batch mode
+        this.addlead_state.batchEditMode = false;
+        this.addlead_state.selectedLeadIds = [];
+
+        // OPTIMISTIC UI: Update UI immediately
+        this.addlead_updateTableContent();
+
+        // OPTIMISTIC UI: Make API call in background
+        try {
+            await API.batchUpdateLeads(oldSelectedIds, { status: newStatus });
+
+            this.addlead_showNotification(`${count} lead${count > 1 ? 's' : ''} updated to ${this.addlead_formatStatus(newStatus)}`, 'success');
+
+        } catch (error) {
+            console.error('Batch status change error:', error);
+            this.addlead_showNotification('Failed to update leads', 'error');
+
+            // OPTIMISTIC UI: Rollback on error
+            this.addlead_state.leads = oldLeads;
+            this.addlead_state.batchEditMode = oldBatchMode;
+            this.addlead_state.selectedLeadIds = oldSelectedIds;
+            this.addlead_updateTableContent();
+        }
     },
 
     addlead_showBatchDeleteModal() {
@@ -2765,21 +3013,41 @@ addlead_showCustomSourceInput(targetInput) {
     },
 
     async addlead_confirmBatchDelete() {
-        // Close modal
+        // OPTIMISTIC UI: Close modal immediately
         document.querySelector('.addlead-delete-modal-overlay')?.remove();
         if (this.addlead_state.selectedLeadIds.length === 0) return;
 
-        try {
-            await API.batchDeleteLeads(this.addlead_state.selectedLeadIds);
-            this.addlead_showNotification(`Deleted ${this.addlead_state.selectedLeadIds.length} lead(s)`, 'success');
+        const count = this.addlead_state.selectedLeadIds.length;
 
-            this.addlead_state.selectedLeadIds = [];
-            this.addlead_state.batchEditMode = false;
-            await this.addlead_loadLeads();
-            this.addlead_render();
+        // OPTIMISTIC UI: Store old state for rollback
+        const oldLeads = [...this.addlead_state.leads];
+        const oldBatchMode = this.addlead_state.batchEditMode;
+        const oldSelectedIds = [...this.addlead_state.selectedLeadIds];
+
+        // OPTIMISTIC UI: Update state immediately
+        this.addlead_state.leads = this.addlead_state.leads.filter(
+            lead => !this.addlead_state.selectedLeadIds.includes(lead.id)
+        );
+        this.addlead_state.selectedLeadIds = [];
+        this.addlead_state.batchEditMode = false;
+
+        // OPTIMISTIC UI: Update UI immediately
+        this.addlead_updateTableContent();
+
+        // OPTIMISTIC UI: Make API call in background
+        try {
+            await API.batchDeleteLeads(oldSelectedIds);
+            this.addlead_showNotification(`Deleted ${count} lead(s)`, 'success');
+
         } catch (error) {
             console.error('Batch delete error:', error);
             this.addlead_showNotification('Failed to delete leads', 'error');
+
+            // OPTIMISTIC UI: Rollback on error
+            this.addlead_state.leads = oldLeads;
+            this.addlead_state.batchEditMode = oldBatchMode;
+            this.addlead_state.selectedLeadIds = oldSelectedIds;
+            this.addlead_updateTableContent();
         }
     },
 
@@ -3588,7 +3856,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-form-select {
                 padding: 10px 40px 10px 12px;
                 border: 1px solid var(--border);
-                border-radius: 6px;
+                border-radius: var(--radius);
                 font-size: 14px;
                 background: var(--background);
                 color: var(--text-primary);
@@ -3599,19 +3867,20 @@ addlead_showCustomSourceInput(targetInput) {
                 appearance: none;
                 -webkit-appearance: none;
                 -moz-appearance: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
                 background-repeat: no-repeat;
                 background-position: right 12px center;
                 background-size: 16px;
             }
 
             .addlead-form-select:hover {
-                border-color: var(--primary);
+                border-color: #667eea;
             }
 
             .addlead-form-select:focus {
                 outline: none;
-                border-color: var(--primary);
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
 
             .addlead-form-input:focus,
@@ -4522,30 +4791,44 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-batch-edit {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
                 padding: 0.75rem 1.25rem;
-                background: #6b7280;
-                color: white;
-                border: none;
-                border-radius: 8px;
+                background: var(--background);
+                color: var(--text-primary);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-lg);
                 font-weight: 600;
+                font-size: 0.9rem;
                 cursor: pointer;
-                transition: all 0.2s ease;
-                text-align: center;
+                transition: all 0.3s;
+            }
+
+            .addlead-btn-batch-edit svg {
+                width: 1.125rem;
+                height: 1.125rem;
+                flex-shrink: 0;
             }
 
             .addlead-btn-batch-edit:hover {
-                background: #4b5563;
+                border-color: #667eea;
+                color: #667eea;
+                transform: translateY(-1px);
             }
 
             .addlead-btn-batch-edit.active {
-                background: #ef4444;
+                background: #667eea;
+                color: white;
+                border-color: #667eea;
             }
 
             .addlead-btn-batch-edit.active:hover {
-                background: #dc2626;
+                background: #5568d3;
+                border-color: #5568d3;
+                transform: translateY(-1px);
             }
 
-            /* BATCH ACTIONS - Floating Style */
             .addlead-batch-actions-bar {
                 position: sticky;
                 bottom: 2rem;
@@ -4559,7 +4842,6 @@ addlead_showCustomSourceInput(targetInput) {
                 border-radius: var(--radius-lg);
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
                 z-index: 100;
-                margin-top: 1rem;
             }
 
             .addlead-batch-actions-left {
@@ -4571,12 +4853,56 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-batch-selected {
                 font-size: 0.9rem;
                 font-weight: 600;
-                color: var(--primary);
+                color: #667eea;
             }
 
             .addlead-batch-actions-right {
                 display: flex;
                 gap: 0.5rem;
+            }
+
+            .addlead-batch-status-group {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+            .addlead-batch-status-group label {
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                white-space: nowrap;
+            }
+
+            .addlead-batch-status-select {
+                padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                background: var(--surface);
+                color: var(--text-primary);
+                font-size: 0.85rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                min-width: 180px;
+                appearance: none;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 0.5rem center;
+                background-size: 1rem;
+            }
+
+            .addlead-batch-status-select:hover {
+                border-color: #667eea;
+                background-color: rgba(102, 126, 234, 0.05);
+            }
+
+            .addlead-batch-status-select:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
             }
 
             .addlead-batch-btn {
@@ -4594,24 +4920,24 @@ addlead_showCustomSourceInput(targetInput) {
                 gap: 0.5rem;
             }
 
-            .addlead-batch-btn:hover {
-                background: rgba(102, 126, 234, 0.1);
-                border-color: var(--primary);
-            }
-
             .addlead-batch-btn svg {
                 width: 1rem;
                 height: 1rem;
             }
 
-            .addlead-batch-btn.addlead-batch-delete {
-                color: var(--danger);
+            .addlead-batch-btn:hover {
+                background: rgba(102, 126, 234, 0.1);
+                border-color: #667eea;
+            }
+
+            .addlead-batch-btn.delete {
+                color: #ef4444;
                 border-color: rgba(239, 68, 68, 0.3);
             }
 
-            .addlead-batch-btn.addlead-batch-delete:hover {
+            .addlead-batch-btn.delete:hover {
                 background: rgba(239, 68, 68, 0.1);
-                border-color: var(--danger);
+                border-color: #ef4444;
             }
 
             /* Delete Modal - Dark/Light Mode Adaptive */
@@ -4760,19 +5086,63 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-table-row.selected {
-                background: rgba(102, 126, 234, 0.1);
-                border-left: 4px solid #667eea;
+                /* No visual change - checkbox is enough */
             }
 
             .addlead-checkbox-col {
-                width: 50px;
+                width: 60px;
                 text-align: center;
+                vertical-align: middle;
             }
 
-            .addlead-batch-checkbox {
-                width: 18px;
-                height: 18px;
+            .addlead-checkbox-wrapper {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+            }
+
+            .addlead-checkbox-input {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+            .addlead-checkbox-custom {
+                width: 1.75rem;
+                height: 1.75rem;
+                border: 2px solid var(--border);
+                border-radius: 6px;
+                background: var(--surface);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
                 cursor: pointer;
+            }
+
+            .addlead-checkbox-custom svg {
+                width: 1.125rem;
+                height: 1.125rem;
+                opacity: 0;
+                transform: scale(0.5);
+                transition: all 0.2s;
+            }
+
+            .addlead-checkbox-input:checked + .addlead-checkbox-custom {
+                background: #667eea;
+                border-color: #667eea;
+            }
+
+            .addlead-checkbox-input:checked + .addlead-checkbox-custom svg {
+                opacity: 1;
+                transform: scale(1);
+                stroke: white;
+            }
+
+            .addlead-checkbox-custom:hover {
+                border-color: #667eea;
             }
 
             /* Responsive */

@@ -1,3 +1,8 @@
+// ========================================
+// PRO FEATURE: Estimates Module
+// Available to: Professional, Admin tiers
+// Free tier: Hidden in Settings (future)
+// ========================================
 /**
  * ESTIMATES MODULE - Complete Rewrite v2.0
  * Clean, simple, bulletproof batch selection
@@ -32,7 +37,10 @@ window.EstimatesModule = {
             totalAccepted: 0,
             totalPending: 0,
             acceptanceRate: 0
-        }
+        },
+
+        // Init flag
+        hasInitialized: false  // Track if module has loaded before
     },
 
     STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
@@ -42,7 +50,6 @@ window.EstimatesModule = {
      */
     async init(targetContainer = 'estimates-content') {
         this.state.container = targetContainer;
-        this.estimates_showLoading();
 
         try {
             const [estimates, leadsData] = await Promise.all([
@@ -58,6 +65,7 @@ window.EstimatesModule = {
 
             this.estimates_calculateStats();
             this.estimates_render();
+            this.state.hasInitialized = true;
         } catch (error) {
             console.error('Error initializing Estimates:', error);
             this.estimates_showError('Failed to load estimates');
@@ -71,6 +79,7 @@ window.EstimatesModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        const isFirstLoad = !this.state.hasInitialized;
         this.estimates_applyFilters();
 
         // Clear any lingering inline styles from other modules
@@ -89,6 +98,44 @@ window.EstimatesModule = {
 
         // Use a single requestAnimationFrame for smoother rendering
         requestAnimationFrame(() => {
+            // Apply animations based on load state
+            if (isFirstLoad) {
+                // First load: Staggered wave animation
+                const header = container.querySelector('.estimates-header');
+                if (header) {
+                    header.classList.add('est-wave-in');
+                    header.style.animationDelay = '0s';
+                }
+
+                const limitBar = container.querySelector('.estimates-limit-bar');
+                if (limitBar) {
+                    limitBar.classList.add('est-wave-in');
+                    limitBar.style.animationDelay = '0.1s';
+                }
+
+                const statCards = container.querySelectorAll('.estimates-stat-card');
+                statCards.forEach((card, i) => {
+                    card.classList.add('est-wave-in');
+                    card.style.animationDelay = `${0.15 + (i * 0.08)}s`;
+                });
+
+                const toolbar = container.querySelector('.estimates-toolbar');
+                if (toolbar) {
+                    toolbar.classList.add('est-wave-in');
+                    toolbar.style.animationDelay = `${0.15 + (statCards.length * 0.08)}s`;
+                }
+
+                const cards = container.querySelectorAll('.estimates-card');
+                cards.forEach((card, i) => {
+                    card.classList.add('est-wave-in');
+                    card.style.animationDelay = `${0.25 + (Math.min(i, 6) * 0.06)}s`;
+                });
+            } else {
+                // Subsequent loads: Fast fade
+                const allElements = container.querySelectorAll('.estimates-header, .estimates-limit-bar, .estimates-stat-card, .estimates-toolbar, .estimates-card');
+                allElements.forEach(el => el.classList.add('est-fade-in'));
+            }
+
             this.estimates_attachEvents();
         });
     },
@@ -2140,6 +2187,9 @@ estimates_showViewModal(estimateId) {
         overlay.style.opacity = '0';
         setTimeout(() => overlay.remove(), 200);
 
+        // Store backup for rollback
+        const estimateBackup = {...estimate};
+
         // Remove from local state immediately
         const index = this.state.estimates.findIndex(e => e.id === estimate.id);
         if (index !== -1) {
@@ -2176,6 +2226,31 @@ estimates_showViewModal(estimateId) {
         } catch (error) {
             console.error('Delete estimate error:', error);
             window.SteadyUtils.showToast('Failed to delete estimate', 'error');
+
+            // Rollback: restore deleted estimate
+            if (estimateBackup) {
+                this.state.estimates.push(estimateBackup);
+                this.estimates_calculateStats();
+                this.estimates_instantFilterChange();
+
+                // Re-update stats and limit bar
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.estimates-stats');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.estimates-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+            }
         }
     });
 
@@ -3077,56 +3152,70 @@ async estimates_handleSave(overlay, button) {
 
         console.log('[Estimates] Saving estimate:', estimateData);
 
-        // Save the editing ID before closing modal (closeModal sets it to null)
+        // Store editing ID before API call
         const editingId = this.state.editingEstimateId;
 
-        // Close modal immediately for instant feedback
-        this.estimates_closeModal();
+        // Variables for rollback (must be in outer scope)
+        let backup = null;
+        let tempEstimate = null;
 
-        // Save in background
         try {
             let savedEstimate;
             if (editingId) {
+                // Update optimistically
+                const index = this.state.estimates.findIndex(e => e.id === editingId);
+                backup = index !== -1 ? {...this.state.estimates[index]} : null;
+
+                if (index !== -1) {
+                    this.state.estimates[index] = { ...this.state.estimates[index], ...estimateData };
+                }
+
+                // Update UI immediately
+                this.estimates_calculateStats();
+                this.estimates_instantFilterChange();
+
+                const container = document.getElementById(this.state.container);
+                if (container) {
+                    const statsSection = container.querySelector('.estimates-stats');
+                    if (statsSection) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderStats();
+                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+
+                    const limitBar = container.querySelector('.estimates-limit-bar');
+                    if (limitBar) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = this.estimates_renderLimitBar();
+                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
+                    }
+                }
+
+                // Make API call
                 savedEstimate = await API.updateEstimate(editingId, estimateData);
 
-                // Update in state
-                const index = this.state.estimates.findIndex(e => e.id === editingId);
+                // Update with actual saved data
                 if (index !== -1) {
                     this.state.estimates[index] = savedEstimate;
                 }
 
-                // Update UI immediately (like Jobs)
-                this.estimates_calculateStats();
-                this.estimates_instantFilterChange();
-
-                // Update stats tabs and limit bar without full re-render
-                const container = document.getElementById(this.state.container);
-                if (container) {
-                    const statsSection = container.querySelector('.estimates-stats');
-                    if (statsSection) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = this.estimates_renderStats();
-                        statsSection.outerHTML = tempDiv.firstElementChild.outerHTML;
-                    }
-
-                    const limitBar = container.querySelector('.estimates-limit-bar');
-                    if (limitBar) {
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = this.estimates_renderLimitBar();
-                        limitBar.outerHTML = tempDiv.firstElementChild.outerHTML;
-                    }
-                }
-
+                // Success - close modal and show toast
+                this.estimates_closeModal();
                 window.SteadyUtils.showToast('Estimate updated successfully', 'success');
-            } else {
-                savedEstimate = await API.createEstimate(estimateData);
-                this.state.estimates.unshift(savedEstimate);
 
-                // Update UI immediately (like Jobs)
+            } else {
+                // Create optimistically with temp data
+                tempEstimate = {
+                    id: `temp-${Date.now()}`,
+                    ...estimateData,
+                    created_at: new Date().toISOString()
+                };
+                this.state.estimates.unshift(tempEstimate);
+
+                // Update UI immediately
                 this.estimates_calculateStats();
                 this.estimates_instantFilterChange();
 
-                // Update stats tabs and limit bar without full re-render
                 const container = document.getElementById(this.state.container);
                 if (container) {
                     const statsSection = container.querySelector('.estimates-stats');
@@ -3144,6 +3233,17 @@ async estimates_handleSave(overlay, button) {
                     }
                 }
 
+                // Make API call
+                savedEstimate = await API.createEstimate(estimateData);
+
+                // Replace temp estimate with real one
+                const tempIndex = this.state.estimates.findIndex(e => e.id === tempEstimate.id);
+                if (tempIndex !== -1) {
+                    this.state.estimates[tempIndex] = savedEstimate;
+                }
+
+                // Success - close modal and show toast
+                this.estimates_closeModal();
                 window.SteadyUtils.showToast('Estimate created successfully', 'success');
             }
 
@@ -3154,8 +3254,28 @@ async estimates_handleSave(overlay, button) {
             console.error('[Estimates] Save error:', error);
             window.SteadyUtils.showToast('Failed to save estimate', 'error');
 
-            // Reset flag after save error
+            // Reset flag and re-enable button
             this.state.isSaving = false;
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '';
+                button.style.cursor = '';
+            }
+
+            // Rollback: Restore backup state
+            if (editingId && backup) {
+                const index = this.state.estimates.findIndex(e => e.id === editingId);
+                if (index !== -1) {
+                    this.state.estimates[index] = backup;
+                }
+            } else if (tempEstimate) {
+                // Remove temp estimate on create failure
+                this.state.estimates = this.state.estimates.filter(e => e.id !== tempEstimate.id);
+            }
+
+            // Update UI to reflect rollback
+            this.estimates_calculateStats();
+            this.estimates_instantFilterChange();
         }
 
     } catch (error) {
@@ -3670,13 +3790,14 @@ estimates_formatStatus(status) {
 
         if (!confirmed) return;
 
-        try {
-            // Batch delete in backend
-            await API.batchDeleteEstimates(this.state.selectedEstimateIds);
+        // Store backup for rollback
+        const idsToDelete = [...this.state.selectedEstimateIds];
+        const estimatesBackup = this.state.estimates.filter(e => idsToDelete.includes(e.id));
 
-            // Remove from local state
+        try {
+            // Optimistically remove from local state
             this.state.estimates = this.state.estimates.filter(
-                e => !this.state.selectedEstimateIds.includes(e.id)
+                e => !idsToDelete.includes(e.id)
             );
 
             // Clear selections and exit batch mode
@@ -3724,10 +3845,20 @@ estimates_formatStatus(status) {
                 container.querySelectorAll('.estimates-card-checkbox').forEach(cb => cb.remove());
             }
 
+            // Make API call in background
+            await API.batchDeleteEstimates(idsToDelete);
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
             window.SteadyUtils.showToast('Failed to delete estimates', 'error');
+
+            // Rollback: restore deleted estimates
+            if (estimatesBackup.length > 0) {
+                this.state.estimates.push(...estimatesBackup);
+                this.estimates_calculateStats();
+                this.estimates_instantFilterChange();
+            }
         }
     },
 
@@ -3970,12 +4101,6 @@ estimates_formatStatus(status) {
 .estimates-container {
     max-width: 1400px;
     margin: 0 auto;
-    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* MODAL SYSTEM */
@@ -4543,7 +4668,7 @@ estimates_formatStatus(status) {
     padding: 0.75rem 1rem 0.75rem 2.75rem;
     border: 2px solid var(--border);
     border-radius: 999px;
-    background: var(--bg);
+    background: var(--background);
     color: var(--text-primary);
     font-size: 0.9rem;
     transition: all 0.2s;
@@ -4580,7 +4705,7 @@ estimates_formatStatus(status) {
     padding: 0.75rem 2.5rem 0.75rem 1rem;
     border: 2px solid var(--border);
     border-radius: 999px;
-    background: var(--bg);
+    background: var(--background);
     color: var(--text-primary);
     font-size: 0.875rem;
     font-weight: 600;
@@ -5036,6 +5161,33 @@ estimates_formatStatus(status) {
     .estimates-search {
         max-width: none;
     }
+}
+
+/* Module-level animations */
+@keyframes estWaveIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes estFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.est-wave-in {
+    animation: estWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.est-fade-in {
+    animation: estFadeIn 0.3s ease forwards;
+    opacity: 0;
 }
 </style>`;
     }

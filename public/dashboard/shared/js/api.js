@@ -190,11 +190,20 @@ class TierScalingAPI {
   }
 
   static async getUserSubscriptionInfo() {
+    const { data: { user } } = await supabase.auth.getUser();
     const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
+    // Count current leads
+    const { count: leadCount } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
     return {
       tier: profile.user_type,
-      leadLimit: profile.current_lead_limit,
-      currentLeads: profile.current_leads,
+      leadLimit: limits.leads,
+      currentLeads: leadCount || 0,
       isAdmin: profile.user_type === 'admin'
     };
   }
@@ -245,18 +254,72 @@ class TierScalingAPI {
     }
   }
 
+  /**
+   * Get tier limits based on user type
+   * FREE:  50 leads, 100 tasks, 10 goals, 10 estimates, 10 jobs (no photos)
+   * PRO:   5000 leads, 10000 tasks, 1000 goals, 1000 estimates, 1000 jobs (with photos)
+   * ADMIN: Unlimited everything
+   */
+  static getTierLimits(userType) {
+    if (userType === 'admin') {
+      return {
+        leads: 999999,
+        tasks: 999999,
+        goals: 999999,
+        estimates: 999999,
+        jobs: 999999,
+        photosEnabled: true
+      };
+    }
+
+    const isFree = userType === 'free';
+    return {
+      leads: isFree ? 50 : 5000,
+      tasks: isFree ? 100 : 10000,
+      goals: isFree ? 10 : 1000,
+      estimates: isFree ? 10 : 1000,
+      jobs: isFree ? 10 : 1000,
+      photosEnabled: !isFree
+    };
+  }
+
+  /**
+   * Check if user is Pro tier (has access to photos and higher limits)
+   */
+  static isProTier(userType) {
+    return ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(userType);
+  }
+
   // =====================================================
   // LEADS MANAGEMENT
   // =====================================================
   
-  static async getLeads() {
+  static async getLeads(forceRefresh = false) {
+    // Check cache first (unless force refresh)
+    if (!forceRefresh && window.AppCache) {
+      const cached = window.AppCache.get('leads');
+      if (cached) {
+        return {
+          cold: cached.filter(l => l.type === 'cold'),
+          warm: cached.filter(l => l.type === 'warm'),
+          all: cached
+        };
+      }
+    }
+
+    // Cache miss - fetch from database
     const { data, error } = await supabase
       .from('leads')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
-    
+
+    // Store in cache
+    if (window.AppCache && data) {
+      window.AppCache.set('leads', data);
+    }
+
     return {
       cold: data.filter(l => l.type === 'cold'),
       warm: data.filter(l => l.type === 'warm'),
@@ -268,35 +331,47 @@ class TierScalingAPI {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
-        
-        // Get user's current lead count and limit
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('user_type, current_lead_limit, current_leads')
-            .eq('id', user.id)
-            .single();
-        
-        if (userError) throw userError;
-        
-        const { current_leads, current_lead_limit, user_type } = userData;
-        
+
+        // Get user tier and limits
+        const profile = await this.getProfile();
+        const limits = this.getTierLimits(profile.user_type);
+
+        // Count current leads
+        const { count, error: countError } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
+        if (countError) throw countError;
+
         // Check if at limit
-        if (current_leads >= current_lead_limit) {
-            if (user_type === 'free') {
-                throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${current_lead_limit} leads. Upgrade to Pro for 5,000 leads!`);
+        if (count >= limits.leads) {
+            if (profile.user_type === 'free') {
+                throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${limits.leads} leads. Upgrade to Pro for 1,000 leads!`);
             } else {
-                throw new Error(`PRO_TIER_LIMIT:You've reached the tier limit of ${current_lead_limit} leads.`);
+                throw new Error(`TIER_LIMIT:You've reached your lead limit of ${limits.leads} leads.`);
             }
         }
-        
-        // Insert lead and increment counter in a transaction
-        const { data, error } = await supabase.rpc('create_lead_with_increment', {
-            lead_data: { ...leadData, user_id: user.id }
-        });
-        
+
+        // Insert lead (no counter to increment)
+        const { data, error } = await supabase
+            .from('leads')
+            .insert([{ ...leadData, user_id: user.id }])
+            .select()
+            .single();
+
         if (error) throw error;
+
+        // Add to cache
+        if (window.AppCache && data) {
+          window.AppCache.update('leads', (leads) => {
+            if (!leads) return [data];
+            return [data, ...leads];
+          });
+        }
+
         return data;
-        
+
     } catch (error) {
         console.error('Create lead error:', error);
         throw error;
@@ -304,14 +379,33 @@ class TierScalingAPI {
   }
 
   static async updateLead(leadId, updates) {
-    // Use RPC function to safely update leads (bypasses any triggers blocking manual updates)
-    const { data, error } = await supabase.rpc('update_lead_safe', {
-      lead_id_val: leadId,
-      lead_updates: updates
-    });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    return data?.[0];
+      const { data, error } = await supabase
+        .from('leads')
+        .update(updates)
+        .eq('id', leadId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update cache
+      if (window.AppCache && data) {
+        window.AppCache.update('leads', (leads) => {
+          if (!leads) return [data];
+          return leads.map(l => l.id === leadId ? data : l);
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Update lead error:', error);
+      throw error;
+    }
   }
 
   static async deleteLead(leadId) {
@@ -335,18 +429,12 @@ class TierScalingAPI {
 
         if (deleteError) throw deleteError;
 
-        // Step 3: Decrement the user's current_leads counter
-        const { data: userData } = await supabase
-            .from('users')
-            .select('current_leads')
-            .eq('id', user.id)
-            .single();
-
-        if (userData) {
-            await supabase
-                .from('users')
-                .update({ current_leads: Math.max(0, (userData.current_leads || 0) - 1) })
-                .eq('id', user.id);
+        // Remove from cache
+        if (window.AppCache) {
+          window.AppCache.update('leads', (leads) => {
+            if (!leads) return [];
+            return leads.filter(l => l.id !== leadId);
+          });
         }
 
         return { success: true };
@@ -434,12 +522,21 @@ class TierScalingAPI {
       .select();
 
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data) {
+      window.AppCache.update('leads', (leads) => {
+        if (!leads) return data;
+        const updatedMap = new Map(data.map(d => [d.id, d]));
+        return leads.map(l => updatedMap.has(l.id) ? updatedMap.get(l.id) : l);
+      });
+    }
+
     return { success: true, updated: data.length, leads: data };
   }
 
   /**
    * Delete multiple leads at once
-   * WARNING: This will decrement lead counter for each deleted lead
    */
   static async batchDeleteLeads(leadIds) {
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
@@ -465,24 +562,16 @@ class TierScalingAPI {
 
     if (deleteError) throw deleteError;
 
-    // Step 3: Decrement counter by the number deleted
-    const deletedCount = count || 0;
-    if (deletedCount > 0) {
-        const { data: userData } = await supabase
-            .from('users')
-            .select('current_leads')
-            .eq('id', user.id)
-            .single();
-
-        if (userData) {
-            await supabase
-                .from('users')
-                .update({ current_leads: Math.max(0, (userData.current_leads || 0) - deletedCount) })
-                .eq('id', user.id);
-        }
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('leads', (leads) => {
+        if (!leads) return [];
+        const idsToDelete = new Set(leadIds);
+        return leads.filter(l => !idsToDelete.has(l.id));
+      });
     }
 
-    return { success: true, deleted: deletedCount };
+    return { success: true, deleted: count || 0 };
   }
 
   /**
@@ -646,44 +735,73 @@ class TierScalingAPI {
   
   static async createTask(taskData) {
     const { data: { user } } = await supabase.auth.getUser();
-    
+    if (!user) throw new Error('Not authenticated');
+
+    // Get user tier and limits
+    const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
     // Check task count first
     const { count, error: countError } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
-    
+
     if (countError) throw countError;
-    
-    if (count >= 10000) {
-      throw new Error('Task limit reached (10,000 max)');
+
+    if (count >= limits.tasks) {
+      if (profile.user_type === 'free') {
+        throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${limits.tasks} tasks. Upgrade to Pro for 10,000 tasks!`);
+      } else {
+        throw new Error(`TIER_LIMIT:You've reached your task limit of ${limits.tasks} tasks.`);
+      }
     }
-    
+
     const { data, error } = await supabase
       .from('tasks')
       .insert([{ ...taskData, user_id: user.id }])
       .select();
-    
+
     if (error) throw error;
-    
+
+    // Add to cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('tasks', (tasks) => {
+        if (!tasks) return [data[0]];
+        return [data[0], ...tasks];
+      });
+    }
+
     return data[0];
   }
 
-  static async getTasks(filters = {}) {
+  static async getTasks(filters = {}, forceRefresh = false) {
+    // Check cache first (unless force refresh)
+    if (!forceRefresh && window.AppCache && !filters.status && !filters.type) {
+      const cached = window.AppCache.get('tasks');
+      if (cached) return cached;
+    }
+
     let query = supabase
       .from('tasks')
       .select('*')
-      .order('due_date', { ascending: true });
-    
+      .order('due_date', { ascending: true});
+
     if (filters.status) {
       query = query.eq('status', filters.status);
     }
     if (filters.type) {
       query = query.eq('task_type', filters.type);
     }
-    
+
     const { data, error } = await query;
     if (error) throw error;
+
+    // Store in cache only if no filters (getting all tasks)
+    if (window.AppCache && data && !filters.status && !filters.type) {
+      window.AppCache.set('tasks', data);
+    }
+
     return data;
   }
 
@@ -693,8 +811,17 @@ class TierScalingAPI {
       .update(updates)
       .eq('id', taskId)
       .select();
-    
+
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('tasks', (tasks) => {
+        if (!tasks) return [data[0]];
+        return tasks.map(t => t.id === taskId ? data[0] : t);
+      });
+    }
+
     return data[0];
   }
 
@@ -703,8 +830,17 @@ class TierScalingAPI {
       .from('tasks')
       .delete()
       .eq('id', taskId);
-    
+
     if (error) throw error;
+
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('tasks', (tasks) => {
+        if (!tasks) return [];
+        return tasks.filter(t => t.id !== taskId);
+      });
+    }
+
     return { success: true };
   }
 
@@ -788,6 +924,16 @@ class TierScalingAPI {
       .select();
 
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data) {
+      window.AppCache.update('tasks', (tasks) => {
+        if (!tasks) return data;
+        const updatedMap = new Map(data.map(d => [d.id, d]));
+        return tasks.map(t => updatedMap.has(t.id) ? updatedMap.get(t.id) : t);
+      });
+    }
+
     return { success: true, updated: data.length, tasks: data };
   }
 
@@ -805,6 +951,16 @@ class TierScalingAPI {
       .in('id', taskIds);
 
     if (error) throw error;
+
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('tasks', (tasks) => {
+        if (!tasks) return [];
+        const idsToDelete = new Set(taskIds);
+        return tasks.filter(t => !idsToDelete.has(t.id));
+      });
+    }
+
     return { success: true, deleted: taskIds.length };
   }
 
@@ -868,12 +1024,24 @@ class TierScalingAPI {
   }
 
   static async getCurrentStats() {
+    const { data: { user } } = await supabase.auth.getUser();
     const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
+    // Count current leads
+    const { count: leadCount } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+
+    const currentLeads = leadCount || 0;
+    const leadLimit = limits.leads;
+
     return {
-      currentLeads: profile.current_leads || 0,
-      currentLeadLimit: profile.current_lead_limit || 50,
-      leadsRemaining: Math.max(0, (profile.current_lead_limit || 50) - (profile.current_leads || 0)),
-      percentageUsed: Math.round(((profile.current_leads || 0) / (profile.current_lead_limit || 50)) * 100)
+      currentLeads,
+      currentLeadLimit: leadLimit,
+      leadsRemaining: Math.max(0, leadLimit - currentLeads),
+      percentageUsed: Math.round((currentLeads / leadLimit) * 100)
     };
   }
 
@@ -950,7 +1118,14 @@ class TierScalingAPI {
    * @param {Object} filters - Optional filters (status, job_type, lead_id, payment_status)
    * @returns {Promise<Array>} Array of job objects
    */
-  static async getJobs(filters = {}) {
+  static async getJobs(filters = {}, forceRefresh = false) {
+    // Check cache first (unless force refresh) - only if no filters
+    const hasFilters = filters.status || filters.job_type || filters.lead_id || filters.payment_status || filters.estimate_id;
+    if (!forceRefresh && window.AppCache && !hasFilters) {
+      const cached = window.AppCache.get('jobs');
+      if (cached) return cached;
+    }
+
     let query = supabase
       .from('jobs')
       .select('*, leads(name, email, phone)')
@@ -964,6 +1139,12 @@ class TierScalingAPI {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    // Store in cache only if no filters
+    if (window.AppCache && data && !hasFilters) {
+      window.AppCache.set('jobs', data);
+    }
+
     return data;
   }
 
@@ -990,6 +1171,27 @@ class TierScalingAPI {
    */
   static async createJob(jobData) {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get user tier and limits
+    const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
+    // Check job count
+    const { count, error: countError } = await supabase
+        .from('jobs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    if (count >= limits.jobs) {
+        if (profile.user_type === 'free') {
+            throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${limits.jobs} jobs. Upgrade to Pro for 1,000 jobs with photos!`);
+        } else {
+            throw new Error(`TIER_LIMIT:You've reached your job limit of ${limits.jobs} jobs.`);
+        }
+    }
 
     const { data, error } = await supabase
       .from('jobs')
@@ -1004,6 +1206,15 @@ class TierScalingAPI {
       .select();
 
     if (error) throw error;
+
+    // Add to cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('jobs', (jobs) => {
+        if (!jobs) return [data[0]];
+        return [data[0], ...jobs];
+      });
+    }
+
     return data[0];
   }
 
@@ -1021,6 +1232,15 @@ class TierScalingAPI {
       .select();
 
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('jobs', (jobs) => {
+        if (!jobs) return [data[0]];
+        return jobs.map(j => j.id === jobId ? data[0] : j);
+      });
+    }
+
     return data[0];
   }
 
@@ -1036,6 +1256,15 @@ class TierScalingAPI {
       .eq('id', jobId);
 
     if (error) throw error;
+
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('jobs', (jobs) => {
+        if (!jobs) return [];
+        return jobs.filter(j => j.id !== jobId);
+      });
+    }
+
     return { success: true };
   }
 
@@ -1372,6 +1601,12 @@ class TierScalingAPI {
    * @returns {Promise<string>} Public URL of uploaded photo
    */
   static async uploadJobPhoto(file, jobId, type) {
+    // PRO TIER ONLY - Check if user has photo access
+    const profile = await this.getProfile();
+    if (!this.isProTier(profile.user_type)) {
+      throw new Error('UPGRADE_REQUIRED:Photo uploads are a Pro feature. Upgrade to unlock photos on estimates and jobs!');
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${jobId}/${type}-${Date.now()}.${fileExt}`;
 
@@ -1466,7 +1701,13 @@ class TierScalingAPI {
    * @param {Object} filters - Filter criteria {status, lead_id}
    * @returns {Promise<Array>} Array of estimate objects
    */
-  static async getEstimates(filters = {}) {
+  static async getEstimates(filters = {}, forceRefresh = false) {
+    // Check cache first (unless force refresh) - only if no filters
+    if (!forceRefresh && window.AppCache && !filters.status && !filters.lead_id) {
+      const cached = window.AppCache.get('estimates');
+      if (cached) return cached;
+    }
+
     let query = supabase
       .from('estimates')
       .select('*, leads(name, email, phone, company)')
@@ -1477,6 +1718,12 @@ class TierScalingAPI {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    // Store in cache only if no filters
+    if (window.AppCache && data && !filters.status && !filters.lead_id) {
+      window.AppCache.set('estimates', data);
+    }
+
     return data;
   }
 
@@ -1502,6 +1749,29 @@ class TierScalingAPI {
    * @returns {Promise<Object>} Created estimate object
    */
   static async createEstimate(estimateData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get user tier and limits
+    const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
+    // Check estimate count
+    const { count, error: countError } = await supabase
+        .from('estimates')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    if (count >= limits.estimates) {
+        if (profile.user_type === 'free') {
+            throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${limits.estimates} estimates. Upgrade to Pro for 1,000 estimates with photos!`);
+        } else {
+            throw new Error(`TIER_LIMIT:You've reached your estimate limit of ${limits.estimates} estimates.`);
+        }
+    }
+
     // Generate estimate number
     const estimateNumber = await this.generateEstimateNumber();
 
@@ -1510,12 +1780,21 @@ class TierScalingAPI {
       .insert([{
         ...estimateData,
         estimate_number: estimateNumber,
-        user_id: (await supabase.auth.getUser()).data.user.id
+        user_id: user.id
       }])
       .select()
       .single();
 
     if (error) throw error;
+
+    // Add to cache
+    if (window.AppCache && data) {
+      window.AppCache.update('estimates', (estimates) => {
+        if (!estimates) return [data];
+        return [data, ...estimates];
+      });
+    }
+
     return data;
   }
 
@@ -1534,6 +1813,15 @@ class TierScalingAPI {
       .single();
 
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data) {
+      window.AppCache.update('estimates', (estimates) => {
+        if (!estimates) return [data];
+        return estimates.map(e => e.id === estimateId ? data : e);
+      });
+    }
+
     return data;
   }
 
@@ -1561,6 +1849,14 @@ class TierScalingAPI {
       .eq('id', estimateId);
 
     if (error) throw error;
+
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('estimates', (estimates) => {
+        if (!estimates) return [];
+        return estimates.filter(e => e.id !== estimateId);
+      });
+    }
   }
 
   /**
@@ -1639,6 +1935,12 @@ class TierScalingAPI {
    * @returns {Promise<string>} Public URL of uploaded photo
    */
   static async uploadEstimatePhoto(file, estimateId, caption = '') {
+    // PRO TIER ONLY - Check if user has photo access
+    const profile = await this.getProfile();
+    if (!this.isProTier(profile.user_type)) {
+      throw new Error('UPGRADE_REQUIRED:Photo uploads are a Pro feature. Upgrade to unlock photos on estimates and jobs!');
+    }
+
     // Compress image before upload
     const compressedFile = await this.compressImage(file, 1024, 0.8);
 
@@ -1865,7 +2167,13 @@ class TierScalingAPI {
 // GOALS (Pro Tier - Apple Watch Style Goal Tracking)
 // =====================================================
 
-static async getGoals(status = 'active') {
+static async getGoals(status = 'active', forceRefresh = false) {
+    // Check cache first (unless force refresh) - only if getting all goals
+    if (!forceRefresh && window.AppCache && status === null) {
+      const cached = window.AppCache.get('goals');
+      if (cached) return cached;
+    }
+
     let query = supabase
         .from('goals')
         .select('*')
@@ -1878,17 +2186,54 @@ static async getGoals(status = 'active') {
 
     const { data, error } = await query;
     if (error) throw error;
+
+    // Store in cache only if getting all goals
+    if (window.AppCache && data && status === null) {
+      window.AppCache.set('goals', data);
+    }
+
     return data;
 }
 
 static async createGoal(goalData) {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Get user tier and limits
+    const profile = await this.getProfile();
+    const limits = this.getTierLimits(profile.user_type);
+
+    // Check goal count
+    const { count, error: countError } = await supabase
+        .from('goals')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+    if (countError) throw countError;
+
+    if (count >= limits.goals) {
+        if (profile.user_type === 'free') {
+            throw new Error(`FREE_TIER_LIMIT:You've reached the free tier limit of ${limits.goals} goals. Upgrade to Pro for 1,000 goals!`);
+        } else {
+            throw new Error(`TIER_LIMIT:You've reached your goal limit of ${limits.goals} goals.`);
+        }
+    }
+
     const { data, error } = await supabase
         .from('goals')
         .insert([{ ...goalData, user_id: user.id }])
         .select();
-    
+
     if (error) throw error;
+
+    // Add to cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('goals', (goals) => {
+        if (!goals) return [data[0]];
+        return [data[0], ...goals];
+      });
+    }
+
     return data[0];
 }
 
@@ -1898,8 +2243,17 @@ static async updateGoal(goalId, updates) {
         .update(updates)
         .eq('id', goalId)
         .select();
-    
+
     if (error) throw error;
+
+    // Update cache
+    if (window.AppCache && data && data[0]) {
+      window.AppCache.update('goals', (goals) => {
+        if (!goals) return [data[0]];
+        return goals.map(g => g.id === goalId ? data[0] : g);
+      });
+    }
+
     return data[0];
 }
 
@@ -1910,6 +2264,15 @@ static async deleteGoal(goalId) {
         .eq('id', goalId);
 
     if (error) throw error;
+
+    // Remove from cache
+    if (window.AppCache) {
+      window.AppCache.update('goals', (goals) => {
+        if (!goals) return [];
+        return goals.filter(g => g.id !== goalId);
+      });
+    }
+
     return { success: true };
 }
 

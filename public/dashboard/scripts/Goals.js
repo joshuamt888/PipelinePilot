@@ -1,3 +1,8 @@
+// ========================================
+// PRO FEATURE: Goals Module
+// Available to: Professional, Admin tiers
+// Free tier: Hidden in Settings (future)
+// ========================================
 window.GoalsModule = {
     // STATE
     state: {
@@ -14,18 +19,19 @@ window.GoalsModule = {
         taskLinkTab: 'existing',
         batchEditMode: false,
         selectedGoalIds: [],
-        goalLimit: 1000
+        goalLimit: 1000,
+        hasInitialized: false  // Track if module has loaded before
     },
 
     // INIT
     async goals_init(targetContainer = 'goals-content') {
         this.state.container = targetContainer;
-        this.goals_showLoading();
 
         try {
             await this.goals_loadData();
             await this.goals_loadAvailableTasks();
             this.goals_render();
+            this.state.hasInitialized = true;
 
             // Listen for task status changes to refresh goal percentages
             this.goals_setupTaskChangeListener();
@@ -96,6 +102,8 @@ async goals_loadAvailableTasks() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        const isFirstLoad = !this.state.hasInitialized;
+
         // Clear any lingering inline styles from other modules
         container.removeAttribute('style');
 
@@ -110,6 +118,32 @@ async goals_loadAvailableTasks() {
 
         // Use a single requestAnimationFrame for smoother rendering
         requestAnimationFrame(() => {
+            // Apply animations based on load state
+            if (isFirstLoad) {
+                // First load: Staggered wave animation
+                const header = container.querySelector('.goals-header');
+                if (header) {
+                    header.classList.add('goals-wave-in');
+                    header.style.animationDelay = '0s';
+                }
+
+                const banners = container.querySelectorAll('.goals-banner');
+                banners.forEach((banner, i) => {
+                    banner.classList.add('goals-wave-in');
+                    banner.style.animationDelay = `${0.1 + (i * 0.1)}s`;
+                });
+
+                const cards = container.querySelectorAll('.goals-card');
+                cards.forEach((card, i) => {
+                    card.classList.add('goals-wave-in');
+                    card.style.animationDelay = `${0.2 + (Math.min(i, 6) * 0.08)}s`;
+                });
+            } else {
+                // Subsequent loads: Fast fade
+                const allElements = container.querySelectorAll('.goals-header, .goals-banner, .goals-card');
+                allElements.forEach(el => el.classList.add('goals-fade-in'));
+            }
+
             this.goals_attachEvents();
             this.goals_startCountdownTimer(); // Start live countdown for urgent goals
         });
@@ -816,20 +850,30 @@ async goals_loadAvailableTasks() {
             try {
                 const success = await this.goals_createGoal();
                 if (success !== false) {
+                    // Success - close modal and show toast
                     modal.remove();
+                    window.SteadyUtils.showToast('Goal created successfully!', 'success');
                 } else {
-                    // Re-enable button on validation failure
+                    // Validation failure - re-enable button, keep modal open
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalHTML;
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
                 }
             } catch (error) {
-                // Re-enable button on error
+                // API error - re-enable button, keep modal open, show error
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
+
+                let errorMsg = 'Failed to create goal';
+                if (error.message?.includes('numeric field overflow')) {
+                    errorMsg = 'Target value is too large. Please use a smaller number.';
+                } else if (error.message) {
+                    errorMsg = error.message;
+                }
+                window.SteadyUtils.showToast(errorMsg, 'error');
             }
         });
 
@@ -1212,10 +1256,19 @@ async goals_loadAvailableTasks() {
             submitBtn.style.cursor = 'not-allowed';
 
             try {
-                await this.goals_updateGoal();
-                modal.remove();
+                const success = await this.goals_updateGoal();
+                if (success !== false) {
+                    // Success - close modal
+                    modal.remove();
+                } else {
+                    // Validation failure - re-enable button, keep modal open
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHTML;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                }
             } catch (error) {
-                // Re-enable button on error
+                // API error - re-enable button, keep modal open
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalHTML;
                 submitBtn.style.opacity = '1';
@@ -2041,31 +2094,14 @@ goals_showGoalDetailModal(goalId) {
         // Setup delete confirmation handler
         modal.querySelector('[data-action="confirm-delete"]')?.addEventListener('click', async (e) => {
             const id = e.target.closest('button').dataset.id;
-            const btn = e.target.closest('button');
 
-            // Disable button to prevent double-click
-            if (btn.disabled) return;
-            btn.disabled = true;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `
-                <svg class="goals-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/>
-                    <path d="M12 2a10 10 0 0 1 10 10" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Deleting...
-            `;
-            btn.style.opacity = '0.6';
+            // Standard optimistic pattern for delete: close modal immediately
+            modal.remove();
+            // Also close detail modal if it's open
+            document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
 
-            try {
-                await this.goals_deleteGoal(id);
-                modal.remove();
-                // Also close detail modal if it's open
-                document.querySelector('.goals-modal-detail')?.closest('.goals-modal-overlay')?.remove();
-            } catch (error) {
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
-                btn.style.opacity = '1';
-            }
+            // Update UI optimistically, then call API
+            await this.goals_deleteGoal(id);
         });
     },
 
@@ -2419,19 +2455,15 @@ goals_attachEvents() {
         this.state.selectedTaskIds = [];
         this.state.newTasks = [];
 
-        window.SteadyUtils.showToast('Goal created successfully!', 'success');
+        // Reload data and re-render (optimistic UI update)
         await this.goals_loadData();
         this.goals_render();
 
-    } catch (error) {
-        let errorMsg = 'Failed to create goal';
-        if (error.message?.includes('numeric field overflow')) {
-            errorMsg = 'Target value is too large. Please use a smaller number.';
-        } else if (error.message) {
-            errorMsg = error.message;
-        }
+        return true; // Success
 
-        window.SteadyUtils.showToast(errorMsg, 'error');
+    } catch (error) {
+        console.error('Create goal error:', error);
+        throw error; // Re-throw for form handler to catch
     }
 },
 
@@ -2509,7 +2541,6 @@ goals_attachEvents() {
                 };
 
                 await API.updateGoal(goalId, updates);
-                window.SteadyUtils.showToast('Goal updated successfully', 'success');
 
             } else {
                 // For auto and manual goals
@@ -2584,16 +2615,20 @@ goals_attachEvents() {
                 };
 
                 await API.updateGoal(goalId, updates);
-                window.SteadyUtils.showToast('Goal updated successfully', 'success');
             }
 
+            // Reset state and reload data (optimistic UI update)
             this.state.editingGoalId = null;
             await this.goals_loadData();
             this.goals_render();
 
+            window.SteadyUtils.showToast('Goal updated successfully', 'success');
+            return true; // Success
+
         } catch (error) {
             console.error('Update goal error:', error);
             window.SteadyUtils.showToast('Failed to update goal', 'error');
+            throw error; // Re-throw for form handler to catch
         }
     },
 
@@ -2629,14 +2664,28 @@ goals_attachEvents() {
 
     // API ACTIONS - DELETE
     async goals_deleteGoal(goalId) {
-        try {
-            await API.deleteGoal(goalId);
+        // Store backup for rollback
+        const goalBackup = this.state.goals.find(g => g.id === goalId);
 
-            await this.goals_loadData();
+        try {
+            // Optimistically remove from state and update UI immediately
+            this.state.goals = this.state.goals.filter(g => g.id !== goalId);
             this.goals_render();
 
+            // Make API call in background
+            await API.deleteGoal(goalId);
+
+            window.SteadyUtils.showToast('Goal deleted successfully', 'success');
+
         } catch (error) {
+            console.error('Delete goal error:', error);
             window.SteadyUtils.showToast('Failed to delete goal', 'error');
+
+            // Rollback: restore the goal
+            if (goalBackup) {
+                this.state.goals.push(goalBackup);
+                this.goals_render();
+            }
         }
     },
 
@@ -3073,23 +3122,33 @@ goals_formatValueAbbreviated(value, unit) {
     async goals_batchDelete() {
         if (this.state.selectedGoalIds.length === 0) return;
 
+        const count = this.state.selectedGoalIds.length;
+        const idsToDelete = [...this.state.selectedGoalIds];
+
+        // Store backup for rollback
+        const goalsBackup = this.state.goals.filter(g => idsToDelete.includes(g.id));
+
         try {
-            const count = this.state.selectedGoalIds.length;
-
-            // Batch delete all selected goals
-            await API.batchDeleteGoals(this.state.selectedGoalIds);
-
-            window.SteadyUtils.showToast(`Deleted ${count} goal(s)`, 'success');
-
-            // Reload and reset
+            // Optimistically remove from state and update UI immediately
+            this.state.goals = this.state.goals.filter(g => !idsToDelete.includes(g.id));
             this.state.selectedGoalIds = [];
             this.state.batchEditMode = false;
-            await this.goals_loadData();
             this.goals_render();
+
+            // Batch delete all selected goals
+            await API.batchDeleteGoals(idsToDelete);
+
+            window.SteadyUtils.showToast(`Deleted ${count} goal(s)`, 'success');
 
         } catch (error) {
             console.error('Batch delete error:', error);
             window.SteadyUtils.showToast('Failed to delete goals', 'error');
+
+            // Rollback: restore deleted goals
+            if (goalsBackup.length > 0) {
+                this.state.goals.push(...goalsBackup);
+                this.goals_render();
+            }
         }
     },
 
@@ -3101,12 +3160,6 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-container {
     max-width: 1400px;
     margin: 0 auto;
-    animation: goalsSlideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes goalsSlideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .goals-header {
@@ -4982,6 +5035,33 @@ goals_formatValueAbbreviated(value, unit) {
 
 [data-theme="dark"] .goals-modal {
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Module-level animations */
+@keyframes goalsWaveIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes goalsFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.goals-wave-in {
+    animation: goalsWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+}
+
+.goals-fade-in {
+    animation: goalsFadeIn 0.3s ease forwards;
+    opacity: 0;
 }
 </style>`;
     }

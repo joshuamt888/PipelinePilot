@@ -4,7 +4,6 @@ const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require('@supabase/supabase-js');
 const cron = require('node-cron');
-const open = require('open').default;
 
 // VALIDATION - Add this block
 const requiredEnvVars = [
@@ -300,12 +299,4 @@ app.listen(PORT, () => {
   console.log('Stripe webhooks ready');
   console.log('Auth handled by Supabase');
   console.log('Cron jobs active');
-
-  // Auto-open browser (local development only - skip on Railway)
-  if (!process.env.RAILWAY_ENVIRONMENT) {
-    console.log('Opening browser at http://localhost:' + PORT);
-    open(`http://localhost:${PORT}`);
-  } else {
-    console.log('Skipping browser auto-open (running on Railway)');
-  }
 });

@@ -5,29 +5,29 @@ window.PipelineModule = {
         stats: { currentLeads: 0, currentLeadLimit: 50 },
         filters: { search: '', types: [], sources: [], scores: [] },
         draggedLead: null,
-        container: 'pipeline-content'
+        container: 'pipeline-content',
+        hasInitialized: false  // Track if module has loaded before
     },
 
     // Stage definitions
     stages: [
-    { id: 'new', name: 'New Leads', icon: 'sparkles', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
-    { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
-    { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
-    { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
-    { id: 'closed', name: 'Closed Won', icon: 'trophy', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
-    { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
-],
+        { id: 'new', name: 'New Leads', icon: 'sparkles', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
+        { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
+        { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
+        { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
+        { id: 'closed', name: 'Closed Won', icon: 'trophy', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
+        { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
+    ],
 
     // Initialize
     async pipeline_init(targetContainer = 'pipeline-content') {
         console.log('Pipeline module loading');
-        
-        this.showLoading();
-        
+
         try {
             await this.loadData();
             this.render();
             this.attachEvents();
+            this.state.hasInitialized = true;
             console.log('Pipeline module ready');
         } catch (error) {
             console.error('Pipeline init failed:', error);
@@ -41,7 +41,7 @@ window.PipelineModule = {
             API.getLeads(),
             API.getCurrentStats()
         ]);
-        
+
         this.state.leads = (Array.isArray(leadData) ? leadData : leadData.all || []).map(lead => ({
             ...lead,
             status: lead.status || 'new',
@@ -49,7 +49,7 @@ window.PipelineModule = {
             quality_score: lead.quality_score || 5,
             type: lead.type || ''
         }));
-        
+
         this.state.stats = {
             currentLeads: stats.currentLeads || 0,
             currentLeadLimit: stats.currentLeadLimit || 50
@@ -60,48 +60,48 @@ window.PipelineModule = {
     getOrganizedLeads() {
         const { search, types, sources, scores } = this.state.filters;
         const organized = {};
-        
+
         this.stages.forEach(stage => {
             organized[stage.id] = this.state.leads.filter(lead => {
                 if (lead.status !== stage.id) return false;
-                
+
                 if (search) {
                     const term = search.toLowerCase();
-                    const matches = [lead.name, lead.company, lead.email].some(field => 
+                    const matches = [lead.name, lead.company, lead.email].some(field =>
                         field?.toLowerCase().includes(term)
                     );
                     if (!matches) return false;
                 }
-                
+
                 if (types.length && !types.includes(lead.type)) return false;
                 if (sources.length) {
-                const leadSource = lead.source || null;
-                const hasCustomFilter = sources.includes('custom');
-    
-                // Predefined sources (from your dropdown)
-                const predefined = ['Website', 'LinkedIn', 'Facebook', 'Instagram',
-                    'Twitter', 'Referral', 'Email', 'Phone', 'Event',
-                    'Advertisement', 'Direct', 'Google', 'Organic', 'Paid Ads',
-                    'Cold Call', 'Trade Show', 'Webinar', 'Content', 'Partnership'];
-    
-                // Check if it matches a predefined source OR is a custom source when custom filter is active
-                const matchesPredefined = sources.includes(leadSource);
-                const isCustom = leadSource && !predefined.includes(leadSource);
-                const matchesCustom = hasCustomFilter && isCustom;
-    
-                if (!matchesPredefined && !matchesCustom) return false;
+                    const leadSource = lead.source || null;
+                    const hasCustomFilter = sources.includes('custom');
+
+                    // Predefined sources (from your dropdown)
+                    const predefined = ['Website', 'LinkedIn', 'Facebook', 'Instagram',
+                        'Twitter', 'Referral', 'Email', 'Phone', 'Event',
+                        'Advertisement', 'Direct', 'Google', 'Organic', 'Paid Ads',
+                        'Cold Call', 'Trade Show', 'Webinar', 'Content', 'Partnership'];
+
+                    // Check if it matches a predefined source OR is a custom source when custom filter is active
+                    const matchesPredefined = sources.includes(leadSource);
+                    const isCustom = leadSource && !predefined.includes(leadSource);
+                    const matchesCustom = hasCustomFilter && isCustom;
+
+                    if (!matchesPredefined && !matchesCustom) return false;
                 }
-                
+
                 if (scores.length) {
                     const score = lead.quality_score || 5;
                     const category = score >= 8 ? 'high' : score >= 5 ? 'medium' : 'low';
                     if (!scores.includes(category)) return false;
                 }
-                
+
                 return true;
             });
         });
-        
+
         return organized;
     },
 
@@ -118,17 +118,17 @@ window.PipelineModule = {
         const totalOutcome = closedLeads.length + lostLeads.length;
         const conversionRate = totalOutcome > 0 ?
             Math.round((closedLeads.length / totalOutcome) * 100) : 0;
-        
+
         const reasonCounts = {};
         lostLeads.forEach(lead => {
             if (lead.lost_reason) {
                 reasonCounts[lead.lost_reason] = (reasonCounts[lead.lost_reason] || 0) + 1;
             }
         });
-        
+
         const topReason = Object.entries(reasonCounts)
             .sort(([,a], [,b]) => b - a)[0] || ['N/A', 0];
-        
+
         return {
             totalValue,
             conversionRate,
@@ -137,11 +137,117 @@ window.PipelineModule = {
         };
     },
 
-    // Main render
+    // Simple stage updates - no full re-render
+    updatePipeline() {
+        const organized = this.getOrganizedLeads();
+
+        // Update all 6 stage columns
+        this.stages.forEach(stage => {
+            const stageContent = document.querySelector(`[data-stage-content="${stage.id}"]`);
+            if (stageContent) {
+                const leads = organized[stage.id];
+                stageContent.innerHTML = leads.length > 0
+                    ? leads.map(l => this.renderLeadCard(l)).join('')
+                    : this.renderEmpty(stage);
+
+                // Update stage count badge
+                const countBadge = stageContent.closest('[data-stage]')?.querySelector('.stage-count');
+                if (countBadge) countBadge.textContent = leads.length;
+
+                // Update stage value
+                const value = leads.reduce((sum, l) => sum + (l.potential_value || 0), 0);
+                const valueDisplay = stageContent.closest('[data-stage]')?.querySelector('.stage-value');
+                if (valueDisplay) valueDisplay.textContent = `$${value.toLocaleString()}`;
+            }
+        });
+
+        // Update section stats
+        const activeCount = ['new', 'contacted', 'negotiation']
+            .reduce((sum, id) => sum + organized[id].length, 0);
+        const activeValue = ['new', 'contacted', 'negotiation']
+            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
+        const outcomeCount = ['qualified', 'closed', 'lost']
+            .reduce((sum, id) => sum + organized[id].length, 0);
+        const outcomeValue = ['qualified', 'closed', 'lost']
+            .reduce((sum, id) => sum + organized[id].reduce((s, l) => s + (l.potential_value || 0), 0), 0);
+
+        const sections = document.querySelectorAll('.pipeline-section');
+        if (sections[0]) {
+            sections[0].querySelector('.section-badge').textContent = `${activeCount} leads`;
+            sections[0].querySelector('.section-value').textContent = `$${activeValue.toLocaleString()}`;
+        }
+        if (sections[1]) {
+            sections[1].querySelector('.section-badge').textContent = `${outcomeCount} leads`;
+            sections[1].querySelector('.section-value').textContent = `$${outcomeValue.toLocaleString()}`;
+        }
+
+        // Update analytics
+        const analytics = this.getAnalytics();
+        const conversionRateEl = document.querySelector('.analytics-card:nth-child(1) .primary-metric');
+        const totalValueEl = document.querySelector('.analytics-card:nth-child(2) .primary-metric');
+        const topLossReasonEl = document.querySelector('.analytics-card:nth-child(3) .primary-metric');
+        const topLossCountEl = document.querySelector('.analytics-card:nth-child(3) .metric-detail');
+
+        if (conversionRateEl) conversionRateEl.textContent = `${analytics.conversionRate}%`;
+        if (totalValueEl) totalValueEl.textContent = `$${Math.round(analytics.totalValue).toLocaleString()}`;
+        if (topLossReasonEl) {
+            topLossReasonEl.textContent = analytics.topLossReason;
+            topLossReasonEl.style.fontSize = analytics.topLossReason.length > 15 ? '1.5rem' :
+                                             analytics.topLossReason.length > 10 ? '1.75rem' : '2rem';
+        }
+        if (topLossCountEl) topLossCountEl.textContent = `${analytics.topLossCount} deals`;
+
+        // Update active filters panel
+        this.updateActiveFiltersPanel(organized);
+
+        // Re-attach only drag events on new cards
+        this.attachDragEvents();
+
+        // Re-render icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    // Update active filters panel
+    updateActiveFiltersPanel(organized) {
+        const existingPanel = document.querySelector('.active-filters-panel');
+        const filtersContainer = document.querySelector('.pipeline-filters');
+
+        if (this.hasActiveFilters()) {
+            const total = Object.values(organized).reduce((sum, arr) => sum + arr.length, 0);
+            const details = [];
+
+            if (this.state.filters.types.length) details.push(`Types: ${this.state.filters.types.length}`);
+            if (this.state.filters.sources.length) details.push(`Sources: ${this.state.filters.sources.length}`);
+            if (this.state.filters.scores.length) details.push(`Scores: ${this.state.filters.scores.length}`);
+
+            const panelHTML = `
+                <div class="active-filters-panel">
+                    <div class="filters-info">
+                        <span class="filter-count">Showing ${total} of ${this.state.leads.length} leads</span>
+                        <span class="filter-details">${API.escapeHtml(details.join(', '))}</span>
+                    </div>
+                    <button class="clear-filters-btn" onclick="PipelineModule.clearAllFilters()">
+                        Clear All
+                    </button>
+                </div>
+            `;
+
+            if (existingPanel) {
+                existingPanel.outerHTML = panelHTML;
+            } else if (filtersContainer) {
+                filtersContainer.insertAdjacentHTML('afterend', panelHTML);
+            }
+        } else if (existingPanel) {
+            existingPanel.remove();
+        }
+    },
+
+    // Main render (only called on initial load)
     render() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        const isFirstLoad = !this.state.hasInitialized;
         const organized = this.getOrganizedLeads();
         const analytics = this.getAnalytics();
         const activeCount = ['new', 'contacted', 'negotiation']
@@ -159,7 +265,7 @@ window.PipelineModule = {
                 ${this.renderHeader()}
                 ${this.renderFilters()}
                 ${this.hasActiveFilters() ? this.renderActiveFilters(organized) : ''}
-                
+
                 <div class="pipeline-section">
                     <div class="section-header">
                         <div class="section-title-group">
@@ -173,7 +279,7 @@ window.PipelineModule = {
                             .map(s => this.renderStage(s, organized[s.id])).join('')}
                     </div>
                 </div>
-                
+
                 <div class="pipeline-section">
                     <div class="section-header">
                         <div class="section-title-group">
@@ -187,19 +293,48 @@ window.PipelineModule = {
                             .map(s => this.renderStage(s, organized[s.id])).join('')}
                     </div>
                 </div>
-                
+
                 ${this.renderAnalytics(analytics)}
             </div>
         `;
 
-        // Fade in animation
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => {
-            container.style.opacity = '1';
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-            this.attachEvents();
-        }, 50);
+        // Apply animations based on load state
+        if (isFirstLoad) {
+            // First load: Staggered wave animation
+            requestAnimationFrame(() => {
+                const header = container.querySelector('.pipeline-header');
+                if (header) {
+                    header.classList.add('pipe-wave-in');
+                    header.style.animationDelay = '0s';
+                }
+
+                const filters = container.querySelector('.pipeline-filters');
+                if (filters) {
+                    filters.classList.add('pipe-wave-in');
+                    filters.style.animationDelay = '0.1s';
+                }
+
+                const sections = container.querySelectorAll('.pipeline-section');
+                sections.forEach((section, i) => {
+                    section.classList.add('pipe-wave-in');
+                    section.style.animationDelay = `${0.2 + (i * 0.15)}s`;
+                });
+
+                const analyticsSection = container.querySelector('.analytics-section');
+                if (analyticsSection) {
+                    analyticsSection.classList.add('pipe-wave-in');
+                    analyticsSection.style.animationDelay = `${0.2 + (sections.length * 0.15)}s`;
+                }
+            });
+        } else {
+            // Subsequent loads: Fast fade
+            requestAnimationFrame(() => {
+                const allElements = container.querySelectorAll('.pipeline-header, .pipeline-filters, .pipeline-section, .analytics-section');
+                allElements.forEach(el => el.classList.add('pipe-fade-in'));
+            });
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
     // Render header with progress
@@ -231,7 +366,7 @@ window.PipelineModule = {
                         <i data-lucide="search" class="search-icon" style="width: 18px; height: 18px;"></i>
                     </div>
                 </div>
-                
+
                 <div class="filter-controls">
                     <div class="filter-btn" data-filter="type">
                         Temperature <span class="filter-arrow">▼</span>
@@ -251,11 +386,11 @@ window.PipelineModule = {
     renderActiveFilters(organized) {
         const total = Object.values(organized).reduce((sum, arr) => sum + arr.length, 0);
         const details = [];
-        
+
         if (this.state.filters.types.length) details.push(`Types: ${this.state.filters.types.length}`);
         if (this.state.filters.sources.length) details.push(`Sources: ${this.state.filters.sources.length}`);
         if (this.state.filters.scores.length) details.push(`Scores: ${this.state.filters.scores.length}`);
-        
+
         return `
             <div class="active-filters-panel">
                 <div class="filters-info">
@@ -272,7 +407,7 @@ window.PipelineModule = {
     // Render stage column
     renderStage(stage, leads) {
         const value = leads.reduce((sum, l) => sum + (l.potential_value || 0), 0);
-        
+
         return `
             <div class="stage-column" data-stage="${stage.id}">
                 <div class="stage-header" style="--stage-color: ${stage.color}">
@@ -287,28 +422,28 @@ window.PipelineModule = {
                     </div>
                     <div class="stage-count">${leads.length}</div>
                 </div>
-                
+
                 <div class="stage-content" data-stage-content="${stage.id}">
-                    ${leads.length > 0 ? 
-                        leads.map(l => this.renderLeadCard(l, stage)).join('') :
+                    ${leads.length > 0 ?
+                        leads.map(l => this.renderLeadCard(l)).join('') :
                         this.renderEmpty(stage)}
                 </div>
             </div>
         `;
     },
 
-    // Render lead card with 40-line note truncation
-    renderLeadCard(lead, stage) {
+    // Render lead card
+    renderLeadCard(lead) {
         const typeIcon = lead.type === 'warm' ? 'flame' : lead.type === 'cold' ? 'snowflake' : 'minus';
         const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' :
                           lead.quality_score >= 6 ? 'var(--success)' :
                           lead.quality_score >= 4 ? 'var(--warning)' : 'var(--danger)';
-        
+
         const truncateText = (text, maxLength) => {
             if (!text || text.length <= maxLength) return text;
             return text.substring(0, maxLength) + '...';
         };
-        
+
         const safeName = API.escapeHtml(truncateText(lead.name, 18));
         const safeCompany = API.escapeHtml(truncateText(lead.company || 'No company', 25));
         const safeEmail = API.escapeHtml(truncateText(lead.email || '', 30));
@@ -316,13 +451,13 @@ window.PipelineModule = {
         const safeNotes = API.escapeHtml(truncateText(lead.notes || '', 100));
         const initials = this.getInitials(lead.name);
         const timeAgo = this.formatTimeAgo(lead.created_at);
-        
+
         return `
-            <div class="lead-card" 
+            <div class="lead-card"
                  data-lead-id="${lead.id}"
                  data-lead-status="${lead.status}"
                  draggable="true">
-                
+
                 <div class="card-header">
                     <div class="lead-avatar">
                         <span class="avatar-text">${initials}</span>
@@ -336,7 +471,7 @@ window.PipelineModule = {
                         <i data-lucide="${typeIcon}" class="lead-type" style="width: 16px; height: 16px;"></i>
                     </div>
                 </div>
-                
+
                 <div class="card-body">
                     ${safeEmail || safePhone ? `
                         <div class="contact-info">
@@ -344,9 +479,9 @@ window.PipelineModule = {
                             ${safePhone ? `<div class="contact-item"><i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safePhone}</div>` : ''}
                         </div>
                     ` : ''}
-                    
+
                     ${safeNotes ? `<div class="lead-notes">${safeNotes}</div>` : ''}
-                    
+
                     ${lead.potential_value ? `
                         <div class="deal-value-display" onclick="PipelineModule.editDealValue('${lead.id}')" style="cursor: pointer;" title="Click to edit value">
                             <i data-lucide="dollar-sign" class="value-icon" style="width: 16px; height: 16px;"></i>
@@ -358,7 +493,7 @@ window.PipelineModule = {
                             <i data-lucide="dollar-sign" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;"></i>Add value
                         </button>
                     `}
-                    
+
                     ${lead.status === 'lost' ? (
                         lead.lost_reason ? `
                             <div class="loss-reason-display" onclick="PipelineModule.editLossReason('${lead.id}')" style="cursor: pointer;" title="Click to edit loss reason">
@@ -373,7 +508,7 @@ window.PipelineModule = {
                         `
                     ) : ''}
                 </div>
-                
+
                 <div class="card-footer">
                     <div class="card-date">${timeAgo}</div>
                     <div class="card-actions">
@@ -439,7 +574,7 @@ window.PipelineModule = {
                             <div class="metric-detail">Pipeline Value</div>
                         </div>
                     </div>
-                    
+
                     <div class="analytics-card">
                         <div class="card-header-analytics">
                             <i data-lucide="x-circle" class="card-icon" style="width: 20px; height: 20px;"></i>
@@ -455,7 +590,7 @@ window.PipelineModule = {
         `;
     },
 
-    // Attach all events with SMOOTH DRAG
+    // Attach all events (only called on initial render)
     attachEvents() {
         const search = document.getElementById('pipelineSearch');
         if (search) {
@@ -464,22 +599,27 @@ window.PipelineModule = {
                 clearTimeout(timeout);
                 timeout = setTimeout(() => {
                     this.state.filters.search = e.target.value;
-                    this.render();
+                    this.updatePipeline();
                 }, 300);
             };
         }
-        
+
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.onclick = (e) => this.showFilterDropdown(e, btn.dataset.filter);
         });
-        
-        // Smooth drag with ghost preview
+
+        this.attachDragEvents();
+    },
+
+    // Attach drag events (called on updates)
+    attachDragEvents() {
+        // Attach drag events to lead cards
         document.querySelectorAll('.lead-card').forEach(card => {
             card.ondragstart = (e) => {
                 this.state.draggedLead = card.dataset.leadId;
                 card.style.opacity = '0.3';
                 card.style.transform = 'scale(0.95)';
-                
+
                 const ghost = card.cloneNode(true);
                 ghost.style.position = 'absolute';
                 ghost.style.top = '-9999px';
@@ -488,32 +628,28 @@ window.PipelineModule = {
                 ghost.style.transform = 'none';
                 document.body.appendChild(ghost);
                 e.dataTransfer.setDragImage(ghost, card.offsetWidth / 2, 30);
-                
+
                 setTimeout(() => ghost.remove(), 0);
             };
 
             card.ondragend = (e) => {
                 card.style.opacity = '';
                 card.style.transform = '';
-                
-                if (e.dataTransfer.dropEffect === 'none') {
-                    this.render();
-                }
-                
                 this.state.draggedLead = null;
             };
         });
 
+        // Attach drop events to stage columns
         document.querySelectorAll('.stage-content').forEach(stage => {
             stage.ondragover = (e) => {
                 e.preventDefault();
                 stage.classList.add('drag-over');
             };
-            
+
             stage.ondragleave = (e) => {
                 stage.classList.remove('drag-over');
             };
-            
+
             stage.ondrop = (e) => {
                 e.preventDefault();
                 stage.classList.remove('drag-over');
@@ -528,7 +664,7 @@ window.PipelineModule = {
     // Show filter dropdown
     showFilterDropdown(event, filterType) {
         this.hideAllDropdowns();
-        
+
         const filterOptions = {
             type: [
                 { value: '', label: 'All Temperatures', clear: true },
@@ -570,11 +706,11 @@ window.PipelineModule = {
                 { value: null, label: 'Unknown', icon: 'help-circle' }
             ]
         };
-        
+
         const options = filterOptions[filterType] || [];
-        const column = filterType === 'type' ? 'types' : 
+        const column = filterType === 'type' ? 'types' :
                       filterType === 'score' ? 'scores' : 'sources';
-        
+
         const dropdown = document.createElement('div');
         dropdown.className = 'filter-dropdown show';
         dropdown.innerHTML = `
@@ -594,7 +730,7 @@ window.PipelineModule = {
                 }).join('')}
             </div>
         `;
-        
+
         const rect = event.target.getBoundingClientRect();
         dropdown.style.position = 'fixed';
         dropdown.style.top = `${rect.bottom + 5}px`;
@@ -618,18 +754,18 @@ window.PipelineModule = {
     toggleFilter(column, value, event) {
         if (event) event.stopPropagation();
         if (value === 'null') value = null;
-        
+
         const index = this.state.filters[column].indexOf(value);
         if (index > -1) {
             this.state.filters[column].splice(index, 1);
         } else {
             this.state.filters[column].push(value);
         }
-        
+
         const option = event.target.closest('.filter-option');
         const checkbox = option.querySelector('.checkbox');
         const isChecked = this.state.filters[column].includes(value);
-        
+
         if (isChecked) {
             checkbox.classList.add('checked');
             checkbox.textContent = '✓';
@@ -637,21 +773,21 @@ window.PipelineModule = {
             checkbox.classList.remove('checked');
             checkbox.textContent = '';
         }
-        
-        this.render();
+
+        this.updatePipeline();
     },
 
     clearFilter(column) {
         this.state.filters[column] = [];
         this.hideAllDropdowns();
-        this.render();
+        this.updatePipeline();
     },
 
     clearAllFilters() {
         this.state.filters = { search: '', types: [], sources: [], scores: [] };
         const search = document.getElementById('pipelineSearch');
         if (search) search.value = '';
-        this.render();
+        this.updatePipeline();
     },
 
     hideAllDropdowns() {
@@ -667,17 +803,25 @@ window.PipelineModule = {
     },
 
     async updateLeadStatus(leadId, newStatus) {
+        const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
+        if (!lead || lead.status === newStatus) return;
+
+        const oldStatus = lead.status;
+
+        // Update state immediately
+        lead.status = newStatus;
+        this.updatePipeline();
+
+        // API call in background
         try {
-            const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
-            if (!lead || lead.status === newStatus) return;
-            
-            lead.status = newStatus;
             await API.updateLead(leadId, { status: newStatus });
-            this.render();
-            
         } catch (error) {
             console.error('Failed to update lead status:', error);
             this.notify('Failed to update lead status', 'error');
+
+            // Rollback on error
+            lead.status = oldStatus;
+            this.updatePipeline();
         }
     },
 
@@ -692,9 +836,11 @@ window.PipelineModule = {
 
     // Edit lead modal
     editLead(leadId) {
+        if (document.getElementById('pipelineEditModal')) return;
+
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
         modal.id = 'pipelineEditModal';
@@ -747,11 +893,10 @@ window.PipelineModule = {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('pipelineEditBackdrop');
         let mouseDownTarget = null;
 
@@ -765,7 +910,7 @@ window.PipelineModule = {
             }
             mouseDownTarget = null;
         });
-        
+
         const form = document.getElementById('editLeadForm');
         document.querySelectorAll('.temp-btn').forEach(btn => {
             btn.onclick = () => {
@@ -774,13 +919,13 @@ window.PipelineModule = {
                 document.getElementById('editType').value = btn.dataset.temp;
             };
         });
-        
+
         const slider = document.getElementById('editScore');
         const scoreDisplay = document.getElementById('scoreDisplay');
         slider.oninput = (e) => {
             scoreDisplay.textContent = e.target.value;
         };
-        
+
         const notes = document.getElementById('editNotes');
         const feedback = document.getElementById('notesFeedback');
         notes.oninput = (e) => {
@@ -788,43 +933,51 @@ window.PipelineModule = {
             feedback.textContent = `${len}/500`;
             feedback.className = `input-feedback ${len > 450 ? 'warning' : 'normal'}`;
         };
-        
+
         form.onsubmit = async (e) => {
             e.preventDefault();
             const btn = form.querySelector('.btn-primary');
 
-            // Prevent double submission
             if (btn.disabled) return;
             btn.disabled = true;
 
-            // Capture form values BEFORE closing modal
             const updateData = {
                 type: document.getElementById('editType').value || null,
                 quality_score: parseInt(document.getElementById('editScore').value),
                 notes: document.getElementById('editNotes').value.trim() || null
             };
 
-            // Close modal immediately
             modal.remove();
+
+            const oldValues = {
+                type: lead.type,
+                quality_score: lead.quality_score,
+                notes: lead.notes
+            };
+
+            Object.assign(lead, updateData);
+            this.updatePipeline();
 
             try {
                 await API.updateLead(lead.id, updateData);
-                await this.loadData();
-                this.render();
                 this.notify('Lead updated successfully', 'success');
-
             } catch (error) {
                 console.error('Failed to update lead:', error);
                 this.notify('Failed to update lead', 'error');
+
+                Object.assign(lead, oldValues);
+                this.updatePipeline();
             }
         };
     },
 
-    // Move lead modal (no text inputs, no fix needed)
+    // Move lead modal
     moveLead(leadId) {
+        if (document.getElementById('pipelineMoveModal')) return;
+
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
         modal.id = 'pipelineMoveModal';
@@ -866,10 +1019,12 @@ window.PipelineModule = {
     },
 
     // Add deal value modal
-    addDealValue(leadId) {
+    addDealValue(leadId, isEdit = false) {
+        if (document.getElementById('dealValueModal')) return;
+
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
         modal.id = 'dealValueModal';
@@ -877,7 +1032,7 @@ window.PipelineModule = {
             <div class="modal-backdrop" id="dealValueBackdrop"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title">Add Deal Value</h3>
+                    <h3 class="modal-title">${isEdit ? 'Edit Deal Value' : 'Add Deal Value'}</h3>
                     <button class="modal-close" onclick="document.getElementById('dealValueModal').remove()">×</button>
                 </div>
                 <div class="modal-body">
@@ -890,16 +1045,16 @@ window.PipelineModule = {
                             </div>
                             <div class="input-feedback" id="dealValueFeedback"></div>
                         </div>
-                        
+
                         <div class="quick-values">
-                            ${[500, 1000, 2500, 5000, 10000, 25000].map(v => 
+                            ${[0, 500, 1000, 2500, 5000, 10000].map(v =>
                                 `<button type="button" class="quick-value-btn" onclick="document.getElementById('dealValueInput').value = '${v}'; document.getElementById('dealValueInput').dispatchEvent(new Event('input'))">$${v.toLocaleString()}</button>`
                             ).join('')}
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('dealValueModal').remove()">Cancel</button>
-                            <button type="submit" class="btn-primary">Add Value</button>
+                            <button type="submit" class="btn-primary">${isEdit ? 'Save Value' : 'Add Value'}</button>
                         </div>
                     </form>
                 </div>
@@ -909,7 +1064,6 @@ window.PipelineModule = {
         document.body.appendChild(modal);
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('dealValueBackdrop');
         let mouseDownTarget = null;
 
@@ -930,32 +1084,32 @@ window.PipelineModule = {
 
         input.oninput = (e) => {
             let raw = e.target.value.replace(/[^0-9.]/g, '');
-            
+
             const decimalCount = (raw.match(/\./g) || []).length;
             if (decimalCount > 1) {
                 const firstDot = raw.indexOf('.');
                 raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
             }
-            
-            if (!raw || raw === '.') {
+
+            if (!raw || raw === '.' || raw === '') {
                 feedback.textContent = '';
                 btn.disabled = true;
                 e.target.value = raw;
                 return;
             }
-            
+
             let [whole, decimal] = raw.split('.');
-            
+
             if (whole && whole.length > 8) {
                 whole = whole.slice(0, 8);
                 raw = whole + (decimal !== undefined ? '.' + decimal : '');
             }
-            
+
             if (decimal !== undefined && decimal.length > 2) {
                 decimal = decimal.slice(0, 2);
                 raw = whole + '.' + decimal;
             }
-            
+
             let displayed = '';
             if (whole) {
                 displayed = parseInt(whole, 10).toLocaleString('en-US');
@@ -963,13 +1117,13 @@ window.PipelineModule = {
             if (decimal !== undefined) {
                 displayed += '.' + decimal;
             }
-            
+
             e.target.value = displayed;
-            
+
             const numValue = parseFloat(whole + (decimal !== undefined ? '.' + decimal : ''));
-            
-            if (isNaN(numValue) || numValue < 0.01 || numValue > 99999999.99) {
-                feedback.textContent = 'Value must be between $0.01 and $99,999,999.99';
+
+            if (isNaN(numValue) || numValue < 0 || numValue > 99999999.99) {
+                feedback.textContent = 'Value must be between $0 and $99,999,999.99';
                 feedback.className = 'input-feedback feedback-error';
                 btn.disabled = true;
             } else {
@@ -978,48 +1132,50 @@ window.PipelineModule = {
                 btn.disabled = false;
             }
         };
-        
+
         document.getElementById('dealValueForm').onsubmit = async (e) => {
             e.preventDefault();
             const raw = input.value.replace(/[^0-9.]/g, '');
             const value = parseFloat(raw);
 
-            if (isNaN(value) || value < 0.01 || value > 99999999.99) return;
+            if (isNaN(value) || value < 0 || value > 99999999.99) return;
 
-            // Prevent double submission
             if (btn.disabled) return;
             btn.disabled = true;
 
-            // Close modal immediately
             modal.remove();
+
+            const oldValue = lead.potential_value;
+
+            lead.potential_value = value;
+            this.updatePipeline();
 
             try {
                 await API.updateLead(leadId, { potential_value: value });
-                lead.potential_value = value;
-
-                this.render();
                 this.notify(`Deal value added: $${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'success');
-
             } catch (error) {
                 console.error('Failed to add deal value:', error);
                 this.notify('Failed to add deal value', 'error');
+
+                lead.potential_value = oldValue;
+                this.updatePipeline();
             }
         };
-        
+
         setTimeout(() => input.focus(), 100);
     },
 
     editDealValue(leadId) {
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
-        this.addDealValue(leadId);
+
+        this.addDealValue(leadId, true);
         setTimeout(() => {
             const input = document.getElementById('dealValueInput');
-            if (input && lead.potential_value) {
-                const formatted = lead.potential_value.toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
+            if (input && lead.potential_value !== null && lead.potential_value !== undefined) {
+                const formatted = lead.potential_value.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
                 });
                 input.value = formatted;
                 input.dispatchEvent(new Event('input'));
@@ -1029,10 +1185,12 @@ window.PipelineModule = {
     },
 
     // Add loss reason modal
-    addLossReason(leadId) {
+    addLossReason(leadId, isEdit = false) {
+        if (document.getElementById('lossReasonModal')) return;
+
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
         modal.id = 'lossReasonModal';
@@ -1040,7 +1198,7 @@ window.PipelineModule = {
             <div class="modal-backdrop" id="lossReasonBackdrop"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title">Add Loss Reason</h3>
+                    <h3 class="modal-title">${isEdit ? 'Edit Loss Reason' : 'Add Loss Reason'}</h3>
                     <button class="modal-close" onclick="document.getElementById('lossReasonModal').remove()">×</button>
                 </div>
                 <div class="modal-body">
@@ -1060,20 +1218,20 @@ window.PipelineModule = {
                                 <option value="other">Other (specify below)</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-section" id="customReasonSection" style="display: none;">
                             <label class="form-label">Custom Reason</label>
-                            <input type="text" 
-                                id="customReasonInput" 
-                                class="custom-reason-input" 
-                                placeholder="Enter custom reason..." 
+                            <input type="text"
+                                id="customReasonInput"
+                                class="custom-reason-input"
+                                placeholder="Enter custom reason..."
                                 maxlength="20">
                             <div class="input-feedback" id="customReasonFeedback"></div>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" onclick="document.getElementById('lossReasonModal').remove()">Cancel</button>
-                            <button type="submit" class="btn-primary" disabled>Add Reason</button>
+                            <button type="submit" class="btn-primary" disabled>${isEdit ? 'Save Reason' : 'Add Reason'}</button>
                         </div>
                     </form>
                 </div>
@@ -1083,7 +1241,6 @@ window.PipelineModule = {
         document.body.appendChild(modal);
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('lossReasonBackdrop');
         let mouseDownTarget = null;
 
@@ -1097,12 +1254,12 @@ window.PipelineModule = {
             }
             mouseDownTarget = null;
         });
-        
+
         const select = document.getElementById('lossReasonSelect');
         const customSection = document.getElementById('customReasonSection');
         const customInput = document.getElementById('customReasonInput');
         const btn = document.querySelector('#lossReasonForm .btn-primary');
-        
+
         select.onchange = (e) => {
             if (e.target.value === 'other') {
                 customSection.style.display = 'block';
@@ -1112,16 +1269,16 @@ window.PipelineModule = {
                 btn.disabled = !e.target.value;
             }
         };
-        
+
         const feedback = document.getElementById('customReasonFeedback');
 
         customInput.oninput = (e) => {
             const value = e.target.value;
             const length = value.length;
             const limit = 20;
-            
+
             btn.disabled = !value.trim();
-            
+
             if (length === 0) {
                 feedback.textContent = '';
                 feedback.className = 'input-feedback';
@@ -1143,29 +1300,31 @@ window.PipelineModule = {
                 customInput.classList.add('input-error');
             }
         };
-        
+
         document.getElementById('lossReasonForm').onsubmit = async (e) => {
             e.preventDefault();
             const reason = select.value === 'other' ? customInput.value.trim() : select.value;
             if (!reason) return;
 
-            // Prevent double submission
             if (btn.disabled) return;
             btn.disabled = true;
 
-            // Close modal immediately
             modal.remove();
+
+            const oldReason = lead.lost_reason;
+
+            lead.lost_reason = reason;
+            this.updatePipeline();
 
             try {
                 await API.updateLead(leadId, { lost_reason: reason });
-                lead.lost_reason = reason;
-
-                this.render();
                 this.notify(`Loss reason added: ${reason}`, 'success');
-
             } catch (error) {
                 console.error('Failed to add loss reason:', error);
                 this.notify('Failed to add loss reason', 'error');
+
+                lead.lost_reason = oldReason;
+                this.updatePipeline();
             }
         };
     },
@@ -1173,13 +1332,13 @@ window.PipelineModule = {
     editLossReason(leadId) {
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
-        this.addLossReason(leadId);
+
+        this.addLossReason(leadId, true);
         setTimeout(() => {
             const select = document.getElementById('lossReasonSelect');
             if (select && lead.lost_reason) {
                 const predefined = ['Price too high', 'Went with competitor', 'Budget constraints', 'Timing not right', 'No longer interested', 'Poor communication', 'Product not a fit', 'Decision maker changed'];
-                
+
                 if (predefined.includes(lead.lost_reason)) {
                     select.value = lead.lost_reason;
                 } else {
@@ -1196,7 +1355,7 @@ window.PipelineModule = {
     async deleteLead(leadId) {
         const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
         if (!lead) return;
-        
+
         const modal = document.createElement('div');
         modal.className = 'pipeline-modal show';
         modal.id = 'pipelineDeleteModal';
@@ -1220,7 +1379,7 @@ window.PipelineModule = {
                         <p style="margin-bottom: 2rem; color: var(--danger); font-weight: 600;">
                             This action cannot be undone.
                         </p>
-                        
+
                         <div class="form-actions" style="border-top: none; padding-top: 0;">
                             <button type="button" class="btn-secondary" id="cancelDeleteBtn">
                                 Cancel
@@ -1237,7 +1396,6 @@ window.PipelineModule = {
         document.body.appendChild(modal);
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
-        // Proper mousedown/mouseup pattern for backdrop
         const backdrop = document.getElementById('pipelineDeleteBackdrop');
         let mouseDownTarget = null;
 
@@ -1251,12 +1409,12 @@ window.PipelineModule = {
             }
             mouseDownTarget = null;
         });
-        
+
         const closeModal = () => modal.remove();
-        
+
         document.getElementById('deleteModalClose').onclick = closeModal;
         document.getElementById('cancelDeleteBtn').onclick = closeModal;
-        
+
         document.getElementById('confirmDeleteBtn').onclick = () => {
             this.confirmDeleteLead(leadId);
         };
@@ -1266,22 +1424,29 @@ window.PipelineModule = {
         const modal = document.getElementById('pipelineDeleteModal');
         const btn = document.getElementById('confirmDeleteBtn');
 
-        // Prevent double clicks
         if (btn.disabled) return;
         btn.disabled = true;
 
-        // Close modal immediately
         document.getElementById('pipelineEditModal')?.remove();
         modal.remove();
 
+        const lead = this.state.leads.find(l => l.id.toString() === leadId.toString());
+        if (!lead) return;
+
+        const leadIndex = this.state.leads.findIndex(l => l.id.toString() === leadId.toString());
+
+        this.state.leads = this.state.leads.filter(l => l.id.toString() !== leadId.toString());
+        this.updatePipeline();
+
         try {
             await API.deleteLead(leadId);
-            this.state.leads = this.state.leads.filter(l => l.id.toString() !== leadId.toString());
-            this.render();
             this.notify('Lead deleted successfully', 'success');
         } catch (error) {
             console.error('Failed to delete lead:', error);
             this.notify('Failed to delete lead', 'error');
+
+            this.state.leads.splice(leadIndex, 0, lead);
+            this.updatePipeline();
         }
     },
 
@@ -1296,12 +1461,12 @@ window.PipelineModule = {
         if (!date) return 'Unknown';
         const dateObj = new Date(date);
         if (isNaN(dateObj)) return 'Invalid';
-        
+
         const diff = Date.now() - dateObj;
         const mins = Math.floor(diff / 60000);
         const hours = Math.floor(mins / 60);
         const days = Math.floor(hours / 24);
-        
+
         if (mins < 1) return 'Just now';
         if (mins < 60) return `${mins}m ago`;
         if (hours < 24) return `${hours}h ago`;
@@ -1346,37 +1511,20 @@ window.PipelineModule = {
         return `
             <style>
                 .pipeline-container { max-width: 1800px; margin: 0 auto; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-                
+
                 .stage-content.drag-over {
                     background: rgba(102, 126, 234, 0.05);
                     border: 2px dashed var(--primary);
                     border-radius: var(--radius-lg);
                 }
-                
+
                 .pipeline-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; margin-bottom: 2rem; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: 1fr auto; gap: 3rem; align-items: center; }
                 .header-brand { display: flex; flex-direction: column; gap: 0.5rem; }
                 .pipeline-title { display: flex; align-items: center; gap: 1rem; font-size: 2rem; font-weight: 800; color: var(--text-primary); margin: 0; }
                 .title-icon { font-size: 1.75rem; }
                 .title-text { background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
                 .pipeline-subtitle { color: var(--text-secondary); font-size: 1.125rem; margin: 0; }
-                
-                .monthly-progress { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; min-width: 320px; }
-                .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-                .progress-title { font-weight: 600; color: var(--text-primary); }.progress-stats { display: flex; align-items: center; gap: 0.25rem; font-weight: 700; }
-                .current-count { color: var(--primary); font-size: 1.125rem; }
-                .separator { color: var(--text-tertiary); }
-                .limit-count { color: var(--text-secondary); }
-                .leads-text { color: var(--text-tertiary); font-size: 0.8rem; font-weight: 500; }
-                .progress-bar-container { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
-                .progress-bar-track { flex: 1; height: 8px; background: var(--surface-hover); border-radius: 4px; overflow: hidden; }
-                .progress-bar-fill { height: 100%; background: var(--success); border-radius: 4px; transition: width 0.8s ease; }
-                .progress-bar-fill.near-limit { background: var(--warning); }
-                .progress-bar-fill.at-limit { background: var(--danger); }
-                .progress-percentage { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); min-width: 35px; text-align: right; }
-                .progress-warning { padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.8rem; font-weight: 600; }
-                .progress-warning.near-limit { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
-                .progress-warning.at-limit { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
-                
+
                 .pipeline-filters { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; align-items: center; }
                 .search-group { flex: 1; }
                 .search-wrapper { position: relative; display: flex; align-items: center; }
@@ -1388,7 +1536,7 @@ window.PipelineModule = {
                 .filter-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
                 .filter-btn.active { border-color: var(--primary); background: rgba(102, 126, 234, 0.1); color: var(--primary); }
                 .filter-arrow { font-size: 0.7rem; transition: transform 0.2s ease; }
-                
+
                 .filter-dropdown { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); z-index: 10000; max-height: 300px; overflow-y: auto; }
                 .filter-options { padding: 0.5rem; }
                 .filter-option { padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s ease; border-radius: var(--radius); display: flex; align-items: center; gap: 0.75rem; }
@@ -1398,21 +1546,21 @@ window.PipelineModule = {
                 .checkbox { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; flex-shrink: 0; }
                 .checkbox.checked { background: var(--primary); border-color: var(--primary); color: white; }
                 .option-text { flex: 1; }
-                
+
                 .active-filters-panel { background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius-lg); padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
                 .filters-info { display: flex; flex-direction: column; gap: 0.25rem; }
                 .filter-count { font-weight: 700; color: var(--primary); }
                 .filter-details { font-size: 0.85rem; color: var(--text-secondary); }
                 .clear-filters-btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
                 .clear-filters-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
-                
+
                 .pipeline-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-lg); margin-bottom: 2rem; }
                 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
                 .section-title-group { display: flex; align-items: center; gap: 1rem; }
                 .section-title { font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; }
                 .section-badge { background: rgba(102, 126, 234, 0.1); color: var(--primary); padding: 0.375rem 0.875rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
                 .section-value { font-size: 1.25rem; font-weight: 800; color: var(--success); }
-                
+
                 .stages-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
                 .stage-column { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); min-height: 500px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
                 .stage-column::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--stage-color); }
@@ -1425,7 +1573,7 @@ window.PipelineModule = {
                 .stage-value { font-size: 0.85rem; color: var(--success); font-weight: 700; }
                 .stage-count { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
                 .stage-content { flex: 1; padding: 1rem; overflow-y: auto; max-height: 600px; transition: all 0.3s ease; }
-                
+
                 .lead-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; cursor: grab; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; }
                 .lead-card:hover { border-color: var(--primary); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15); transform: translateY(-3px); }
                 .lead-card:active { cursor: grabbing; }
@@ -1442,40 +1590,40 @@ window.PipelineModule = {
                 .contact-info { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
                 .contact-item { font-size: 0.8rem; color: var(--text-secondary); }
                 .lead-notes { font-size: 0.8rem; color: var(--text-tertiary); font-style: italic; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--surface-hover); border-radius: var(--radius); border-left: 3px solid var(--border); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-height: 5.5rem; overflow: hidden; }
-                
+
                 .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .deal-value-display:hover { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
                 .value-icon { font-size: 1rem; }
                 .value-amount { font-weight: 700; color: var(--success); flex: 1; }
                 .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
                 .value-edit-btn:hover { background: rgba(16, 185, 129, 0.2); }
-                
+
                 .deal-value-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .deal-value-btn:hover { background: rgba(102, 126, 234, 0.2); }
-                
+
                 .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .loss-reason-display:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
                 .loss-icon { font-size: 0.9rem; }
                 .loss-text { font-size: 0.8rem; color: var(--danger); font-weight: 600; flex: 1; }
                 .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
                 .loss-edit-btn:hover { background: rgba(239, 68, 68, 0.2); }
-                
+
                 .loss-reason-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius); color: var(--danger); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
                 .loss-reason-btn:hover { background: rgba(239, 68, 68, 0.2); }
-                
+
                 .card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 0.875rem; border-top: 1px solid var(--border); }
                 .card-date { color: var(--text-tertiary); font-size: 0.75rem; font-weight: 500; }
                 .card-actions { display: flex; gap: 0.5rem; }
                 .action-btn { padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; }
                 .action-btn:hover { background: rgba(102, 126, 234, 0.2); transform: translateY(-1px); }
-                
+
                 .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-tertiary); }
                 .empty-icon { font-size: 3rem; opacity: 0.6; display: block; margin-bottom: 1rem; }
                 .empty-title { font-size: 1.125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; }
                 .empty-subtitle { font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
                 .empty-action-btn { background: var(--primary); color: white; border: none; padding: 0.875rem 1.75rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 0.5rem; }
                 .empty-action-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
-                
+
                 .analytics-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-lg); }
                 .analytics-header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
                 .analytics-title { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin: 0 0 0.25rem 0; }
@@ -1489,7 +1637,7 @@ window.PipelineModule = {
                 .card-content-analytics { text-align: left; }
                 .primary-metric { font-size: 2rem; font-weight: 800; color: var(--text-primary); line-height: 1; margin-bottom: 0.5rem; }
                 .metric-detail { font-size: 0.8rem; color: var(--text-tertiary); font-weight: 500; }
-                
+
                 .pipeline-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
                 .pipeline-modal.show { opacity: 1; visibility: visible; }
                 .modal-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); }
@@ -1499,15 +1647,15 @@ window.PipelineModule = {
                 .modal-close { background: none; border: none; width: 32px; height: 32px; border-radius: var(--radius); cursor: pointer; font-size: 28px; color: var(--text-secondary); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
                 .modal-close:hover { background: var(--surface-hover); color: var(--text-primary); }
                 .modal-body { padding: 2rem; overflow-y: auto; max-height: 60vh; }
-                
+
                 .form-section { background: var(--surface-hover); border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border); margin-bottom: 1.5rem; }
                 .form-label { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px; display: block; }
-                
+
                 .temperature-toggle { display: flex; gap: 1rem; }
                 .temp-btn { flex: 1; padding: 1rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); color: var(--text-secondary); cursor: pointer; transition: all 0.3s ease; font-weight: 600; }
                 .temp-btn:hover { border-color: var(--primary); }
                 .temp-btn.active { border-color: var(--primary); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-                
+
                 .quality-slider-container { display: flex; align-items: center; gap: 2rem; }
                 .score-track { flex: 1; }
                 .quality-slider { width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--danger) 0%, var(--warning) 40%, var(--success) 70%, var(--primary) 100%); outline: none; cursor: pointer; }
@@ -1516,7 +1664,7 @@ window.PipelineModule = {
                 .score-display { text-align: center; min-width: 80px; }
                 .score-number { font-size: 2.5rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 0.25rem; }
                 .score-label { font-size: 0.8rem; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; }
-                
+
                 .notes-textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; background: var(--background); color: var(--text-primary); transition: all 0.2s; font-family: inherit; line-height: 1.6; resize: vertical; min-height: 140px; }
                 .notes-textarea:focus { outline: none; border-color: var(--primary); }
                 .input-feedback { font-size: 0.8rem; margin-top: 0.5rem; font-weight: 500; }
@@ -1525,7 +1673,7 @@ window.PipelineModule = {
                 .input-feedback.error, .feedback-error { color: var(--danger); }
                 .feedback-normal { color: var(--text-secondary); font-weight: 500; }
                 .feedback-warning { color: var(--warning); font-weight: 600; }
-                
+
                 .form-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border); }
                 .form-actions-right { display: flex; gap: 1rem; }
                 .btn-primary, .btn-secondary, .btn-danger { padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
@@ -1536,7 +1684,7 @@ window.PipelineModule = {
                 .btn-secondary:hover { background: var(--surface-hover); }
                 .btn-danger { background: var(--danger); color: white; border: none; }
                 .btn-danger:hover { background: #dc2626; }
-                
+
                 .move-options { display: flex; flex-direction: column; gap: 0.75rem; }
                 .move-option { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s ease; text-align: left; }
                 .move-option:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-2px); }
@@ -1547,16 +1695,16 @@ window.PipelineModule = {
                 .option-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
                 .option-desc { font-size: 0.8rem; color: var(--text-secondary); }
                 .current-badge { background: var(--success); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-                
+
                 .value-input-group { position: relative; display: flex; align-items: center; }
                 .value-prefix { position: absolute; left: 1.25rem; font-size: 1.25rem; font-weight: 700; color: var(--success); pointer-events: none; }
                 .value-input { width: 100%; padding: 10px 12px 10px 3rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 1.25rem; font-weight: 700; background: var(--background); color: var(--text-primary); transition: all 0.2s; }
                 .value-input:focus { outline: none; border-color: var(--success); }
-                
+
                 .quick-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem; }
                 .quick-value-btn { padding: 0.75rem 1rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s; font-weight: 600; }
                 .quick-value-btn:hover { border-color: var(--success); color: var(--success); background: rgba(16, 185, 129, 0.05); }
-                
+
                 .reason-select {
                     width: 100%;
                     padding: 10px 12px;
@@ -1587,7 +1735,7 @@ window.PipelineModule = {
                     outline: none;
                     border-color: var(--danger);
                 }
-                
+
                 .custom-reason-input {
                     width: 100%;
                     padding: 10px 12px;
@@ -1604,20 +1752,20 @@ window.PipelineModule = {
                     outline: none;
                     border-color: var(--danger);
                 }
-                
+
                 .input-warning {
                     border-color: var(--warning) !important;
                 }
-                
+
                 .input-error {
                     border-color: var(--danger) !important;
                 }
-                
+
                 @media (max-width: 1024px) {
                     .stages-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
                     .analytics-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
                 }
-                
+
                 @media (max-width: 768px) {
                     .pipeline-header { grid-template-columns: 1fr; gap: 2rem; }
                     .pipeline-filters { flex-direction: column; gap: 1rem; }
@@ -1632,13 +1780,39 @@ window.PipelineModule = {
                     .btn-primary, .btn-secondary, .btn-danger { width: 100%; justify-content: center; }
                     .quick-values { grid-template-columns: repeat(2, 1fr); }
                 }
-                
+
                 @media (max-width: 480px) {
                     .pipeline-header { padding: 1.5rem; }
                     .pipeline-title { font-size: 1.5rem; }
-                    .monthly-progress { min-width: auto; }
                     .search-input { font-size: 16px; }
                     .modal-body { padding: 1.5rem; max-height: 50vh; }
+                }
+
+                /* Module-level animations */
+                @keyframes pipeWaveIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px) scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+
+                @keyframes pipeFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .pipe-wave-in {
+                    animation: pipeWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                    opacity: 0;
+                }
+
+                .pipe-fade-in {
+                    animation: pipeFadeIn 0.3s ease forwards;
+                    opacity: 0;
                 }
             </style>
         `;

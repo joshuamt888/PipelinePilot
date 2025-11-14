@@ -28,19 +28,518 @@
 - **Flows:** Register → Email Verify → Login | Password Reset | ToS Required
 - **Security:** XSS Protected | RLS Enabled | No Account Enumeration | CSP Headers
 
-### Frontend - Free Tier
+### Frontend - Consolidated Architecture (v6.0)
 - **Status:** ✅ PRODUCTION READY
-- **Lead Limit:** 50
-- **Modules:** Dashboard, AddLead, Pipeline, Scheduling, Settings
-- **Bugs:** None
+- **Architecture:** Single universal dashboard with tier-aware modules
+- **Location:** `/dashboard/` (no more tier folders!)
+- **Tier Detection:** Client-side via `API.getTierLimits(userType)`
+- **All Tiers:** Load same dashboard, modules show appropriate limits
+- **Limits Enforced:** Database triggers (server-side) + frontend display
+  - **Free:** 50 leads, 100 tasks, 10 goals/estimates/jobs
+  - **Professional:** 5,000 leads, 10,000 tasks, 1,000 goals/estimates/jobs
+  - **Admin:** 999,999 (unlimited)
+- **Modules:** Dashboard, Pipeline, Leads, Scheduling, Goals, Estimates, Jobs, Settings
+- **Pro Features:** Goals, Estimates, Jobs (marked with `// PRO FEATURE:` comments)
+- **Future Features:** Business (team collaboration), Enterprise (SSO/audit)
 
-### Frontend - Professional Tier
-- **Status:** 🔨 90% COMPLETE
-- **Lead Limit:** 5000
-- **Modules Complete:** Dashboard, AddLead, Pipeline, Scheduling, Goals ✅, Estimates ✅, Settings
-- **Modules In Progress:** Jobs (0%)
-- **Icon System:** 95% complete (Lucide SVG - only Settings needs update)
-- **Build Order (UPDATED):** Goals ✅ → Estimates ✅ → Jobs → Settings Preferences
+---
+
+## 🚀 TIER CONSOLIDATION REFACTOR (COMPLETED v6.0)
+
+**STATUS:** ✅ COMPLETE
+**COMPLETED:** Nov 13, 2025
+**RESULT:** Simplified from 3 tier folders to 1 universal dashboard
+
+### What Was Accomplished
+- ✅ Deleted `/dashboard/tiers/free/` and `/dashboard/tiers/admin/` folders
+- ✅ Moved `/dashboard/tiers/professional/` → `/dashboard/` (flattened structure)
+- ✅ Single `index.html` loads for all tiers (no more routing)
+- ✅ All modules tier-aware via `API.getTierLimits(userType)`
+- ✅ Database triggers enforce limits server-side (blocks console injection)
+- ✅ Added future-proof comments (`// PRO FEATURE:`, `// BUSINESS FEATURE:`, etc.)
+- ✅ Reduced duplicate code significantly
+- ✅ Bug fixes now need **1 edit** instead of 3
+
+---
+
+## PHASE 0: TIER CONSOLIDATION (FOUNDATION) ⏱️ 6-8 hours
+
+### New Folder Structure
+```
+/dashboard/
+  ├── index.html              ← Smart loader (tier detection)
+  ├── /core/                  ← Everyone gets this (FREE + PRO)
+  │   ├── Dashboard.js
+  │   ├── AddLead.js
+  │   ├── Pipeline.js
+  │   ├── Scheduling.js
+  │   └── Settings.js
+  ├── /pro/                   ← PRO+ tier additions only
+  │   ├── Goals.js
+  │   ├── Estimates.js
+  │   └── Jobs.js
+  ├── /business/              ← Future (empty - team features)
+  │   └── .gitkeep
+  └── /enterprise/            ← Future (empty - SSO/audit)
+      └── .gitkeep
+```
+
+### How Smart Loading Works
+**index.html detects tier and loads appropriate modules:**
+```javascript
+// Step 1: Everyone loads core
+<script src="/dashboard/core/Dashboard.js"></script>
+<script src="/dashboard/core/Pipeline.js"></script>
+<script src="/dashboard/core/Settings.js"></script>
+
+// Step 2: Pro+ loads additional features
+if (userType in ['professional', 'professional_trial', 'business', 'enterprise', 'admin']) {
+  <script src="/dashboard/pro/Goals.js"></script>
+  <script src="/dashboard/pro/Estimates.js"></script>
+  <script src="/dashboard/pro/Jobs.js"></script>
+}
+
+// Step 3: Business+ loads team features (future)
+if (userType in ['business', 'enterprise', 'admin']) {
+  // Future: <script src="/dashboard/business/TeamManagement.js"></script>
+}
+
+// Step 4: Enterprise loads SSO/audit (future)
+if (userType === 'enterprise' || userType === 'admin') {
+  // Future: <script src="/dashboard/enterprise/SSO.js"></script>
+}
+```
+
+### Migration Checklist
+- [ ] **Move to /core/**: Dashboard.js, Pipeline.js, Scheduling.js, Settings.js, AddLead.js
+- [ ] **Move to /pro/**: Goals.js, Estimates.js, Jobs.js, JobsManagement.js
+- [ ] **Update index.html**: Implement smart tier-based loading
+- [ ] **Add tier gates in Settings.js**: Free users see "Upgrade" prompts for pro features
+- [ ] **Test all tiers**: Verify free sees core only, pro sees core + pro modules
+- [ ] **Delete old /tiers/ folders**: Once migration verified
+
+### Feature Gating Pattern (In Settings.js)
+```javascript
+renderSecurityTab() {
+    const { user_type } = this.state.profile;
+
+    return `
+        <!-- Everyone gets password change -->
+        ${this.renderPasswordSection()}
+
+        <!-- Pro+ gets MFA -->
+        ${this.isProTier(user_type)
+            ? this.renderMFASection()
+            : this.renderUpgradePrompt('MFA', 'Secure your account with two-factor authentication')
+        }
+
+        <!-- Everyone gets data export -->
+        ${this.renderDataExportSection()}
+    `;
+}
+
+isProTier(userType) {
+    return ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(userType);
+}
+```
+
+---
+
+## PHASE 1: SECURITY LOCKDOWN (GO HARD) ⏱️ 4-5 hours
+
+**"Time to lock in - this is where we go hard on ourselves"**
+
+### 1.1 Input Validation & Injection Prevention
+- [ ] **Text inputs**: Set max length to 1,000 chars across ALL forms
+- [ ] **Number inputs**: Validate to 12,2 decimal format
+- [ ] **Match frontend validators**: Backend limits must match frontend exactly
+- [ ] **Check every form**: Lead forms, task forms, estimate forms, job forms, settings forms
+- [ ] **SQL injection audit**: Review all `.select()`, `.insert()`, `.update()` calls
+- [ ] **CSS injection prevention**: Sanitize any user content rendered as styles
+
+### 1.2 XSS Protection Deep Dive
+- [ ] **Audit API.escapeHtml**: Is it comprehensive or a "janky excuse"?
+- [ ] **Test injection vectors**: Try `<script>alert('xss')</script>` in all text fields
+- [ ] **DOM manipulation**: All `.innerHTML` must use escaped content or `.textContent`
+- [ ] **URL validation**: Whitelist internal URLs in redirects (already done in register.html:686-693)
+- [ ] **Content Security Policy**: Verify CSP headers block inline scripts
+
+**Example fixes needed:**
+```javascript
+// BAD - XSS vulnerable
+element.innerHTML = userInput;
+
+// GOOD - Safe
+element.textContent = userInput;
+// OR
+element.innerHTML = API.escapeHtml(userInput);
+```
+
+### 1.3 Notification Security Check
+- [ ] **Audit toast notifications**: Do they escape user data?
+- [ ] **Error messages**: Do they expose sensitive info (DB errors, file paths)?
+- [ ] **Success messages**: Do they reflect user input safely?
+
+### 1.4 Authentication Security
+- [ ] **Session validation**: Check both at login AND on page refresh
+- [ ] **Trial expiration**: Enforce at index.html load + auth check (dual validation)
+- [ ] **Token refresh**: Verify Supabase auto-refresh works correctly
+- [ ] **Logout everywhere**: Test session invalidation
+
+---
+
+## PHASE 2: PERFORMANCE & API OPTIMIZATION ⏱️ 3-4 hours
+
+### 2.1 Batch Operation Audit
+**Goal**: Find every place we make multiple API calls that could be one batch call
+
+- [ ] **Review api.js**: Look for opportunities to add more batch functions
+- [ ] **Check Dashboard.js**: Are stats fetched separately or in one query?
+- [ ] **Check Pipeline.js**: Drag-and-drop updates - can we batch them?
+- [ ] **Check Scheduling.js**: Task list loads - N+1 query issue?
+- [ ] **Check Goals.js**: Progress updates - batchable?
+- [ ] **Check Estimates.js**: Line item updates - batchable?
+- [ ] **Check Jobs.js**: Material/crew updates - batchable?
+
+**Example optimization:**
+```javascript
+// BAD - 10 separate API calls
+for (const taskId of taskIds) {
+    await API.updateTask(taskId, { status: 'completed' });
+}
+
+// GOOD - 1 batch call
+await API.batchUpdateTasks(taskIds, { status: 'completed' });
+```
+
+### 2.2 Supabase Slow Query Analysis
+- [ ] **Check Supabase Dashboard**: Database → Query Performance
+- [ ] **Identify slow queries**: Look for >500ms queries
+- [ ] **Add missing indexes**: user_id, status, created_at, lead_id, etc.
+- [ ] **Review RLS policies**: Are they causing sequential scans?
+- [ ] **Use EXPLAIN ANALYZE**: On slow queries to find bottlenecks
+
+### 2.3 Fix VS Code Problems
+- [ ] **Open Problems panel**: Fix the 2 existing issues
+- [ ] **Document what they were**: Add to this section after fixing
+
+---
+
+## PHASE 3: TIER LIMITS & TRIAL ENFORCEMENT ⏱️ 2-3 hours
+
+### 3.1 Resource Limits by Tier
+
+**FREE TIER LIMITS:**
+- Leads: 50 max
+- Tasks: 100 max
+- Goals: 10 max
+- Estimates: 10 max (no photos)
+- Jobs: 5 max (no photos)
+
+**PRO TIER LIMITS:**
+- Leads: 5,000 max
+- Tasks: 10,000 max
+- Goals: 1,000 max
+- Estimates: 1,000 max (with photos - 3 per estimate)
+- Jobs: 1,000 max (with photos - 3 per job)
+
+**ADMIN TIER LIMITS:**
+- All resources: 999,999 max (unlimited)
+
+**CRITICAL RULE:** On downgrade from Pro → Free:
+- User KEEPS all existing data (50+ leads, etc.)
+- User CANNOT ADD new data beyond free limits
+- Show "Upgrade to add more" message when limit hit
+
+### 3.2 Implement Limit Checks
+- [x] **Update createLead()**: Check tier limit before insert ✅ DONE
+- [x] **Update createEstimate()**: Check tier limit before insert ✅ DONE
+- [x] **Update createJob()**: Check tier limit before insert ✅ DONE
+- [x] **Update createGoal()**: Check tier limit before insert ✅ DONE
+- [x] **Add helpful errors**: "You've hit the free tier limit. Upgrade to Pro for 5,000 leads!" ✅ DONE
+
+**Example pattern:**
+```javascript
+async createEstimate(estimateData) {
+    const profile = await this.getProfile();
+    const { data: estimates } = await supabase
+        .from('estimates')
+        .select('id', { count: 'exact', head: true });
+
+    if (estimates.count >= 10) {
+        throw new Error('ESTIMATE_LIMIT:You\'ve reached the estimate limit (10 max). Delete old estimates or upgrade for more storage.');
+    }
+
+    // Continue with creation...
+}
+```
+
+### 3.3 Trial Enforcement (REMOVE CRON JOB)
+
+**Old way (fragile):**
+- Cron job runs daily at 2AM
+- Checks trial_end_date, downgrades users
+- Misses users who log in between checks
+
+**New way (bulletproof):**
+```javascript
+// In index.html - runs on EVERY page load
+async function checkTrialStatus() {
+    const profile = await API.getProfile();
+
+    if (profile.user_type === 'professional_trial') {
+        const now = new Date();
+        const trialEnd = new Date(profile.trial_end_date);
+
+        if (now > trialEnd) {
+            // Auto-downgrade to free
+            await supabase.rpc('downgrade_trial_to_free');
+
+            // Show modal: "Your trial has ended. Upgrade to keep Pro features!"
+            showTrialExpiredModal();
+
+            // Reload page to reflect new tier
+            window.location.reload();
+        }
+    }
+}
+```
+
+- [ ] **Remove cron job**: Delete daily trial check
+- [ ] **Add index.html check**: Trial validation on page load
+- [ ] **Add auth check**: Also validate on login flow (backup)
+- [ ] **Test trial expiration**: Manually set trial_end_date to yesterday, verify downgrade
+
+### 3.4 Upgrade CTA for Free Users
+
+**Add to Settings.js (FREE users only):**
+- [ ] **New tab**: "Upgrade" (only visible to free tier)
+- [ ] **Floating nav button**: "Upgrade to Pro!" or "Start your free 2-week trial!"
+- [ ] **Dynamic text**: Changes if user already used trial
+  - Never used trial: "Start your free 2-week trial!"
+  - Already used trial: "Upgrade to Pro!"
+
+**Example:**
+```javascript
+renderTabs() {
+    const { user_type, trial_end_date } = this.state.profile;
+    const isFree = user_type === 'free';
+    const hasUsedTrial = trial_end_date !== null;
+
+    return `
+        ${this.renderTab('account', 'Account')}
+        ${this.renderTab('preferences', 'Preferences')}
+        ${this.renderTab('security', 'Security')}
+        ${isFree ? this.renderTab('upgrade', 'Upgrade ⭐') : ''}
+    `;
+}
+
+renderUpgradeTab() {
+    const hasUsedTrial = this.state.profile.trial_end_date !== null;
+    const ctaText = hasUsedTrial ? 'Upgrade to Pro!' : 'Start your free 2-week trial!';
+
+    return `
+        <div class="upgrade-cta">
+            <h2>Unlock Pro Features</h2>
+            <ul>
+                <li>5,000 leads (vs 50)</li>
+                <li>Goals tracking</li>
+                <li>Estimates & Jobs</li>
+                <li>Priority support</li>
+            </ul>
+            <button class="upgrade-btn">${ctaText}</button>
+        </div>
+    `;
+}
+```
+
+---
+
+## PHASE 4: STYLING & CROSS-PLATFORM FIX ⏱️ 1-2 hours
+
+### 4.1 Fix Windows Color Breakage
+
+**Problem**: Colors work on Mac, broken on Windows
+**Root cause**: CSS variables not shared via utils.js
+**Solution**: Centralize ALL color definitions in utils.js
+
+- [ ] **Move colors to utils.js**: Extract all `--primary`, `--secondary`, etc.
+- [ ] **Use CSS variables everywhere**: Replace hardcoded colors
+- [ ] **Test on Windows**: Verify colors render correctly
+- [ ] **Test on Mac**: Ensure no regression
+
+**Pattern:**
+```javascript
+// utils.js - Define colors ONCE
+:root {
+    --primary: #667eea;
+    --primary-dark: #4f46e5;
+    --secondary: #764ba2;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --text-primary: #1a202c;
+    --text-secondary: #6b7280;
+    --surface: #ffffff;
+    --surface-hover: #f9fafb;
+    --border: #e5e7eb;
+}
+
+// All modules reference these variables
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+```
+
+---
+
+## PHASE 5: CODE CLEANUP & TESTING ⏱️ 2-3 hours
+
+### 5.1 Remove Artificial Comments
+**Goal**: Make code look professional and intentional, not AI-generated
+
+- [ ] **Find and remove**: `// version AMAZING NICE`, `// THIS IS SO COOL`, etc.
+- [ ] **Keep explanatory comments**: Business logic, security notes, edge cases
+- [ ] **Remove commented-out code**: Clean up old experiments
+- [ ] **Standardize format**: Use JSDoc for functions
+
+**BAD comments to remove:**
+```javascript
+// THIS IS FIRE 🔥🔥🔥
+// AMAZING FEATURE!!!
+// v2.0 LETS GOOO
+```
+
+**GOOD comments to keep:**
+```javascript
+// RLS policy prevents users from accessing other users' data
+// Edge case: If trial_end_date is null, user has never trialed
+// SECURITY: Whitelist internal URLs only to prevent open redirect
+```
+
+### 5.2 Auth Flow Testing
+- [ ] **Test registration**: Create account, verify email works
+- [ ] **Test login**: Email/password, wrong credentials, unverified account
+- [ ] **Test password reset**: Request reset, receive email, set new password
+- [ ] **Test trial flow**: Start trial, verify features unlock, test expiration
+- [ ] **Test downgrade**: Pro → Free, verify limits enforced
+- [ ] **Test upgrade**: Free → Pro, verify features unlock
+
+### 5.3 Module Testing
+- [ ] **Test Dashboard**: Stats load correctly, no console errors
+- [ ] **Test Pipeline**: Drag-and-drop, lead editing, stage changes
+- [ ] **Test Scheduling**: Task creation, completion, deletion
+- [ ] **Test Goals**: Creation, progress tracking, recurring goals
+- [ ] **Test Estimates**: PDF export, photo upload, acceptance flow
+- [ ] **Test Jobs**: Material tracking, crew management, completion
+
+---
+
+## PHASE 6: ANALYTICS & SEO SETUP ⏱️ 2-3 hours
+
+### 6.1 Implement Analytics Tracking
+- [ ] **Read analytics.md**: Review tracking requirements
+- [ ] **Set up user metrics**: Page views, feature usage, conversion events
+- [ ] **Add cookie consent**: GDPR-compliant banner
+- [ ] **Test tracking**: Verify events fire correctly
+- [ ] **Privacy policy update**: Document what data we collect
+
+### 6.2 Static Pages & Content
+- [ ] **Create static pages**: Features, pricing, about, contact, blog
+- [ ] **Add YouTube videos**: Private link embeds showing feature demos
+- [ ] **Optimize images**: Compress, add alt text for SEO
+- [ ] **Add meta tags**: title, description, og:image for social sharing
+
+### 6.3 SEO Optimization
+- [ ] **Get SEMrush trial**: Sign up for free trial
+- [ ] **Audit every page**: Run SEO score on all static pages
+- [ ] **Fix SEO issues**: Title tags, meta descriptions, heading hierarchy
+- [ ] **Page speed test**: Use Lighthouse, aim for >90 score
+- [ ] **Mobile responsiveness**: Test on real devices
+- [ ] **Sitemap.xml**: Generate and submit to Google Search Console
+
+---
+
+## PHASE 7: DOCUMENTATION & ADMIN TOOLS ⏱️ 2-3 hours
+
+### 7.1 Admin Commands Documentation
+**Create .env.example with admin SQL commands**
+
+```bash
+# ============================================
+# ADMIN COMMANDS - Tier Management
+# ============================================
+
+# Upgrade user to Pro (manual override)
+# UPDATE users SET user_type = 'professional', current_lead_limit = 5000 WHERE email = 'user@example.com';
+
+# Start 14-day trial
+# UPDATE users SET user_type = 'professional_trial', trial_start_date = NOW(), trial_end_date = NOW() + INTERVAL '14 days', current_lead_limit = 5000 WHERE email = 'user@example.com';
+
+# Downgrade user to Free
+# UPDATE users SET user_type = 'free', current_lead_limit = 50 WHERE email = 'user@example.com';
+
+# Check user tier status
+# SELECT email, user_type, current_lead_limit, current_leads, trial_end_date FROM users WHERE email = 'user@example.com';
+
+# ============================================
+# TIER LIMITS REFERENCE
+# ============================================
+# FREE TIER:
+#   - Leads: 50
+#   - Estimates: 10
+#   - Jobs: 10
+#   - Tasks: 10,000
+#   - Goals: Locked
+#
+# PRO TIER:
+#   - Leads: 5,000
+#   - Estimates: 10 (photo storage limit)
+#   - Jobs: 10 (photo storage limit)
+#   - Tasks: 10,000
+#   - Goals: Unlimited
+```
+
+### 7.2 Database Structure Documentation
+- [ ] **Document all tables**: Schema, columns, indexes, triggers
+- [ ] **Document RLS policies**: What each policy protects
+- [ ] **Document functions**: What each DB function does
+- [ ] **Document triggers**: Auto-tracking triggers and their purpose
+- [ ] **Document unused features**: What's in the schema but not used yet
+
+**Example:**
+```markdown
+## Database Tables
+
+### users
+- **Purpose**: Core user profiles and tier management
+- **Columns**: id, email, user_type, current_lead_limit, current_leads, trial_end_date
+- **Indexes**: id (primary), email (unique), user_type
+- **RLS**: Users can only read/update their own row
+- **Triggers**: None
+
+### leads
+- **Purpose**: Lead/contact management
+- **Columns**: id, user_id, name, email, phone, company, status, type, created_at
+- **Indexes**: id (primary), user_id, status, type, created_at
+- **RLS**: Users can only see their own leads
+- **Triggers**: Auto-update current_leads counter on users table
+
+### estimates (Pro tier only)
+- **Purpose**: Quote/proposal management
+- **Columns**: id, user_id, lead_id, title, total_amount, status, photos (JSONB)
+- **Indexes**: id (primary), user_id, lead_id, status
+- **RLS**: Users can only see their own estimates
+- **Triggers**: None
+- **Storage limit**: 10 estimates max (photo storage constraint)
+```
+
+### 7.3 Feature Usage Audit
+- [ ] **Review all DB tables**: What's actively used vs planned for future
+- [ ] **Document feature status**: Live, planned, deprecated
+- [ ] **Clean up unused code**: Remove features that won't ship
+- [ ] **Update HANDOFF.md**: Reflect actual vs planned features
 
 ---
 
@@ -396,9 +895,8 @@ profit_margin            NUMERIC(6,2)   -- Percentage: -999.99% to 999.99%
 - Database has 10x headroom ($9,999,999,999.99) to handle edge cases
 
 **Key Implementation Files:**
-- `/dashboard/tiers/professional/scripts/JobsManagement.js` - Main jobs module (lines 3999-4028: value capping)
+- `/dashboard/scripts/JobsManagement.js` - Main jobs module (lines 3999-4028: value capping)
 - `/dashboard/shared/js/utils.js` - Updated formatCurrency to show 2 decimals (lines 115-123)
-- `/database/migrations/RUNTHIS_combined_numeric_fix.sql` - Database numeric precision fix
 
 ---
 
@@ -543,23 +1041,172 @@ COMMIT;
 
 ---
 
+## 🗄️ DATABASE FUNCTIONS & TRIGGERS (CLEANED v5.0)
+
+### Overview
+**Total Functions:** 13 (5 limit enforcement + 5 goal tracking + 3 admin)
+**Cleaned:** Removed 35+ deprecated functions referencing deleted columns
+**Security:** All tier limits enforced server-side (blocks console injection)
+
+### 1️⃣ Tier Limit Enforcement (5 Functions)
+
+All limits enforced at database level via BEFORE INSERT triggers. Prevents users from bypassing frontend checks via browser console. Limits match API.js getTierLimits() exactly.
+
+#### `check_lead_limit()`
+- **Trigger:** `check_lead_limit_trigger` (BEFORE INSERT ON leads)
+- **Purpose:** Enforces lead limits based on user tier
+- **Logic:** COUNT(*) → if >= max_allowed → RAISE EXCEPTION
+- **Limits:**
+  - Free: 50 leads max
+  - Professional/Trial: 5,000 leads max
+  - Admin: 999,999 leads max (unlimited)
+- **Error:** "Lead limit reached (50 max)"
+
+#### `check_task_limit()`
+- **Trigger:** `check_task_limit_trigger` (BEFORE INSERT ON tasks)
+- **Purpose:** Enforces task limits based on user tier
+- **Limits:**
+  - Free: 100 tasks max
+  - Professional/Trial: 10,000 tasks max
+  - Admin: 999,999 tasks max
+- **Error:** "Task limit reached (100 max)"
+
+#### `check_goal_limit()`
+- **Trigger:** `check_goal_limit_trigger` (BEFORE INSERT ON goals)
+- **Purpose:** Enforces goal limits based on user tier
+- **Limits:**
+  - Free: 10 goals max
+  - Professional/Trial: 1,000 goals max
+  - Admin: 999,999 goals max
+- **Error:** "Goal limit reached (10 max)"
+
+#### `check_estimate_limit()`
+- **Trigger:** `check_estimate_limit_trigger` (BEFORE INSERT ON estimates)
+- **Purpose:** Enforces estimate limits based on user tier
+- **Limits:**
+  - Free: 10 estimates max
+  - Professional/Trial: 1,000 estimates max
+  - Admin: 999,999 estimates max
+- **Error:** "Estimate limit reached (10 max)"
+
+#### `check_job_limit()`
+- **Trigger:** `check_job_limit_trigger` (BEFORE INSERT ON jobs)
+- **Purpose:** Enforces job limits based on user tier
+- **Limits:**
+  - Free: 10 jobs max
+  - Professional/Trial: 1,000 jobs max
+  - Admin: 999,999 jobs max
+- **Error:** "Job limit reached (10 max)"
+
+### 2️⃣ Goal Auto-Tracking (5 Functions)
+
+Auto-updates goal progress when leads/jobs/tasks change.
+
+#### `update_lead_goals()`
+- **Trigger:** `update_lead_goals_trigger` (AFTER INSERT OR DELETE ON leads)
+- **Purpose:** Auto-tracks "leads_created" goals
+- **Logic:**
+  - INSERT → increment current_value by 1
+  - DELETE → decrement current_value by 1 (min 0)
+- **Applies To:** Goals with goal_type='leads_created' AND auto_track=true
+
+#### `update_job_goals()`
+- **Trigger:** `update_job_goals_trigger` (AFTER INSERT OR UPDATE ON jobs)
+- **Purpose:** Auto-tracks revenue/profit/jobs_completed goals
+- **Logic:** When job.status changes to 'completed':
+  - Revenue goals → add final_price or quoted_price
+  - Profit goals → add profit amount
+  - Jobs completed → increment by 1
+- **Applies To:** Goals with auto_track=true in date range
+
+#### `check_goal_completion()`
+- **Trigger:** `check_goal_completion_trigger` (BEFORE UPDATE ON goals)
+- **Purpose:** Checks if goal hit target and handles completion
+- **Logic:**
+  - If current_value >= target_value:
+    - Recurring goals → reset to 0, increment completion_count
+    - One-time goals → set status='completed'
+- **Handles:** Both manual and auto-tracked goals
+
+#### `update_goal_task_progress()`
+- **Trigger:** `update_goal_task_progress_trigger` (AFTER INSERT OR UPDATE ON tasks)
+- **Purpose:** Auto-tracks task-based goals (e.g., "Complete 10 tasks this week")
+- **Logic:** When task.status changes to 'completed':
+  - Count all completed tasks linked to goal via goal_tasks table
+  - Update goal.current_value with new count
+- **Applies To:** Goals linked to tasks via goal_tasks junction table
+
+#### `update_goal_on_task_link()`
+- **Trigger:** `update_goal_on_task_link_trigger` (AFTER INSERT ON goal_tasks)
+- **Purpose:** Recalculates goal progress when task is linked to goal
+- **Logic:** Count completed tasks linked to this goal, update current_value
+- **Use Case:** User links existing completed task to goal → goal progress updates
+
+#### `update_goal_on_task_unlink()`
+- **Trigger:** `update_goal_on_task_unlink_trigger` (AFTER DELETE ON goal_tasks)
+- **Purpose:** Recalculates goal progress when task is unlinked from goal
+- **Logic:** Count completed tasks still linked to this goal, update current_value
+- **Use Case:** User removes task from goal → goal progress recalculates
+
+### 3️⃣ Admin Tier Management (3 Functions)
+
+Secure tier changes via SQL Editor only.
+
+#### `protect_user_tier()`
+- **Trigger:** `protect_user_tier_trigger` (BEFORE UPDATE ON users)
+- **Purpose:** Blocks direct user_type changes (prevents self-upgrading)
+- **Security:** Users can't change their own tier via console injection
+- **Bypass:** Only admin_change_user_tier() and Stripe webhooks can change tier
+- **Error:** "Cannot modify user_type directly. Use admin_change_user_tier() or Stripe webhooks."
+
+#### `admin_change_user_tier(target_email, new_user_type, new_subscription_status)`
+- **Type:** Function (SECURITY DEFINER)
+- **Access:** Only callable from Supabase SQL Editor (requires dashboard login)
+- **Purpose:** Safely bypass protect_user_tier trigger for admin changes
+- **Logic:**
+  1. Disable protect_user_tier_trigger
+  2. Update user tier + subscription status + Stripe IDs
+  3. Re-enable protect_user_tier_trigger
+- **Usage:**
+  ```sql
+  SELECT admin_change_user_tier('user@example.com', 'professional', 'active');
+  SELECT admin_change_user_tier('user@example.com', 'free', NULL);
+  ```
+
+### 🗑️ Deprecated Functions (Removed)
+
+The following 35+ functions were removed in v5.0 cleanup:
+
+- `admin_set_user_tier()` → used current_lead_limit (deleted column)
+- `create_lead_with_increment()` → used current_leads counter (deleted column)
+- `downgrade_expired_trials()` → used current_lead_limit (deleted column)
+- `handle_new_user()` → used current_lead_limit (deleted column)
+- `upgrade_to_trial()` → used current_lead_limit (deleted column)
+- `accept_terms_of_service()` → never implemented in frontend
+- `delete_user_account()` → never implemented in frontend
+- `check_lead_duplicates()` → never implemented in frontend
+- `update_lead_safe()` → replaced with direct Supabase .update()
+- All `pg_trgm` extension functions → built-in PostgreSQL, not custom
+
+**Note:** `update_goal_task_progress()`, `update_goal_on_task_link()`, and `update_goal_on_task_unlink()` were initially removed but **RESTORED** because task-based goals are actively used in the app.
+
+---
+
 ## 🗄️ DATABASE SCHEMA
 
 ### `users` Table
-**Status:** ✅ PRODUCTION
+**Status:** ✅ PRODUCTION (v5.0 - Counter columns removed)
 ```sql
 id                      UUID PRIMARY KEY
 email                   TEXT NOT NULL
-user_type               TEXT CHECK IN ('free', 'professional', 'professional_trial')
-current_lead_limit      INT4
-current_leads           INT4
+user_type               TEXT CHECK IN ('free', 'professional', 'professional_trial', 'admin')
 trial_start_date        TIMESTAMPTZ
 trial_end_date          TIMESTAMPTZ
 stripe_customer_id      TEXT
 stripe_subscription_id  TEXT
 subscription_status     TEXT
 settings                JSONB
-goals                   JSONB
+goals                   JSONB (deprecated - use goals table)
 preferences             JSONB
 created_at              TIMESTAMPTZ
 updated_at              TIMESTAMPTZ
@@ -569,6 +1216,7 @@ privacy_accepted_at     TIMESTAMPTZ
 last_active_at          TIMESTAMPTZ
 onboarding_completed    BOOL
 ```
+**Note:** Removed `current_lead_limit` and `current_leads` columns in v5.0. All limits now determined by `user_type` via API.js `getTierLimits()`.
 
 ### `leads` Table
 **Status:** ✅ PRODUCTION
