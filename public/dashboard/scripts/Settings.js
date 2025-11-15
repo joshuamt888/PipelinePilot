@@ -49,12 +49,14 @@ window.SettingsModule = {
                         ${this.renderTabButton('account', '👤', 'Account')}
                         ${this.renderTabButton('preferences', '⚙️', 'Preferences')}
                         ${this.renderTabButton('security', '🔐', 'Security')}
+                        ${this.renderTabButton('modulemarket', '<i data-lucide="shopping-bag"></i>', 'Module Market')}
                     </div>
 
                     <div class="settings-content">
                         ${this.renderTabContent('account', this.renderAccountTab())}
                         ${this.renderTabContent('preferences', this.renderPreferencesTab())}
                         ${this.renderTabContent('security', this.renderSecurityTab())}
+                        ${this.renderTabContent('modulemarket', this.renderModuleMarketTab())}
                     </div>
                 </div>
             </div>
@@ -62,6 +64,9 @@ window.SettingsModule = {
 
         setTimeout(() => {
             container.querySelector('.settings-shell').classList.add('loaded');
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         }, 50);
     },
 
@@ -328,6 +333,62 @@ window.SettingsModule = {
         `;
     },
 
+    renderModuleMarketTab() {
+        return `
+            <div class="module-market-cta">
+                <div class="cta-header">
+                    <div class="cta-icon">
+                        <i data-lucide="shopping-bag"></i>
+                    </div>
+                    <h2 class="cta-title">Module Market</h2>
+                    <p class="cta-subtitle">Customize your workspace with optional modules and premium themes</p>
+                </div>
+
+                <div class="cta-benefits">
+                    <div class="benefit-card">
+                        <div class="benefit-icon">
+                            <i data-lucide="puzzle"></i>
+                        </div>
+                        <h3 class="benefit-title">Optional Modules</h3>
+                        <p class="benefit-description">Enable or disable features based on your workflow. Only activate what you need.</p>
+                    </div>
+
+                    <div class="benefit-card">
+                        <div class="benefit-icon">
+                            <i data-lucide="palette"></i>
+                        </div>
+                        <h3 class="benefit-title">Premium Themes</h3>
+                        <p class="benefit-description">Choose from professional color schemes and customize your interface appearance.</p>
+                    </div>
+
+                    <div class="benefit-card">
+                        <div class="benefit-icon">
+                            <i data-lucide="zap"></i>
+                        </div>
+                        <h3 class="benefit-title">Instant Activation</h3>
+                        <p class="benefit-description">Changes take effect immediately. No restart required, just toggle and go.</p>
+                    </div>
+
+                    <div class="benefit-card">
+                        <div class="benefit-icon">
+                            <i data-lucide="sparkles"></i>
+                        </div>
+                        <h3 class="benefit-title">Always Growing</h3>
+                        <p class="benefit-description">New modules and themes added regularly. Keep your workspace fresh and productive.</p>
+                    </div>
+                </div>
+
+                <div class="cta-action">
+                    <button class="btn-market-primary" onclick="window.loadPage('module-market')">
+                        <i data-lucide="arrow-right"></i>
+                        <span>Browse Module Market</span>
+                    </button>
+                    <p class="cta-note">Explore themes, modules, and customization options</p>
+                </div>
+            </div>
+        `;
+    },
+
     attachEvents() {
         // Tab switching
         document.querySelectorAll('.tab-button').forEach(btn => {
@@ -411,6 +472,11 @@ window.SettingsModule = {
         document.querySelectorAll('.tab-panel').forEach(panel => {
             panel.classList.toggle('active', panel.dataset.tab === tabName);
         });
+
+        // Re-initialize Lucide icons for the new tab content
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => lucide.createIcons(), 10);
+        }
     },
 
     changePassword() {
@@ -1500,7 +1566,7 @@ window.SettingsModule = {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(8px);
+                    
                     z-index: 10000;
                     display: flex;
                     align-items: center;
@@ -1717,6 +1783,174 @@ window.SettingsModule = {
                     margin-bottom: 2rem;
                 }
 
+                /* Module Market CTA Tab */
+                .module-market-cta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2.5rem;
+                    max-width: 900px;
+                    margin: 0 auto;
+                }
+
+                .cta-header {
+                    text-align: center;
+                    padding: 2rem 0;
+                }
+
+                .cta-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 80px;
+                    height: 80px;
+                    background: var(--gradient-primary);
+                    border-radius: var(--radius-lg);
+                    margin-bottom: 1.5rem;
+                    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+                }
+
+                .cta-icon i {
+                    width: 40px;
+                    height: 40px;
+                    color: white;
+                    stroke-width: 2;
+                }
+
+                .cta-title {
+                    font-size: 2.25rem;
+                    font-weight: 900;
+                    background: var(--gradient-primary);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-bottom: 0.75rem;
+                }
+
+                .cta-subtitle {
+                    font-size: 1.125rem;
+                    color: var(--text-secondary);
+                    line-height: 1.6;
+                    max-width: 600px;
+                    margin: 0 auto;
+                }
+
+                .cta-benefits {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 1.5rem;
+                }
+
+                .benefit-card {
+                    background: var(--background);
+                    border: 2px solid var(--border);
+                    border-radius: var(--radius-lg);
+                    padding: 2rem;
+                    transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .benefit-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: var(--gradient-primary);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .benefit-card:hover::before {
+                    opacity: 1;
+                }
+
+                .benefit-card:hover {
+                    border-color: var(--primary);
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+                }
+
+                .benefit-icon {
+                    width: 56px;
+                    height: 56px;
+                    background: rgba(102, 126, 234, 0.1);
+                    border-radius: var(--radius);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 1.25rem;
+                    transition: all 0.3s ease;
+                }
+
+                .benefit-card:hover .benefit-icon {
+                    background: rgba(102, 126, 234, 0.15);
+                    transform: scale(1.1) rotate(-5deg);
+                }
+
+                .benefit-icon i {
+                    width: 28px;
+                    height: 28px;
+                    color: var(--primary);
+                    stroke-width: 2;
+                }
+
+                .benefit-title {
+                    font-size: 1.25rem;
+                    font-weight: 800;
+                    color: var(--text-primary);
+                    margin-bottom: 0.75rem;
+                }
+
+                .benefit-description {
+                    font-size: 0.95rem;
+                    color: var(--text-secondary);
+                    line-height: 1.6;
+                }
+
+                .cta-action {
+                    text-align: center;
+                    padding: 2rem 0;
+                }
+
+                .btn-market-primary {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 1.25rem 3rem;
+                    background: var(--gradient-primary);
+                    color: white;
+                    border: none;
+                    border-radius: var(--radius-lg);
+                    font-size: 1.125rem;
+                    font-weight: 800;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                }
+
+                .btn-market-primary:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+                }
+
+                .btn-market-primary:active {
+                    transform: translateY(-2px);
+                }
+
+                .btn-market-primary i {
+                    width: 20px;
+                    height: 20px;
+                    stroke-width: 2.5;
+                }
+
+                .cta-note {
+                    margin-top: 1rem;
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    font-style: italic;
+                }
+
                 /* Responsive */
                 @media (max-width: 1024px) {
                     .settings-body {
@@ -1756,6 +1990,19 @@ window.SettingsModule = {
                     .btn-primary,
                     .btn-outline,
                     .btn-danger {
+                        width: 100%;
+                        justify-content: center;
+                    }
+
+                    .cta-benefits {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .cta-title {
+                        font-size: 1.75rem;
+                    }
+
+                    .btn-market-primary {
                         width: 100%;
                         justify-content: center;
                     }

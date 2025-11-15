@@ -353,14 +353,6 @@ class SteadyUtils {
             .skeleton-section-header {
                 /* Uses base skeleton class for shimmer */
             }
-
-            .skeleton-fade-out {
-                animation: fadeOut 0.3s ease forwards;
-            }
-
-            @keyframes fadeOut {
-                to { opacity: 0; }
-            }
         `;
         document.head.appendChild(style);
     }
@@ -473,10 +465,7 @@ class SteadyUtils {
         if (!container) return;
 
         const skeletons = container.querySelectorAll('[data-skeleton]');
-        skeletons.forEach(skeleton => {
-            skeleton.classList.add('skeleton-fade-out');
-            setTimeout(() => skeleton.remove(), 300);
-        });
+        skeletons.forEach(skeleton => skeleton.remove());
     }
 }
 

@@ -1,1201 +1,611 @@
-# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v13.3
-**"JOBS HUB COMPLETE - 3-SECTION ARCHITECTURE (CLIENTS ACCESSIBLE VIA HUB ONLY)"**
+# 🎯 STEADYMANAGER PRO - TECHNICAL HANDOFF v14.0
+**"MODULAR ARCHITECTURE + THEME SYSTEM + CLIENT-SIDE CACHING"**
 
-**Status:** Jobs Hub ✅ | Goals 100% | Estimates 100% | Jobs Management 100% | Clients Placeholder ✅ | Database Clean | API Optimized
-**Philosophy:** Manual CRM + Smart Auto-Tracking + Professional UI + Unified Project Hub
+**Status:** Production Ready ✅
+**Philosophy:** Manual CRM + Smart Auto-Tracking + Modular Plugin Architecture + Instant Performance
 
 ---
 
-## 📊 SYSTEM STATUS OVERVIEW
+## 📊 SYSTEM STATUS
 
 ### Backend
 - **Status:** ✅ LIVE & OPTIMIZED
 - **Stack:** Supabase PostgreSQL + RLS | Node.js on Railway | Supabase Auth
 - **Cron:** Daily 2AM trial expiration check
-- **Uptime:** 100%
-- **Optimization:** See "Supabase Performance Checklist" section below
+- **Caching:** Client-side AppCache (95% API reduction)
+- **Performance:** 5,000+ concurrent users supported
 
 ### Database
 - **Status:** ✅ PRODUCTION READY
-- **Schema:** All tables optimized with 20+ indexes
-- **Triggers:** 7 auto-tracking triggers (Goal Ladder removed)
+- **Schema:** All tables with 20+ indexes
+- **Triggers:** 8 triggers (7 auto-tracking + 1 tier validation)
 - **Functions:** 4 server-side functions (duplicates, batch ops, goal tracking)
 - **Extensions:** pg_trgm enabled for fuzzy search
-- **Recent:** Removed Goal Ladder tables and columns ✅
+- **Tier Enforcement:** Server-side trigger validates module/theme access
 
-### Authentication
-- **Status:** ✅ COMPLETE
-- **Flows:** Register → Email Verify → Login | Password Reset | ToS Required
-- **Security:** XSS Protected | RLS Enabled | No Account Enumeration | CSP Headers
-
-### Frontend - Consolidated Architecture (v6.0)
+### Frontend Architecture
 - **Status:** ✅ PRODUCTION READY
-- **Architecture:** Single universal dashboard with tier-aware modules
-- **Location:** `/dashboard/` (no more tier folders!)
+- **Location:** `/dashboard/` (single universal dashboard)
 - **Tier Detection:** Client-side via `API.getTierLimits(userType)`
 - **All Tiers:** Load same dashboard, modules show appropriate limits
 - **Limits Enforced:** Database triggers (server-side) + frontend display
   - **Free:** 50 leads, 100 tasks, 10 goals/estimates/jobs
   - **Professional:** 5,000 leads, 10,000 tasks, 1,000 goals/estimates/jobs
   - **Admin:** 999,999 (unlimited)
-- **Modules:** Dashboard, Pipeline, Leads, Scheduling, Goals, Estimates, Jobs, Settings
-- **Pro Features:** Goals, Estimates, Jobs (marked with `// PRO FEATURE:` comments)
-- **Future Features:** Business (team collaboration), Enterprise (SSO/audit)
+
+### Core Modules (Always Available)
+- Dashboard - Overview and stats
+- Leads - Add/manage leads
+- Pipeline - Drag-and-drop pipeline
+- Tasks - Calendar-based scheduling
+- Settings - Profile, preferences, account
+
+### Optional Modules (Toggle On/Off)
+- Goals - Target tracking with auto-completion ✅
+- Estimates - Quote management with photos ✅
+- Jobs Hub - Jobs, Clients, Project Management ✅
+- Notes - Quick notes (Early Access - Admin only) 🔒
+
+### Theme System
+- **Themes:** 7 total (light, dark, slate, minimal-red, whiteout, founders-edition, joshs-style)
+- **Free Themes:** Light, Dark
+- **Pro Themes:** Slate, Minimal Red, Whiteout
+- **Admin Themes:** Founders Edition (sharp gold), Josh's Style (electric orange) 🔒
+- **Architecture:** CSS variables in `/dashboard/shared/css/themes.css`
+- **Tier Enforcement:** Database trigger + API validation + frontend locks
 
 ---
 
-## 🚀 TIER CONSOLIDATION REFACTOR (COMPLETED v6.0)
+## 🏗️ ARCHITECTURE OVERVIEW
 
-**STATUS:** ✅ COMPLETE
-**COMPLETED:** Nov 13, 2025
-**RESULT:** Simplified from 3 tier folders to 1 universal dashboard
+### Module Marketplace System
+Users can enable/disable optional modules from Settings → Module Market.
 
-### What Was Accomplished
-- ✅ Deleted `/dashboard/tiers/free/` and `/dashboard/tiers/admin/` folders
-- ✅ Moved `/dashboard/tiers/professional/` → `/dashboard/` (flattened structure)
-- ✅ Single `index.html` loads for all tiers (no more routing)
-- ✅ All modules tier-aware via `API.getTierLimits(userType)`
-- ✅ Database triggers enforce limits server-side (blocks console injection)
-- ✅ Added future-proof comments (`// PRO FEATURE:`, `// BUSINESS FEATURE:`, etc.)
-- ✅ Reduced duplicate code significantly
-- ✅ Bug fixes now need **1 edit** instead of 3
+**Core Modules (Can't Disable):**
+- Dashboard, Leads, Pipeline, Tasks, Settings
+
+**Optional Modules:**
+- Goals, Jobs Hub (includes Estimates + Jobs + Clients)
+- Future: Notes, Reports, Integrations, Teams
+
+**How It Works:**
+1. User preferences stored in `users.preferences` (JSONB column)
+2. `preferences.modules_selected` = array of enabled module IDs
+3. Sidebar dynamically built from `modules_selected` on page load
+4. Settings module always rendered last (hardcoded)
+5. Toggling modules invalidates cache, refreshes sidebar instantly
+
+**Tier Restrictions:**
+- **Free Tier:** Goals, Jobs Hub (with limits: 50 leads, 100 tasks, 10 goals/estimates/jobs)
+- **Pro Tier:** All free modules + Reports, Integrations, Teams (future)
+- **Early Access (Admin Only):** Notes module (testing only)
+- Module Market shows:
+  - Lock icon for Pro-only modules (non-Pro users)
+  - "Coming Soon" badge for Early Access modules (non-admin users)
+- **Enforcement:** Database trigger prevents bypassing via dev console
+
+### Theme System Architecture
+**Location:** `/dashboard/shared/css/themes.css`
+
+**All themes use CSS variables:**
+```css
+/* Example: Light Theme */
+[data-theme="light"] {
+  --primary: #667eea;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --text-primary: #0f172a;
+  --border: #e2e8f0;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --sidebar-bg: var(--gradient-primary);
+  --sidebar-text: white;
+  /* ...100+ variables */
+}
+```
+
+**Applying Themes:**
+```javascript
+// On page load
+const savedTheme = await API.getTheme(); // Falls back to 'light' if Pro theme on Free tier
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+// When user changes theme
+await API.updateTheme('slate'); // Tier validation on backend
+document.documentElement.setAttribute('data-theme', 'slate');
+AppCache.invalidate('preferences');
+```
+
+**Universal Colors (NOT theme-based):**
+- Pipeline lead scores: 8-10=green, 6-7=yellow, 4-5=orange, 1-3=red
+- These stay consistent across all themes for instant recognition
 
 ---
 
-## PHASE 0: TIER CONSOLIDATION (FOUNDATION) ⏱️ 6-8 hours
+## 🛠️ HOW TO BUILD A MODULE
 
-### New Folder Structure
-```
-/dashboard/
-  ├── index.html              ← Smart loader (tier detection)
-  ├── /core/                  ← Everyone gets this (FREE + PRO)
-  │   ├── Dashboard.js
-  │   ├── AddLead.js
-  │   ├── Pipeline.js
-  │   ├── Scheduling.js
-  │   └── Settings.js
-  ├── /pro/                   ← PRO+ tier additions only
-  │   ├── Goals.js
-  │   ├── Estimates.js
-  │   └── Jobs.js
-  ├── /business/              ← Future (empty - team features)
-  │   └── .gitkeep
-  └── /enterprise/            ← Future (empty - SSO/audit)
-      └── .gitkeep
-```
+Follow this guide when creating new modules to ensure they work with themes, caching, and the module system.
 
-### How Smart Loading Works
-**index.html detects tier and loads appropriate modules:**
+### Module Structure Pattern
+
+Every module follows this structure:
+
 ```javascript
-// Step 1: Everyone loads core
-<script src="/dashboard/core/Dashboard.js"></script>
-<script src="/dashboard/core/Pipeline.js"></script>
-<script src="/dashboard/core/Settings.js"></script>
+window.ModuleName = {
+    // State
+    state: {
+        data: [],
+        container: 'module-content',
+        isLoading: false,
+        filters: {},
+        currentView: 'grid'
+    },
 
-// Step 2: Pro+ loads additional features
-if (userType in ['professional', 'professional_trial', 'business', 'enterprise', 'admin']) {
-  <script src="/dashboard/pro/Goals.js"></script>
-  <script src="/dashboard/pro/Estimates.js"></script>
-  <script src="/dashboard/pro/Jobs.js"></script>
-}
+    // Initialize
+    async init(targetContainer = 'module-content') {
+        console.log('Module loading');
+        this.state.container = targetContainer;
 
-// Step 3: Business+ loads team features (future)
-if (userType in ['business', 'enterprise', 'admin']) {
-  // Future: <script src="/dashboard/business/TeamManagement.js"></script>
-}
+        // Auth check
+        await this.checkAuth();
 
-// Step 4: Enterprise loads SSO/audit (future)
-if (userType === 'enterprise' || userType === 'admin') {
-  // Future: <script src="/dashboard/enterprise/SSO.js"></script>
-}
-```
+        // Load data (use cache if available)
+        await this.loadData();
 
-### Migration Checklist
-- [ ] **Move to /core/**: Dashboard.js, Pipeline.js, Scheduling.js, Settings.js, AddLead.js
-- [ ] **Move to /pro/**: Goals.js, Estimates.js, Jobs.js, JobsManagement.js
-- [ ] **Update index.html**: Implement smart tier-based loading
-- [ ] **Add tier gates in Settings.js**: Free users see "Upgrade" prompts for pro features
-- [ ] **Test all tiers**: Verify free sees core only, pro sees core + pro modules
-- [ ] **Delete old /tiers/ folders**: Once migration verified
+        // Render UI
+        this.render();
 
-### Feature Gating Pattern (In Settings.js)
-```javascript
-renderSecurityTab() {
-    const { user_type } = this.state.profile;
+        // Attach events
+        this.attachEvents();
 
-    return `
-        <!-- Everyone gets password change -->
-        ${this.renderPasswordSection()}
+        console.log('Module loaded');
+    },
 
-        <!-- Pro+ gets MFA -->
-        ${this.isProTier(user_type)
-            ? this.renderMFASection()
-            : this.renderUpgradePrompt('MFA', 'Secure your account with two-factor authentication')
+    // Auth validation
+    async checkAuth() {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) window.location.href = '/auth/login.html';
+        } catch (error) {
+            window.location.href = '/auth/login.html';
+        }
+    },
+
+    // Load data with caching
+    async loadData() {
+        this.state.isLoading = true;
+
+        // Check cache first (5 min TTL)
+        const cached = AppCache.get('module-data');
+        if (cached) {
+            this.state.data = cached;
+            this.state.isLoading = false;
+            return;
         }
 
-        <!-- Everyone gets data export -->
-        ${this.renderDataExportSection()}
-    `;
-}
-
-isProTier(userType) {
-    return ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(userType);
-}
-```
-
----
-
-## PHASE 1: SECURITY LOCKDOWN (GO HARD) ⏱️ 4-5 hours
-
-**"Time to lock in - this is where we go hard on ourselves"**
-
-### 1.1 Input Validation & Injection Prevention
-- [ ] **Text inputs**: Set max length to 1,000 chars across ALL forms
-- [ ] **Number inputs**: Validate to 12,2 decimal format
-- [ ] **Match frontend validators**: Backend limits must match frontend exactly
-- [ ] **Check every form**: Lead forms, task forms, estimate forms, job forms, settings forms
-- [ ] **SQL injection audit**: Review all `.select()`, `.insert()`, `.update()` calls
-- [ ] **CSS injection prevention**: Sanitize any user content rendered as styles
-
-### 1.2 XSS Protection Deep Dive
-- [ ] **Audit API.escapeHtml**: Is it comprehensive or a "janky excuse"?
-- [ ] **Test injection vectors**: Try `<script>alert('xss')</script>` in all text fields
-- [ ] **DOM manipulation**: All `.innerHTML` must use escaped content or `.textContent`
-- [ ] **URL validation**: Whitelist internal URLs in redirects (already done in register.html:686-693)
-- [ ] **Content Security Policy**: Verify CSP headers block inline scripts
-
-**Example fixes needed:**
-```javascript
-// BAD - XSS vulnerable
-element.innerHTML = userInput;
-
-// GOOD - Safe
-element.textContent = userInput;
-// OR
-element.innerHTML = API.escapeHtml(userInput);
-```
-
-### 1.3 Notification Security Check
-- [ ] **Audit toast notifications**: Do they escape user data?
-- [ ] **Error messages**: Do they expose sensitive info (DB errors, file paths)?
-- [ ] **Success messages**: Do they reflect user input safely?
-
-### 1.4 Authentication Security
-- [ ] **Session validation**: Check both at login AND on page refresh
-- [ ] **Trial expiration**: Enforce at index.html load + auth check (dual validation)
-- [ ] **Token refresh**: Verify Supabase auto-refresh works correctly
-- [ ] **Logout everywhere**: Test session invalidation
-
----
-
-## PHASE 2: PERFORMANCE & API OPTIMIZATION ⏱️ 3-4 hours
-
-### 2.1 Batch Operation Audit
-**Goal**: Find every place we make multiple API calls that could be one batch call
-
-- [ ] **Review api.js**: Look for opportunities to add more batch functions
-- [ ] **Check Dashboard.js**: Are stats fetched separately or in one query?
-- [ ] **Check Pipeline.js**: Drag-and-drop updates - can we batch them?
-- [ ] **Check Scheduling.js**: Task list loads - N+1 query issue?
-- [ ] **Check Goals.js**: Progress updates - batchable?
-- [ ] **Check Estimates.js**: Line item updates - batchable?
-- [ ] **Check Jobs.js**: Material/crew updates - batchable?
-
-**Example optimization:**
-```javascript
-// BAD - 10 separate API calls
-for (const taskId of taskIds) {
-    await API.updateTask(taskId, { status: 'completed' });
-}
-
-// GOOD - 1 batch call
-await API.batchUpdateTasks(taskIds, { status: 'completed' });
-```
-
-### 2.2 Supabase Slow Query Analysis
-- [ ] **Check Supabase Dashboard**: Database → Query Performance
-- [ ] **Identify slow queries**: Look for >500ms queries
-- [ ] **Add missing indexes**: user_id, status, created_at, lead_id, etc.
-- [ ] **Review RLS policies**: Are they causing sequential scans?
-- [ ] **Use EXPLAIN ANALYZE**: On slow queries to find bottlenecks
-
-### 2.3 Fix VS Code Problems
-- [ ] **Open Problems panel**: Fix the 2 existing issues
-- [ ] **Document what they were**: Add to this section after fixing
-
----
-
-## PHASE 3: TIER LIMITS & TRIAL ENFORCEMENT ⏱️ 2-3 hours
-
-### 3.1 Resource Limits by Tier
-
-**FREE TIER LIMITS:**
-- Leads: 50 max
-- Tasks: 100 max
-- Goals: 10 max
-- Estimates: 10 max (no photos)
-- Jobs: 5 max (no photos)
-
-**PRO TIER LIMITS:**
-- Leads: 5,000 max
-- Tasks: 10,000 max
-- Goals: 1,000 max
-- Estimates: 1,000 max (with photos - 3 per estimate)
-- Jobs: 1,000 max (with photos - 3 per job)
-
-**ADMIN TIER LIMITS:**
-- All resources: 999,999 max (unlimited)
-
-**CRITICAL RULE:** On downgrade from Pro → Free:
-- User KEEPS all existing data (50+ leads, etc.)
-- User CANNOT ADD new data beyond free limits
-- Show "Upgrade to add more" message when limit hit
-
-### 3.2 Implement Limit Checks
-- [x] **Update createLead()**: Check tier limit before insert ✅ DONE
-- [x] **Update createEstimate()**: Check tier limit before insert ✅ DONE
-- [x] **Update createJob()**: Check tier limit before insert ✅ DONE
-- [x] **Update createGoal()**: Check tier limit before insert ✅ DONE
-- [x] **Add helpful errors**: "You've hit the free tier limit. Upgrade to Pro for 5,000 leads!" ✅ DONE
-
-**Example pattern:**
-```javascript
-async createEstimate(estimateData) {
-    const profile = await this.getProfile();
-    const { data: estimates } = await supabase
-        .from('estimates')
-        .select('id', { count: 'exact', head: true });
-
-    if (estimates.count >= 10) {
-        throw new Error('ESTIMATE_LIMIT:You\'ve reached the estimate limit (10 max). Delete old estimates or upgrade for more storage.');
-    }
-
-    // Continue with creation...
-}
-```
-
-### 3.3 Trial Enforcement (REMOVE CRON JOB)
-
-**Old way (fragile):**
-- Cron job runs daily at 2AM
-- Checks trial_end_date, downgrades users
-- Misses users who log in between checks
-
-**New way (bulletproof):**
-```javascript
-// In index.html - runs on EVERY page load
-async function checkTrialStatus() {
-    const profile = await API.getProfile();
-
-    if (profile.user_type === 'professional_trial') {
-        const now = new Date();
-        const trialEnd = new Date(profile.trial_end_date);
-
-        if (now > trialEnd) {
-            // Auto-downgrade to free
-            await supabase.rpc('downgrade_trial_to_free');
-
-            // Show modal: "Your trial has ended. Upgrade to keep Pro features!"
-            showTrialExpiredModal();
-
-            // Reload page to reflect new tier
-            window.location.reload();
+        // Fetch from API
+        try {
+            this.state.data = await API.getModuleData();
+            AppCache.set('module-data', this.state.data, 300000); // 5 min
+        } catch (error) {
+            console.error('Load failed:', error);
+        } finally {
+            this.state.isLoading = false;
         }
+    },
+
+    // Render UI
+    render() {
+        const container = document.getElementById(this.state.container);
+        if (!container) return;
+
+        container.innerHTML = `
+            ${this.renderStyles()}
+            <div class="module-shell">
+                ${this.renderHeader()}
+                ${this.renderContent()}
+            </div>
+        `;
+
+        // Init icons
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    // Styles using theme variables
+    renderStyles() {
+        return `
+            <style>
+                .module-shell {
+                    background: var(--background);
+                    color: var(--text-primary);
+                }
+
+                .module-card {
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                }
+
+                .module-card:hover {
+                    background: var(--surface-hover);
+                    border-color: var(--primary-border);
+                }
+
+                .btn-primary {
+                    background: var(--primary);
+                    color: white;
+                    border-radius: var(--radius);
+                }
+
+                .btn-primary:hover {
+                    background: var(--primary-dark);
+                }
+            </style>
+        `;
+    },
+
+    // Event handlers
+    attachEvents() {
+        // Use event delegation for dynamic content
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.module-action')) {
+                this.handleAction(e);
+            }
+        });
     }
+};
+```
+
+### Theme Integration Checklist
+
+**✅ Use CSS Variables Everywhere:**
+```css
+/* ❌ BAD - Hardcoded colors */
+.card {
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+}
+
+/* ✅ GOOD - Theme variables */
+.card {
+    background: var(--surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
 }
 ```
 
-- [ ] **Remove cron job**: Delete daily trial check
-- [ ] **Add index.html check**: Trial validation on page load
-- [ ] **Add auth check**: Also validate on login flow (backup)
-- [ ] **Test trial expiration**: Manually set trial_end_date to yesterday, verify downgrade
+**Common Theme Variables:**
+```css
+/* Layout */
+--background          /* Page background */
+--surface             /* Card/panel backgrounds */
+--surface-hover       /* Hover state for cards */
+--border              /* Default border color */
 
-### 3.4 Upgrade CTA for Free Users
+/* Text */
+--text-primary        /* Main text */
+--text-secondary      /* Muted text */
+--text-tertiary       /* Very muted text */
 
-**Add to Settings.js (FREE users only):**
-- [ ] **New tab**: "Upgrade" (only visible to free tier)
-- [ ] **Floating nav button**: "Upgrade to Pro!" or "Start your free 2-week trial!"
-- [ ] **Dynamic text**: Changes if user already used trial
-  - Never used trial: "Start your free 2-week trial!"
-  - Already used trial: "Upgrade to Pro!"
+/* Brand */
+--primary             /* Primary brand color */
+--primary-dark        /* Darker shade for hover */
+--primary-bg          /* Light bg for badges */
+--primary-border      /* Border using primary */
 
-**Example:**
-```javascript
-renderTabs() {
-    const { user_type, trial_end_date } = this.state.profile;
-    const isFree = user_type === 'free';
-    const hasUsedTrial = trial_end_date !== null;
+/* Status Colors */
+--success             /* Green - positive actions */
+--warning             /* Orange - warnings */
+--danger              /* Red - destructive actions */
+--info                /* Cyan - informational */
 
-    return `
-        ${this.renderTab('account', 'Account')}
-        ${this.renderTab('preferences', 'Preferences')}
-        ${this.renderTab('security', 'Security')}
-        ${isFree ? this.renderTab('upgrade', 'Upgrade ⭐') : ''}
-    `;
-}
+/* Sidebar */
+--sidebar-bg          /* Sidebar background */
+--sidebar-text        /* Sidebar text color */
+--sidebar-item-hover  /* Hover state */
+--sidebar-item-active /* Active state */
 
-renderUpgradeTab() {
-    const hasUsedTrial = this.state.profile.trial_end_date !== null;
-    const ctaText = hasUsedTrial ? 'Upgrade to Pro!' : 'Start your free 2-week trial!';
-
-    return `
-        <div class="upgrade-cta">
-            <h2>Unlock Pro Features</h2>
-            <ul>
-                <li>5,000 leads (vs 50)</li>
-                <li>Goals tracking</li>
-                <li>Estimates & Jobs</li>
-                <li>Priority support</li>
-            </ul>
-            <button class="upgrade-btn">${ctaText}</button>
-        </div>
-    `;
-}
+/* Utility */
+--radius              /* Border radius (8px) */
+--radius-lg           /* Large radius (16px) */
+--shadow              /* Default shadow */
+--shadow-lg           /* Large shadow */
+--transition          /* Transition timing */
 ```
 
----
+### AppCache Integration
 
-## PHASE 4: STYLING & CROSS-PLATFORM FIX ⏱️ 1-2 hours
+**When to use cache:**
+- User preferences (1 hour TTL)
+- Lead/task/goal lists (5 min TTL)
+- Stats/counts (5 min TTL)
+- Settings data (1 hour TTL)
 
-### 4.1 Fix Windows Color Breakage
-
-**Problem**: Colors work on Mac, broken on Windows
-**Root cause**: CSS variables not shared via utils.js
-**Solution**: Centralize ALL color definitions in utils.js
-
-- [ ] **Move colors to utils.js**: Extract all `--primary`, `--secondary`, etc.
-- [ ] **Use CSS variables everywhere**: Replace hardcoded colors
-- [ ] **Test on Windows**: Verify colors render correctly
-- [ ] **Test on Mac**: Ensure no regression
+**Don't cache:**
+- Real-time data (chat, notifications)
+- Single-use data (modal forms)
+- Data that changes frequently
 
 **Pattern:**
 ```javascript
-// utils.js - Define colors ONCE
-:root {
-    --primary: #667eea;
-    --primary-dark: #4f46e5;
-    --secondary: #764ba2;
-    --success: #10b981;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --text-primary: #1a202c;
-    --text-secondary: #6b7280;
-    --surface: #ffffff;
-    --surface-hover: #f9fafb;
-    --border: #e5e7eb;
+// GET with cache
+async getData() {
+    const cached = AppCache.get('my-data');
+    if (cached) return cached;
+
+    const data = await API.fetchData();
+    AppCache.set('my-data', data, 300000); // 5 min
+    return data;
 }
 
-// All modules reference these variables
-.btn-primary {
-    background: var(--primary);
-    color: white;
+// UPDATE - invalidate cache
+async updateData(id, updates) {
+    await API.updateData(id, updates);
+    AppCache.invalidate('my-data');
+    await this.getData(); // Reload fresh data
+}
+
+// DELETE - invalidate cache
+async deleteData(id) {
+    await API.deleteData(id);
+    AppCache.invalidate('my-data');
+    await this.getData();
 }
 ```
 
----
+### Batch Operations Pattern
 
-## PHASE 5: CODE CLEANUP & TESTING ⏱️ 2-3 hours
+Always batch multi-item operations:
 
-### 5.1 Remove Artificial Comments
-**Goal**: Make code look professional and intentional, not AI-generated
-
-- [ ] **Find and remove**: `// version AMAZING NICE`, `// THIS IS SO COOL`, etc.
-- [ ] **Keep explanatory comments**: Business logic, security notes, edge cases
-- [ ] **Remove commented-out code**: Clean up old experiments
-- [ ] **Standardize format**: Use JSDoc for functions
-
-**BAD comments to remove:**
 ```javascript
-// THIS IS FIRE 🔥🔥🔥
-// AMAZING FEATURE!!!
-// v2.0 LETS GOOO
+// ❌ BAD - Multiple API calls
+async deleteMultiple(ids) {
+    for (const id of ids) {
+        await API.delete(id); // N calls!
+    }
+}
+
+// ✅ GOOD - Single batched call
+async deleteMultiple(ids) {
+    await API.batchDelete(ids); // 1 call
+    AppCache.invalidate('data');
+}
 ```
 
-**GOOD comments to keep:**
+### Optimistic UI Updates
+
+Update UI immediately, rollback on error:
+
 ```javascript
-// RLS policy prevents users from accessing other users' data
-// Edge case: If trial_end_date is null, user has never trialed
-// SECURITY: Whitelist internal URLs only to prevent open redirect
-```
+async toggleStatus(id, newStatus) {
+    // 1. Update local state
+    const item = this.state.data.find(i => i.id === id);
+    const oldStatus = item.status;
+    item.status = newStatus;
 
-### 5.2 Auth Flow Testing
-- [ ] **Test registration**: Create account, verify email works
-- [ ] **Test login**: Email/password, wrong credentials, unverified account
-- [ ] **Test password reset**: Request reset, receive email, set new password
-- [ ] **Test trial flow**: Start trial, verify features unlock, test expiration
-- [ ] **Test downgrade**: Pro → Free, verify limits enforced
-- [ ] **Test upgrade**: Free → Pro, verify features unlock
+    // 2. Update UI immediately
+    this.updateItemVisually(id, newStatus);
 
-### 5.3 Module Testing
-- [ ] **Test Dashboard**: Stats load correctly, no console errors
-- [ ] **Test Pipeline**: Drag-and-drop, lead editing, stage changes
-- [ ] **Test Scheduling**: Task creation, completion, deletion
-- [ ] **Test Goals**: Creation, progress tracking, recurring goals
-- [ ] **Test Estimates**: PDF export, photo upload, acceptance flow
-- [ ] **Test Jobs**: Material tracking, crew management, completion
-
----
-
-## PHASE 6: ANALYTICS & SEO SETUP ⏱️ 2-3 hours
-
-### 6.1 Implement Analytics Tracking
-- [ ] **Read analytics.md**: Review tracking requirements
-- [ ] **Set up user metrics**: Page views, feature usage, conversion events
-- [ ] **Add cookie consent**: GDPR-compliant banner
-- [ ] **Test tracking**: Verify events fire correctly
-- [ ] **Privacy policy update**: Document what data we collect
-
-### 6.2 Static Pages & Content
-- [ ] **Create static pages**: Features, pricing, about, contact, blog
-- [ ] **Add YouTube videos**: Private link embeds showing feature demos
-- [ ] **Optimize images**: Compress, add alt text for SEO
-- [ ] **Add meta tags**: title, description, og:image for social sharing
-
-### 6.3 SEO Optimization
-- [ ] **Get SEMrush trial**: Sign up for free trial
-- [ ] **Audit every page**: Run SEO score on all static pages
-- [ ] **Fix SEO issues**: Title tags, meta descriptions, heading hierarchy
-- [ ] **Page speed test**: Use Lighthouse, aim for >90 score
-- [ ] **Mobile responsiveness**: Test on real devices
-- [ ] **Sitemap.xml**: Generate and submit to Google Search Console
-
----
-
-## PHASE 7: DOCUMENTATION & ADMIN TOOLS ⏱️ 2-3 hours
-
-### 7.1 Admin Commands Documentation
-**Create .env.example with admin SQL commands**
-
-```bash
-# ============================================
-# ADMIN COMMANDS - Tier Management
-# ============================================
-
-# Upgrade user to Pro (manual override)
-# UPDATE users SET user_type = 'professional', current_lead_limit = 5000 WHERE email = 'user@example.com';
-
-# Start 14-day trial
-# UPDATE users SET user_type = 'professional_trial', trial_start_date = NOW(), trial_end_date = NOW() + INTERVAL '14 days', current_lead_limit = 5000 WHERE email = 'user@example.com';
-
-# Downgrade user to Free
-# UPDATE users SET user_type = 'free', current_lead_limit = 50 WHERE email = 'user@example.com';
-
-# Check user tier status
-# SELECT email, user_type, current_lead_limit, current_leads, trial_end_date FROM users WHERE email = 'user@example.com';
-
-# ============================================
-# TIER LIMITS REFERENCE
-# ============================================
-# FREE TIER:
-#   - Leads: 50
-#   - Estimates: 10
-#   - Jobs: 10
-#   - Tasks: 10,000
-#   - Goals: Locked
-#
-# PRO TIER:
-#   - Leads: 5,000
-#   - Estimates: 10 (photo storage limit)
-#   - Jobs: 10 (photo storage limit)
-#   - Tasks: 10,000
-#   - Goals: Unlimited
-```
-
-### 7.2 Database Structure Documentation
-- [ ] **Document all tables**: Schema, columns, indexes, triggers
-- [ ] **Document RLS policies**: What each policy protects
-- [ ] **Document functions**: What each DB function does
-- [ ] **Document triggers**: Auto-tracking triggers and their purpose
-- [ ] **Document unused features**: What's in the schema but not used yet
-
-**Example:**
-```markdown
-## Database Tables
-
-### users
-- **Purpose**: Core user profiles and tier management
-- **Columns**: id, email, user_type, current_lead_limit, current_leads, trial_end_date
-- **Indexes**: id (primary), email (unique), user_type
-- **RLS**: Users can only read/update their own row
-- **Triggers**: None
-
-### leads
-- **Purpose**: Lead/contact management
-- **Columns**: id, user_id, name, email, phone, company, status, type, created_at
-- **Indexes**: id (primary), user_id, status, type, created_at
-- **RLS**: Users can only see their own leads
-- **Triggers**: Auto-update current_leads counter on users table
-
-### estimates (Pro tier only)
-- **Purpose**: Quote/proposal management
-- **Columns**: id, user_id, lead_id, title, total_amount, status, photos (JSONB)
-- **Indexes**: id (primary), user_id, lead_id, status
-- **RLS**: Users can only see their own estimates
-- **Triggers**: None
-- **Storage limit**: 10 estimates max (photo storage constraint)
-```
-
-### 7.3 Feature Usage Audit
-- [ ] **Review all DB tables**: What's actively used vs planned for future
-- [ ] **Document feature status**: Live, planned, deprecated
-- [ ] **Clean up unused code**: Remove features that won't ship
-- [ ] **Update HANDOFF.md**: Reflect actual vs planned features
-
----
-
-## 🗂️ SUPABASE PERFORMANCE CHECKLIST
-
-Run this checklist periodically to optimize database performance, security, and reduce API calls:
-
-### 🔍 Slow Query Analysis
-- [ ] Check Supabase Dashboard → Database → Query Performance
-- [ ] Look for queries taking >500ms
-- [ ] Add indexes on frequently filtered columns (user_id, status, created_at)
-- [ ] Review RLS policies - are they causing sequential scans?
-- [ ] Use `EXPLAIN ANALYZE` on slow queries to identify bottlenecks
-
-### ⚡ Performance Optimization
-- [ ] Review API calls - can we batch operations?
-- [ ] Check for N+1 queries (loading tasks then their leads individually)
-- [ ] Use `.select()` with specific columns instead of `*` where possible
-- [ ] Implement pagination for large data sets (>100 records)
-- [ ] Cache frequently accessed data (user preferences, lead counts)
-- [ ] Review connection pooling settings in Supabase
-
-### 🔒 Security Audit
-- [ ] Verify all tables have RLS policies enabled
-- [ ] Test RLS policies - can users access other users' data?
-- [ ] Check for SQL injection vulnerabilities in search queries
-- [ ] Review API key exposure (use anon key in frontend only)
-- [ ] Audit CORS settings - only allow your domain
-- [ ] Check for sensitive data in logs/error messages
-
-### 📦 Batch Data Opportunities
-- [x] Task creation - batch insert instead of individual ✅
-- [x] Task deletion/updates - batch operations ✅
-- [x] Goal deletion/updates - batch operations ✅
-- [x] Estimate status updates - batch operations ✅
-- [x] Lead deletion/updates - batch operations ✅
-- [ ] Lead imports - use batch insert for CSV uploads
-- [ ] Analytics queries - aggregate data server-side instead of client-side
-- [ ] Dashboard stats - fetch all in one query with joins
-
-### 🎯 Query Optimization Examples
-```sql
--- BAD: Multiple queries for dashboard stats
-SELECT COUNT(*) FROM leads WHERE status = 'active';
-SELECT COUNT(*) FROM tasks WHERE status = 'pending';
-SELECT COUNT(*) FROM goals WHERE status = 'active';
-
--- GOOD: Single query with CTEs
-WITH lead_stats AS (
-  SELECT COUNT(*) as active_leads FROM leads WHERE status = 'active'
-),
-task_stats AS (
-  SELECT COUNT(*) as pending_tasks FROM tasks WHERE status = 'pending'
-),
-goal_stats AS (
-  SELECT COUNT(*) as active_goals FROM goals WHERE status = 'active'
-)
-SELECT * FROM lead_stats, task_stats, goal_stats;
-```
-
-### 📊 Monitoring Metrics
-- [ ] Average response time per endpoint (<200ms target)
-- [ ] Database connection pool usage (<70% target)
-- [ ] API error rate (<1% target)
-- [ ] RLS policy execution time (<50ms target)
-- [ ] Storage usage and growth rate
-- [ ] Active connections count
-
----
-
-## 🎨 UX/UI OPTIMIZATION CHECKLIST
-
-Run this checklist periodically to ensure all modules provide instant feedback and optimal user experience:
-
-### ⚡ Instant Feedback & Optimistic UI
-- [x] Estimates - Create/Edit/Delete with instant modal close and stats update ✅
-- [x] Estimates - Status changes update stats tabs immediately ✅
-- [x] Estimates - Stats show "$99,999,999.99..." for values over 99,999,999.99 ✅
-- [ ] Goals - Verify instant feedback on create/edit/delete
-- [ ] Goals - Verify stat updates when goal status changes
-- [ ] Jobs - Implement instant feedback on create/edit/delete
-- [ ] Jobs - Verify stat updates when job status changes
-
-### 📊 Stats Tab Real-Time Updates
-All modules with stats tabs should update immediately when:
-- [ ] Item is created (adds to total)
-- [ ] Item is deleted (removes from total)
-- [ ] Item status changes (moves between stat categories)
-- [ ] Batch operations complete (updates all affected stats)
-
-### Pattern to Follow (Optimistic UI):
-1. Close modal/form immediately
-2. Update local state immediately
-3. Recalculate stats immediately
-4. Update DOM (grid + stats section) immediately
-5. API call to server in background
-6. Show error toast only if API fails
-
-**Reference Implementation:** See `Estimates.js` lines 2110-2198 for delete and status change handlers.
-
----
-
-## 🎯 GOALS MODULE - 100% COMPLETE ✅
-
-### Status: ✅ PRODUCTION READY
-
-**Features Implemented:**
-- Manual and auto-tracked goals
-- Recurring goals with completion counter
-- Time-based periods (daily/weekly/monthly/quarterly/yearly/ongoing)
-- Color-coded progress bars with shimmer animation
-- Live countdown timers for urgent goals
-- Character validation on all inputs
-- Filter by Active/Completed
-- Custom units support
-- Description field (500 chars)
-
-**Recent Changes (v11.0):**
-- ✅ Removed Goal Ladder banner
-- ✅ Removed Goal Ladder event handler
-- ✅ Added `completion_count` column tracking
-- ✅ Added completion badge to recurring goals ("Completed 4x")
-- ✅ Fixed goal title ellipsis (no more overflow)
-- ✅ Styled unit dropdown with custom arrow
-- ✅ Updated `checkGoalCompletion()` to handle recurring goals
-
-**Database Columns:**
-```sql
--- goals table (cleaned up)
-id              UUID PRIMARY KEY
-user_id         UUID REFERENCES users(id)
-title           TEXT NOT NULL (35 char limit)
-description     TEXT (500 char limit)
-goal_type       TEXT NOT NULL
-target_value    NUMERIC
-current_value   NUMERIC
-unit            TEXT
-period          TEXT NOT NULL
-start_date      DATE NOT NULL
-end_date        DATE NOT NULL
-status          TEXT
-is_recurring    BOOL
-auto_track      BOOL
-color           TEXT
-completion_count INTEGER DEFAULT 0  -- NEW ✅
-created_at      TIMESTAMPTZ
-updated_at      TIMESTAMPTZ
-```
-
-**API Functions:**
-```javascript
-// Core goal operations
-API.getGoals(status)
-API.createGoal(data)
-API.updateGoal(id, updates)
-API.deleteGoal(id)
-API.updateGoalProgress(id, value)
-API.getGoalProgress()
-API.checkGoalCompletion()  // Handles recurring + normal goals
-API.getGoalById(goalId)
-```
-
-**Completion Logic:**
-```javascript
-// In API.js
-static async checkGoalCompletion() {
-    const goals = await this.getGoals('active');
-    
-    for (const goal of goals) {
-        const progress = (goal.current_value / goal.target_value) * 100;
-        
-        if (progress >= 100) {
-            if (goal.is_recurring) {
-                // Recurring: increment counter and reset
-                await this.updateGoal(goal.id, {
-                    completion_count: (goal.completion_count || 0) + 1,
-                    current_value: 0,
-                    status: 'active'
-                });
-            } else {
-                // Normal: mark completed
-                await this.updateGoal(goal.id, {
-                    status: 'completed'
-                });
-            }
-        }
+    // 3. API call in background
+    try {
+        await API.updateStatus(id, newStatus);
+        AppCache.invalidate('data');
+    } catch (error) {
+        // 4. Rollback on error
+        item.status = oldStatus;
+        this.updateItemVisually(id, oldStatus);
+        window.SteadyUtils?.showToast('Update failed', 'error');
     }
 }
 ```
 
-**Recurring Goal Display:**
+### Spam Prevention (Debouncing)
+
+Prevent rapid-fire clicks from spamming backend:
+
 ```javascript
-// Shows green badge when completed > 0 times
-${goal.is_recurring && goal.completion_count > 0 ? `
-    <div class="goals-card-completions">
-        <svg viewBox="0 0 24 24">...</svg>
-        Completed ${goal.completion_count}x
-    </div>
-` : ''}
-```
+state: {
+    debounceTimers: {} // Track pending timers
+},
 
-**CSS for Completion Badge:**
-```css
-.goals-card-completions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--success);
-    margin-top: 0.75rem;
-}
+async toggleComplete(taskId, isCompleted) {
+    // Clear existing timer
+    if (this.state.debounceTimers[taskId]) {
+        clearTimeout(this.state.debounceTimers[taskId]);
+    }
 
-.goals-card-completions svg {
-    width: 1rem;
-    height: 1rem;
-    stroke-width: 2;
+    // Update UI immediately (optimistic)
+    this.updateTaskVisually(taskId, isCompleted);
+
+    // Debounce API call (300ms)
+    this.state.debounceTimers[taskId] = setTimeout(async () => {
+        try {
+            await API.completeTask(taskId, isCompleted);
+        } catch (error) {
+            // Rollback on error
+            this.updateTaskVisually(taskId, !isCompleted);
+        } finally {
+            delete this.state.debounceTimers[taskId];
+        }
+    }, 300);
 }
 ```
 
----
+### Security Best Practices
 
-## 📋 ESTIMATES MODULE - 100% COMPLETE ✅
-
-### Status: ✅ PRODUCTION READY
-
-**Features Implemented:**
-- Full CRUD operations (create, read, update, delete)
-- Lead linking with searchable dropdown
-- Line items table with auto-sum totals
-- Photo upload (3 max) with click-to-enlarge lightbox
-- Status workflow (draft → sent → accepted/rejected)
-- Batch operations (mark sent, mark accepted, delete multiple)
-- Professional PDF client copy download
-- Instant modal close (no loading states)
-- Search and filtering
-- Status statistics
-
-**Recent Changes (Previous Session):**
-- ✅ Fixed view modal display (added missing overlay CSS)
-- ✅ Made modal 30% narrower (900px → 630px)
-- ✅ Added click-to-enlarge photo lightbox
-- ✅ Moved total box to left alignment
-- ✅ Reduced title max length from 100 to 50 characters
-- ✅ Removed duplicate estimate counter
-- ✅ Moved "Edit Multiple" button to toolbar
-- ✅ Instant modal close without success popups
-- ✅ Optimized all batch operations (1 API call instead of N)
-- ✅ Added professional PDF client copy download
-
-**PDF Client Copy Features:**
-- Beautiful branded header with estimate number
-- Client contact information
-- Description and line items table
-- Total with large bold styling
-- Photos in 2-column grid
-- Terms & conditions
-- **NO internal notes** (client-facing only)
-- Auto-opens print dialog for PDF save
-
-**Batch Operations (Optimized):**
+**XSS Prevention:**
 ```javascript
-// All batched to single API calls
-API.batchUpdateEstimates(ids, updates)  // Mark sent/accepted
-API.batchDeleteEstimates(ids)           // Delete multiple
+// Always escape user input
+const safeName = API.escapeHtml(lead.name);
+const safeNotes = API.escapeHtml(lead.notes);
+
+container.innerHTML = `<div>${safeName}</div>`;
 ```
 
-**Database Columns:**
-```sql
--- estimates table
-id              UUID PRIMARY KEY
-user_id         UUID REFERENCES users(id)
-lead_id         UUID REFERENCES leads(id)
-estimate_number TEXT UNIQUE
-title           TEXT NOT NULL (50 char limit)
-description     TEXT
-line_items      JSONB DEFAULT '[]'
-total_price     NUMERIC DEFAULT 0
-photos          JSONB DEFAULT '[]' (3 max)
-status          TEXT DEFAULT 'draft'
-expires_at      TIMESTAMPTZ
-sent_at         TIMESTAMPTZ
-accepted_at     TIMESTAMPTZ
-rejected_at     TIMESTAMPTZ
-terms           TEXT
-notes           TEXT (internal only)
-created_at      TIMESTAMPTZ
-updated_at      TIMESTAMPTZ
-```
+**RLS Enforcement:**
+- All DB queries automatically filtered by `user_id` via RLS policies
+- Never query without user context
+- Never trust client-side validation alone
 
-**Ready for Jobs Integration:**
-- Estimates module is fully built and ready
-- Jobs module can reference `estimate_id`
-- Convert-to-job workflow ready to implement
-- Photos can transfer to jobs as "before" photos
-
----
-
-## 💼 JOBS MANAGEMENT MODULE - 100% COMPLETE ✅
-
-### Status: ✅ PRODUCTION READY
-
-**Features Implemented:**
-- Full CRUD operations (create, read, update, delete)
-- Lead linking with searchable dropdown
-- Materials table with dynamic rows (50 max)
-- Crew members table with dynamic rows (20 max)
-- Photo upload (3 max) with type selection (before/during/after)
-- Live profit calculator with real-time updates
-- Deposit tracking (amount + paid status)
-- Status workflow (draft → scheduled → in_progress → completed → invoiced → paid)
-- Financial summary with revenue, costs, profit, and margin
-- Comprehensive view modal with all job details
-- Silent value capping to prevent database overflow
-- Live totals that update when adding/deleting rows
-
-**Recent Changes (Current Session):**
-- ✅ Fixed materials unit field to show placeholder ("pcs") instead of default value
-- ✅ Updated currency formatting to show 2 decimal places for labor rates
-- ✅ Created comprehensive view modal with financial summary, materials, crew, photos
-- ✅ Fixed live totals to update immediately when deleting material/crew rows
-- ✅ Changed last row deletion behavior to clear inputs instead of removing row
-- ✅ Implemented silent value capping at $99,999,999.99 (no error messages)
-- ✅ Database migration: NUMERIC(12,2) for inputs, NUMERIC(20,2) for calculated fields
-- ✅ All numeric fields automatically cap at max value without blocking user
-
-**Database Numeric Precision:**
-```sql
--- Input fields (user-entered values)
-material_cost            NUMERIC(12,2)  -- Max: $9,999,999,999.99
-labor_rate               NUMERIC(12,2)  -- Max: $9,999,999,999.99
-estimated_labor_hours    NUMERIC(12,2)  -- Max: 9,999,999,999.99 hours
-actual_labor_hours       NUMERIC(12,2)  -- Max: 9,999,999,999.99 hours
-other_expenses           NUMERIC(12,2)  -- Max: $9,999,999,999.99
-quoted_price             NUMERIC(12,2)  -- Max: $9,999,999,999.99
-deposit_amount           NUMERIC(12,2)  -- Max: $9,999,999,999.99
-
--- Calculated fields (higher precision to handle multiplication)
-total_cost               NUMERIC(20,2)  -- Handles: material + (hours * rate) + expenses
-profit                   NUMERIC(20,2)  -- Handles: final_price - total_cost
-profit_margin            NUMERIC(6,2)   -- Percentage: -999.99% to 999.99%
-```
-
-**Frontend Value Capping:**
-- All numeric inputs silently cap at $99,999,999.99
-- No error messages shown to user
-- Values exceeding max are automatically reduced
-- Applies to: all direct job fields, material items, crew member hours/rates
-- Database has 10x headroom ($9,999,999,999.99) to handle edge cases
-
-**Key Implementation Files:**
-- `/dashboard/scripts/JobsManagement.js` - Main jobs module (lines 3999-4028: value capping)
-- `/dashboard/shared/js/utils.js` - Updated formatCurrency to show 2 decimals (lines 115-123)
-
----
-
-## 🔢 DATABASE VALIDATION & FRONTEND ALIGNMENT
-
-### Critical Principle: Match Database Constraints with Frontend Validators
-
-**The Problem:**
-- Database has hard limits (NUMERIC precision, VARCHAR length, etc.)
-- If frontend doesn't validate first, users hit cryptic database errors
-- Poor UX: "numeric field overflow" means nothing to users
-
-**The Solution:**
-- **Frontend validates BEFORE database** - catch issues early with friendly messages
-- **Frontend caps values silently when appropriate** - no disruption to workflow
-- **Database has buffer room** - frontend max < database max for safety margin
-
-### Examples from Jobs Module
-
-**Numeric Field Overflow (SOLVED):**
+**Input Validation:**
 ```javascript
-// BEFORE: User hits database error
-// Input: 10,000,000,000 → Database: "precision 12, scale 2 must round to absolute value less than 10^10"
+// Validate on frontend AND backend
+function validateInput(data) {
+    if (!data.name || data.name.length > 100) {
+        throw new Error('Invalid name');
+    }
 
-// AFTER: Silent capping in frontend
-const MAX_VALUE = 99999999.99;  // Frontend cap
-const capValue = (value) => Math.min(Math.max(value, 0), MAX_VALUE);
-jobData.material_cost = capValue(jobData.material_cost);
+    if (data.email && !isValidEmail(data.email)) {
+        throw new Error('Invalid email');
+    }
 
-// Database: NUMERIC(12,2) = max $9,999,999,999.99 (10x buffer)
-// Result: User never sees error, value is safely capped
+    return true;
+}
 ```
 
-**Character Limits:**
+### Tier Limit Handling
+
+Check tier limits before operations:
+
 ```javascript
-// Estimates: title max 50 chars
-<input maxlength="50" />  // Frontend
-title TEXT NOT NULL CHECK(length(title) <= 50)  // Database
+async createItem(data) {
+    // Get tier limits
+    const profile = await API.getProfile();
+    const limits = API.getTierLimits(profile.user_type);
 
-// Goals: title max 35 chars
-<input maxlength="35" />  // Frontend
-title TEXT NOT NULL CHECK(length(title) <= 35)  // Database
+    // Check current count
+    const currentCount = this.state.data.length;
+
+    if (currentCount >= limits.items) {
+        window.SteadyUtils?.showToast(
+            `You've reached your limit of ${limits.items} items. Upgrade to Professional for more!`,
+            'error'
+        );
+        return;
+    }
+
+    // Create item
+    await API.createItem(data);
+}
 ```
 
-**Calculated Fields Need Higher Precision:**
-```sql
--- WRONG: All fields same precision
-labor_hours   NUMERIC(10,2)  -- Max: $99,999,999.99
-labor_rate    NUMERIC(10,2)  -- Max: $99,999,999.99
-labor_cost    NUMERIC(10,2) GENERATED AS (labor_hours * labor_rate) STORED
--- Problem: 99999999.99 * 99999999.99 = 9,999,999,998,000,000 (OVERFLOW!)
+### Module Registration
 
--- RIGHT: Calculated fields have higher precision
-labor_hours   NUMERIC(12,2)  -- Input field
-labor_rate    NUMERIC(12,2)  -- Input field
-labor_cost    NUMERIC(20,2) GENERATED AS (labor_hours * labor_rate) STORED
--- Solution: Can handle multiplication without overflow
+When creating a new module, register it in the navigation builder:
+
+**File:** `/dashboard/index.html`
+
+```javascript
+const moduleDefinitions = {
+    dashboard: { icon: 'layout-dashboard', label: 'Dashboard' },
+    leads: { icon: 'user-plus', label: 'Add Leads' },
+    pipeline: { icon: 'git-branch', label: 'Pipeline' },
+    tasks: { icon: 'list-checks', label: 'Tasks' },
+    // Add your new module here
+    mynewmodule: { icon: 'star', label: 'My New Module' },
+    settings: { icon: 'settings', label: 'Settings' }
+};
 ```
 
-### Best Practices Checklist
+**Add to Module Market:**
 
-When adding new fields with numeric/length constraints:
+**File:** `/dashboard/scripts/ModuleMarket.js`
 
-- [ ] **Define database constraint first** - Know the hard limit
-- [ ] **Set frontend limit lower** - Leave buffer room (10-20% margin)
-- [ ] **Add frontend validation** - Friendly error messages or silent capping
-- [ ] **Test with max values** - Try to break it with extreme inputs
-- [ ] **Document both limits** - In code comments and handoff doc
-- [ ] **Consider calculated fields** - Do they need higher precision?
-- [ ] **Choose validation strategy:**
-  - **Blocking validation** - For critical fields (payment amounts)
-  - **Silent capping** - For non-critical fields (descriptions, quantities)
-  - **Warning messages** - For fields that should be reviewed
-
-### Validation Strategy by Field Type
-
-**Money/Currency:**
-- Strategy: Silent capping with generous buffer
-- Example: Frontend caps at $99,999,999.99, database allows $9,999,999,999.99
-- Reason: Users shouldn't see errors for large (but reasonable) amounts
-
-**Text/Descriptions:**
-- Strategy: Character limit with counter
-- Example: "Description (250/500 characters)"
-- Reason: Users need to know when they're approaching limit
-
-**Critical Financial Fields:**
-- Strategy: Blocking validation with clear error
-- Example: "Payment amount cannot exceed invoice total"
-- Reason: Mistakes here have real consequences
-
-**Counts/Quantities:**
-- Strategy: Min/max with friendly message
-- Example: "Please enter a value between 1 and 1000"
-- Reason: Unreasonable values indicate user error
-
-### Migration Pattern for Numeric Fixes
-
-```sql
-BEGIN;
-
--- Drop generated columns (they reference columns we're changing)
-ALTER TABLE jobs
-    DROP COLUMN IF EXISTS total_cost,
-    DROP COLUMN IF EXISTS profit,
-    DROP COLUMN IF EXISTS profit_margin;
-
--- Update input fields to desired precision
-ALTER TABLE jobs
-    ALTER COLUMN material_cost TYPE NUMERIC(12, 2),
-    ALTER COLUMN labor_rate TYPE NUMERIC(12, 2),
-    -- ... other input fields ...
-
--- Recreate calculated fields with HIGHER precision
-ALTER TABLE jobs
-    ADD COLUMN total_cost NUMERIC(20, 2) GENERATED ALWAYS AS (
-        COALESCE(material_cost, 0) +
-        COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
-        COALESCE(other_expenses, 0)
-    ) STORED,
-    ADD COLUMN profit NUMERIC(20, 2) GENERATED ALWAYS AS (
-        COALESCE(final_price, 0) - total_cost
-    ) STORED;
-
-COMMIT;
+```javascript
+loadAvailableModules() {
+    this.state.availableModules = [
+        // ... existing modules
+        {
+            id: 'mynewmodule',
+            name: 'My New Module',
+            description: 'Does cool stuff',
+            icon: 'star',
+            tier: 'free', // or 'professional'
+            category: 'productivity',
+            enabled: false
+        }
+    ];
+}
 ```
-
-### Summary
-
-**Remember:**
-1. **Frontend validates first** - Users see friendly messages, not database errors
-2. **Frontend max < Database max** - Always leave buffer room
-3. **Calculated fields need extra precision** - Account for multiplication/aggregation
-4. **Choose appropriate strategy** - Block, cap, or warn based on field criticality
-5. **Test with extreme values** - Try to break it before users do
-
-**The result:**
-- ✅ No cryptic database errors for users
-- ✅ Smooth, professional UX
-- ✅ Data integrity maintained
-- ✅ Easy to reason about limits in code
 
 ---
 
-## 🗄️ DATABASE FUNCTIONS & TRIGGERS (CLEANED v5.0)
+## 📦 CLIENT-SIDE CACHING SYSTEM (AppCache)
 
-### Overview
-**Total Functions:** 13 (5 limit enforcement + 5 goal tracking + 3 admin)
-**Cleaned:** Removed 35+ deprecated functions referencing deleted columns
-**Security:** All tier limits enforced server-side (blocks console injection)
+**Location:** `/dashboard/shared/js/cache.js`
 
-### 1️⃣ Tier Limit Enforcement (5 Functions)
+### How It Works
+```javascript
+// Store data with TTL
+AppCache.set('leads', leadsData, 300000);  // 5 min TTL
 
-All limits enforced at database level via BEFORE INSERT triggers. Prevents users from bypassing frontend checks via browser console. Limits match API.js getTierLimits() exactly.
+// Retrieve cached data
+const cached = AppCache.get('leads');
+if (cached) {
+    console.log('Using cached data');
+    return cached;
+}
 
-#### `check_lead_limit()`
-- **Trigger:** `check_lead_limit_trigger` (BEFORE INSERT ON leads)
-- **Purpose:** Enforces lead limits based on user tier
-- **Logic:** COUNT(*) → if >= max_allowed → RAISE EXCEPTION
-- **Limits:**
-  - Free: 50 leads max
-  - Professional/Trial: 5,000 leads max
-  - Admin: 999,999 leads max (unlimited)
-- **Error:** "Lead limit reached (50 max)"
+// Invalidate cache
+AppCache.invalidate('leads');  // Clear specific key
+AppCache.clear();  // Clear all cache
+```
 
-#### `check_task_limit()`
-- **Trigger:** `check_task_limit_trigger` (BEFORE INSERT ON tasks)
-- **Purpose:** Enforces task limits based on user tier
-- **Limits:**
-  - Free: 100 tasks max
-  - Professional/Trial: 10,000 tasks max
-  - Admin: 999,999 tasks max
-- **Error:** "Task limit reached (100 max)"
+### Cache Strategy
 
-#### `check_goal_limit()`
-- **Trigger:** `check_goal_limit_trigger` (BEFORE INSERT ON goals)
-- **Purpose:** Enforces goal limits based on user tier
-- **Limits:**
-  - Free: 10 goals max
-  - Professional/Trial: 1,000 goals max
-  - Admin: 999,999 goals max
-- **Error:** "Goal limit reached (10 max)"
+**High TTL (1 hour):**
+- User preferences
+- Settings data
+- Profile data
 
-#### `check_estimate_limit()`
-- **Trigger:** `check_estimate_limit_trigger` (BEFORE INSERT ON estimates)
-- **Purpose:** Enforces estimate limits based on user tier
-- **Limits:**
-  - Free: 10 estimates max
-  - Professional/Trial: 1,000 estimates max
-  - Admin: 999,999 estimates max
-- **Error:** "Estimate limit reached (10 max)"
+**Medium TTL (5 min):**
+- Lead lists
+- Task lists
+- Goal lists
+- Stats/counts
 
-#### `check_job_limit()`
-- **Trigger:** `check_job_limit_trigger` (BEFORE INSERT ON jobs)
-- **Purpose:** Enforces job limits based on user tier
-- **Limits:**
-  - Free: 10 jobs max
-  - Professional/Trial: 1,000 jobs max
-  - Admin: 999,999 jobs max
-- **Error:** "Job limit reached (10 max)"
+**Low TTL (1 min):**
+- Real-time data
+- Dashboard stats
 
-### 2️⃣ Goal Auto-Tracking (5 Functions)
+**No Cache:**
+- Single-item fetches (modals)
+- Real-time notifications
+- Form submissions
 
-Auto-updates goal progress when leads/jobs/tasks change.
+### Cache Invalidation
 
-#### `update_lead_goals()`
-- **Trigger:** `update_lead_goals_trigger` (AFTER INSERT OR DELETE ON leads)
-- **Purpose:** Auto-tracks "leads_created" goals
-- **Logic:**
-  - INSERT → increment current_value by 1
-  - DELETE → decrement current_value by 1 (min 0)
-- **Applies To:** Goals with goal_type='leads_created' AND auto_track=true
+**When to invalidate:**
+```javascript
+// After CREATE
+await API.createLead(data);
+AppCache.invalidate('leads');
 
-#### `update_job_goals()`
-- **Trigger:** `update_job_goals_trigger` (AFTER INSERT OR UPDATE ON jobs)
-- **Purpose:** Auto-tracks revenue/profit/jobs_completed goals
-- **Logic:** When job.status changes to 'completed':
-  - Revenue goals → add final_price or quoted_price
-  - Profit goals → add profit amount
-  - Jobs completed → increment by 1
-- **Applies To:** Goals with auto_track=true in date range
+// After UPDATE
+await API.updateLead(id, updates);
+AppCache.invalidate('leads');
 
-#### `check_goal_completion()`
-- **Trigger:** `check_goal_completion_trigger` (BEFORE UPDATE ON goals)
-- **Purpose:** Checks if goal hit target and handles completion
-- **Logic:**
-  - If current_value >= target_value:
-    - Recurring goals → reset to 0, increment completion_count
-    - One-time goals → set status='completed'
-- **Handles:** Both manual and auto-tracked goals
+// After DELETE
+await API.deleteLead(id);
+AppCache.invalidate('leads');
 
-#### `update_goal_task_progress()`
-- **Trigger:** `update_goal_task_progress_trigger` (AFTER INSERT OR UPDATE ON tasks)
-- **Purpose:** Auto-tracks task-based goals (e.g., "Complete 10 tasks this week")
-- **Logic:** When task.status changes to 'completed':
-  - Count all completed tasks linked to goal via goal_tasks table
-  - Update goal.current_value with new count
-- **Applies To:** Goals linked to tasks via goal_tasks junction table
+// After preference changes
+await API.updatePreferences(prefs);
+AppCache.invalidate('preferences');
+```
 
-#### `update_goal_on_task_link()`
-- **Trigger:** `update_goal_on_task_link_trigger` (AFTER INSERT ON goal_tasks)
-- **Purpose:** Recalculates goal progress when task is linked to goal
-- **Logic:** Count completed tasks linked to this goal, update current_value
-- **Use Case:** User links existing completed task to goal → goal progress updates
-
-#### `update_goal_on_task_unlink()`
-- **Trigger:** `update_goal_on_task_unlink_trigger` (AFTER DELETE ON goal_tasks)
-- **Purpose:** Recalculates goal progress when task is unlinked from goal
-- **Logic:** Count completed tasks still linked to this goal, update current_value
-- **Use Case:** User removes task from goal → goal progress recalculates
-
-### 3️⃣ Admin Tier Management (3 Functions)
-
-Secure tier changes via SQL Editor only.
-
-#### `protect_user_tier()`
-- **Trigger:** `protect_user_tier_trigger` (BEFORE UPDATE ON users)
-- **Purpose:** Blocks direct user_type changes (prevents self-upgrading)
-- **Security:** Users can't change their own tier via console injection
-- **Bypass:** Only admin_change_user_tier() and Stripe webhooks can change tier
-- **Error:** "Cannot modify user_type directly. Use admin_change_user_tier() or Stripe webhooks."
-
-#### `admin_change_user_tier(target_email, new_user_type, new_subscription_status)`
-- **Type:** Function (SECURITY DEFINER)
-- **Access:** Only callable from Supabase SQL Editor (requires dashboard login)
-- **Purpose:** Safely bypass protect_user_tier trigger for admin changes
-- **Logic:**
-  1. Disable protect_user_tier_trigger
-  2. Update user tier + subscription status + Stripe IDs
-  3. Re-enable protect_user_tier_trigger
-- **Usage:**
-  ```sql
-  SELECT admin_change_user_tier('user@example.com', 'professional', 'active');
-  SELECT admin_change_user_tier('user@example.com', 'free', NULL);
-  ```
-
-### 🗑️ Deprecated Functions (Removed)
-
-The following 35+ functions were removed in v5.0 cleanup:
-
-- `admin_set_user_tier()` → used current_lead_limit (deleted column)
-- `create_lead_with_increment()` → used current_leads counter (deleted column)
-- `downgrade_expired_trials()` → used current_lead_limit (deleted column)
-- `handle_new_user()` → used current_lead_limit (deleted column)
-- `upgrade_to_trial()` → used current_lead_limit (deleted column)
-- `accept_terms_of_service()` → never implemented in frontend
-- `delete_user_account()` → never implemented in frontend
-- `check_lead_duplicates()` → never implemented in frontend
-- `update_lead_safe()` → replaced with direct Supabase .update()
-- All `pg_trgm` extension functions → built-in PostgreSQL, not custom
-
-**Note:** `update_goal_task_progress()`, `update_goal_on_task_link()`, and `update_goal_on_task_unlink()` were initially removed but **RESTORED** because task-based goals are actively used in the app.
+**Performance Impact:**
+- Before caching: ~60,000 API calls/hour (500 concurrent users max)
+- After caching: ~3,000 API calls/hour (5,000+ concurrent users possible)
+- API reduction: 95%
 
 ---
 
 ## 🗄️ DATABASE SCHEMA
 
 ### `users` Table
-**Status:** ✅ PRODUCTION (v5.0 - Counter columns removed)
 ```sql
 id                      UUID PRIMARY KEY
 email                   TEXT NOT NULL
@@ -1205,21 +615,25 @@ trial_end_date          TIMESTAMPTZ
 stripe_customer_id      TEXT
 stripe_subscription_id  TEXT
 subscription_status     TEXT
-settings                JSONB
-goals                   JSONB (deprecated - use goals table)
-preferences             JSONB
+preferences             JSONB  -- Includes theme, modules_selected
 created_at              TIMESTAMPTZ
 updated_at              TIMESTAMPTZ
 tos_accepted_at         TIMESTAMPTZ
-tos_version             TEXT
-privacy_accepted_at     TIMESTAMPTZ
-last_active_at          TIMESTAMPTZ
-onboarding_completed    BOOL
 ```
-**Note:** Removed `current_lead_limit` and `current_leads` columns in v5.0. All limits now determined by `user_type` via API.js `getTierLimits()`.
+
+**Preferences Structure:**
+```json
+{
+  "theme": "slate",
+  "modules_selected": ["dashboard", "leads", "pipeline", "tasks", "goals", "jobs", "settings"]
+}
+```
+
+**Constraints:**
+- `preferences_size_check`: Max 100KB to prevent storage abuse
+- `preferences_modules_array_check`: `modules_selected` must be array or null
 
 ### `leads` Table
-**Status:** ✅ PRODUCTION
 ```sql
 id                  UUID PRIMARY KEY
 user_id             UUID REFERENCES users(id) ON DELETE CASCADE
@@ -1227,36 +641,17 @@ name                TEXT NOT NULL
 email               TEXT
 phone               TEXT
 company             TEXT
-job_title           TEXT
-website             TEXT
 status              TEXT
-type                TEXT
-source              TEXT
-platform            TEXT
-notes               TEXT
-quality_score       INT4
+type                TEXT  -- cold/warm/hot
+quality_score       INT4  -- 1-10
 potential_value     NUMERIC
 deal_value_actual   NUMERIC
-follow_up_date      DATE
-last_contact_date   DATE
+position            TEXT
 created_at          TIMESTAMPTZ
 updated_at          TIMESTAMPTZ
-lost_reason         TEXT
-archived_at         TIMESTAMPTZ
-position            TEXT
-department          TEXT
-deal_stage          TEXT
-next_action         TEXT
-win_probability     INT4
-linkedin_url        TEXT
-facebook_url        TEXT
-twitter_url         TEXT
-instagram_url       TEXT
-tags                TEXT[]
 ```
 
 ### `tasks` Table
-**Status:** ✅ PRODUCTION (Clean - No Goal Ladder)
 ```sql
 id                  UUID PRIMARY KEY
 user_id             UUID REFERENCES users(id) ON DELETE CASCADE
@@ -1269,268 +664,171 @@ task_type           TEXT
 priority            TEXT
 status              TEXT
 completed_at        TIMESTAMPTZ
-completion_notes    TEXT
 created_at          TIMESTAMPTZ
-updated_at          TIMESTAMPTZ
 ```
 
 ### `goals` Table
-**Status:** ✅ PRODUCTION (Clean - No Goal Ladder)
 ```sql
 id                UUID PRIMARY KEY
 user_id           UUID REFERENCES users(id) ON DELETE CASCADE
 title             TEXT NOT NULL
 description       TEXT
-goal_type         TEXT NOT NULL
 target_value      NUMERIC
 current_value     NUMERIC
-unit              TEXT
-period            TEXT NOT NULL
-start_date        DATE NOT NULL
-end_date          DATE NOT NULL
+goal_type         TEXT  -- manual, auto_leads, auto_deals, task_list
+tracking_metric   TEXT
+start_date        DATE
+end_date          DATE
 status            TEXT
+completed_at      TIMESTAMPTZ
 is_recurring      BOOL
-auto_track        BOOL
-color             TEXT
-completion_count  INTEGER DEFAULT 0  -- Tracks recurring completions ✅
+recurrence_type   TEXT  -- weekly, monthly, quarterly
+completion_count  INT4
 created_at        TIMESTAMPTZ
-updated_at        TIMESTAMPTZ
 ```
 
-### `goal_tasks` Table (Junction)
-**Status:** ✅ PRODUCTION
-**Purpose:** Links tasks to goals for task-based goal tracking
+### `estimates` Table
 ```sql
-id          UUID PRIMARY KEY DEFAULT gen_random_uuid()
-goal_id     UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE
-task_id     UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE
-created_at  TIMESTAMPTZ DEFAULT NOW()
-
--- Constraints
-UNIQUE(goal_id, task_id)  -- Prevents duplicate links
-
--- Indexes
-idx_goal_tasks_goal_id ON goal_tasks(goal_id)
-idx_goal_tasks_task_id ON goal_tasks(task_id)
-
--- RLS Policies
-- Users can only see/create/delete links for their own goals
-
--- Triggers
-- update_goal_task_progress(): Auto-updates goal.current_value when task status changes
-- update_goal_on_task_link(): Auto-updates goal.current_value when task is linked
-- update_goal_on_task_unlink(): Auto-updates goal.current_value when task is unlinked
-- See: database/migrations/goal_task_progress_trigger.sql
+id                UUID PRIMARY KEY
+user_id           UUID REFERENCES users(id) ON DELETE CASCADE
+lead_id           UUID REFERENCES leads(id) ON DELETE SET NULL
+estimate_number   TEXT UNIQUE
+title             TEXT
+line_items        JSONB
+subtotal          NUMERIC
+tax_rate          NUMERIC
+tax_amount        NUMERIC
+total_amount      NUMERIC
+status            TEXT  -- draft, sent, accepted, rejected
+photos            JSONB
+valid_until       DATE
+notes             TEXT
+created_at        TIMESTAMPTZ
 ```
 
 ### `jobs` Table
-**Status:** ✅ PRODUCTION (Schema complete, UI pending)
 ```sql
--- Core
-id                      UUID PRIMARY KEY
-user_id                 UUID REFERENCES users(id) ON DELETE CASCADE
-lead_id                 UUID REFERENCES leads(id) ON DELETE SET NULL
-estimate_id             UUID REFERENCES estimates(id) ON DELETE SET NULL  -- NEW
+id                UUID PRIMARY KEY
+user_id           UUID REFERENCES users(id) ON DELETE CASCADE
+estimate_id       UUID REFERENCES estimates(id)
+client_id         UUID REFERENCES clients(id)
+lead_id           UUID REFERENCES leads(id)
+job_number        TEXT UNIQUE
+title             TEXT
+description       TEXT
+status            TEXT  -- draft, in_progress, completed, invoiced, paid
+total_price       NUMERIC
+deposit_amount    NUMERIC
+deposit_paid      BOOL
+materials         JSONB
+crew              JSONB
+photos            JSONB
+start_date        DATE
+end_date          DATE
+hours_worked      NUMERIC
+invoice_number    TEXT
+payment_status    TEXT
+created_at        TIMESTAMPTZ
+```
 
--- Job Info
-title                   TEXT NOT NULL
-description             TEXT
-job_type                TEXT  -- installation, repair, maintenance, inspection, consultation, emergency, custom
-status                  TEXT DEFAULT 'draft'  -- draft, scheduled, in_progress, completed, invoiced, paid, cancelled
-priority                TEXT
+### `clients` Table
+```sql
+id                UUID PRIMARY KEY
+user_id           UUID REFERENCES users(id) ON DELETE CASCADE
+lead_id           UUID REFERENCES leads(id)
+name              TEXT NOT NULL
+email             TEXT
+phone             TEXT
+company           TEXT
+address           TEXT
+city              TEXT
+state             TEXT
+zip_code          TEXT
+notes             TEXT
+created_at        TIMESTAMPTZ
+```
 
--- Scheduling
-scheduled_date          DATE
-scheduled_time          TIME
-duration_hours          NUMERIC
-completed_at            TIMESTAMPTZ
+### `goal_tasks` Table (Task-based goals)
+```sql
+id                UUID PRIMARY KEY
+goal_id           UUID REFERENCES goals(id) ON DELETE CASCADE
+task_id           UUID REFERENCES tasks(id) ON DELETE CASCADE
+created_at        TIMESTAMPTZ
 
--- Financial - Labor
-estimated_labor_hours   NUMERIC  -- NEW (renamed from labor_hours)
-actual_labor_hours      NUMERIC  -- NEW
-labor_rate              NUMERIC
-
--- Financial - Costs
-material_cost           NUMERIC DEFAULT 0
-other_expenses          NUMERIC DEFAULT 0
-total_cost              NUMERIC GENERATED ALWAYS AS (
-    COALESCE(material_cost, 0) +
-    COALESCE(actual_labor_hours, 0) * COALESCE(labor_rate, 0) +
-    COALESCE(other_expenses, 0)
-) STORED
-
--- Financial - Revenue
-quoted_price            NUMERIC
-final_price             NUMERIC
-profit                  NUMERIC GENERATED ALWAYS AS (
-    COALESCE(final_price, 0) - total_cost
-) STORED
-profit_margin           NUMERIC GENERATED ALWAYS AS (
-    CASE WHEN COALESCE(final_price, 0) > 0
-    THEN ((COALESCE(final_price, 0) - total_cost) / COALESCE(final_price, 1)) * 100
-    ELSE 0 END
-) STORED
-
--- Deposits  -- NEW
-deposit_amount          NUMERIC DEFAULT 0
-deposit_paid            BOOLEAN DEFAULT FALSE
-deposit_paid_at         TIMESTAMPTZ
-
--- Payment
-invoice_number          TEXT
-payment_status          TEXT  -- pending, partial, paid, overdue
-
--- Additional
-location                TEXT
-notes                   TEXT
-
--- JSONB Fields
-materials               JSONB DEFAULT '[]'
--- [{"name": "2x4 lumber", "quantity": 50, "unit": "pcs", "cost_per_unit": 5.99, "supplier": "Home Depot", "total": 299.50}]
-
-crew_members            JSONB DEFAULT '[]'  -- NEW
--- [{"name": "John Doe", "hours": 8, "rate": 25, "total": 200}]
-
-photos                  JSONB DEFAULT '[]'  -- NEW (Supabase Storage URLs)
--- [{"url": "https://...", "type": "before|during|after", "caption": "...", "uploaded_at": "..."}]
-
--- Timestamps
-created_at              TIMESTAMPTZ DEFAULT NOW()
-updated_at              TIMESTAMPTZ DEFAULT NOW()
-
--- Indexes: user_id, lead_id, estimate_id, status, scheduled_date, payment_status, created_at
--- RLS: Users can only see/edit their own jobs
+-- Unique constraint: goal + task combo
+UNIQUE(goal_id, task_id)
 ```
 
 ---
 
-## 🔒 ROW LEVEL SECURITY (RLS) POLICIES
+## 🔒 ROW LEVEL SECURITY (RLS)
 
-**Status:** ✅ PRODUCTION - All tables secured with RLS
+**All tables have RLS enabled. Users can only access their own data.**
 
-### Policy Pattern
-All tables follow the same simple pattern:
-- **SELECT**: Users can only see their own data (`user_id = auth.uid()`)
-- **INSERT**: Users can only create data for themselves
-- **UPDATE**: Users can only update their own data
-- **DELETE**: Users can only delete their own data
+### Example RLS Policies
 
-### Tables with RLS Enabled
-- ✅ `users` - 2 policies (SELECT, UPDATE only)
-- ✅ `leads` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
-- ✅ `tasks` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
-- ✅ `goals` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
-- ✅ `goal_tasks` - 3 policies (SELECT, INSERT, DELETE)
-- ✅ `estimates` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
-- ✅ `jobs` - 4 policies (SELECT, INSERT, UPDATE, DELETE)
-
-### Policy Details
-
-**Users Table:**
 ```sql
--- Users can only see their own profile
-CREATE POLICY users_select_own ON public.users
-    FOR SELECT TO authenticated
-    USING (id = auth.uid());
+-- Leads table
+CREATE POLICY "Users can read own leads"
+ON leads FOR SELECT
+USING (auth.uid() = user_id);
 
--- Users can only update their own profile
-CREATE POLICY users_update_own ON public.users
-    FOR UPDATE TO authenticated
-    USING (id = auth.uid())
-    WITH CHECK (id = auth.uid());
+CREATE POLICY "Users can insert own leads"
+ON leads FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own leads"
+ON leads FOR UPDATE
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own leads"
+ON leads FOR DELETE
+USING (auth.uid() = user_id);
 ```
 
-**Standard Pattern (Leads, Tasks, Goals, Estimates, Jobs):**
-```sql
--- Example: leads_select_own
-CREATE POLICY leads_select_own ON public.leads
-    FOR SELECT TO authenticated
-    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
-
-CREATE POLICY leads_insert_own ON public.leads
-    FOR INSERT TO authenticated
-    WITH CHECK (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
-
-CREATE POLICY leads_update_own ON public.leads
-    FOR UPDATE TO authenticated
-    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()))
-    WITH CHECK (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
-
-CREATE POLICY leads_delete_own ON public.leads
-    FOR DELETE TO authenticated
-    USING (user_id IN (SELECT id FROM public.users WHERE id = auth.uid()));
-```
-
-**Junction Table Pattern (Goal Tasks):**
-```sql
--- Users can only see/modify links for their own goals
-CREATE POLICY goal_tasks_select_own ON public.goal_tasks
-    FOR SELECT TO authenticated
-    USING (
-        goal_id IN (
-            SELECT id FROM public.goals
-            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
-        )
-    );
-
-CREATE POLICY goal_tasks_insert_own ON public.goal_tasks
-    FOR INSERT TO authenticated
-    WITH CHECK (
-        goal_id IN (
-            SELECT id FROM public.goals
-            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
-        )
-    );
-
-CREATE POLICY goal_tasks_delete_own ON public.goal_tasks
-    FOR DELETE TO authenticated
-    USING (
-        goal_id IN (
-            SELECT id FROM public.goals
-            WHERE user_id IN (SELECT id FROM public.users WHERE id = auth.uid())
-        )
-    );
-```
-
-### Security Notes
-- All policies use `TO authenticated` - anonymous users have no access
-- RLS is enabled on all tables - no data leaks possible
-- Policies use subquery pattern for consistency
-- Junction tables inherit security from parent (goals)
-- No BYPASS RLS permissions granted to any role
-
-### Verification Query
-```sql
--- Run this to verify all policies are active
-SELECT tablename, COUNT(*) as policy_count
-FROM pg_policies
-WHERE schemaname = 'public'
-GROUP BY tablename
-ORDER BY tablename;
-```
-
-**Expected Results:**
-- users: 2 policies
-- leads: 4 policies
-- tasks: 4 policies
-- goals: 4 policies
-- goal_tasks: 3 policies
-- estimates: 4 policies
-- jobs: 4 policies
+**Same pattern applied to:**
+- tasks, goals, estimates, jobs, clients, goal_tasks
 
 ---
 
-## 🔌 API REFERENCE (v5.0 - Clean)
+## 🛡️ TIER VALIDATION TRIGGER
+
+**Location:** `MIGRATION_tier_validation_trigger.sql`
+
+**Purpose:** Prevents users from bypassing client-side tier restrictions by directly updating their `preferences` JSONB field via dev console or API calls.
+
+**What It Does:**
+- Runs **BEFORE UPDATE** on `users` table
+- Validates `preferences.modules_selected` and `preferences.theme` on every update
+- Blocks unauthorized tier access with database errors
+
+**Tier Arrays (Must Match API.js):**
+```sql
+admin_modules := ARRAY['notes'];
+pro_modules := ARRAY['reports', 'integrations', 'teams'];
+admin_themes := ARRAY['founders-edition', 'joshs-style'];
+pro_themes := ARRAY['slate', 'minimal-red', 'whiteout'];
+```
+
+**Validation Logic:**
+- ❌ Free user tries pro module/theme → Error: "Requires Professional plan"
+- ❌ Free user tries admin module/theme → Error: "In Early Access, requires admin tier"
+- ❌ Pro user tries admin module/theme → Error: "In Early Access, requires admin tier"
+- ✅ Pro user tries pro module/theme → Allowed
+- ✅ Admin user tries anything → Allowed (full access)
+
+**Security:**
+- Cannot be bypassed via client-side dev console
+- Enforced at database level (most secure)
+- Synced with `API.js` tier validation (client UX + server security)
+
+**Migration File:** `/MIGRATION_tier_validation_trigger.sql`
+
+---
+
+## 🔌 API REFERENCE
 
 **Location:** `/dashboard/shared/js/api.js`
-
-### Auth
-```javascript
-API.login(email, password)
-API.logout()
-API.register(email, password)
-API.upgradeToTrial()
-```
 
 ### Leads
 ```javascript
@@ -1551,120 +849,105 @@ API.updateTask(id, updates)
 API.deleteTask(id)
 API.completeTask(id, notes)
 API.batchCompleteTasks(ids, notes)
+API.batchDeleteTasks(ids)
 ```
 
 ### Goals
 ```javascript
-API.getGoals(status)             // Get all goals
-API.createGoal(data)             // Create new goal
-API.updateGoal(id, updates)      // Update existing goal
-API.deleteGoal(id)               // Delete goal
-API.updateGoalProgress(id, value) // Manually update progress
-API.getGoalProgress()            // Get all goals with calculated progress
-API.checkGoalCompletion()        // Check and auto-complete goals
-API.getGoalById(goalId)          // Get single goal by ID
+API.getGoals(status)
+API.createGoal(data)
+API.updateGoal(id, updates)
+API.deleteGoal(id)
+API.updateGoalProgress(id, value)
+API.checkGoalCompletion()
+API.batchUpdateGoals(ids, updates)
+API.batchDeleteGoals(ids)
 
-// Task-based goal tracking
-API.linkTasksToGoal(goalId, taskIds)    // Link existing tasks to goal
-API.createTaskForGoal(goalId, taskData) // Create and link new task
-API.batchCreateTasksForGoal(goalId, tasksArray) // Batch create tasks
-API.getGoalTasks(goalId)                // Get all tasks for a goal
-API.getTaskGoalProgress(goalId)         // Get completion stats
-API.unlinkTaskFromGoal(goalId, taskId)  // Remove task-goal link
-
-// Batch operations ✅
-API.batchUpdateGoals(ids, updates)  // Update multiple goals at once
-API.batchDeleteGoals(ids)           // Delete multiple goals at once
+// Task-based goals
+API.linkTasksToGoal(goalId, taskIds)
+API.createTaskForGoal(goalId, taskData)
+API.getGoalTasks(goalId)
+API.unlinkTaskFromGoal(goalId, taskId)
 ```
 
-### Jobs
+### Estimates
 ```javascript
-// Core CRUD
-API.getJobs(filters)                // Get all jobs with optional filters
-API.getJobById(id)                  // Get single job with full details
-API.createJob(data)                 // Create new job
-API.updateJob(id, updates)          // Update existing job
-API.deleteJob(id)                   // Delete job
-API.completeJob(id, finalData)      // Mark job complete + set final price/hours
-API.getJobsByLead(leadId)           // Get all jobs for a specific lead
-API.getJobStats()                   // Get revenue/profit stats
-API.getJobProfitability()           // Get jobs sorted by profit
-API.getJobsByPaymentStatus(status)  // Filter by payment status
-API.getScheduledJobs(start, end)    // Get jobs in date range
+API.getEstimates(filters)
+API.createEstimate(data)
+API.updateEstimate(id, updates)
+API.deleteEstimate(id)
+API.batchUpdateEstimates(ids, updates)
+API.batchDeleteEstimates(ids)
+API.generateEstimateNumber()  // EST-2025-001
 
-// Deposits
-API.markDepositPaid(jobId, amount)  // Mark deposit as paid
-API.updateDeposit(jobId, amount)    // Update deposit amount
-
-// Materials
-API.addJobMaterial(jobId, material) // Add material to job
-API.updateJobMaterials(jobId, arr)  // Update all materials
-API.removeJobMaterial(jobId, matId) // Remove material from job
-
-// Crew
-API.addJobCrewMember(jobId, crew)   // Add crew member to job
-API.updateJobCrew(jobId, arr)       // Update all crew members
-API.removeJobCrewMember(jobId, id)  // Remove crew member from job
-
-// Photos (Supabase Storage)
-API.uploadJobPhoto(file, jobId, type)     // Upload photo to storage
-API.addJobPhoto(jobId, photo)             // Add photo URL to job
-API.updateJobPhotos(jobId, arr)           // Update all photos
-API.removeJobPhoto(jobId, photoId)        // Remove photo from job
-API.deleteJobPhotoFile(photoUrl)          // Delete file from storage
-
-// Invoice & Payment
-API.updateJobInvoice(jobId, num, status)  // Update invoice details
-API.markJobPaid(jobId)                    // Mark job as fully paid
-API.generateInvoiceNumber()               // Generate unique invoice# (INV-2025-001)
-```
-
-### Estimates ✅
-```javascript
-// Core CRUD
-API.getEstimates(filters)           // Get all estimates
-API.getEstimateById(id)             // Get single estimate
-API.createEstimate(data)            // Create new estimate
-API.updateEstimate(id, updates)     // Update estimate
-API.deleteEstimate(id)              // Delete estimate
-API.generateEstimateNumber()        // EST-2025-001
-
-// Photo management
+// Photos
 API.uploadEstimatePhoto(file, estimateId, caption)
 API.addEstimatePhoto(estimateId, photoData)
 API.removeEstimatePhoto(estimateId, photoId)
 API.compressImage(file, maxWidth, quality)
-
-// Status management
-API.markEstimateSent(estimateId)
-API.markEstimateAccepted(estimateId)
-API.markEstimateRejected(estimateId)
-
-// Batch operations ✅
-API.batchUpdateEstimates(ids, updates)  // Update multiple estimates
-API.batchDeleteEstimates(ids)           // Delete multiple estimates
-
-// Convert to job (future)
-API.convertEstimateToJob(estimateId)    // Create job from accepted estimate
 ```
 
-### Preferences
+### Jobs
+```javascript
+API.getJobs(filters)
+API.getJobById(id)
+API.createJob(data)
+API.updateJob(id, updates)
+API.deleteJob(id)
+API.completeJob(id, finalData)
+API.generateInvoiceNumber()  // INV-2025-001
+
+// Materials/Crew
+API.updateJobMaterials(jobId, arr)
+API.updateJobCrew(jobId, arr)
+
+// Photos
+API.uploadJobPhoto(file, jobId, type)
+API.updateJobPhotos(jobId, arr)
+API.deleteJobPhotoFile(photoUrl)
+
+// Deposits
+API.markDepositPaid(jobId, amount)
+API.updateDeposit(jobId, amount)
+```
+
+### Clients
+```javascript
+API.getClients()
+API.createClient(data)
+API.updateClient(id, updates)
+API.deleteClient(id)
+```
+
+### Preferences & Themes
 ```javascript
 API.getPreferences()
 API.updatePreferences(prefs)
-API.toggleFeature(name, enabled)
+API.updateTheme(themeName)  // Tier validation
+API.getTheme()  // Falls back to 'light' if Pro theme on Free tier
+API.updateModules(moduleIds)  // Tier validation
+API.getEnabledModules()  // Filtered by tier
+```
+
+### Utilities
+```javascript
+API.getTierLimits(userType)  // Get limits for tier
+API.getProfile()  // Get current user profile
+API.escapeHtml(str)  // XSS prevention
+API.getStatusColor(status)  // Get color for status badge
 ```
 
 ---
 
-## 📂 COMPLETE FILE STRUCTURE
+## 📂 FILE STRUCTURE
+
 ```
 /steadymanager
-├── server.js                          ✅ Node.js + Stripe + Cron
-├── .env                               ✅ Secrets
+├── server.js                          # Node.js + Stripe + Cron
+├── .env                               # Secrets
 │
 ├── /public
-│   ├── /auth                          ✅ ALL COMPLETE
+│   ├── /auth                          # Login, register, password reset
 │   │   ├── login.html
 │   │   ├── register.html
 │   │   ├── callback.html
@@ -1672,1649 +955,116 @@ API.toggleFeature(name, enabled)
 │   │   ├── reset-password.html
 │   │   └── resend-verification.html
 │   │
-│   └── /dashboard
-│       ├── index.html                 ✅ Router
-│       │
-│       ├── /shared
-│       │   └── /js
-│       │       ├── supabase.js        ✅ Client
-│       │       ├── api.js             ✅ v5.0 (Clean - No Goal Ladder)
-│       │       └── utils.js           ✅ Toast, validation
-│       │
-│       └── /tiers
-│           ├── /free                  ✅ PRODUCTION READY
-│           │   ├── index.html
-│           │   └── /scripts
-│           │       ├── Dashboard.js
-│           │       ├── AddLead.js
-│           │       ├── Pipeline.js
-│           │       ├── Scheduling.js
-│           │       └── Settings.js
-│           │
-│           └── /professional          🔨 90% COMPLETE
-│               ├── index.html         ✅ Loads modules
-│               └── /scripts
-│                   ├── Shell.js       ✅ Navigation
-│                   ├── Dashboard.js   ✅ Complete
-│                   ├── Leads.js       ✅ Complete
-│                   ├── Pipeline.js       ✅ Complete
-│                   ├── Scheduling.js    ✅ Complete
-│                   ├── Goals.js         ✅ 100% COMPLETE (recurring + completion count)
-│                   ├── Estimates.js     ✅ 100% COMPLETE (batch ops + PDF export)
-│                   ├── Jobs.js          ✅ NEW - Parent Hub Container (3 sections)
-│                   ├── JobsManagement.js ✅ 100% COMPLETE (actual jobs functionality)
-│                   ├── Clients.js       ✅ Placeholder (accessible via Jobs Hub only)
-│                   └── Settings.js      🔨 Needs Preferences tab
+│   ├── /dashboard                     # Universal dashboard (all tiers)
+│   │   ├── index.html                 # Main shell with loading overlay
+│   │   │
+│   │   ├── /scripts                   # Module files
+│   │   │   ├── Dashboard.js
+│   │   │   ├── Leads.js
+│   │   │   ├── Pipeline.js
+│   │   │   ├── Scheduling.js
+│   │   │   ├── Goals.js
+│   │   │   ├── Estimates.js
+│   │   │   ├── JobsManagement.js
+│   │   │   ├── Clients.js
+│   │   │   ├── Jobs.js              # Hub
+│   │   │   ├── Settings.js
+│   │   │   └── ModuleMarket.js
+│   │   │
+│   │   └── /shared                    # Shared utilities
+│   │       ├── /js
+│   │       │   ├── supabase.js       # Supabase client
+│   │       │   ├── api.js            # API wrapper
+│   │       │   ├── utils.js          # Utilities
+│   │       │   ├── cache.js          # AppCache
+│   │       │   └── analytics.js      # Usage tracking
+│   │       └── /css
+│   │           └── themes.css        # Theme system
+│   │
+│   └── /pages                         # Static pages
+│       ├── about.html
+│       ├── pricing.html
+│       ├── terms.html
+│       └── privacy.html
+│
+└── /docs
+    ├── HANDOFF.md                     # This file
+    ├── CLAUDE.md                      # Claude Code instructions
+    ├── SCALING_PLAN.md                # Module marketplace architecture
+    └── README.md                      # Public overview
 ```
 
 ---
 
-## 🎨 DESIGN SYSTEM
+## 🔐 SECURITY NOTES
 
-### Colors (CSS Variables)
-```css
---primary: #667eea
---success: #10b981
---warning: #f59e0b
---danger: #ef4444
---background: #f8fafc (light) / #0a0f1c (dark)
---surface: #ffffff (light) / #1a1a2e (dark)
---text-primary: #0f172a (light) / #f1f5f9 (dark)
---border: #e2e8f0 (light) / #374151 (dark)
-```
+### XSS Protection
+- All user input escaped via `API.escapeHtml()`
+- CSP headers block inline scripts
+- Never use `innerHTML` with raw user data
 
-### Typography
-- **Titles:** 2.5rem, 900 weight, gradient
-- **Subtitles:** 1.125rem, 600 weight
-- **Body:** 1rem, 500 weight
-- **Small:** 0.875rem, 600 weight
+### RLS Enforcement
+- All tables have RLS policies
+- Users can only access their own data
+- Server-side validation on all operations
 
-### Spacing
-- **Container padding:** 2rem
-- **Card padding:** 1.75rem
-- **Gap between cards:** 1.5rem
-- **Section margins:** 3rem
+### Tier Enforcement
+- **Client-side (API.js):** Validates modules/themes, shows locks/badges (UX)
+- **Database Trigger:** `validate_preferences_tier()` prevents bypass attempts
+- **Tier Levels:** Free, Professional, Admin (Early Access)
+- **Protected Resources:**
+  - Pro Themes: slate, minimal-red, whiteout
+  - Admin Themes: founders-edition, joshs-style
+  - Pro Modules: reports, integrations, teams (future)
+  - Admin Modules: notes (Early Access testing)
 
-### Animations
-- **Duration:** 0.3s (fast), 0.6s (normal)
-- **Easing:** cubic-bezier(0.4, 0, 0.2, 1)
-- **Fade in:** opacity 0 → 1
-- **Slide up:** translateY(30px) → 0
+### Authentication
+- Email verification required
+- No account enumeration
+- Secure password reset flow
+- ToS acceptance tracked
 
 ---
 
-## 🚀 WHAT'S LEFT BEFORE LAUNCH
+## 🚀 DEPLOYMENT
 
-### High Priority (Before Launch)
-1. **Settings Preferences Tab** (2-3 hours)
-   - Theme toggle (light/dark)
-   - Default view selector
-   - Windowing toggle
-   - Save/load from database
+**Platform:** Railway
 
-2. **Jobs Module** (5-6 hours)
-   - List view with financial summary
-   - Add/edit job forms
-   - Link to leads
-   - Profit calculations
-
-3. **Mobile Optimization** (5-6 hours) 🔥 CRITICAL
-   - Test on iPhone 12 (390px)
-   - Touch targets ≥ 44px
-   - No horizontal scroll
-   - Disable windowing on mobile
-
-### Medium Priority (Post-Launch v1.1)
-1. **Pro Info Fields** (3-4 hours)
-   - Position, department in AddLead
-   - Social links (LinkedIn, Twitter, etc)
-   - Pro Info sidebar in Pipeline
-
-2. **Enhanced Dashboard Stats** (2-3 hours)
-   - Pipeline value widgets
-   - Weighted pipeline
-   - Smart insights
-
-3. **Theme System** (2-3 hours)
-   - Apply dark mode CSS to all modules
-   - Persist theme selection
-   - Smooth transitions
-
-### Low Priority (v1.2+)
-1. **Command Palette** (4-5 hours)
-2. **Quick Panels** (3-4 hours)
-3. **Keyboard Shortcuts** (2-3 hours)
-4. **Advanced Filters** (3-4 hours)
-
----
-
-## ⚠️ CRITICAL NOTES
-
-### Before Launch Checklist
-- 🔴 Complete Settings Preferences tab (2-3 hours)
-- 🔴 Build Jobs module (5-6 hours)
-- 🔴 Mobile optimization (5-6 hours)
-- 🔴 Security audit (XSS, SQL injection, RLS)
-- 🔴 Trial upgrade/downgrade testing
-- 🔴 Performance testing (page load, API calls)
-
-### Known Issues
-- ❌ Jobs module not built
-- ❌ Settings Preferences tab not built
-- ❌ Mobile not tested
-- ⚠️ Settings module still has emojis (needs icon update)
-
-### Recent Wins (v11.0)
-- ✅ Goal Ladder completely removed (database + API + UI)
-- ✅ Recurring goals track completion count
-- ✅ Completion badge shows on recurring goals
-- ✅ Goal title ellipsis prevents overflow
-- ✅ Unit dropdown styled with custom arrow
-- ✅ Goals module 100% complete and production ready
-- ✅ API cleaned up - removed 8 Goal Ladder functions
-- ✅ Database optimized - removed 2 columns + trigger
-
----
-
-## 📊 PROGRESS TRACKER
-
-**Overall System:** 90% Complete
-
-### Backend: 100% ✅
-- Database schema: 100%
-- RLS policies: 100%
-- Triggers: 100%
-- Functions: 100%
-
-### API: 100% ✅
-- Auth: 100%
-- Leads: 100%
-- Tasks: 100%
-- Goals: 100%
-- Jobs: 100%
-
-### Free Tier: 100% ✅
-
-### Professional Tier: 90%
-**By Module:**
-- Dashboard: 95% (needs dark mode polish)
-- AddLead: 95% (needs Pro Info fields)
-- Pipeline: 95% (needs Pro Info sidebar)
-- Scheduling: 100% ✅
-- Goals: 100% ✅
-- Estimates: 100% ✅
-- Settings: 70% (needs Preferences tab + icons)
-- Jobs: 0%
-
-### Time to Launch: 10-15 hours
-
-**Breakdown:**
-- Jobs module: 5-6 hours
-- Settings Preferences: 2-3 hours
-- Mobile optimization: 5-6 hours
-- Testing & polish: 3-5 hours
-
----
-
-## 🎯 IMMEDIATE NEXT STEPS
-
-### Session 1: Jobs Module Foundation (2-3 hours)
-1. Create `Jobs.js` file
-2. Build basic CRUD interface
-3. Job list view with filters
-4. Add/edit job modal
-
-### Session 2: Jobs Financial Features (3 hours)
-1. Profit calculations (material + labor)
-2. Link jobs to leads
-3. Financial summary widgets
-4. Payment status tracking
-
-### Session 3: Settings Preferences (2-3 hours)
-1. Build Preferences tab UI
-2. Theme toggle (light/dark)
-3. Default view selector
-4. Windowing enable/disable
-5. Save preferences to database
-
-### Session 4: Mobile Optimization (5-6 hours)
-1. Test on iPhone 12 (390px)
-2. Fix any layout issues
-3. Touch target optimization
-4. Disable windowing on mobile
-5. Performance testing
-
-### Session 5: Polish & Launch (3-5 hours)
-1. Security audit
-2. Cross-browser testing
-3. Performance optimization
-4. Bug fixes
-5. Deploy to production
-
----
-
-## 🔄 POST-LAUNCH OPTIMIZATION PHASE
-
-**Priority:** High (Before hitting 1000+ users)  
-**Estimated Time:** 8-12 hours total  
-**When:** After Jobs + Settings + Mobile complete
-
-This phase addresses performance bottlenecks and architectural improvements that aren't critical for launch but become essential at scale.
-
----
-
-### 1. Event Bus Implementation (3-4 hours)
-
-**Problem:** Modules are tightly coupled - they directly call each other's functions, creating spaghetti code as you add more features.
-
-**Solution:** Implement a pub/sub event system where modules broadcast changes instead of calling each other directly.
-
-#### Benefits:
-- **Decoupling:** Scheduling.js doesn't need to know Goals.js exists
-- **Easier debugging:** See all inter-module communication in one place
-- **Feature additions:** New modules just subscribe to existing events
-- **No circular dependencies:** Modules only know about event names (strings)
-
-#### Implementation Plan:
-
-**Step 1: Add EventBus to utils.js** (15 min)
-```javascript
-// Add to /dashboard/shared/js/utils.js
-
-const EventBus = {
-  events: {},
-  
-  emit(eventName, data) {
-    if (!this.events[eventName]) return;
-    console.log(`📢 EVENT: ${eventName}`, data); // dev mode logging
-    this.events[eventName].forEach(callback => callback(data));
-  },
-  
-  on(eventName, callback) {
-    if (!this.events[eventName]) this.events[eventName] = [];
-    this.events[eventName].push(callback);
-  },
-  
-  off(eventName, callback) {
-    if (!this.events[eventName]) return;
-    this.events[eventName] = this.events[eventName].filter(cb => cb !== callback);
-  },
-  
-  clear() {
-    this.events = {};
-  }
-};
-
-window.EventBus = EventBus;
+**Environment Variables:**
+```
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID=
+STRIPE_PROFESSIONAL_YEARLY_PRICE_ID=
+FRONTEND_URL=
 ```
 
-**Step 2: Update Goals.js** (1 hour)
+**Deploy Process:**
+1. Push to main branch
+2. Railway auto-deploys
+3. Cron jobs run automatically
 
-*Add to init() method:*
-```javascript
-// Listen for external task updates
-EventBus.on('task:completed', async (data) => {
-  await this.goals_loadData();
-  this.goals_render();
-});
+**Essential Commands:**
+```bash
+# Development
+npm install
+npm start  # Opens at localhost:3000
 
-EventBus.on('goal:completed', async (data) => {
-  window.SteadyUtils.showToast('🎉 Goal completed!', 'success');
-  await this.goals_loadData();
-  this.goals_render();
-});
+# Production mode locally
+npm run prod-local
+
+# Testing
+npm test  # Desktop tests
 ```
-
-*Update goals_updateProgress() method:*
-```javascript
-async goals_updateProgress(goalId, newValue) {
-    try {
-        await API.updateGoalProgress(goalId, newValue);
-        await API.checkGoalCompletion();
-        
-        // ADD THIS - broadcast to other modules
-        EventBus.emit('goal:progress_updated', { 
-            goalId, 
-            newValue 
-        });
-        
-        window.SteadyUtils.showToast('Progress updated!', 'success');
-        
-        await this.goals_loadData();
-        this.goals_render();
-
-    } catch (error) {
-        console.error('Update progress error:', error);
-        window.SteadyUtils.showToast('Failed to update progress', 'error');
-    }
-}
-```
-
-**Step 3: Update Scheduling.js** (30 min)
-
-*In completeTask() method:*
-```javascript
-async completeTask(taskId) {
-  const task = await API.completeTask(taskId);
-  
-  // OLD WAY (delete this):
-  // await API.checkGoalCompletion();
-  // Dashboard.refreshStats();
-  // Goals.refreshGoals();
-  
-  // NEW WAY (add this):
-  EventBus.emit('task:completed', { 
-    taskId
-  });
-  
-  // Goals and Dashboard auto-update now
-}
-```
-
-**Step 4: Update Dashboard.js** (30 min)
-
-*Add to init() method:*
-```javascript
-EventBus.on('task:completed', () => {
-  this.refreshStats();
-});
-
-EventBus.on('lead:created', () => {
-  this.refreshStats();
-});
-
-EventBus.on('goal:completed', (data) => {
-  this.showConfetti(); // celebrate wins 🎉
-  this.refreshStats();
-});
-```
-
-**Step 5: Update Jobs.js (when built)** (20 min)
-
-*Add to init() method:*
-```javascript
-EventBus.on('lead:converted', (data) => {
-  this.suggestJobCreation(data.leadId);
-});
-```
-
-#### Event Catalog:
-
-**Task Events:**
-- `task:created` - { taskId }
-- `task:completed` - { taskId }
-- `task:deleted` - { taskId }
-- `task:updated` - { taskId }
-
-**Goal Events:**
-- `goal:created` - { goalId }
-- `goal:completed` - { goalId, completionCount }
-- `goal:updated` - { goalId }
-- `goal:progress_updated` - { goalId, progress }
-
-**Lead Events:**
-- `lead:created` - { leadId }
-- `lead:converted` - { leadId }
-- `lead:status_changed` - { leadId, status }
-
-**Job Events (future):**
-- `job:created` - { jobId, leadId }
-- `job:completed` - { jobId, profit }
-
-#### Testing Checklist:
-- [ ] Complete task in Scheduling → Goals auto-updates
-- [ ] Complete task → Dashboard stats refresh
-- [ ] Complete goal → Dashboard shows celebration
-- [ ] Update goal → refresh works
-- [ ] No console errors
-- [ ] No memory leaks (EventBus.clear() on logout)
-
----
-
-### 2. Batch Operations ✅ COMPLETE
-
-**Status:** ✅ All batch operations implemented and optimized
-
-**What We Built:**
-
-All modules now use proper batch operations instead of sequential loops:
-
-**Leads Module:**
-- `API.batchUpdateLeads(ids, updates)` ✅
-- `API.batchDeleteLeads(ids)` ✅
-
-**Tasks/Scheduling Module:**
-- `API.batchCreateTasks(tasksArray)` ✅
-- `API.batchUpdateTasks(ids, updates)` ✅
-- `API.batchDeleteTasks(ids)` ✅
-- `API.batchCompleteTasks(ids, notes)` ✅
-- `API.batchCreateTasksForGoal(goalId, tasksArray)` ✅
-
-**Goals Module:**
-- `API.batchUpdateGoals(ids, updates)` ✅
-- `API.batchDeleteGoals(ids)` ✅
-
-**Estimates Module:**
-- `API.batchUpdateEstimates(ids, updates)` ✅
-- `API.batchDeleteEstimates(ids)` ✅
-
-**Performance Gains:**
-
-| Operation | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| Create 50 tasks | ~15 seconds | ~0.5 seconds | **30x faster** |
-| Update 20 estimates | ~6 seconds | ~0.3 seconds | **20x faster** |
-| Delete 10 goals | ~3 seconds | ~0.2 seconds | **15x faster** |
-
-**Implementation Example:**
-```javascript
-// OLD WAY - Sequential loops (slow)
-for (const id of selectedIds) {
-  await API.deleteEstimate(id);  // 10 API calls
-}
-
-// NEW WAY - Single batch call (fast)
-await API.batchDeleteEstimates(selectedIds);  // 1 API call
-```
-
-**Testing Checklist:**
-- [x] Batch create 50 tasks completes in <1 second ✅
-- [x] Batch update works correctly ✅
-- [x] Database triggers still fire ✅
-- [x] RLS policies still enforced ✅
-- [x] All modules use batch operations ✅
-
-**Result:** All batch operations are production-ready and 10-30x faster than before.
-
----
-
-### 3. Server-Side Task Search (1-2 hours)
-
-**Problem:** Searching 5000 tasks in the browser = UI lag.
-
-**Solution:** Let PostgreSQL do the heavy lifting with full-text search.
-
-#### Implementation Plan:
-
-**Step 1: Add search function to API** (30 min)
-
-*Add to api.js:*
-```javascript
-/**
- * Server-side task search with fuzzy matching
- * Uses PostgreSQL's pg_trgm extension (already enabled)
- */
-static async searchTasks(query, limit = 50) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-  
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('user_id', user.id)
-    .textSearch('title', query, { type: 'websearch' }) // uses pg_trgm
-    .limit(limit);
-  
-  if (error) throw error;
-  
-  return data;
-}
-```
-
-**Step 2: Update Scheduling.js** (30 min)
-
-*Add search with debouncing:*
-```javascript
-// Add to Scheduling
-let searchTimeout;
-function handleSearchInput(e) {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(async () => {
-    const results = await API.searchTasks(e.target.value);
-    renderSearchResults(results);
-  }, 300); // wait 300ms after typing stops
-}
-```
-
-#### Testing Checklist:
-- [ ] Search 5000 tasks returns results in <500ms
-- [ ] Fuzzy search works ("desing" finds "design")
-- [ ] No duplicate searches while typing
-- [ ] Works with special characters
-
----
-
-### 4. Mobile Optimization Enhancements (1-2 hours)
-
-**Problem:** Large datasets on mobile = scroll hell + performance issues.
-
-**Solution:** Responsive configs + virtual scrolling for large lists.
-
-#### Implementation Plan:
-
-**Step 1: Add responsive configs** (30 min)
-
-*Add to each module:*
-```javascript
-getResponsiveConfig() {
-  const width = window.innerWidth;
-  
-  if (width < 768) {
-    // Mobile
-    return {
-      itemsPerPage: 20,
-      cardSize: 'small',
-      fontSize: 14
-    };
-  } else if (width < 1024) {
-    // Tablet
-    return {
-      itemsPerPage: 40,
-      cardSize: 'medium',
-      fontSize: 15
-    };
-  } else {
-    // Desktop
-    return {
-      itemsPerPage: 100,
-      cardSize: 'large',
-      fontSize: 16
-    };
-  }
-}
-```
-
-**Step 2: Implement pagination for mobile** (1 hour)
-
-*For lists with 100+ items on mobile:*
-```javascript
-renderTaskList() {
-  const config = this.getResponsiveConfig();
-  const page = this.state.currentPage || 1;
-  const start = (page - 1) * config.itemsPerPage;
-  const end = start + config.itemsPerPage;
-  const visibleTasks = this.state.tasks.slice(start, end);
-  
-  // Render only visible tasks
-  return visibleTasks.map(task => this.renderTaskCard(task));
-}
-```
-
-#### Testing Checklist:
-- [ ] Works on iPhone 12 (390px)
-- [ ] Works on iPad (768px)
-- [ ] Rotation doesn't break layout
-- [ ] Touch targets ≥ 44px
-- [ ] No horizontal scroll
-- [ ] Large lists don't lag
-
----
-
-## 📋 OPTIMIZATION CHECKLIST
-
-Run this checklist AFTER completing Jobs, Settings, and Mobile:
-
-### Performance:
-- [ ] EventBus implemented in utils.js
-- [ ] All modules emit events instead of direct calls
-- [ ] Batch task operations in API
-- [ ] Server-side task search with debouncing
-- [ ] Mobile optimization (responsive configs)
-- [ ] Pagination for large lists on mobile
-
-### Testing:
-- [ ] Complete task in Scheduling → all modules update
-- [ ] Create 50 tasks completes in <1 second
-- [ ] Search 5000 tasks returns in <500ms
-- [ ] Test on iPhone 12, iPad, desktop
-- [ ] No console errors in any module
-- [ ] No memory leaks (test EventBus cleanup)
-
-### Code Quality:
-- [ ] Remove all direct module-to-module calls
-- [ ] Replace individual API calls with batch operations
-- [ ] Add debouncing to all search inputs
-- [ ] Document event catalog in comments
-
-### Before Production:
-- [ ] Stress test: 5000 leads + 10000 tasks
-- [ ] Mobile performance test (Lighthouse score >90)
-- [ ] EventBus logging disabled in production
-- [ ] All console.logs removed
-
----
-
-## 🎯 WHY THIS MATTERS
-
-**Without these optimizations:**
-- Creating 50 tasks = 15 seconds ❌
-- Modules tightly coupled = hard to add features ❌
-- Mobile = laggy mess ❌
-- Search 5000 tasks = browser freeze ❌
-
-**With these optimizations:**
-- Creating 50 tasks = 0.5 seconds ✅
-- Modules loosely coupled = easy feature additions ✅
-- Mobile = smooth 60fps ✅
-- Search 5000 tasks = instant results ✅
-
----
-
-**Total Time Investment:** 8-12 hours  
-**Performance Gain:** 10-30x faster operations  
-**Code Quality Gain:** Much easier to maintain and extend  
-**User Experience Gain:** Professional-grade performance
-
-**Priority Level:** Do this BEFORE launching to 100+ users, or you'll be refactoring under pressure.
-
----
-
-## 🏗️ TIER DEVELOPMENT STRATEGY
-
-### Current Phase: Building Pro Tier Foundation
-
-**Philosophy:** Build feature-complete Pro tier first, then adapt for other tiers.
-
-### Phase 1: Pro Tier Development (CURRENT)
-**Goal:** Create the most feature-rich, powerful version with ALL functionality
-
-**Modules to Build:**
-1. ✅ **Goals** - Manual, auto-tracked, task-based, recurring goals (COMPLETE)
-2. ✅ **Estimates** - Quote/estimate builder with client acceptance and auto-job creation (COMPLETE)
-3. 🔨 **Jobs** - Job management with profit tracking, cost calculation, and lead linking
-4. 🔨 **Settings Preferences** - Theme, windowing, customization options
-
-**Build Order Rationale:**
-- **Goals + Estimates** - Completed, provide goal tracking and quote management
-- **Jobs next** - Core money maker, tracks revenue/costs/profit, natural extension of Estimates
-- **Settings** - Polish piece, implement preferences and customization options
-
-**Why Pro First:**
-- Establishes the feature ceiling
-- Sets the UX standard
-- All advanced functionality gets built once
-- Easier to remove features than add them later
-
-### Phase 2: Admin Tier Development (NEXT)
-**Goal:** Super admin tier with team management, analytics, and oversight
-
-**Additional Features:**
-- Team member management (add/remove users)
-- Permission levels (admin, manager, user)
-- Company-wide analytics dashboard
-- Audit logs (who did what, when)
-- Bulk operations on behalf of team members
-- White-label branding options
-- Advanced reporting and exports
-
-**Database Additions:**
-```sql
--- New tables for admin tier
-companies (id, name, plan, created_at)
-company_members (company_id, user_id, role, permissions)
-audit_logs (id, user_id, action, resource_type, resource_id, timestamp)
-team_analytics (company_id, metrics, date)
-```
-
-**Why Admin After Pro:**
-- Pro tier establishes single-user workflows
-- Admin builds on top of proven features
-- Team features require solid foundation
-- Easier to test multi-user scenarios with complete app
-
-### Phase 3: Free Tier Refinement (FINAL)
-**Goal:** Strip Pro tier down to essentials + add upgrade prompts
-
-**Features to KEEP in Free:**
-- Dashboard (basic stats only)
-- AddLead (50 lead limit)
-- Pipeline (basic view, no advanced filters)
-- Scheduling (basic task management)
-- Settings (account only, no preferences)
-
-**Features to REMOVE from Free:**
-- ❌ Goals module entirely
-- ❌ Jobs module entirely
-- ❌ Advanced pipeline filters
-- ❌ Bulk operations
-- ❌ Custom fields
-
-**Upgrade Prompts to ADD:**
-```javascript
-// Example upgrade prompt in Goals spot
-<div class="upgrade-prompt-card">
-  <div class="upgrade-icon">🎯</div>
-  <h3>Goals Module</h3>
-  <p>Track progress toward your business objectives with manual, auto-tracked, and task-based goals.</p>
-  <ul class="upgrade-features">
-    <li>✓ Unlimited goals</li>
-    <li>✓ Auto-tracking from pipeline data</li>
-    <li>✓ Recurring goals with completion tracking</li>
-    <li>✓ Task-based goal linking</li>
-  </ul>
-  <button class="upgrade-cta">Upgrade to Pro - $29/mo</button>
-  <span class="upgrade-hint">Join 500+ users crushing their goals</span>
-</div>
-```
-
-**Visual Upgrade Prompts:**
-- Blurred/locked module cards in navigation
-- "Upgrade to unlock" overlays on disabled features
-- Feature comparison table in Settings
-- Success stories from Pro users
-- Limited-time upgrade offers
-
-**Implementation Strategy:**
-1. Copy Pro tier codebase
-2. Remove Pro-only modules entirely
-3. Add upgrade prompt components
-4. Replace module content with upgrade cards
-5. Add "Upgrade" button to navigation
-6. Link upgrade prompts to Stripe checkout
-
-**Why Free Last:**
-- Pro tier is already battle-tested
-- Know exactly what features to restrict
-- Upgrade prompts reference real Pro features
-- Can A/B test different upgrade messaging
-- Free users see polished, complete Pro tier as upgrade target
-
----
-
-### Summary: Build Order
-
-```
-┌─────────────────────────────────────────────┐
-│  Phase 1: PRO TIER (Current)               │
-│  Build ALL features, unlimited power       │
-│  Timeline: 3-4 weeks                       │
-└─────────────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────────────┐
-│  Phase 2: ADMIN TIER                       │
-│  Add team management on top of Pro         │
-│  Timeline: 2-3 weeks                       │
-└─────────────────────────────────────────────┘
-              ↓
-┌─────────────────────────────────────────────┐
-│  Phase 3: FREE TIER REFINEMENT             │
-│  Strip features, add upgrade prompts       │
-│  Timeline: 1 week                          │
-└─────────────────────────────────────────────┘
-```
-
-**Current Status:** Phase 1 (Pro Tier) - 80% complete
-**Next Milestones:** Jobs → Settings Preferences → Phase 2
-
----
-
-## 📋 ESTIMATES MODULE - QUOTE MANAGEMENT
-
-### Overview
-Lightweight quote/proposal system that feeds into Jobs. Estimates capture client requests with photos, generate professional quotes, and seamlessly convert to jobs when accepted.
-
-### Database Schema
-
-```sql
-CREATE TABLE estimates (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,  -- Optional (nullable)
-
-  estimate_number TEXT UNIQUE,  -- EST-2025-001
-  title TEXT NOT NULL,
-  description TEXT,
-
-  line_items JSONB DEFAULT '[]'::JSONB,  -- [{name, quantity, rate, total}]
-  total_price NUMERIC DEFAULT 0,
-
-  photos JSONB DEFAULT '[]'::JSONB,  -- Client reference photos (3 max)
-
-  status TEXT DEFAULT 'draft',  -- draft, sent, accepted, rejected, expired
-  expires_at TIMESTAMPTZ,
-  sent_at TIMESTAMPTZ,
-  accepted_at TIMESTAMPTZ,
-  rejected_at TIMESTAMPTZ,
-
-  terms TEXT,  -- Legal terms/conditions
-  notes TEXT,  -- Internal notes
-
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_estimates_user_id ON estimates(user_id);
-CREATE INDEX idx_estimates_lead_id ON estimates(lead_id);
-CREATE INDEX idx_estimates_status ON estimates(status);
-CREATE INDEX idx_estimates_created_at ON estimates(created_at DESC);
-```
-
-### Photo Storage
-- **Bucket:** `estimate-photos` (public bucket)
-- **Limit:** 3 photos max per estimate
-- **Type:** Client reference photos ("before I start" pics)
-- **Compression:** 1024px max width, 80% JPEG quality (~100-200KB each)
-- **Path:** `estimate-photos/{estimateId}/photo-{timestamp}.jpg`
-
-### Estimate → Job Workflow
-
-```
-Client: "Can you quote this?" + sends 2 photos
-   ↓
-Create Estimate
-   - Attach client photos
-   - Add line items (labor, materials)
-   - Total: $2,500
-   - Set expiration (30 days)
-   ↓
-Send to Client
-   - Status: draft → sent
-   - sent_at timestamp recorded
-   ↓
-Client Accepts
-   - Status: sent → accepted
-   - accepted_at timestamp recorded
-   ↓
-Click "Convert to Job" Button
-   - Auto-creates Job with:
-     - estimate_id link
-     - All estimate data pre-filled
-     - Photos copied as "before" photos
-     - Line items → materials
-     - Status: scheduled
-   ↓
-Job Execution
-   - Add scheduling
-   - Assign crew
-   - Track actual costs
-   - Add "during" and "after" photos
-   - Calculate profit
-```
-
-### API Methods (api.js)
-
-**Core CRUD:**
-```javascript
-API.getEstimates(filters)              // Get all estimates
-API.getEstimateById(id)                // Get single estimate
-API.createEstimate(data)               // Create new estimate
-API.updateEstimate(id, updates)        // Update estimate
-API.deleteEstimate(id)                 // Delete estimate
-API.generateEstimateNumber()           // EST-2025-001
-```
-
-**Photo Management:**
-```javascript
-API.uploadEstimatePhoto(file, estimateId, caption)  // Upload + compress
-API.addEstimatePhoto(estimateId, photoData)         // Add to estimate
-API.removeEstimatePhoto(estimateId, photoId)        // Remove photo
-API.compressImage(file, maxWidth, quality)          // Helper function
-```
-
-**Status Management:**
-```javascript
-API.markEstimateSent(estimateId)       // draft → sent
-API.markEstimateAccepted(estimateId)   // sent → accepted
-API.markEstimateRejected(estimateId)   // sent → rejected
-```
-
-**Convert to Job:**
-```javascript
-API.convertEstimateToJob(estimateId)   // Creates job from accepted estimate
-   - Only works if status === 'accepted'
-   - Copies all data to new job
-   - Photos become "before" photos
-   - Line items → materials
-   - Links job.estimate_id
-```
-
-### UI Features to Build
-
-**Estimates List View:**
-- Cards showing lead, total, status, expiration
-- Filter by status (draft, sent, accepted, rejected)
-- Photo thumbnail count badge
-- "Convert to Job" button (only for accepted)
-
-**Add/Edit Estimate Modal:**
-- Lead dropdown
-- Title, description
-- Line items table (add/remove rows)
-- Auto-sum total
-- Photo upload (3 max)
-- Terms textarea
-- Expiration date picker
-
-**Estimate Detail View:**
-- Read-only display
-- Show all line items
-- Photo gallery
-- "Send", "Accept", "Reject" buttons
-- "Convert to Job" button (if accepted)
-
-### Storage Bucket Setup
-
-**Create bucket:** `estimate-photos`
-**Policies:**
-```sql
--- Allow authenticated uploads
-CREATE POLICY "Allow authenticated uploads" ON storage.objects
-FOR INSERT TO authenticated USING (bucket_id = 'estimate-photos');
-
--- Public read access
-CREATE POLICY "Public read access" ON storage.objects
-FOR SELECT TO public USING (bucket_id = 'estimate-photos');
-
--- Allow authenticated deletes
-CREATE POLICY "Allow authenticated deletes" ON storage.objects
-FOR DELETE TO authenticated USING (bucket_id = 'estimate-photos');
-```
-
-### Build Priority
-
-**🔥 BUILD THIS FIRST** - Estimates comes before Jobs. Natural flow: Quote → Job.
-
-**Total Build Time:** 5-7 hours
-
----
-
-## 🏗️ ESTIMATES MODULE - IMPLEMENTATION ROADMAP
-
-### Why Build Estimates First?
-
-Natural workflow: Client requests quote → You create estimate → Client accepts → Convert to job → Execute work
-
-Building estimates first means:
-- Jobs can reference estimates (estimate_id link)
-- Convert-to-job flow makes sense
-- Users can start quoting immediately
-- Photos transfer smoothly to jobs
-
-### Implementation Sessions
-
-**Session 1: Foundation (2-3 hours)**
-1. Module structure + state management
-2. Estimates list view with cards
-3. Filters (status, date, lead)
-4. Add/Edit estimate modal:
-   - Lead dropdown with quick create
-   - Title, description
-   - Status dropdown
-   - Expiration date picker
-   - Terms textarea
-   - Notes
-5. Delete estimate with confirmation
-6. Quick stats (total quoted, accepted, pending)
-
-**Session 2: Line Items + Photos (2-3 hours)**
-7. Line items table (editable rows)
-   - Add/remove rows dynamically
-   - Columns: Description, Quantity, Rate, Total
-   - Auto-sum total price
-8. Photo upload section (3 max)
-   - Drag & drop or file picker
-   - Photo counter "2/3 photos used"
-   - Photo preview with delete
-   - Compression on upload
-9. Visual total calculation box
-
-**Session 3: Status Workflow + Convert to Job (1-2 hours)**
-10. Estimate detail view (read-only)
-11. Status action buttons (sent, accepted, rejected)
-12. **"Convert to Job" button** (only for accepted)
-    - Calls `API.convertEstimateToJob()`
-    - Redirects to Jobs with new job
-13. Expiration warning badges
-
-### Visual Mockups
-
-#### Estimates List View
-```
-┌────────────────────────────────────────────────────────────┐
-│ ESTIMATES                                    + New Estimate│
-├────────────────────────────────────────────────────────────┤
-│ Quick Stats: Quoted $28K | Accepted $18K | Pending $10K   │
-│                                                            │
-│ Filters: [Status ▾] [Lead ▾] [Date ▾]                     │
-│                                                            │
-│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
-│ │EST-2025-042  │ │EST-2025-041  │ │EST-2025-040  │       │
-│ │Kitchen Remod │ │Deck Repair   │ │Fence Install │       │
-│ │John Smith    │ │Sarah Johnson │ │Mike Davis    │       │
-│ │              │ │              │ │              │       │
-│ │🟢 Accepted   │ │🔵 Sent       │ │⚫ Draft      │       │
-│ │📷 2 photos   │ │📷 1 photo    │ │No photos     │       │
-│ │              │ │              │ │              │       │
-│ │Total: $2,500 │ │Total: $1,200 │ │Total: $3,800 │       │
-│ │Exp: 12 days  │ │Exp: 5 days⚠️│ │Not sent      │       │
-│ │              │ │              │ │              │       │
-│ │[Convert Job] │ │[View][Edit]  │ │[Edit][Send]  │       │
-│ └──────────────┘ └──────────────┘ └──────────────┘       │
-└────────────────────────────────────────────────────────────┘
-```
-
-#### Add/Edit Estimate Modal
-```
-┌────────────────────────────────────────────────────────────┐
-│ ✕ New Estimate                                             │
-├────────────────────────────────────────────────────────────┤
-│ BASIC INFO                                                 │
-│ Title: [Kitchen Remodel___________]                        │
-│ Lead:  [🔍 John Smith ▾] or [+ Create New Lead]           │
-│ Status: [Draft ▾]        Expires: [Dec 31, 2025]          │
-│ Description: [____________________________________]         │
-│                                                            │
-│ LINE ITEMS                                                 │
-│ ┌──────────────────────────────────────────────────────┐   │
-│ │ Description        Qty    Rate      Total            │   │
-│ │ [Labor________]   [1]  [$1000]   = $1,000  [✕]      │   │
-│ │ [Materials____]   [1]  [$500 ]   = $500    [✕]      │   │
-│ │ [+ Add Line Item]                                    │   │
-│ │                                   ─────────────      │   │
-│ │                                   TOTAL: $1,500      │   │
-│ └──────────────────────────────────────────────────────┘   │
-│                                                            │
-│ PHOTOS (2/3 used)                                          │
-│ ┌────┐ ┌────┐ ┌──────────┐                                │
-│ │📷 │ │📷 │ │+ Upload  │                                │
-│ │ ✕ │ │ ✕ │ │or Drag   │                                │
-│ └────┘ └────┘ └──────────┘                                │
-│                                                            │
-│ TERMS & CONDITIONS                                         │
-│ [Standard terms... payment due 30 days...]                 │
-│                                                            │
-│ NOTES (Internal)                                           │
-│ [Client prefers oak cabinets...]                           │
-│                                                            │
-│                              [Cancel] [Save Estimate]      │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Build Checklist
-
-**Session 1: Foundation (2-3 hours)**
-- [ ] Create Estimates.js module structure
-- [ ] Add state management (estimates, leads, filters)
-- [ ] Build estimates_init() - load estimates and leads
-- [ ] Build estimates_render() - main render function
-- [ ] Build estimates_renderStatsBar() - quick stats
-- [ ] Build estimates_renderFilters() - status/lead/date filters
-- [ ] Build estimates_renderEstimatesGrid() - card layout
-- [ ] Build estimates_renderAddEditModal() - basic form
-- [ ] Build estimates_handleSave() - create/update logic
-- [ ] Build estimates_renderLeadDropdown() - with quick create
-- [ ] Test create/update/delete flows
-
-**Session 2: Line Items + Photos (2-3 hours)**
-- [ ] Build line items table component
-- [ ] Add/remove row functionality
-- [ ] Auto-calculate totals
-- [ ] Build photo upload section
-- [ ] Integrate API.uploadEstimatePhoto()
-- [ ] Photo preview grid with delete
-- [ ] Photo counter "X/3 photos"
-- [ ] Test photo upload/compression/delete
-
-**Session 3: Status Workflow + Convert (1-2 hours)**
-- [ ] Build estimates_renderDetailView() - read-only
-- [ ] Build status action buttons (sent, accepted, rejected)
-- [ ] Build "Convert to Job" button
-- [ ] Handle API.convertEstimateToJob()
-- [ ] Redirect to Jobs with new job open
-- [ ] Add expiration warnings
-- [ ] Final testing & polish
-
----
-
-## 🏢 JOBS HUB - NEW ARCHITECTURE v13.0
-
-**Status:** ✅ COMPLETE - Jobs is now a parent container with 3 sections
-
-### Overview
-
-Jobs has been restructured from a single module into a **parent hub** that consolidates project management features. This creates a unified "Project Management Hub" accessible from the navigation.
-
-**Important:** Clients is ONLY accessible through the Jobs Hub, NOT from the main navigation. This keeps the sidebar clean while grouping related project management features together.
-
-### Architecture
-
-```
-Jobs (Navigation) → Jobs Hub (Parent Container)
-                    ├── Estimates Section
-                    ├── Jobs Section
-                    └── Clients Section (Hub-only, NOT in main nav)
-```
-
-**When users click "Jobs" in the navigation:**
-1. They see 3 large, beautiful blocks: Estimates, Jobs, Clients
-2. Clicking any block loads that module inside the Jobs hub
-3. A "Back to Hub" button returns to the 3-block selector
-
-### Files Structure
-
-```javascript
-/scripts/
-  Jobs.js              // Parent hub container
-  JobsManagement.js    // Actual jobs functionality
-  Estimates.js         // Estimates module (unchanged)
-  Clients.js           // Clients placeholder (Hub-only access)
-```
-
-**Jobs.js (Parent Hub):**
-- `window.JobsModule` - Parent container
-- Shows 3-block selector on init
-- Routes to appropriate sub-module when clicked
-- Provides "Back to Hub" navigation
-
-**JobsManagement.js:**
-- `window.JobsManagementModule` - Actual jobs functionality
-- Contains all job tracking, profit calculations, etc.
-- Loaded when "Jobs" block is clicked
-
-**Clients.js:**
-- `window.ClientsModule` - Placeholder (Coming Soon)
-- Only accessible through Jobs Hub
-- NOT in main navigation
-- Future: client management, project history, communication logs
-
-### Navigation Changes
-
-**Removed from Navigation:**
-- ❌ Estimates (no longer a top-level nav item)
-- ❌ Clients (never added to main nav - Hub-only access)
-
-**How to access project management features:**
-- Estimates: Jobs → Estimates block
-- Jobs: Jobs → Jobs block
-- Clients: Jobs → Clients block
-
-**Why this structure?**
-- Groups related project management features
-- Reduces nav clutter (no "Clients" in sidebar)
-- Natural workflow: Estimate → Job → Client
-- All project-related features in one hub
-- Cleaner main navigation
-
-### User Flow Examples
-
-**Create Estimate Flow:**
-1. Click "Jobs" in nav
-2. Click "Estimates" block
-3. Estimates module loads with full functionality
-4. Click "Back to Hub" to return
-
-**Manage Jobs Flow:**
-1. Click "Jobs" in nav
-2. Click "Jobs" block
-3. Jobs Management module loads
-4. Full job tracking, profit calculations, etc.
-
-**Manage Clients (Coming Soon):**
-1. Click "Jobs" in nav
-2. Click "Clients" block
-3. Clients module loads
-4. View client information, project history, communication logs
-
-### Implementation Details
-
-**Jobs.js structure:**
-```javascript
-window.JobsModule = {
-    state: {
-        container: 'jobs-content',
-        activeSection: null  // 'estimates', 'jobs', or 'clients'
-    },
-
-    async init(targetContainer) {
-        // Show 3-block selector
-        this.renderSectionSelector();
-    },
-
-    async loadSection(sectionName) {
-        // Load appropriate module:
-        // - 'estimates' → EstimatesModule.init('jobs-section-content')
-        // - 'jobs' → JobsManagementModule.init('jobs-section-content')
-        // - 'clients' → ClientsModule.init('jobs-section-content')
-    }
-}
-```
-
-**Container nesting:**
-```
-#jobs-content (main container)
-  └── .jobs-hub-container
-       ├── .jobs-hub-sections (3 blocks)
-       └── #jobs-section-content (sub-module renders here)
-```
-
-### Visual Design
-
-**3-Block Selector:**
-- Beautiful gradient icons
-- Hover animations (lift up, glow)
-- Clear section descriptions
-- Badge labels ("Quote Management", "Project Tracking", "Coming Soon")
-
-**Styling:**
-- Consistent with Goals/Estimates design
-- Responsive grid (1-3 columns)
-- Smooth transitions
-- Professional gradient effects
-
-### Benefits
-
-✅ **Cleaner Navigation** - One entry point for all project management, Clients not in sidebar
-✅ **Better UX** - Related features grouped together (Estimates → Jobs → Clients)
-✅ **Scalable** - Easy to add more sections (Invoices, Contracts, etc.)
-✅ **Flexible** - Each sub-module maintains full functionality
-✅ **Organized** - Clients accessible through Jobs Hub only, keeping main nav clean
-
-### Future Expansion
-
-**Potential new sections:**
-- Invoices (track sent/paid invoices)
-- Contracts (manage signed agreements)
-- Proposals (pre-estimate pitches)
-- Schedule (calendar view of all jobs)
-
-All would be accessible through the Jobs Hub without cluttering navigation.
-
----
-
-## 💼 JOBS MANAGEMENT MODULE - DETAILED ANALYSIS & RECOMMENDATIONS
-
-**(Formerly "JOBS MODULE")**
-
-### Current Schema Review (From Line 368)
-
-The existing `jobs` table schema is **solid** and covers the core needs:
-
-**✅ What's Good:**
-- Clean financial tracking (material_cost, labor_hours, labor_rate, other_expenses)
-- Auto-calculated fields (total_cost, profit, profit_margin) - smart!
-- Links to leads (estimate → job workflow)
-- Payment tracking (invoice_number, payment_status)
-- Materials stored as JSONB (flexible)
-- Time tracking (scheduled_date, scheduled_time, duration_hours)
-
-**💡 Recommended Additions:**
-
-1. **estimate_id** - Link back to estimate that created this job
-   ```sql
-   estimate_id  UUID REFERENCES estimates(id) ON DELETE SET NULL
-   ```
-
-2. **deposit_amount & deposit_status** - Track deposits separately
-   ```sql
-   deposit_amount    NUMERIC DEFAULT 0
-   deposit_paid      BOOLEAN DEFAULT FALSE
-   deposit_paid_at   TIMESTAMPTZ
-   ```
-
-3. **actual_labor_hours** - Track estimated vs actual
-   ```sql
-   estimated_labor_hours  NUMERIC  -- renamed from labor_hours
-   actual_labor_hours     NUMERIC  -- what it actually took
-   ```
-
-4. **photos** - Before/after job photos (critical for contractors)
-   ```sql
-   photos  JSONB DEFAULT '[]'::JSONB
-   -- [{"url": "...", "type": "before|during|after", "caption": "..."}]
-   ```
-
-5. **crew_members** - Track who worked on the job
-   ```sql
-   crew_members  JSONB DEFAULT '[]'::JSONB
-   -- [{"name": "John", "hours": 8, "rate": 25}]
-   ```
-
-6. **materials tracking improvements** - Better structure
-   ```sql
-   materials  JSONB DEFAULT '[]'::JSONB
-   -- [{"name": "2x4 lumber", "quantity": 50, "unit": "pcs", "cost_per_unit": 5.99, "supplier": "Home Depot", "total": 299.50}]
-   ```
-
-### Recommended Status Flow
-
-```
-draft → scheduled → in_progress → completed → invoiced → paid
-                 ↓
-              cancelled
-```
-
-### Recommended Job Types (Contractor-Focused)
-
-```javascript
-const JOB_TYPES = [
-  'installation',
-  'repair',
-  'maintenance',
-  'inspection',
-  'consultation',
-  'emergency',
-  'custom'
-];
-```
-
-### Financial Calculations (Auto-computed)
-
-```javascript
-// Total Cost = materials + labor + other
-total_cost = material_cost + (actual_labor_hours * labor_rate) + other_expenses
-
-// Profit = what customer paid - what it cost
-profit = final_price - total_cost
-
-// Profit Margin = profit as percentage
-profit_margin = (profit / final_price) * 100
-```
-
-### UI Features to Build
-
-**Jobs List View:**
-- Filter by status, date range, payment status
-- Sort by scheduled date, profit, completion
-- Quick stats: Total revenue, total profit, avg profit margin
-- Color-coded status badges
-
-**Job Detail Modal:**
-- Top section: Job info (title, lead, dates, status)
-- Financial section: Costs breakdown, quoted vs final price, profit
-- Materials list: Editable table
-- Crew section: Who worked + hours
-- Photos: Before/during/after grid
-- Timeline: Status changes, payments received
-
-**Add/Edit Job:**
-- Link to lead (dropdown)
-- Link to estimate (optional)
-- Financial inputs with live profit calculation
-- Materials table (add/remove rows)
-- Photo upload (drag & drop)
-- Crew assignment
-
----
-
-## 🏗️ JOBS MODULE - IMPLEMENTATION BATTLE PLAN
-
-### Photo Storage Limits (Pro Tier Only)
-- **Per Job**: 3 photos max (before/during/after)
-- **Total Storage**: 50 MB bucket limit (Supabase free tier)
-- **Total Jobs**: 1,000 jobs limit
-- **Estimated Capacity**: ~16 KB per photo avg = 48KB per job × 1,000 jobs = 48 MB (safe margin)
-- **Tier Restriction**: Photos available **ONLY in Pro tier**
-
-### Implementation Phases
-
-**Phase 1: Core Foundation (3-4 hours) - BUILD THIS FIRST**
-1. Module structure + state management
-2. Jobs list view with cards
-3. Filters (status, payment, date range)
-4. Add/Edit job modal with:
-   - Lead dropdown
-   - Basic info (title, description, type, status, priority)
-   - Scheduling (date, time, duration)
-   - Financial inputs (material cost, labor rate/hours, quoted price, deposit)
-   - **Live profit calculation** (auto-updates as you type)
-5. Delete job with confirmation
-6. Quick stats bar (total revenue, profit, avg margin)
-
-**Phase 2: Advanced Features (2-3 hours)**
-7. Materials section (collapsible)
-   - Add/remove rows dynamically
-   - Name, quantity, unit, cost per unit, total
-   - Auto-sum material costs
-8. Deposit tracking
-   - Checkbox "Deposit Paid" with date
-   - Mark deposit paid from job card
-9. Invoice number generation
-10. Payment status dropdown
-11. Job detail view (read-only mode)
-
-**Phase 3: Premium Features (2-3 hours)**
-12. Crew members section (collapsible)
-    - Add/remove crew members
-    - Name, role, hours worked, hourly rate
-13. Photo upload (collapsible, **Pro tier only**)
-    - Drag & drop or file picker
-    - 3 photo limit with visual counter "2/3 photos used"
-    - Type selector (before/during/after)
-    - Photo preview grid with delete
-14. Complete job workflow
-    - Modal to enter final price and actual hours
-    - Auto-calculate final profit/margin
-    - Mark job as completed
-
-**Total Time: 7-10 hours**
-
-### Visual Mockups
-
-#### Jobs List View
-```
-┌────────────────────────────────────────────────────────────┐
-│ JOBS                                         + New Job     │
-├────────────────────────────────────────────────────────────┤
-│ Quick Stats: Revenue $45K | Profit $12K | Margin 27%      │
-│                                                            │
-│ Filters: [Status ▾] [Payment ▾] [Date ▾]                  │
-│                                                            │
-│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
-│ │Kitchen Remod │ │Bathroom Rep. │ │Deck Build    │       │
-│ │John Smith    │ │Sarah Johnson │ │Mike Davis    │       │
-│ │              │ │              │ │              │       │
-│ │🟢 In Progress│ │🔵 Scheduled  │ │🟡 Draft      │       │
-│ │Nov 12, 2025  │ │Nov 15, 2025  │ │TBD           │       │
-│ │              │ │              │ │              │       │
-│ │Quote: $12.5K │ │Quote: $3.2K  │ │Est: $8K      │       │
-│ │Profit: $3.2K │ │Deposit: ✓    │ │Draft         │       │
-│ │(26%)         │ │              │ │              │       │
-│ │[View][Edit]  │ │[View][Edit]  │ │[Edit][X]     │       │
-│ └──────────────┘ └──────────────┘ └──────────────┘       │
-└────────────────────────────────────────────────────────────┘
-```
-
-#### Add/Edit Job Modal
-```
-┌────────────────────────────────────────────────────────────┐
-│ ✕ Add New Job                                              │
-├────────────────────────────────────────────────────────────┤
-│ BASIC INFO                                                 │
-│ Title: [Kitchen Remodel___________]                        │
-│ Lead:  [🔍 John Smith ▾]    Status: [Scheduled ▾]         │
-│ Type:  [Installation ▾]     Priority: [High ▾]            │
-│ Date:  [Nov 12, 2025] @ [2:00 PM]  Duration: [8] hrs      │
-│ Description: [____________________________________]         │
-│                                                            │
-│ FINANCIAL                                                  │
-│ Material Cost:    [$2,500] Labor Rate: [$50]/hr           │
-│ Estimated Hours:  [40] hrs Other: [$200]                  │
-│ Quoted Price:     [$12,500]                                │
-│ Deposit:          [$2,500] [☐] Paid                       │
-│                                                            │
-│ ┌────────────────────────────────────────────────────────┐ │
-│ │💰 PROFIT: $7,800 (62%) = $12,500 - $4,700 cost       │ │
-│ └────────────────────────────────────────────────────────┘ │
-│                                                            │
-│ ▾ MATERIALS (Optional)                                     │
-│ ▾ CREW (Optional)                                          │
-│ ▾ PHOTOS (Optional - Pro Only) 🔒                         │
-│                                                            │
-│                               [Cancel] [Save Job]          │
-└────────────────────────────────────────────────────────────┘
-```
-
-#### Job Detail View
-```
-┌────────────────────────────────────────────────────────────┐
-│ ← Back   Kitchen Remodel              [Edit][Complete]    │
-├────────────────────────────────────────────────────────────┤
-│ Lead: John Smith (555-1234) | 🟢 In Progress              │
-│ Nov 12, 2025 @ 2:00 PM | 8 hours | Installation           │
-│                                                            │
-│ ┌────────────────────────────────────────────────────────┐ │
-│ │ FINANCIAL                                              │ │
-│ │ Revenue:  $12,500                                      │ │
-│ │ - Materials: -$2,500                                   │ │
-│ │ - Labor: -$2,000 (40 hrs × $50/hr)                    │ │
-│ │ - Other: -$200                                         │ │
-│ │ Profit: $7,800 (62%)                                   │ │
-│ │ Deposit: $2,500 ✓ Paid Nov 1                          │ │
-│ └────────────────────────────────────────────────────────┘ │
-│                                                            │
-│ MATERIALS (3 items)                                        │
-│ • Oak Cabinets × 12 @ $150 = $1,800                       │
-│ • Granite × 1 @ $500 = $500                               │
-│ • Hardware × 1 @ $200 = $200                              │
-│                                                            │
-│ CREW (2 members)                                           │
-│ • Mike J. - Lead Carpenter - 24 hrs @ $50/hr              │
-│ • Tom W. - Assistant - 16 hrs @ $35/hr                    │
-│                                                            │
-│ PHOTOS (3/3) 🔒 Pro Only                                  │
-│ ┌────┐ ┌────┐ ┌────┐                                     │
-│ │📷 │ │📷 │ │📷 │ Before | During | After             │
-│ └────┘ └────┘ └────┘                                     │
-└────────────────────────────────────────────────────────────┘
-```
-
-### Build Checklist
-
-**Files to Create/Modify:**
-- ✅ `Jobs.js` - Main module (create from scratch)
-- ✅ `api.js` - Already has 30+ Jobs methods
-- ✅ Database - Already migrated with all fields
-- ✅ Storage - Already set up with policies
-
-**Step-by-Step Build Order:**
-
-**Session 1: Foundation (1-2 hours)**
-- [ ] Create Jobs.js module structure
-- [ ] Add state management (jobs, leads, filters, editingJob)
-- [ ] Build jobs_init() - load jobs and leads
-- [ ] Build jobs_render() - main render function
-- [ ] Build jobs_renderStatsBar() - quick stats
-- [ ] Build jobs_renderFilters() - status/payment/date filters
-- [ ] Build jobs_renderJobsGrid() - card layout
-
-**Session 2: Add/Edit Modal (2 hours)**
-- [ ] Build jobs_renderAddEditModal() - full form
-- [ ] Build jobs_calculateProfit() - live calculation
-- [ ] Build jobs_handleSave() - create/update logic
-- [ ] Build jobs_renderLeadDropdown() - searchable dropdown
-- [ ] Add form validation
-- [ ] Test create/update/delete flows
-
-**Session 3: Advanced Features (2 hours)**
-- [ ] Build materials section (collapsible)
-- [ ] Add/remove material rows dynamically
-- [ ] Auto-sum material costs
-- [ ] Build deposit tracking UI
-- [ ] Build invoice generation
-- [ ] Build job detail view (read-only)
-
-**Session 4: Premium Features (2-3 hours)**
-- [ ] Build crew section (collapsible)
-- [ ] Add/remove crew members
-- [ ] Build photo upload UI (Pro tier gate)
-- [ ] Integrate with Supabase Storage
-- [ ] Photo counter "2/3 used"
-- [ ] Complete job workflow
-- [ ] Final testing & polish
-
-### Database Indexes to Add
-
-```sql
-CREATE INDEX idx_jobs_user_id ON jobs(user_id);
-CREATE INDEX idx_jobs_lead_id ON jobs(lead_id);
-CREATE INDEX idx_jobs_status ON jobs(status);
-CREATE INDEX idx_jobs_scheduled_date ON jobs(scheduled_date);
-CREATE INDEX idx_jobs_payment_status ON jobs(payment_status);
-CREATE INDEX idx_jobs_created_at ON jobs(created_at DESC);
-```
-
-### RLS Policies Needed
-
-```sql
--- Users can only see their own jobs
-CREATE POLICY jobs_select_own ON jobs FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY jobs_insert_own ON jobs FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY jobs_update_own ON jobs FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY jobs_delete_own ON jobs FOR DELETE USING (auth.uid() = user_id);
-```
-
-### API Methods to Build
-
-```javascript
-// In api.js
-API.getJobs(filters)           // Get all jobs with optional filters
-API.getJobById(id)             // Get single job with full details
-API.createJob(data)            // Create new job
-API.updateJob(id, updates)     // Update existing job
-API.deleteJob(id)              // Delete job
-API.completeJob(id, finalData) // Mark job complete + set final price/hours
-API.getJobsByLead(leadId)      // Get all jobs for a specific lead
-API.getJobStats()              // Get revenue/profit stats
-```
-
-### Implementation Priority
-
-**Phase 1 (Core - 3-4 hours):**
-- Basic CRUD operations
-- List view with filters
-- Add/Edit modal with financial calculations
-- Link to leads
-
-**Phase 2 (Financial - 2 hours):**
-- Materials table (add/remove rows)
-- Live profit calculations
-- Payment status tracking
-- Invoice number generation
-
-**Phase 3 (Polish - 2-3 hours):**
-- Photo upload/display
-- Crew tracking
-- Before/after photo comparison
-- Job status timeline
-
-**Total:** 7-9 hours (more realistic than 5-6)
-
-### Integration with Estimates Module
-
-When an estimate is accepted:
-1. Auto-create job from estimate
-2. Copy line items → materials
-3. Copy total → quoted_price
-4. Link estimate_id → job
-5. Set status to 'scheduled'
-6. Notify user "Job created from estimate!"
 
 ---
 
 ## 📝 METADATA
 
-**Version:** 13.3
-**Subtitle:** JOBS HUB COMPLETE - 3-SECTION ARCHITECTURE (CLIENTS HUB-ONLY ACCESS)
-**Last Updated:** Re-added Clients to Jobs Hub, removed from main navigation for cleaner UX
-**Status:** Goals 100% | Estimates 100% | Jobs Hub 100% | Jobs Management 100% ✅ | Clients Placeholder ✅ (Hub-only) | Settings 70% | Mobile not tested
-**Philosophy:** Simple CRM + Smart Auto-Tracking + Clean Professional UI + Unified Project Hub
-**Next Action:** Settings Preferences (2-3 hours) → Mobile optimization (5-6 hours)
-**Launch ETA:** 7-9 hours remaining
-
-**Major Changes from v13.2:**
-- ✅ Re-added Clients section to Jobs Hub (3 sections total)
-- ✅ Clients ONLY accessible through Jobs Hub, NOT in main navigation
-- ✅ Created Clients.js placeholder module with "Coming Soon" UI
-- ✅ Updated all documentation to reflect hub-only Clients access
-- ✅ Cleaner main navigation while maintaining full project workflow (Estimates → Jobs → Clients)
-
----
-
-**END OF HANDOFF DOCUMENT v13.3**
-
-*This is the single source of truth for SteadyManager Pro development.*
-*Current Focus: Jobs Hub ✅ → Settings Preferences → Mobile → Ship 🚀*
-
----
-
-**Goals ✅ Estimates ✅ Jobs Hub ✅ | Settings & Mobile are NEXT. Let's ship this! 💪🔥**
+**Last Updated:** Nov 14, 2025
+**Version:** 14.0
+**Authors:** Josh @ Steady Scaling LLC
+**Stack:** Supabase + Railway + Vanilla JS + Tailwind
+**Status:** Production Ready ✅

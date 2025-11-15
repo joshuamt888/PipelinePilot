@@ -40,7 +40,6 @@ window.EstimatesModule = {
         },
 
         // Init flag
-        hasInitialized: false  // Track if module has loaded before
     },
 
     STATUSES: ['draft', 'sent', 'accepted', 'rejected', 'expired'],
@@ -52,10 +51,33 @@ window.EstimatesModule = {
         this.state.container = targetContainer;
 
         try {
+            // Check cache first
+            const cachedEstimates = AppCache.get('estimates');
+            const cachedLeads = AppCache.get('leads');
+
+            // If both are cached, use them (instant load!)
+            if (cachedEstimates && cachedLeads) {
+                this.state.estimates = Array.isArray(cachedEstimates) ? cachedEstimates : [];
+                this.state.leads = cachedLeads?.all || [];
+                this.state.filteredEstimates = this.state.estimates;
+
+                console.log(`[Estimates] ⚡ Loaded ${this.state.estimates.length} estimates from cache (instant)`);
+
+                this.estimates_calculateStats();
+                this.estimates_render();
+                return;
+            }
+
+            // Cache miss - fetch from API
+            console.log('[Estimates] 🔄 Cache miss - fetching from API');
             const [estimates, leadsData] = await Promise.all([
                 API.getEstimates(),
                 API.getLeads()
             ]);
+
+            // Store in cache
+            AppCache.set('estimates', estimates);
+            AppCache.set('leads', leadsData);
 
             this.state.estimates = Array.isArray(estimates) ? estimates : [];
             this.state.leads = leadsData?.all || [];
@@ -65,7 +87,6 @@ window.EstimatesModule = {
 
             this.estimates_calculateStats();
             this.estimates_render();
-            this.state.hasInitialized = true;
         } catch (error) {
             console.error('Error initializing Estimates:', error);
             this.estimates_showError('Failed to load estimates');
@@ -79,7 +100,6 @@ window.EstimatesModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        const isFirstLoad = !this.state.hasInitialized;
         this.estimates_applyFilters();
 
         // Clear any lingering inline styles from other modules
@@ -96,48 +116,19 @@ window.EstimatesModule = {
             </div>
         `;
 
-        // Use a single requestAnimationFrame for smoother rendering
-        requestAnimationFrame(() => {
-            // Apply animations based on load state
-            if (isFirstLoad) {
-                // First load: Staggered wave animation
-                const header = container.querySelector('.estimates-header');
-                if (header) {
-                    header.classList.add('est-wave-in');
-                    header.style.animationDelay = '0s';
-                }
-
-                const limitBar = container.querySelector('.estimates-limit-bar');
-                if (limitBar) {
-                    limitBar.classList.add('est-wave-in');
-                    limitBar.style.animationDelay = '0.1s';
-                }
-
-                const statCards = container.querySelectorAll('.estimates-stat-card');
-                statCards.forEach((card, i) => {
-                    card.classList.add('est-wave-in');
-                    card.style.animationDelay = `${0.15 + (i * 0.08)}s`;
+        // Simple fade-in animation
+        const estimatesContainer = container.querySelector('.estimates-container');
+        if (estimatesContainer) {
+            estimatesContainer.style.opacity = '0';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    estimatesContainer.style.transition = 'opacity 0.5s ease';
+                    estimatesContainer.style.opacity = '1';
                 });
+            });
+        }
 
-                const toolbar = container.querySelector('.estimates-toolbar');
-                if (toolbar) {
-                    toolbar.classList.add('est-wave-in');
-                    toolbar.style.animationDelay = `${0.15 + (statCards.length * 0.08)}s`;
-                }
-
-                const cards = container.querySelectorAll('.estimates-card');
-                cards.forEach((card, i) => {
-                    card.classList.add('est-wave-in');
-                    card.style.animationDelay = `${0.25 + (Math.min(i, 6) * 0.06)}s`;
-                });
-            } else {
-                // Subsequent loads: Fast fade
-                const allElements = container.querySelectorAll('.estimates-header, .estimates-limit-bar, .estimates-stat-card, .estimates-toolbar, .estimates-card');
-                allElements.forEach(el => el.classList.add('est-fade-in'));
-            }
-
-            this.estimates_attachEvents();
-        });
+        this.estimates_attachEvents();
     },
 
     /**
@@ -589,8 +580,8 @@ estimates_renderModalStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.3);
+            
             display: flex;
             align-items: center;
             justify-content: center;
@@ -611,7 +602,7 @@ estimates_renderModalStyles() {
             max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: var(--shadow-modal);
             animation: slideUp 0.3s ease;
         }
 
@@ -763,7 +754,7 @@ estimates_renderModalStyles() {
 
         .estimate-lead-search-btn:hover {
             border-color: var(--primary);
-            background: rgba(102, 126, 234, 0.05);
+            background: var(--job-profit-calculator-bg);
             color: var(--primary);
         }
 
@@ -844,7 +835,7 @@ estimates_renderModalStyles() {
             background: transparent;
             border: 1px solid var(--border);
             border-radius: 4px;
-            color: #ef4444;
+            color: var(--danger);
             cursor: pointer;
             padding: 8px;
             display: flex;
@@ -854,8 +845,8 @@ estimates_renderModalStyles() {
         }
 
         .estimate-line-item-remove:hover {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: #ef4444;
+            background: var(--danger-light);
+            border-color: var(--danger);
         }
 
         .estimate-add-line-item {
@@ -875,14 +866,14 @@ estimates_renderModalStyles() {
         }
 
         .estimate-add-line-item:hover {
-            background: rgba(59, 130, 246, 0.05);
+            background: var(--job-info-bg);
             border-color: var(--primary);
         }
 
         .estimate-total-box {
             margin-top: 16px;
             padding: 16px;
-            background: rgba(59, 130, 246, 0.05);
+            background: var(--job-info-bg);
             border: 1px solid var(--primary);
             border-radius: 6px;
             text-align: right;
@@ -931,7 +922,7 @@ estimates_renderModalStyles() {
             position: absolute;
             top: 4px;
             right: 4px;
-            background: rgba(0, 0, 0, 0.7);
+            background: var(--modal-overlay-dark);
             border: none;
             color: white;
             border-radius: 4px;
@@ -942,7 +933,7 @@ estimates_renderModalStyles() {
         }
 
         .estimate-photo-remove:hover {
-            background: #ef4444;
+            background: var(--danger);
         }
 
         .estimate-photo-upload {
@@ -960,7 +951,7 @@ estimates_renderModalStyles() {
 
         .estimate-photo-upload:hover {
             border-color: var(--primary);
-            background: rgba(59, 130, 246, 0.05);
+            background: var(--job-info-bg);
         }
 
         .estimate-photo-upload svg {
@@ -982,7 +973,7 @@ estimates_renderModalStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -998,7 +989,7 @@ estimates_renderModalStyles() {
             max-height: 70vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            box-shadow: var(--shadow-modal);
             animation: slideUp 0.3s ease;
         }
 
@@ -1039,7 +1030,7 @@ estimates_renderModalStyles() {
         }
 
         .estimate-modal-close-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--hover-overlay-light);
             color: var(--text-primary);
         }
 
@@ -1081,7 +1072,7 @@ estimates_renderModalStyles() {
         .estimate-search-input-wrapper input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 4px var(--primary-light);
         }
 
         .estimate-lead-results {
@@ -1106,7 +1097,7 @@ estimates_renderModalStyles() {
 
         .estimate-lead-result-item:hover {
             border-color: var(--primary);
-            background: rgba(102, 126, 234, 0.05);
+            background: var(--job-profit-calculator-bg);
             transform: translateX(4px);
         }
 
@@ -1518,7 +1509,7 @@ estimates_initModalEvents(overlay) {
         if (!counter || !input) return;
         const remaining = maxLength - input.value.length;
         counter.textContent = `${remaining} character${remaining === 1 ? '' : 's'} remaining`;
-        counter.style.color = remaining < 20 ? '#ef4444' : 'var(--text-tertiary)';
+        counter.style.color = remaining < 20 ? 'var(--danger)' : 'var(--text-tertiary)';
     };
 
     if (titleInput) {
@@ -1644,11 +1635,11 @@ estimates_showViewModal(estimateId) {
     };
 
     const statusColors = {
-        draft: '#6b7280',
-        sent: '#3b82f6',
-        accepted: '#10b981',
-        rejected: '#ef4444',
-        expired: '#f59e0b'
+        draft: 'var(--estimate-status-draft)',
+        sent: 'var(--estimate-status-sent)',
+        accepted: 'var(--estimate-status-accepted)',
+        rejected: 'var(--estimate-status-rejected)',
+        expired: 'var(--warning)'
     };
 
     const overlay = document.createElement('div');
@@ -1661,8 +1652,8 @@ estimates_showViewModal(estimateId) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(8px);
+                background: rgba(0, 0, 0, 0.3);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -1683,7 +1674,7 @@ estimates_showViewModal(estimateId) {
                 max-width: 630px;
                 max-height: 90vh;
                 overflow-y: auto;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                box-shadow: var(--shadow-modal);
                 animation: slideUp 0.3s ease;
             }
 
@@ -1856,7 +1847,7 @@ estimates_showViewModal(estimateId) {
             .estimate-view-total-box {
                 margin-top: 16px;
                 padding: 20px;
-                background: rgba(59, 130, 246, 0.05);
+                background: var(--job-info-bg);
                 border: 1px solid var(--primary);
                 border-radius: 8px;
                 text-align: left;
@@ -1900,7 +1891,7 @@ estimates_showViewModal(estimateId) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.9);
+                background: var(--modal-overlay-darker);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -1913,7 +1904,7 @@ estimates_showViewModal(estimateId) {
                 max-width: 90%;
                 max-height: 90vh;
                 border-radius: 8px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                box-shadow: var(--shadow-modal-dark);
             }
 
             .estimate-view-photo img {
@@ -1966,23 +1957,23 @@ estimates_showViewModal(estimateId) {
             }
 
             .estimate-view-btn-download {
-                background: #10b981;
+                background: var(--success);
                 color: white;
             }
 
             .estimate-view-btn-download:hover {
-                background: #059669;
+                background: var(--success);
                 transform: translateY(-1px);
             }
 
             .estimate-view-btn-delete {
                 background: transparent;
-                border: 1px solid #ef4444;
-                color: #ef4444;
+                border: 1px solid var(--danger);
+                color: var(--danger);
             }
 
             .estimate-view-btn-delete:hover {
-                background: rgba(239, 68, 68, 0.1);
+                background: var(--danger-light);
             }
 
             .estimate-view-status-dropdown {
@@ -2222,6 +2213,10 @@ estimates_showViewModal(estimateId) {
         // Delete from server in background
         try {
             await API.deleteEstimate(estimate.id);
+
+            // Invalidate cache after successful delete
+            AppCache.invalidate('estimates');
+
             window.SteadyUtils.showToast('Estimate deleted successfully', 'success');
         } catch (error) {
             console.error('Delete estimate error:', error);
@@ -2293,6 +2288,15 @@ estimates_showViewModal(estimateId) {
         // Update server in background
         try {
             await API.updateEstimate(estimate.id, { status: newStatus });
+
+            // Update cache with new status
+            AppCache.update('estimates', (cachedEstimates) => {
+                const estimates = Array.isArray(cachedEstimates) ? cachedEstimates : [];
+                const cachedEst = estimates.find(e => e.id === estimate.id);
+                if (cachedEst) cachedEst.status = newStatus;
+                return estimates;
+            });
+
             window.SteadyUtils.showToast(`Status updated to ${this.estimates_formatStatus(newStatus)}`, 'success');
         } catch (error) {
             console.error('Update status error:', error);
@@ -3059,7 +3063,7 @@ async estimates_handleSave(overlay, button) {
 
             // Add error styling
             titleInput.style.borderColor = 'var(--danger)';
-            titleInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+            titleInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
 
             // Update hint text to show error
             if (titleCounter) {
@@ -3199,6 +3203,9 @@ async estimates_handleSave(overlay, button) {
                     this.state.estimates[index] = savedEstimate;
                 }
 
+                // Invalidate cache after successful update
+                AppCache.invalidate('estimates');
+
                 // Success - close modal and show toast
                 this.estimates_closeModal();
                 window.SteadyUtils.showToast('Estimate updated successfully', 'success');
@@ -3241,6 +3248,9 @@ async estimates_handleSave(overlay, button) {
                 if (tempIndex !== -1) {
                     this.state.estimates[tempIndex] = savedEstimate;
                 }
+
+                // Invalidate cache after successful create
+                AppCache.invalidate('estimates');
 
                 // Success - close modal and show toast
                 this.estimates_closeModal();
@@ -3848,6 +3858,9 @@ estimates_formatStatus(status) {
             // Make API call in background
             await API.batchDeleteEstimates(idsToDelete);
 
+            // Invalidate cache after successful batch delete
+            AppCache.invalidate('estimates');
+
             window.SteadyUtils.showToast(`${count} estimate${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
@@ -3876,9 +3889,9 @@ estimates_formatStatus(status) {
             };
 
             const colors = {
-                warning: '#f59e0b',
-                danger: '#ef4444',
-                success: '#10b981'
+                warning: 'var(--warning)',
+                danger: 'var(--danger)',
+                success: 'var(--success)'
             };
 
             const overlay = document.createElement('div');
@@ -3891,7 +3904,7 @@ estimates_formatStatus(status) {
                         left: 0;
                         right: 0;
                         bottom: 0;
-                        background: rgba(0, 0, 0, 0.6);
+                        background: rgba(0, 0, 0, 0.3);
                         display: flex;
                         align-items: center;
                         justify-content: center;
@@ -3904,7 +3917,7 @@ estimates_formatStatus(status) {
                         border-radius: 12px;
                         width: 90%;
                         max-width: 480px;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        box-shadow: var(--shadow-modal);
                         animation: slideUp 0.3s ease;
                     }
 
@@ -4087,7 +4100,7 @@ estimates_formatStatus(status) {
     estimates_showError(message) {
         const container = document.getElementById(this.state.container);
         if (container) {
-            container.innerHTML = `<div style="text-align: center; padding: 60px; color: #ef4444;">${message}</div>`;
+            container.innerHTML = `<div style="text-align: center; padding: 60px; color: var(--danger);">${message}</div>`;
         }
     },
 
@@ -4107,8 +4120,8 @@ estimates_formatStatus(status) {
 .est-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.3);
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4251,7 +4264,7 @@ estimates_formatStatus(status) {
 .est-form-input-v2:focus, .est-form-select-v2:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
     background: var(--background) !important;
 }
 
@@ -4281,7 +4294,7 @@ estimates_formatStatus(status) {
 .est-form-textarea-v2:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
 }
 
 /* CUSTOM SELECT */
@@ -4310,7 +4323,7 @@ estimates_formatStatus(status) {
 #goalUnit:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
 }
 
 /* DIVIDER */
@@ -4387,7 +4400,7 @@ estimates_formatStatus(status) {
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -4395,7 +4408,7 @@ estimates_formatStatus(status) {
 
 .est-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px var(--job-btn-shadow-hover);
 }
 
 .est-btn-primary svg {
@@ -4450,7 +4463,7 @@ estimates_formatStatus(status) {
 .estimates-header h1 {
     font-size: 2.5rem;
     font-weight: 900;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0 0 0.5rem 0;
@@ -4475,7 +4488,7 @@ estimates_formatStatus(status) {
     align-items: center;
     gap: 0.5rem;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     color: white;
     border: none;
     border-radius: var(--radius-lg);
@@ -4483,12 +4496,12 @@ estimates_formatStatus(status) {
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
 }
 
 .estimates-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px var(--job-btn-shadow-hover);
 }
 
 .estimates-btn-primary svg {
@@ -4519,7 +4532,7 @@ estimates_formatStatus(status) {
 }
 
 .estimates-limit-counter svg {
-    color: #667eea;
+    color: var(--primary);
 }
 
 .estimates-btn-batch {
@@ -4544,15 +4557,15 @@ estimates_formatStatus(status) {
 }
 
 .estimates-btn-batch:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: var(--primary);
+    color: var(--primary);
     transform: translateY(-1px);
 }
 
 .estimates-btn-batch.active {
-    background: #667eea;
+    background: var(--primary);
     color: white;
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 /* STATS */
@@ -4567,29 +4580,28 @@ estimates_formatStatus(status) {
     background: var(--surface);
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 2rem;
+    padding: 1.2rem;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 0.9rem;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .estimates-stat-card:hover {
-    border-color: #667eea;
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary);
+    transform: translateY(-2px);
 }
 
 .estimates-stat-card.active {
-    border-color: #667eea;
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+    border: 3px solid var(--primary);
+    transform: scale(1.02);
 }
 
 .estimates-stat-icon {
-    width: 4rem;
-    height: 4rem;
-    border-radius: var(--radius-lg);
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: var(--radius);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4597,39 +4609,39 @@ estimates_formatStatus(status) {
 }
 
 .estimates-stat-icon.quoted {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
+    background: linear-gradient(135deg, var(--primary-light), rgba(139, 92, 246, 0.15));
 }
 
 .estimates-stat-icon.accepted {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+    background: linear-gradient(135deg, var(--success-light), rgba(5, 150, 105, 0.15));
 }
 
 .estimates-stat-icon.pending {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15));
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), var(--warning-light));
 }
 
 .estimates-stat-icon svg {
-    width: 2rem;
-    height: 2rem;
+    width: 1.2rem;
+    height: 1.2rem;
     stroke-width: 2;
 }
 
-.estimates-stat-icon.quoted svg { stroke: #667eea; }
-.estimates-stat-icon.accepted svg { stroke: #10b981; }
-.estimates-stat-icon.pending svg { stroke: #fbbf24; }
+.estimates-stat-icon.quoted svg { stroke: var(--primary); }
+.estimates-stat-icon.accepted svg { stroke: var(--success); }
+.estimates-stat-icon.pending svg { stroke: var(--warning); }
 
 .estimates-stat-content { flex: 1; }
 
 .estimates-stat-value {
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: 900;
     color: var(--text-primary);
     line-height: 1;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
 }
 
 .estimates-stat-label {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
@@ -4676,8 +4688,8 @@ estimates_formatStatus(status) {
 
 .estimates-search input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .estimates-search svg {
@@ -4715,13 +4727,13 @@ estimates_formatStatus(status) {
 }
 
 .estimates-sort select:hover {
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 .estimates-sort select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .estimates-sort svg {
@@ -4761,7 +4773,7 @@ estimates_formatStatus(status) {
 .estimate-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 .estimate-card.batch-mode {
@@ -4769,8 +4781,8 @@ estimates_formatStatus(status) {
 }
 
 .estimate-card.selected {
-    border-color: #667eea;
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+    border-color: var(--primary);
+    box-shadow: 0 8px 16px var(--primary);
 }
 
 .estimate-card-checkbox {
@@ -4820,8 +4832,8 @@ estimates_formatStatus(status) {
 }
 
 .estimate-card.selected .estimate-checkbox-custom {
-    background: #667eea;
-    border-color: #667eea;
+    background: var(--primary);
+    border-color: var(--primary);
 }
 
 .estimate-card.selected .estimate-checkbox-custom svg {
@@ -4882,28 +4894,28 @@ estimates_formatStatus(status) {
 }
 
 .estimate-status.draft {
-    background: rgba(156, 163, 175, 0.15);
-    color: #6b7280;
+    background: var(--surface-hover);
+    color: var(--estimate-status-draft);
 }
 
 .estimate-status.sent {
-    background: rgba(102, 126, 234, 0.15);
-    color: #667eea;
+    background: var(--primary-light);
+    color: var(--primary);
 }
 
 .estimate-status.accepted {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
+    background: var(--success-light);
+    color: var(--success);
 }
 
 .estimate-status.rejected {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--danger-light);
+    color: var(--danger);
 }
 
 .estimate-status.expired {
-    background: rgba(209, 213, 219, 0.15);
-    color: #9ca3af;
+    background: var(--surface-hover);
+    color: var(--estimate-status-expired);
 }
 
 .estimate-status svg {
@@ -4945,10 +4957,10 @@ estimates_formatStatus(status) {
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.625rem;
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
     border-radius: 6px;
-    color: #667eea;
+    color: var(--primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -4973,7 +4985,7 @@ estimates_formatStatus(status) {
 }
 
 .estimate-expiry.warning {
-    color: #f59e0b;
+    color: var(--warning);
     font-weight: 600;
 }
 
@@ -5002,7 +5014,7 @@ estimates_formatStatus(status) {
 .estimates-batch-selected {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #667eea;
+    color: var(--primary);
 }
 
 .estimates-batch-actions-right {
@@ -5026,8 +5038,8 @@ estimates_formatStatus(status) {
 }
 
 .estimates-batch-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: #667eea;
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 .estimates-batch-btn svg {
@@ -5036,13 +5048,13 @@ estimates_formatStatus(status) {
 }
 
 .estimates-batch-btn.delete {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    border-color: var(--danger-border);
 }
 
 .estimates-batch-btn.delete:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
+    background: var(--danger-light);
+    border-color: var(--danger);
 }
 
 .estimates-batch-status-group {
@@ -5077,25 +5089,25 @@ estimates_formatStatus(status) {
 }
 
 .estimates-batch-status-select:hover {
-    border-color: #667eea;
-    background-color: rgba(102, 126, 234, 0.05);
+    border-color: var(--primary);
+    background-color: var(--job-profit-calculator-bg);
 }
 
 .estimates-batch-status-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .estimates-batch-btn-confirm {
-    background: #10b981;
+    background: var(--success);
     color: white;
-    border-color: #10b981;
+    border-color: var(--success);
 }
 
 .estimates-batch-btn-confirm:hover {
-    background: #059669;
-    border-color: #059669;
+    background: var(--success);
+    border-color: var(--success);
 }
 
 .estimates-batch-btn-confirm svg {
@@ -5163,32 +5175,6 @@ estimates_formatStatus(status) {
     }
 }
 
-/* Module-level animations */
-@keyframes estWaveIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes estFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.est-wave-in {
-    animation: estWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-}
-
-.est-fade-in {
-    animation: estFadeIn 0.3s ease forwards;
-    opacity: 0;
-}
 </style>`;
     }
 };

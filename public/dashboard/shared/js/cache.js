@@ -22,7 +22,8 @@ window.AppCache = {
         goals: 600000,      // 10 min - changes less often
         estimates: 600000,  // 10 min - changes less often
         jobs: 600000,       // 10 min - changes less often
-        clients: 900000     // 15 min - rarely changes
+        clients: 900000,    // 15 min - rarely changes
+        profile: 900000     // 15 min - rarely changes during session
     },
 
     /**
@@ -48,7 +49,8 @@ window.AppCache = {
      * Store data in cache with timestamp
      */
     set(key, data) {
-        console.log(`[Cache SET] ${key} (${data?.length || 0} items)`);
+        const count = Array.isArray(data) ? data.length : (data?.all?.length || 0);
+        console.log(`[Cache SET] ${key} (${count} items)`);
         this._cache[key] = {
             data,
             lastFetch: Date.now()
@@ -68,7 +70,8 @@ window.AppCache = {
 
         cached.data = updateFn(cached.data);
         cached.lastFetch = Date.now(); // Refresh timestamp
-        console.log(`[Cache UPDATE] ${key} (${cached.data?.length || 0} items)`);
+        const count = Array.isArray(cached.data) ? cached.data.length : (cached.data?.all?.length || 0);
+        console.log(`[Cache UPDATE] ${key} (${count} items)`);
     },
 
     /**

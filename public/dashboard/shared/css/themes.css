@@ -1,0 +1,1302 @@
+/* =====================================================
+   THEME SYSTEM - CSS VARIABLES
+   Rebuilt from original styling (pre-conversion)
+   ===================================================== */
+
+/* =====================================================
+   GLOBAL MODAL BLUR STANDARD
+   One style to rule them all - beautiful 4px blur
+   ===================================================== */
+[class*="-modal-overlay"]:not([class*="-delete"]) {
+    backdrop-filter: blur(4px) !important;
+}
+
+[class*="-delete-modal-overlay"],
+[class*="delete-modal-overlay"] {
+    backdrop-filter: blur(8px) !important;
+}
+
+/* =====================================================
+   LIGHT THEME (Default - Original Colors)
+   ===================================================== */
+:root, [data-theme="light"] {
+  /* Primary Colors */
+  --primary: #667eea;
+  --primary-dark: #4f46e5;
+  --primary-light: #dbeafe;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+
+  /* Sidebar */
+  --sidebar-bg: var(--gradient-primary);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.15);
+  --sidebar-item-active: rgba(255, 255, 255, 0.25);
+  --sidebar-text: white;
+  --sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+
+  /* Status Colors */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.1);
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --success-bg-hover: rgba(16, 185, 129, 0.15);
+  --success-border: rgba(16, 185, 129, 0.2);
+  --success-border-hover: rgba(16, 185, 129, 0.3);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.1);
+  --warning-bg-hover: rgba(245, 158, 11, 0.15);
+  --warning-border: rgba(245, 158, 11, 0.2);
+  --warning-border-hover: rgba(245, 158, 11, 0.3);
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.1);
+  --danger-bg-hover: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.2);
+  --danger-border-hover: rgba(239, 68, 68, 0.3);
+  --info: #06b6d4;
+  --info-light: rgba(59, 130, 246, 0.1);
+  --info-bg: rgba(59, 130, 246, 0.1);
+  --info-bg-hover: rgba(59, 130, 246, 0.15);
+  --info-border: rgba(59, 130, 246, 0.2);
+  --info-border-hover: rgba(59, 130, 246, 0.3);
+  --primary-bg: rgba(102, 126, 234, 0.1);
+  --primary-bg-hover: rgba(102, 126, 234, 0.2);
+  --primary-border: rgba(102, 126, 234, 0.2);
+  --primary-border-hover: rgba(102, 126, 234, 0.3);
+
+  /* Background Colors */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+
+  /* Text Colors */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+
+  /* Border Colors */
+  --border: #e2e8f0;
+
+  /* Shadows */
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Utility */
+  --radius: 8px;
+  --radius-lg: 16px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --modal-overlay: rgba(0, 0, 0, 0.3);
+
+  /* Pipeline Stage Colors */
+  --stage-new: #06b6d4;
+  --stage-contacted: #f59e0b;
+  --stage-negotiation: #F97316;
+  --stage-qualified: #8b5cf6;
+  --stage-closed: #10b981;
+  --stage-lost: #ef4444;
+
+  /* Jobs Module Colors */
+  --job-profit-calculator-bg: rgba(102, 126, 234, 0.05);
+  --job-profit-calculator-border: var(--primary);
+  --job-card-shadow: rgba(0, 0, 0, 0.08);
+  --job-input-shadow: rgba(0, 0, 0, 0.1);
+  --job-warning-bg: rgba(251, 191, 36, 0.1);
+  --job-warning-bg-hover: rgba(251, 191, 36, 0.2);
+  --job-btn-shadow: rgba(102, 126, 234, 0.3);
+  --job-btn-shadow-hover: rgba(102, 126, 234, 0.4);
+  --job-hover-shadow: rgba(102, 126, 234, 0.15);
+  --job-danger-shadow: rgba(239, 68, 68, 0.3);
+  --job-info-bg: rgba(59, 130, 246, 0.05);
+  --job-danger-overlay: rgba(239, 68, 68, 0.9);
+
+  /* Job Status Colors */
+  --job-status-draft: #6b7280;
+  --job-status-in-progress: #3b82f6;
+  --job-status-invoiced: #8b5cf6;
+  --job-status-invoiced-bg: rgba(139, 92, 246, 0.15);
+  --job-status-paid: #22c55e;
+
+  /* Estimate Status Colors */
+  --estimate-status-draft: #6b7280;
+  --estimate-status-sent: #3b82f6;
+  --estimate-status-accepted: #10b981;
+  --estimate-status-rejected: #ef4444;
+  --estimate-status-expired: #9ca3af;
+
+  /* Additional overlay/modal colors */
+  --modal-overlay-dark: rgba(0, 0, 0, 0.7);
+  --modal-overlay-darker: rgba(0, 0, 0, 0.9);
+  --hover-overlay-light: rgba(102, 126, 234, 0.1);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,0.3);
+  --shadow-modal-dark: 0 20px 60px rgba(0,0,0,0.5);
+
+  /* Job-specific gradient */
+  --job-profit-gradient: linear-gradient(135deg, var(--primary-light), rgba(139, 92, 246, 0.1));
+  --job-photo-overlay-gradient: linear-gradient(to bottom, rgba(102, 126, 234, 0.7) 0%, transparent 40%, transparent 60%, rgba(102, 126, 234, 0.7) 100%);
+  --job-photo-badge-bg: rgba(102, 126, 234, 0.7);
+
+  /* Pipeline-specific colors */
+  --deal-value-bg: rgba(16, 185, 129, 0.1);
+  --deal-value-bg-hover: rgba(16, 185, 129, 0.15);
+  --deal-value-border: rgba(16, 185, 129, 0.2);
+  --deal-value-border-hover: rgba(16, 185, 129, 0.3);
+  --loss-reason-bg: rgba(239, 68, 68, 0.1);
+  --loss-reason-bg-hover: rgba(239, 68, 68, 0.15);
+  --loss-reason-border: rgba(239, 68, 68, 0.2);
+  --loss-reason-border-hover: rgba(239, 68, 68, 0.3);
+  --action-btn-bg: #e2e8f0;
+  --action-btn-bg-hover: #cbd5e1;
+  --action-btn-border: #cbd5e1;
+  --action-btn-border-hover: #94a3b8;
+  --action-btn-icon-color: #475569;
+
+  /* Section badge (lead count) */
+  --section-badge-bg: #f1f5f9;
+  --section-badge-color: #64748b;
+
+  /* Primary button gradient */
+  --btn-primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
+
+  /* Module Marketplace Colors */
+  --module-card-bg: #ffffff;
+  --module-card-border: #e2e8f0;
+  --module-card-hover-border: rgba(102, 126, 234, 0.4);
+  --module-card-hover-shadow: 0 12px 40px rgba(102, 126, 234, 0.15);
+  --module-card-active-bg: rgba(102, 126, 234, 0.03);
+  --module-card-active-border: rgba(102, 126, 234, 0.5);
+  --module-icon-bg: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(139, 92, 246, 0.08));
+  --module-icon-color: var(--primary);
+
+  /* Tier Badges */
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  --tier-pro-bg: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  --tier-pro-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+
+  /* Category Badges */
+  --category-productivity-bg: rgba(59, 130, 246, 0.1);
+  --category-productivity-color: #3b82f6;
+  --category-operations-bg: rgba(245, 158, 11, 0.1);
+  --category-operations-color: #f59e0b;
+  --category-sales-bg: rgba(139, 92, 246, 0.1);
+  --category-sales-color: #8b5cf6;
+  --category-marketing-bg: rgba(236, 72, 153, 0.1);
+  --category-marketing-color: #ec4899;
+
+  /* Coming Soon */
+  --coming-soon-overlay: rgba(248, 250, 252, 0.85);
+  --coming-soon-badge-bg: #94a3b8;
+  --coming-soon-text: #64748b;
+
+  /* Module Toggle Buttons */
+  --toggle-enabled-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --toggle-enabled-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  --toggle-disabled-bg: var(--border);
+  --toggle-disabled-color: var(--text-secondary);
+}
+
+/* =====================================================
+   DARK THEME (Original Dark Mode)
+   ===================================================== */
+[data-theme="dark"] {
+  /* Background Colors */
+  --background: #0a0f1c;
+  --surface: #1a1f2e;
+  --surface-hover: #242938;
+
+  /* Text Colors */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+
+  /* Border Colors */
+  --border: #374151;
+
+  /* Primary Colors */
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --primary-bg: rgba(99, 102, 241, 0.15);
+  --primary-bg-hover: rgba(99, 102, 241, 0.25);
+  --primary-border: rgba(99, 102, 241, 0.3);
+  --primary-border-hover: rgba(99, 102, 241, 0.4);
+
+  /* Status Colors (Dark Mode) */
+  --success: #34d399;
+  --success-light: rgba(52, 211, 153, 0.15);
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --success-bg-hover: rgba(52, 211, 153, 0.2);
+  --success-border: rgba(52, 211, 153, 0.3);
+  --success-border-hover: rgba(52, 211, 153, 0.4);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.15);
+  --warning-bg: rgba(251, 191, 36, 0.15);
+  --warning-bg-hover: rgba(251, 191, 36, 0.2);
+  --warning-border: rgba(251, 191, 36, 0.3);
+  --warning-border-hover: rgba(251, 191, 36, 0.4);
+  --danger: #f87171;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(248, 113, 113, 0.15);
+  --danger-bg: rgba(248, 113, 113, 0.15);
+  --danger-bg-hover: rgba(248, 113, 113, 0.2);
+  --danger-border: rgba(248, 113, 113, 0.3);
+  --danger-border-hover: rgba(248, 113, 113, 0.4);
+  --info: #60a5fa;
+  --info-light: rgba(96, 165, 250, 0.15);
+  --info-bg: rgba(96, 165, 250, 0.15);
+  --info-bg-hover: rgba(96, 165, 250, 0.2);
+  --info-border: rgba(96, 165, 250, 0.3);
+  --info-border-hover: rgba(96, 165, 250, 0.4);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+
+  /* Sidebar */
+  --sidebar-bg: var(--surface);
+  --sidebar-border: #374151;
+  --sidebar-item-hover: rgba(99, 102, 241, 0.15);
+  --sidebar-item-active: rgba(99, 102, 241, 0.25);
+  --sidebar-text: white;
+  --sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+
+  /* Shadows */
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+  /* Utility */
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+
+  /* Jobs Module Colors (Dark Mode) */
+  --job-profit-calculator-bg: rgba(99, 102, 241, 0.08);
+  --job-profit-calculator-border: var(--primary);
+  --job-card-shadow: rgba(0, 0, 0, 0.3);
+  --job-input-shadow: rgba(0, 0, 0, 0.3);
+  --job-warning-bg: rgba(251, 191, 36, 0.15);
+  --job-warning-bg-hover: rgba(251, 191, 36, 0.2);
+  --job-btn-shadow: rgba(99, 102, 241, 0.3);
+  --job-btn-shadow-hover: rgba(99, 102, 241, 0.4);
+  --job-hover-shadow: rgba(99, 102, 241, 0.15);
+  --job-danger-shadow: rgba(248, 113, 113, 0.3);
+  --job-info-bg: rgba(96, 165, 250, 0.08);
+  --job-danger-overlay: rgba(248, 113, 113, 0.9);
+
+  /* Job Status Colors (same as light mode) */
+  --job-status-draft: #6b7280;
+  --job-status-in-progress: #3b82f6;
+  --job-status-invoiced: #8b5cf6;
+  --job-status-invoiced-bg: rgba(139, 92, 246, 0.15);
+  --job-status-paid: #22c55e;
+
+  /* Estimate Status Colors (same as light mode) */
+  --estimate-status-draft: #6b7280;
+  --estimate-status-sent: #3b82f6;
+  --estimate-status-accepted: #10b981;
+  --estimate-status-rejected: #ef4444;
+  --estimate-status-expired: #9ca3af;
+
+  /* Additional overlay/modal colors (Dark Mode) */
+  --modal-overlay-dark: rgba(0, 0, 0, 0.9);
+  --modal-overlay-darker: rgba(0, 0, 0, 0.95);
+  --hover-overlay-light: rgba(99, 102, 241, 0.15);
+  --shadow-modal: 0 20px 60px rgba(0,0,0,0.5);
+  --shadow-modal-dark: 0 20px 60px rgba(0,0,0,0.7);
+
+  /* Job-specific gradient (Dark Mode) */
+  --job-profit-gradient: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1));
+  --job-photo-overlay-gradient: linear-gradient(to bottom, rgba(102, 126, 234, 0.7) 0%, transparent 40%, transparent 60%, rgba(102, 126, 234, 0.7) 100%);
+  --job-photo-badge-bg: rgba(102, 126, 234, 0.7);
+
+  /* Pipeline-specific colors (Dark Mode) */
+  --deal-value-bg: rgba(52, 211, 153, 0.15);
+  --deal-value-bg-hover: rgba(52, 211, 153, 0.2);
+  --deal-value-border: rgba(52, 211, 153, 0.3);
+  --deal-value-border-hover: rgba(52, 211, 153, 0.4);
+  --loss-reason-bg: rgba(248, 113, 113, 0.15);
+  --loss-reason-bg-hover: rgba(248, 113, 113, 0.2);
+  --loss-reason-border: rgba(248, 113, 113, 0.3);
+  --loss-reason-border-hover: rgba(248, 113, 113, 0.4);
+  --action-btn-bg: #334155;
+  --action-btn-bg-hover: #475569;
+  --action-btn-border: #475569;
+  --action-btn-border-hover: #64748b;
+  --action-btn-icon-color: #f1f5f9;
+
+  /* Section badge (lead count) */
+  --section-badge-bg: #242938;
+  --section-badge-color: #94a3b8;
+
+  /* Primary button gradient - same as light mode */
+  --btn-primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
+
+  /* Module Marketplace Colors (Dark Mode) */
+  --module-card-bg: #1a1f2e;
+  --module-card-border: #374151;
+  --module-card-hover-border: rgba(99, 102, 241, 0.5);
+  --module-card-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --module-card-active-bg: rgba(99, 102, 241, 0.08);
+  --module-card-active-border: rgba(99, 102, 241, 0.6);
+  --module-icon-bg: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+  --module-icon-color: var(--primary);
+
+  /* Tier Badges (same as light mode) */
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  --tier-pro-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+
+  /* Category Badges (Dark Mode) */
+  --category-productivity-bg: rgba(59, 130, 246, 0.15);
+  --category-productivity-color: #60a5fa;
+  --category-operations-bg: rgba(251, 191, 36, 0.15);
+  --category-operations-color: #fbbf24;
+  --category-sales-bg: rgba(139, 92, 246, 0.15);
+  --category-sales-color: #a78bfa;
+  --category-marketing-bg: rgba(236, 72, 153, 0.15);
+  --category-marketing-color: #f472b6;
+
+  /* Coming Soon (Dark Mode) */
+  --coming-soon-overlay: rgba(26, 31, 46, 0.85);
+  --coming-soon-badge-bg: #475569;
+  --coming-soon-text: #94a3b8;
+
+  /* Module Toggle Buttons (same as light mode) */
+  --toggle-enabled-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --toggle-enabled-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  --toggle-disabled-bg: var(--border);
+  --toggle-disabled-color: var(--text-secondary);
+}
+
+/* =====================================================
+   SLATE THEME - Softer gray dark mode (not as dark)
+   ===================================================== */
+[data-theme="slate"] {
+  /* Primary Colors */
+  --primary: #667eea;
+  --primary-dark: #4f46e5;
+  --primary-light: rgba(102, 126, 234, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+
+  /* Status Colors */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-bg-hover: rgba(16, 185, 129, 0.18);
+  --success-border: rgba(16, 185, 129, 0.25);
+  --success-border-hover: rgba(16, 185, 129, 0.35);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.15);
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --warning-bg-hover: rgba(251, 191, 36, 0.18);
+  --warning-border: rgba(251, 191, 36, 0.25);
+  --warning-border-hover: rgba(251, 191, 36, 0.35);
+  --danger: #f87171;
+  --danger-dark: #ef4444;
+  --danger-light: rgba(248, 113, 113, 0.15);
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-bg-hover: rgba(248, 113, 113, 0.18);
+  --danger-border: rgba(248, 113, 113, 0.25);
+  --danger-border-hover: rgba(248, 113, 113, 0.35);
+  --info: #38bdf8;
+  --info-light: rgba(56, 189, 248, 0.15);
+  --info-bg: rgba(56, 189, 248, 0.12);
+  --info-bg-hover: rgba(56, 189, 248, 0.18);
+  --info-border: rgba(56, 189, 248, 0.25);
+  --info-border-hover: rgba(56, 189, 248, 0.35);
+  --primary-bg: rgba(82, 87, 99, 0.3);
+  --primary-bg-hover: rgba(82, 87, 99, 0.5);
+  --primary-border: rgba(102, 126, 234, 0.25);
+  --primary-border-hover: rgba(102, 126, 234, 0.35);
+
+  /* Background Colors - Lighter grays */
+  --background: #2a2e39;
+  --surface: #353945;
+  --surface-hover: #3f4451;
+  --surface-active: #4a4f5e;
+
+  /* Border Colors - Softer */
+  --border: #4a4f5e;
+  --border-light: #3f4451;
+  --border-dark: #525763;
+
+  /* Text Colors */
+  --text-primary: #e5e7eb;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* Component-specific */
+  --modal-bg: #353945;
+  --modal-overlay: rgba(0, 0, 0, 0.35);
+  --input-bg: #3f4451;
+  --input-border: #525763;
+  --input-focus-border: #667eea;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.4);
+
+  /* Sidebar */
+  --sidebar-bg: #353945;
+  --sidebar-border: #4a4f5e;
+  --sidebar-item-hover: #3f4451;
+  --sidebar-item-active: #4a4f5e;
+  --sidebar-text: white;
+  --sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+
+  /* Stats Cards */
+  --stat-bg: #353945;
+  --stat-border: #4a4f5e;
+  --stat-icon-bg: rgba(102, 126, 234, 0.12);
+
+  /* Stage Colors */
+  --stage-new: #667eea;
+  --stage-contacted: #60a5fa;
+  --stage-negotiation: #fbbf24;
+  --stage-qualified: #34d399;
+  --stage-closed: #10b981;
+  --stage-lost: #f87171;
+
+  /* Job Management */
+  --job-card-hover-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  --job-btn-shadow: rgba(102, 126, 234, 0.4);
+
+  /* Module Marketplace */
+  --module-card-bg: #353945;
+  --module-card-border: #4a4f5e;
+  --module-card-hover-border: rgba(102, 126, 234, 0.5);
+  --module-card-hover-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --module-card-active-bg: rgba(102, 126, 234, 0.08);
+  --module-card-active-border: rgba(102, 126, 234, 0.6);
+  --module-icon-bg: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --tier-pro-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  --category-productivity-bg: rgba(102, 126, 234, 0.15);
+  --category-productivity-color: #a5b4fc;
+  --category-operations-bg: rgba(251, 191, 36, 0.15);
+  --category-operations-color: #fde68a;
+  --category-sales-bg: rgba(139, 92, 246, 0.15);
+  --category-sales-color: #ddd6fe;
+  --category-marketing-bg: rgba(236, 72, 153, 0.15);
+  --category-marketing-color: #fbcfe8;
+  --coming-soon-overlay: rgba(42, 46, 57, 0.85);
+  --coming-soon-badge-bg: #525763;
+  --coming-soon-text: #9ca3af;
+  --toggle-enabled-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --toggle-enabled-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  --toggle-disabled-bg: var(--border);
+  --toggle-disabled-color: var(--text-secondary);
+}
+
+/* =====================================================
+   MINIMAL RED THEME - Dark with clean red accents/outlines
+   ===================================================== */
+[data-theme="minimal-red"] {
+  /* Primary Colors - RED */
+  --primary: #ef4444;
+  --primary-dark: #dc2626;
+  --primary-light: rgba(239, 68, 68, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #f87171 100%);
+
+  /* Status Colors - Kept minimal */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-bg: rgba(16, 185, 129, 0.08);
+  --success-bg-hover: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(239, 68, 68, 0.3);
+  --success-border-hover: rgba(239, 68, 68, 0.5);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.15);
+  --warning-bg: rgba(251, 191, 36, 0.08);
+  --warning-bg-hover: rgba(251, 191, 36, 0.12);
+  --warning-border: rgba(239, 68, 68, 0.3);
+  --warning-border-hover: rgba(239, 68, 68, 0.5);
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --danger-bg-hover: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.5);
+  --danger-border-hover: rgba(239, 68, 68, 0.7);
+  --info: #38bdf8;
+  --info-light: rgba(56, 189, 248, 0.15);
+  --info-bg: rgba(56, 189, 248, 0.08);
+  --info-bg-hover: rgba(56, 189, 248, 0.12);
+  --info-border: rgba(239, 68, 68, 0.3);
+  --info-border-hover: rgba(239, 68, 68, 0.5);
+  --primary-bg: rgba(239, 68, 68, 0.08);
+  --primary-bg-hover: rgba(239, 68, 68, 0.12);
+  --primary-border: rgba(239, 68, 68, 0.5);
+  --primary-border-hover: rgba(239, 68, 68, 0.7);
+
+  /* Background Colors - Dark like dark mode */
+  --background: #1a1f2e;
+  --surface: #242936;
+  --surface-hover: #2d3340;
+  --surface-active: #363c4a;
+
+  /* Border Colors - ALL RED */
+  --border: rgba(239, 68, 68, 0.4);
+  --border-light: rgba(239, 68, 68, 0.2);
+  --border-dark: rgba(239, 68, 68, 0.6);
+
+  /* Text Colors */
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* Component-specific - Red outlines */
+  --modal-bg: #242936;
+  --modal-overlay: rgba(0, 0, 0, 0.35);
+  --input-bg: #2d3340;
+  --input-border: rgba(239, 68, 68, 0.4);
+  --input-focus-border: rgba(239, 68, 68, 0.8);
+  --shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+  --shadow-lg: 0 20px 60px rgba(239, 68, 68, 0.2);
+
+  /* Sidebar - Red accents */
+  --sidebar-bg: #242936;
+  --sidebar-border: rgba(239, 68, 68, 0.4);
+  --sidebar-item-hover: #2d3340;
+  --sidebar-item-active: rgba(239, 68, 68, 0.15);
+  --sidebar-text: white;
+  --sidebar-text-secondary: rgba(255, 255, 255, 0.8);
+
+  /* Stats Cards - Red borders */
+  --stat-bg: #242936;
+  --stat-border: rgba(239, 68, 68, 0.4);
+  --stat-icon-bg: rgba(239, 68, 68, 0.12);
+
+  /* Stage Colors - Red highlights */
+  --stage-new: #ef4444;
+  --stage-contacted: #f87171;
+  --stage-negotiation: #fbbf24;
+  --stage-qualified: #10b981;
+  --stage-closed: #10b981;
+  --stage-lost: #dc2626;
+
+  /* Job Management - Red shadows */
+  --job-card-hover-shadow: 0 8px 24px rgba(239, 68, 68, 0.25);
+  --job-btn-shadow: rgba(239, 68, 68, 0.4);
+
+  /* Module Marketplace - Red theme */
+  --module-card-bg: #242936;
+  --module-card-border: rgba(239, 68, 68, 0.4);
+  --module-card-hover-border: rgba(239, 68, 68, 0.7);
+  --module-card-hover-shadow: 0 12px 40px rgba(239, 68, 68, 0.2);
+  --module-card-active-bg: rgba(239, 68, 68, 0.08);
+  --module-card-active-border: rgba(239, 68, 68, 0.8);
+  --module-icon-bg: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.12));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  --tier-pro-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  --category-productivity-bg: rgba(239, 68, 68, 0.12);
+  --category-productivity-color: #fca5a5;
+  --category-operations-bg: rgba(251, 191, 36, 0.15);
+  --category-operations-color: #fde68a;
+  --category-sales-bg: rgba(239, 68, 68, 0.15);
+  --category-sales-color: #fca5a5;
+  --category-marketing-bg: rgba(236, 72, 153, 0.15);
+  --category-marketing-color: #fbcfe8;
+  --coming-soon-overlay: rgba(26, 31, 46, 0.85);
+  --coming-soon-badge-bg: #475569;
+  --coming-soon-text: #94a3b8;
+  --toggle-enabled-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --toggle-enabled-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  --toggle-disabled-bg: rgba(239, 68, 68, 0.2);
+  --toggle-disabled-color: var(--text-secondary);
+}
+
+/* =====================================================
+   WHITEOUT THEME - All white with clean black accents
+   ===================================================== */
+[data-theme="whiteout"] {
+  /* Primary Colors - BLACK */
+  --primary: #1f2937;
+  --primary-dark: #111827;
+  --primary-light: rgba(31, 41, 55, 0.1);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #1f2937 0%, #374151 50%, #4b5563 100%);
+
+  /* Status Colors - Minimal with black borders */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.1);
+  --success-bg: rgba(16, 185, 129, 0.05);
+  --success-bg-hover: rgba(16, 185, 129, 0.08);
+  --success-border: rgba(31, 41, 55, 0.2);
+  --success-border-hover: rgba(31, 41, 55, 0.4);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.1);
+  --warning-bg: rgba(245, 158, 11, 0.05);
+  --warning-bg-hover: rgba(245, 158, 11, 0.08);
+  --warning-border: rgba(31, 41, 55, 0.2);
+  --warning-border-hover: rgba(31, 41, 55, 0.4);
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.1);
+  --danger-bg: rgba(239, 68, 68, 0.05);
+  --danger-bg-hover: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(31, 41, 55, 0.2);
+  --danger-border-hover: rgba(31, 41, 55, 0.4);
+  --info: #3b82f6;
+  --info-light: rgba(59, 130, 246, 0.1);
+  --info-bg: rgba(59, 130, 246, 0.05);
+  --info-bg-hover: rgba(59, 130, 246, 0.08);
+  --info-border: rgba(31, 41, 55, 0.2);
+  --info-border-hover: rgba(31, 41, 55, 0.4);
+  --primary-bg: rgba(31, 41, 55, 0.05);
+  --primary-bg-hover: rgba(31, 41, 55, 0.1);
+  --primary-border: rgba(31, 41, 55, 0.3);
+  --primary-border-hover: rgba(31, 41, 55, 0.5);
+
+  /* Background Colors - ALL WHITE */
+  --background: #ffffff;
+  --surface: #fafafa;
+  --surface-hover: #f5f5f5;
+  --surface-active: #f0f0f0;
+
+  /* Border Colors - BLACK with low opacity */
+  --border: rgba(31, 41, 55, 0.15);
+  --border-light: rgba(31, 41, 55, 0.08);
+  --border-dark: rgba(31, 41, 55, 0.25);
+
+  /* Text Colors */
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --text-muted: #9ca3af;
+
+  /* Component-specific - Black outlines */
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(31, 41, 55, 0.3);
+  --input-bg: #ffffff;
+  --input-border: rgba(31, 41, 55, 0.2);
+  --input-focus-border: rgba(31, 41, 55, 0.5);
+  --shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+  --shadow-lg: 0 20px 60px rgba(31, 41, 55, 0.12);
+
+  /* Sidebar - White with black accents */
+  --sidebar-bg: #fafafa;
+  --sidebar-border: rgba(31, 41, 55, 0.15);
+  --sidebar-item-hover: rgba(31, 41, 55, 0.12);
+  --sidebar-item-active: rgba(31, 41, 55, 0.18);
+  --sidebar-text: #111827;
+  --sidebar-text-secondary: #374151;
+
+  /* Stats Cards - White with black borders */
+  --stat-bg: #ffffff;
+  --stat-border: rgba(31, 41, 55, 0.15);
+  --stat-icon-bg: rgba(31, 41, 55, 0.05);
+
+  /* Stage Colors */
+  --stage-new: #667eea;
+  --stage-contacted: #3b82f6;
+  --stage-negotiation: #f59e0b;
+  --stage-qualified: #10b981;
+  --stage-closed: #10b981;
+  --stage-lost: #ef4444;
+
+  /* Job Management - Subtle black shadows */
+  --job-card-hover-shadow: 0 8px 24px rgba(31, 41, 55, 0.1);
+  --job-btn-shadow: rgba(31, 41, 55, 0.15);
+
+  /* Module Marketplace - White theme */
+  --module-card-bg: #ffffff;
+  --module-card-border: rgba(31, 41, 55, 0.15);
+  --module-card-hover-border: rgba(31, 41, 55, 0.35);
+  --module-card-hover-shadow: 0 12px 40px rgba(31, 41, 55, 0.12);
+  --module-card-active-bg: rgba(31, 41, 55, 0.04);
+  --module-card-active-border: rgba(31, 41, 55, 0.4);
+  --module-icon-bg: linear-gradient(135deg, rgba(31, 41, 55, 0.05), rgba(55, 65, 81, 0.05));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  --tier-pro-bg: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  --tier-pro-shadow: 0 2px 8px rgba(31, 41, 55, 0.3);
+  --category-productivity-bg: rgba(31, 41, 55, 0.08);
+  --category-productivity-color: #1f2937;
+  --category-operations-bg: rgba(245, 158, 11, 0.1);
+  --category-operations-color: #d97706;
+  --category-sales-bg: rgba(31, 41, 55, 0.08);
+  --category-sales-color: #1f2937;
+  --category-marketing-bg: rgba(236, 72, 153, 0.1);
+  --category-marketing-color: #db2777;
+  --coming-soon-overlay: rgba(255, 255, 255, 0.85);
+  --coming-soon-badge-bg: #e5e7eb;
+  --coming-soon-text: #6b7280;
+  --toggle-enabled-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --toggle-enabled-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  --toggle-disabled-bg: rgba(31, 41, 55, 0.1);
+  --toggle-disabled-color: var(--text-secondary);
+}
+
+/* =====================================================
+   LIGHTNING BLUE THEME - Electric Cyan Cyber
+   Professional Tier
+   ===================================================== */
+[data-theme="lightning-blue"] {
+  /* Primary Colors - ELECTRIC CYAN */
+  --primary: #00d9ff;
+  --primary-dark: #00a8cc;
+  --primary-light: rgba(0, 217, 255, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #00d9ff 0%, #00fff2 50%, #00d9ff 100%);
+
+  /* Status Colors - Cyberpunk accents */
+  --success: #00ff88;
+  --success-light: rgba(0, 255, 136, 0.15);
+  --success-bg: rgba(0, 255, 136, 0.05);
+  --success-bg-hover: rgba(0, 255, 136, 0.08);
+  --success-border: rgba(0, 217, 255, 0.4);
+  --success-border-hover: rgba(0, 217, 255, 0.7);
+  --warning: #ffd700;
+  --warning-light: rgba(255, 215, 0, 0.15);
+  --warning-bg: rgba(255, 215, 0, 0.05);
+  --warning-bg-hover: rgba(255, 215, 0, 0.08);
+  --warning-border: rgba(0, 217, 255, 0.4);
+  --warning-border-hover: rgba(0, 217, 255, 0.7);
+  --danger: #ff0055;
+  --danger-dark: #cc0044;
+  --danger-light: rgba(255, 0, 85, 0.15);
+  --danger-bg: rgba(255, 0, 85, 0.05);
+  --danger-bg-hover: rgba(255, 0, 85, 0.08);
+  --danger-border: rgba(0, 217, 255, 0.4);
+  --danger-border-hover: rgba(0, 217, 255, 0.7);
+  --info: #00d9ff;
+  --info-light: rgba(0, 217, 255, 0.15);
+  --info-bg: rgba(0, 217, 255, 0.05);
+  --info-bg-hover: rgba(0, 217, 255, 0.08);
+  --info-border: rgba(0, 217, 255, 0.4);
+  --info-border-hover: rgba(0, 217, 255, 0.7);
+  --primary-bg: rgba(0, 217, 255, 0.05);
+  --primary-bg-hover: rgba(0, 217, 255, 0.08);
+  --primary-border: rgba(0, 217, 255, 0.5);
+  --primary-border-hover: rgba(0, 217, 255, 0.9);
+
+  /* Background Colors - DEEP NAVY/PURPLE BLACKS */
+  --background: #0d0221;
+  --surface: #160b33;
+  --surface-hover: #1f1145;
+  --surface-active: #281756;
+
+  /* Border Colors - CYAN GLOW */
+  --border: rgba(0, 217, 255, 0.4);
+  --border-light: rgba(0, 217, 255, 0.2);
+  --border-dark: rgba(0, 217, 255, 0.6);
+
+  /* Text Colors - CRISP WHITES */
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5e5;
+  --text-tertiary: #b3b3b3;
+  --text-muted: #737373;
+
+  /* Component-specific - Cyan glow outlines */
+  --modal-bg: #160b33;
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+  --input-bg: #1f1145;
+  --input-border: rgba(0, 217, 255, 0.5);
+  --input-focus-border: rgba(0, 217, 255, 1);
+  --shadow: 0 0 25px rgba(0, 217, 255, 0.3);
+  --shadow-lg: 0 0 45px rgba(0, 217, 255, 0.4);
+
+  /* Sidebar - Navy with cyan gradient */
+  --sidebar-bg: linear-gradient(180deg, #160b33 0%, #0d0221 100%);
+  --sidebar-border: rgba(0, 217, 255, 0.5);
+  --sidebar-item-hover: rgba(0, 217, 255, 0.1);
+  --sidebar-item-active: rgba(0, 217, 255, 0.2);
+  --sidebar-text: #ffffff;
+  --sidebar-text-secondary: #00d9ff;
+
+  /* Stats Cards - Navy with cyan borders */
+  --stat-bg: #160b33;
+  --stat-border: rgba(0, 217, 255, 0.5);
+  --stat-icon-bg: rgba(0, 217, 255, 0.1);
+
+  /* Stage Colors - Cyberpunk highlights */
+  --stage-new: #00d9ff;
+  --stage-contacted: #00fff2;
+  --stage-negotiation: #ffd700;
+  --stage-qualified: #00ff88;
+  --stage-closed: #00ff88;
+  --stage-lost: #ff0055;
+
+  /* Job Management - Cyan glow shadows */
+  --job-card-hover-shadow: 0 0 35px rgba(0, 217, 255, 0.4);
+  --job-btn-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+  --job-profit-calculator-bg: rgba(0, 217, 255, 0.05);
+  --job-profit-calculator-border: var(--primary);
+  --job-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  --job-input-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --job-warning-bg: rgba(255, 215, 0, 0.08);
+  --job-warning-bg-hover: rgba(255, 215, 0, 0.12);
+  --job-hover-shadow: 0 0 25px rgba(0, 217, 255, 0.3);
+  --job-danger-shadow: rgba(255, 0, 85, 0.4);
+  --job-info-bg: rgba(0, 217, 255, 0.05);
+  --job-danger-overlay: rgba(255, 0, 85, 0.9);
+  --job-profit-gradient: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(0, 255, 242, 0.05));
+  --job-photo-overlay-gradient: linear-gradient(to bottom, rgba(0, 217, 255, 0.6) 0%, transparent 40%, transparent 60%, rgba(0, 217, 255, 0.6) 100%);
+  --job-photo-badge-bg: rgba(0, 217, 255, 0.8);
+
+  /* Job Status Colors */
+  --job-status-draft: #888899;
+  --job-status-in-progress: #00d9ff;
+  --job-status-invoiced: #00fff2;
+  --job-status-invoiced-bg: rgba(0, 255, 242, 0.15);
+  --job-status-paid: #00ff88;
+
+  /* Estimate Status Colors */
+  --estimate-status-draft: #888899;
+  --estimate-status-sent: #00d9ff;
+  --estimate-status-accepted: #00ff88;
+  --estimate-status-rejected: #ff0055;
+  --estimate-status-expired: #9999aa;
+
+  /* Pipeline-specific colors */
+  --deal-value-bg: rgba(0, 255, 136, 0.08);
+  --deal-value-bg-hover: rgba(0, 255, 136, 0.12);
+  --deal-value-border: rgba(0, 255, 136, 0.4);
+  --deal-value-border-hover: rgba(0, 255, 136, 0.6);
+  --loss-reason-bg: rgba(255, 0, 85, 0.08);
+  --loss-reason-bg-hover: rgba(255, 0, 85, 0.12);
+  --loss-reason-border: rgba(255, 0, 85, 0.4);
+  --loss-reason-border-hover: rgba(255, 0, 85, 0.6);
+  --action-btn-bg: #1f1145;
+  --action-btn-bg-hover: #281756;
+  --action-btn-border: rgba(0, 217, 255, 0.5);
+  --action-btn-border-hover: rgba(0, 217, 255, 0.8);
+  --action-btn-icon-color: #00d9ff;
+
+  /* Section badge (lead count) */
+  --section-badge-bg: #1f1145;
+  --section-badge-color: #00d9ff;
+
+  /* Primary button gradient - Cyan glow */
+  --btn-primary-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #00fff2 0%, #00d9ff 100%);
+
+  /* Module Marketplace - Cyber theme */
+  --module-card-bg: #160b33;
+  --module-card-border: rgba(0, 217, 255, 0.4);
+  --module-card-hover-border: rgba(0, 217, 255, 0.8);
+  --module-card-hover-shadow: 0 0 35px rgba(0, 217, 255, 0.4);
+  --module-card-active-bg: rgba(0, 217, 255, 0.05);
+  --module-card-active-border: rgba(0, 217, 255, 0.9);
+  --module-icon-bg: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(0, 168, 204, 0.1));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --tier-pro-shadow: 0 0 15px rgba(0, 217, 255, 0.5);
+  --category-productivity-bg: rgba(0, 217, 255, 0.1);
+  --category-productivity-color: #00fff2;
+  --category-operations-bg: rgba(255, 215, 0, 0.12);
+  --category-operations-color: #ffd700;
+  --category-sales-bg: rgba(0, 217, 255, 0.12);
+  --category-sales-color: #00fff2;
+  --category-marketing-bg: rgba(255, 0, 255, 0.12);
+  --category-marketing-color: #ff00ff;
+  --coming-soon-overlay: rgba(13, 2, 33, 0.9);
+  --coming-soon-badge-bg: #281756;
+  --coming-soon-text: #9999aa;
+  --toggle-enabled-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --toggle-enabled-shadow: 0 0 15px rgba(0, 217, 255, 0.5);
+  --toggle-disabled-bg: rgba(0, 217, 255, 0.1);
+  --toggle-disabled-color: var(--text-secondary);
+
+  /* Additional overlay/modal colors */
+  --modal-overlay-dark: rgba(13, 2, 33, 0.97);
+  --modal-overlay-darker: rgba(13, 2, 33, 0.99);
+  --hover-overlay-light: rgba(0, 217, 255, 0.1);
+  --shadow-modal: 0 0 60px rgba(0, 217, 255, 0.3);
+  --shadow-modal-dark: 0 0 90px rgba(0, 217, 255, 0.4);
+}
+
+/* =====================================================
+   JOSH'S STYLE THEME - Electric orange glow
+   Early Access - Admin Only (Josh's personal theme)
+   ===================================================== */
+[data-theme="joshs-style"] {
+  /* Primary Colors - VIBRANT ORANGE */
+  --primary: #ff6b00;
+  --primary-dark: #e85d00;
+  --primary-light: rgba(255, 107, 0, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #ff6b00 0%, #ff8533 50%, #ff6b00 100%);
+
+  /* Status Colors - Clean with orange glow accents */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-bg: rgba(16, 185, 129, 0.05);
+  --success-bg-hover: rgba(16, 185, 129, 0.08);
+  --success-border: rgba(255, 107, 0, 0.3);
+  --success-border-hover: rgba(255, 107, 0, 0.5);
+  --warning: #fbbf24;
+  --warning-light: rgba(251, 191, 36, 0.15);
+  --warning-bg: rgba(251, 191, 36, 0.05);
+  --warning-bg-hover: rgba(251, 191, 36, 0.08);
+  --warning-border: rgba(255, 107, 0, 0.3);
+  --warning-border-hover: rgba(255, 107, 0, 0.5);
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.05);
+  --danger-bg-hover: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(255, 107, 0, 0.3);
+  --danger-border-hover: rgba(255, 107, 0, 0.5);
+  --info: #06b6d4;
+  --info-light: rgba(6, 182, 212, 0.15);
+  --info-bg: rgba(6, 182, 212, 0.05);
+  --info-bg-hover: rgba(6, 182, 212, 0.08);
+  --info-border: rgba(255, 107, 0, 0.3);
+  --info-border-hover: rgba(255, 107, 0, 0.5);
+  --primary-bg: rgba(255, 107, 0, 0.05);
+  --primary-bg-hover: rgba(255, 107, 0, 0.08);
+  --primary-border: rgba(255, 107, 0, 0.5);
+  --primary-border-hover: rgba(255, 107, 0, 0.8);
+
+  /* Background Colors - TRUE BLACKS */
+  --background: #0a0a0a;
+  --surface: #151515;
+  --surface-hover: #1a1a1a;
+  --surface-active: #202020;
+
+  /* Border Colors - ORANGE GLOW */
+  --border: rgba(255, 107, 0, 0.3);
+  --border-light: rgba(255, 107, 0, 0.15);
+  --border-dark: rgba(255, 107, 0, 0.5);
+
+  /* Text Colors - CRISP WHITES */
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5e5;
+  --text-tertiary: #b3b3b3;
+  --text-muted: #737373;
+
+  /* Component-specific - Orange glow outlines */
+  --modal-bg: #151515;
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+  --input-bg: #1a1a1a;
+  --input-border: rgba(255, 107, 0, 0.4);
+  --input-focus-border: rgba(255, 107, 0, 1);
+  --shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  --shadow-lg: 0 0 40px rgba(255, 107, 0, 0.4);
+
+  /* Sidebar - Black with orange glow gradient */
+  --sidebar-bg: linear-gradient(180deg, #151515 0%, #0a0a0a 100%);
+  --sidebar-border: rgba(255, 107, 0, 0.4);
+  --sidebar-item-hover: rgba(255, 107, 0, 0.1);
+  --sidebar-item-active: rgba(255, 107, 0, 0.15);
+  --sidebar-text: #ffffff;
+  --sidebar-text-secondary: #ff6b00;
+
+  /* Stats Cards - Black with orange glow borders */
+  --stat-bg: #151515;
+  --stat-border: rgba(255, 107, 0, 0.4);
+  --stat-icon-bg: rgba(255, 107, 0, 0.1);
+
+  /* Stage Colors - Orange highlights */
+  --stage-new: #ff6b00;
+  --stage-contacted: #ff8533;
+  --stage-negotiation: #fbbf24;
+  --stage-qualified: #10b981;
+  --stage-closed: #10b981;
+  --stage-lost: #ef4444;
+
+  /* Job Management - Orange glow shadows */
+  --job-card-hover-shadow: 0 0 30px rgba(255, 107, 0, 0.4);
+  --job-btn-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+  --job-profit-calculator-bg: rgba(255, 107, 0, 0.05);
+  --job-profit-calculator-border: var(--primary);
+  --job-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  --job-input-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --job-warning-bg: rgba(251, 191, 36, 0.08);
+  --job-warning-bg-hover: rgba(251, 191, 36, 0.12);
+  --job-hover-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  --job-danger-shadow: rgba(239, 68, 68, 0.4);
+  --job-info-bg: rgba(6, 182, 212, 0.05);
+  --job-danger-overlay: rgba(239, 68, 68, 0.9);
+  --job-profit-gradient: linear-gradient(135deg, rgba(255, 107, 0, 0.1), rgba(255, 133, 51, 0.05));
+  --job-photo-overlay-gradient: linear-gradient(to bottom, rgba(255, 107, 0, 0.5) 0%, transparent 40%, transparent 60%, rgba(255, 107, 0, 0.5) 100%);
+  --job-photo-badge-bg: rgba(255, 107, 0, 0.8);
+
+  /* Job Status Colors */
+  --job-status-draft: #737373;
+  --job-status-in-progress: #ff6b00;
+  --job-status-invoiced: #ff8533;
+  --job-status-invoiced-bg: rgba(255, 133, 51, 0.15);
+  --job-status-paid: #10b981;
+
+  /* Estimate Status Colors */
+  --estimate-status-draft: #737373;
+  --estimate-status-sent: #ff6b00;
+  --estimate-status-accepted: #10b981;
+  --estimate-status-rejected: #ef4444;
+  --estimate-status-expired: #b3b3b3;
+
+  /* Pipeline-specific colors */
+  --deal-value-bg: rgba(16, 185, 129, 0.08);
+  --deal-value-bg-hover: rgba(16, 185, 129, 0.12);
+  --deal-value-border: rgba(16, 185, 129, 0.4);
+  --deal-value-border-hover: rgba(16, 185, 129, 0.6);
+  --loss-reason-bg: rgba(239, 68, 68, 0.08);
+  --loss-reason-bg-hover: rgba(239, 68, 68, 0.12);
+  --loss-reason-border: rgba(239, 68, 68, 0.4);
+  --loss-reason-border-hover: rgba(239, 68, 68, 0.6);
+  --action-btn-bg: #1a1a1a;
+  --action-btn-bg-hover: #202020;
+  --action-btn-border: rgba(255, 107, 0, 0.4);
+  --action-btn-border-hover: rgba(255, 107, 0, 0.7);
+  --action-btn-icon-color: #ff6b00;
+
+  /* Section badge (lead count) */
+  --section-badge-bg: #1a1a1a;
+  --section-badge-color: #ff6b00;
+
+  /* Primary button gradient - Orange glow */
+  --btn-primary-bg: linear-gradient(135deg, #ff6b00 0%, #e85d00 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #ff8533 0%, #ff6b00 100%);
+
+  /* Module Marketplace - Orange glow theme */
+  --module-card-bg: #151515;
+  --module-card-border: rgba(255, 107, 0, 0.3);
+  --module-card-hover-border: rgba(255, 107, 0, 0.7);
+  --module-card-hover-shadow: 0 0 30px rgba(255, 107, 0, 0.4);
+  --module-card-active-bg: rgba(255, 107, 0, 0.05);
+  --module-card-active-border: rgba(255, 107, 0, 0.8);
+  --module-icon-bg: linear-gradient(135deg, rgba(255, 107, 0, 0.1), rgba(232, 93, 0, 0.1));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #ff6b00 0%, #e85d00 100%);
+  --tier-pro-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+  --category-productivity-bg: rgba(255, 107, 0, 0.1);
+  --category-productivity-color: #ff8533;
+  --category-operations-bg: rgba(251, 191, 36, 0.12);
+  --category-operations-color: #fbbf24;
+  --category-sales-bg: rgba(255, 107, 0, 0.12);
+  --category-sales-color: #ff8533;
+  --category-marketing-bg: rgba(236, 72, 153, 0.12);
+  --category-marketing-color: #fbcfe8;
+  --coming-soon-overlay: rgba(10, 10, 10, 0.9);
+  --coming-soon-badge-bg: #202020;
+  --coming-soon-text: #b3b3b3;
+  --toggle-enabled-bg: linear-gradient(135deg, #ff6b00 0%, #e85d00 100%);
+  --toggle-enabled-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+  --toggle-disabled-bg: rgba(255, 107, 0, 0.1);
+  --toggle-disabled-color: var(--text-secondary);
+
+  /* Additional overlay/modal colors */
+  --modal-overlay-dark: rgba(10, 10, 10, 0.97);
+  --modal-overlay-darker: rgba(10, 10, 10, 0.99);
+  --hover-overlay-light: rgba(255, 107, 0, 0.1);
+  --shadow-modal: 0 0 50px rgba(255, 107, 0, 0.3);
+  --shadow-modal-dark: 0 0 80px rgba(255, 107, 0, 0.4);
+}
+
+/* =====================================================
+   FOUNDERS EDITION THEME - Lightning Blue
+   Early Access - Admin Only
+   ===================================================== */
+[data-theme="founders-edition"] {
+  /* Primary Colors - ELECTRIC CYAN */
+  --primary: #00d9ff;
+  --primary-dark: #00a8cc;
+  --primary-light: rgba(0, 217, 255, 0.2);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #00d9ff 0%, #00fff2 50%, #00d9ff 100%);
+
+  /* Status Colors - Cyberpunk cyan accents */
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-bg: rgba(16, 185, 129, 0.05);
+  --success-bg-hover: rgba(16, 185, 129, 0.08);
+  --success-border: rgba(0, 217, 255, 0.3);
+  --success-border-hover: rgba(0, 217, 255, 0.5);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.05);
+  --warning-bg-hover: rgba(245, 158, 11, 0.08);
+  --warning-border: rgba(0, 217, 255, 0.3);
+  --warning-border-hover: rgba(0, 217, 255, 0.5);
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.05);
+  --danger-bg-hover: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(0, 217, 255, 0.3);
+  --danger-border-hover: rgba(0, 217, 255, 0.5);
+  --info: #06b6d4;
+  --info-light: rgba(6, 182, 212, 0.15);
+  --info-bg: rgba(6, 182, 212, 0.05);
+  --info-bg-hover: rgba(6, 182, 212, 0.08);
+  --info-border: rgba(0, 217, 255, 0.3);
+  --info-border-hover: rgba(0, 217, 255, 0.5);
+  --primary-bg: rgba(0, 217, 255, 0.05);
+  --primary-bg-hover: rgba(0, 217, 255, 0.08);
+  --primary-border: rgba(0, 217, 255, 0.4);
+  --primary-border-hover: rgba(0, 217, 255, 0.7);
+
+  /* Background Colors - TRUE BLACKS */
+  --background: #0a0a0a;
+  --surface: #121212;
+  --surface-hover: #1a1a1a;
+  --surface-active: #222222;
+
+  /* Border Colors - GOLD GLOW */
+  --border: rgba(0, 217, 255, 0.3);
+  --border-light: rgba(0, 217, 255, 0.15);
+  --border-dark: rgba(0, 217, 255, 0.5);
+
+  /* Text Colors - CRISP WHITES */
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5e5;
+  --text-tertiary: #b3b3b3;
+  --text-muted: #737373;
+
+  /* Component-specific - Gold outlines */
+  --modal-bg: #121212;
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+  --input-bg: #1a1a1a;
+  --input-border: rgba(0, 217, 255, 0.4);
+  --input-focus-border: rgba(0, 217, 255, 0.9);
+  --shadow: 0 0 20px rgba(0, 217, 255, 0.2);
+  --shadow-lg: 0 0 40px rgba(0, 217, 255, 0.3);
+
+  /* Sidebar - Black with gold gradient */
+  --sidebar-bg: linear-gradient(180deg, #121212 0%, #0a0a0a 100%);
+  --sidebar-border: rgba(0, 217, 255, 0.4);
+  --sidebar-item-hover: rgba(0, 217, 255, 0.08);
+  --sidebar-item-active: rgba(0, 217, 255, 0.12);
+  --sidebar-text: #ffffff;
+  --sidebar-text-secondary: #00d9ff;
+
+  /* Stats Cards - Black with gold borders */
+  --stat-bg: #121212;
+  --stat-border: rgba(0, 217, 255, 0.4);
+  --stat-icon-bg: rgba(0, 217, 255, 0.08);
+
+  /* Stage Colors - Gold highlights */
+  --stage-new: #00d9ff;
+  --stage-contacted: #00fff2;
+  --stage-negotiation: #f59e0b;
+  --stage-qualified: #10b981;
+  --stage-closed: #10b981;
+  --stage-lost: #ef4444;
+
+  /* Job Management - Gold glow shadows */
+  --job-card-hover-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+  --job-btn-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+  --job-profit-calculator-bg: rgba(0, 217, 255, 0.05);
+  --job-profit-calculator-border: var(--primary);
+  --job-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  --job-input-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --job-warning-bg: rgba(245, 158, 11, 0.08);
+  --job-warning-bg-hover: rgba(245, 158, 11, 0.12);
+  --job-hover-shadow: 0 0 20px rgba(0, 217, 255, 0.25);
+  --job-danger-shadow: rgba(239, 68, 68, 0.4);
+  --job-info-bg: rgba(6, 182, 212, 0.05);
+  --job-danger-overlay: rgba(239, 68, 68, 0.9);
+  --job-profit-gradient: linear-gradient(135deg, rgba(0, 217, 255, 0.08), rgba(244, 208, 63, 0.05));
+  --job-photo-overlay-gradient: linear-gradient(to bottom, rgba(0, 217, 255, 0.5) 0%, transparent 40%, transparent 60%, rgba(0, 217, 255, 0.5) 100%);
+  --job-photo-badge-bg: rgba(0, 217, 255, 0.8);
+
+  /* Job Status Colors */
+  --job-status-draft: #737373;
+  --job-status-in-progress: #00d9ff;
+  --job-status-invoiced: #00fff2;
+  --job-status-invoiced-bg: rgba(244, 208, 63, 0.15);
+  --job-status-paid: #10b981;
+
+  /* Estimate Status Colors */
+  --estimate-status-draft: #737373;
+  --estimate-status-sent: #00d9ff;
+  --estimate-status-accepted: #10b981;
+  --estimate-status-rejected: #ef4444;
+  --estimate-status-expired: #b3b3b3;
+
+  /* Pipeline-specific colors */
+  --deal-value-bg: rgba(16, 185, 129, 0.08);
+  --deal-value-bg-hover: rgba(16, 185, 129, 0.12);
+  --deal-value-border: rgba(16, 185, 129, 0.4);
+  --deal-value-border-hover: rgba(16, 185, 129, 0.6);
+  --loss-reason-bg: rgba(239, 68, 68, 0.08);
+  --loss-reason-bg-hover: rgba(239, 68, 68, 0.12);
+  --loss-reason-border: rgba(239, 68, 68, 0.4);
+  --loss-reason-border-hover: rgba(239, 68, 68, 0.6);
+  --action-btn-bg: #1a1a1a;
+  --action-btn-bg-hover: #222222;
+  --action-btn-border: rgba(0, 217, 255, 0.4);
+  --action-btn-border-hover: rgba(0, 217, 255, 0.7);
+  --action-btn-icon-color: #00d9ff;
+
+  /* Section badge (lead count) */
+  --section-badge-bg: #1a1a1a;
+  --section-badge-color: #00d9ff;
+
+  /* Primary button gradient - Gold glow */
+  --btn-primary-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --btn-primary-bg-hover: linear-gradient(135deg, #00fff2 0%, #00d9ff 100%);
+
+  /* Module Marketplace - Gold theme */
+  --module-card-bg: #121212;
+  --module-card-border: rgba(0, 217, 255, 0.3);
+  --module-card-hover-border: rgba(0, 217, 255, 0.7);
+  --module-card-hover-shadow: 0 0 30px rgba(0, 217, 255, 0.3);
+  --module-card-active-bg: rgba(0, 217, 255, 0.05);
+  --module-card-active-border: rgba(0, 217, 255, 0.8);
+  --module-icon-bg: linear-gradient(135deg, rgba(0, 217, 255, 0.08), rgba(184, 148, 31, 0.08));
+  --module-icon-color: var(--primary);
+  --tier-free-bg: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --tier-free-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  --tier-pro-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --tier-pro-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+  --category-productivity-bg: rgba(0, 217, 255, 0.1);
+  --category-productivity-color: #00fff2;
+  --category-operations-bg: rgba(245, 158, 11, 0.12);
+  --category-operations-color: #f59e0b;
+  --category-sales-bg: rgba(0, 217, 255, 0.12);
+  --category-sales-color: #00fff2;
+  --category-marketing-bg: rgba(236, 72, 153, 0.12);
+  --category-marketing-color: #fbcfe8;
+  --coming-soon-overlay: rgba(10, 10, 10, 0.9);
+  --coming-soon-badge-bg: #222222;
+  --coming-soon-text: #b3b3b3;
+  --toggle-enabled-bg: linear-gradient(135deg, #00d9ff 0%, #00a8cc 100%);
+  --toggle-enabled-shadow: 0 0 15px rgba(0, 217, 255, 0.4);
+  --toggle-disabled-bg: rgba(0, 217, 255, 0.1);
+  --toggle-disabled-color: var(--text-secondary);
+
+  /* Additional overlay/modal colors */
+  --modal-overlay-dark: rgba(10, 10, 10, 0.97);
+  --modal-overlay-darker: rgba(10, 10, 10, 0.99);
+  --hover-overlay-light: rgba(0, 217, 255, 0.08);
+  --shadow-modal: 0 0 50px rgba(0, 217, 255, 0.25);
+  --shadow-modal-dark: 0 0 80px rgba(0, 217, 255, 0.3);
+}
+
+/* =====================================================
+   GLOBAL THEME APPLICATION
+   Apply theme to body element
+   ===================================================== */
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}

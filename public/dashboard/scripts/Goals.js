@@ -19,19 +19,21 @@ window.GoalsModule = {
         taskLinkTab: 'existing',
         batchEditMode: false,
         selectedGoalIds: [],
-        goalLimit: 1000,
-        hasInitialized: false  // Track if module has loaded before
+        goalLimit: 1000
     },
 
     // INIT
     async goals_init(targetContainer = 'goals-content') {
         this.state.container = targetContainer;
 
+        // Fade out container immediately before loading data
+        const container = document.getElementById(this.state.container);
+        if (container) container.style.opacity = '0';
+
         try {
             await this.goals_loadData();
             await this.goals_loadAvailableTasks();
             this.goals_render();
-            this.state.hasInitialized = true;
 
             // Listen for task status changes to refresh goal percentages
             this.goals_setupTaskChangeListener();
@@ -57,7 +59,49 @@ window.GoalsModule = {
 
     // LOAD DATA
     async goals_loadData() {
+        // Check cache first
+        const cached = AppCache.get('goals');
+        if (cached) {
+            const goalsWithProgress = cached;
+
+            this.state.goals = goalsWithProgress;
+
+            // For task_list goals: use progress to determine if "completed" (dynamic)
+            // For value-based goals: use actual status field
+            this.state.activeGoals = goalsWithProgress.filter(g => {
+                if (g.goal_type === 'task_list' && !g.is_recurring) {
+                    // Task list goals: active if progress < 100%
+                    return g.progress < 100;
+                }
+                return g.status === 'active';
+            });
+
+            this.state.completedGoals = goalsWithProgress.filter(g => {
+                if (g.goal_type === 'task_list' && !g.is_recurring) {
+                    // Task list goals: completed if progress >= 100%
+                    return g.progress >= 100;
+                }
+                return g.status === 'completed';
+            });
+
+            this.state.failedGoals = goalsWithProgress.filter(g => g.status === 'failed');
+
+            // Calculate stats
+            this.state.stats = {
+                totalActive: this.state.activeGoals.length,
+                totalCompleted: this.state.completedGoals.length
+            };
+
+            console.log(`[Goals] ⚡ Loaded ${goalsWithProgress.length} goals from cache (instant)`);
+            return;
+        }
+
+        // Cache miss - fetch from API
+        console.log('[Goals] 🔄 Cache miss - fetching from API');
         const goalsWithProgress = await API.getGoalProgress();
+
+        // Store in cache
+        AppCache.set('goals', goalsWithProgress);
 
         this.state.goals = goalsWithProgress;
 
@@ -91,6 +135,17 @@ window.GoalsModule = {
     // LOAD AVAILABLE TASKS
 async goals_loadAvailableTasks() {
     try {
+        // Check cache first
+        const cached = AppCache.get('tasks');
+        if (cached) {
+            // Filter for pending tasks
+            const allTasks = Array.isArray(cached) ? cached : [];
+            this.state.availableTasks = allTasks.filter(t => t.status === 'pending');
+            console.log(`[Goals] ⚡ Loaded ${this.state.availableTasks.length} available tasks from cache`);
+            return;
+        }
+
+        // Cache miss - fetch from API
         this.state.availableTasks = await API.getTasks({ status: 'pending' });
     } catch (error) {
         this.state.availableTasks = [];
@@ -102,51 +157,38 @@ async goals_loadAvailableTasks() {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        const isFirstLoad = !this.state.hasInitialized;
-
-        // Clear any lingering inline styles from other modules
-        container.removeAttribute('style');
+        // Clear container opacity to prevent snap on re-render
+        container.style.opacity = '0';
 
         container.innerHTML = `
             ${this.goals_renderStyles()}
-            <div class="goals-container">
+            <div class="goals-container" style="opacity: 0;">
                 ${this.goals_renderHeader()}
                 ${this.goals_renderBanners()}
                 ${this.goals_renderGoalsGrid()}
             </div>
         `;
 
-        // Use a single requestAnimationFrame for smoother rendering
-        requestAnimationFrame(() => {
-            // Apply animations based on load state
-            if (isFirstLoad) {
-                // First load: Staggered wave animation
-                const header = container.querySelector('.goals-header');
-                if (header) {
-                    header.classList.add('goals-wave-in');
-                    header.style.animationDelay = '0s';
-                }
+        // Force a reflow before animation
+        const goalsContainer = container.querySelector('.goals-container');
+        if (goalsContainer) {
+            // Fade outer container back to visible
+            container.style.opacity = '1';
 
-                const banners = container.querySelectorAll('.goals-banner');
-                banners.forEach((banner, i) => {
-                    banner.classList.add('goals-wave-in');
-                    banner.style.animationDelay = `${0.1 + (i * 0.1)}s`;
-                });
+            // Force browser to acknowledge the opacity: 0 state
+            void goalsContainer.offsetHeight;
 
-                const cards = container.querySelectorAll('.goals-card');
-                cards.forEach((card, i) => {
-                    card.classList.add('goals-wave-in');
-                    card.style.animationDelay = `${0.2 + (Math.min(i, 6) * 0.08)}s`;
-                });
-            } else {
-                // Subsequent loads: Fast fade
-                const allElements = container.querySelectorAll('.goals-header, .goals-banner, .goals-card');
-                allElements.forEach(el => el.classList.add('goals-fade-in'));
-            }
+            // NOW add transition and fade in
+            goalsContainer.style.transition = 'opacity 0.5s ease';
 
-            this.goals_attachEvents();
-            this.goals_startCountdownTimer(); // Start live countdown for urgent goals
-        });
+            // Use setTimeout to ensure transition is registered
+            setTimeout(() => {
+                goalsContainer.style.opacity = '1';
+            }, 20);
+        }
+
+        this.goals_attachEvents();
+        this.goals_startCountdownTimer(); // Start live countdown for urgent goals
     },
 
     // INSTANT FILTER CHANGE (no fade - just like Estimates)
@@ -439,8 +481,7 @@ async goals_loadAvailableTasks() {
 
                 <div class="goals-card-progress-section">
                     <div class="goals-progress-bar">
-                        <div class="goals-progress-fill" style="width: ${progress}%; ${cardColor ? `background: ${cardColor};` : 'background: #94a3b8;'}">
-                            <div class="goals-progress-shimmer"></div>
+                        <div class="goals-progress-fill" style="width: ${progress}%; ${cardColor ? `background: ${cardColor};` : 'background: var(--primary);'}">
                         </div>
                     </div>
                     <div class="goals-progress-label">
@@ -1959,7 +2000,7 @@ goals_showGoalDetailModal(goalId) {
                         <h3>${API.escapeHtml(goal.title)}</h3>
                         <div class="goals-update-progress">
                             <div class="goals-progress-bar">
-                                <div class="goals-progress-fill" style="width: ${goal.progress}%; ${this.goals_sanitizeColor(goal.color) ? `background: ${this.goals_sanitizeColor(goal.color)};` : 'background: #94a3b8;'}"></div>
+                                <div class="goals-progress-fill" style="width: ${goal.progress}%; ${this.goals_sanitizeColor(goal.color) ? `background: ${this.goals_sanitizeColor(goal.color)};` : 'background: var(--primary);'}"></div>
                             </div>
                             <span>${this.goals_formatValue(goal.current_value, goal.unit)} / ${this.goals_formatValue(goal.target_value, goal.unit)}</span>
                         </div>
@@ -2249,7 +2290,7 @@ goals_attachEvents() {
 
             // Add error styling
             titleInput.style.borderColor = 'var(--danger)';
-            titleInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+            titleInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
 
             // Update hint text to show error
             if (titleCounter) {
@@ -2360,7 +2401,7 @@ goals_attachEvents() {
 
                 // Add error styling
                 targetInput.style.borderColor = 'var(--danger)';
-                targetInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                targetInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
 
                 // Update hint text
                 if (targetCounter) {
@@ -2396,7 +2437,7 @@ goals_attachEvents() {
 
                     // Add error styling
                     customUnitInput.style.borderColor = 'var(--danger)';
-                    customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                    customUnitInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
 
                     // Update hint text
                     if (customUnitCounter) {
@@ -2454,6 +2495,12 @@ goals_attachEvents() {
         // Reset state
         this.state.selectedTaskIds = [];
         this.state.newTasks = [];
+
+        // Invalidate cache before reloading
+        AppCache.invalidate('goals');
+        if (trackingMethod === 'task_list') {
+            AppCache.invalidate('tasks'); // Also invalidate tasks if we created/linked tasks
+        }
 
         // Reload data and re-render (optimistic UI update)
         await this.goals_loadData();
@@ -2572,7 +2619,7 @@ goals_attachEvents() {
 
                         // Add error styling
                         customUnitInput.style.borderColor = 'var(--danger)';
-                        customUnitInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                        customUnitInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
 
                         // Update hint text
                         if (customUnitCounter) {
@@ -2619,6 +2666,13 @@ goals_attachEvents() {
 
             // Reset state and reload data (optimistic UI update)
             this.state.editingGoalId = null;
+
+            // Invalidate cache before reloading
+            AppCache.invalidate('goals');
+            if (trackingMethod === 'task_list') {
+                AppCache.invalidate('tasks'); // Also invalidate tasks if we modified task links
+            }
+
             await this.goals_loadData();
             this.goals_render();
 
@@ -2648,6 +2702,9 @@ goals_attachEvents() {
 
             await API.checkGoalCompletion();
 
+            // Invalidate cache before reloading
+            AppCache.invalidate('goals');
+
             await this.goals_loadData();
 
             // If we're moving from completed to active, switch to active tab
@@ -2674,6 +2731,9 @@ goals_attachEvents() {
 
             // Make API call in background
             await API.deleteGoal(goalId);
+
+            // Invalidate cache after successful delete
+            AppCache.invalidate('goals');
 
             window.SteadyUtils.showToast('Goal deleted successfully', 'success');
 
@@ -3036,6 +3096,10 @@ goals_formatValueAbbreviated(value, unit) {
             // Reload and reset
             this.state.selectedGoalIds = [];
             this.state.batchEditMode = false;
+
+            // Invalidate cache before reloading
+            AppCache.invalidate('goals');
+
             await this.goals_loadData();
             this.goals_render();
 
@@ -3060,6 +3124,10 @@ goals_formatValueAbbreviated(value, unit) {
             // Reload and reset
             this.state.selectedGoalIds = [];
             this.state.batchEditMode = false;
+
+            // Invalidate cache before reloading
+            AppCache.invalidate('goals');
+
             await this.goals_loadData();
             this.goals_render();
 
@@ -3137,6 +3205,9 @@ goals_formatValueAbbreviated(value, unit) {
 
             // Batch delete all selected goals
             await API.batchDeleteGoals(idsToDelete);
+
+            // Invalidate cache after successful batch delete
+            AppCache.invalidate('goals');
 
             window.SteadyUtils.showToast(`Deleted ${count} goal(s)`, 'success');
 
@@ -3216,12 +3287,12 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-btn-primary {
     background: var(--gradient-primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
 }
 
 .goals-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px var(--job-btn-shadow-hover);
 }
 
 .goals-btn-primary svg {
@@ -3254,9 +3325,9 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-btn-danger:hover {
-    background: #dc2626;
+    background: var(--danger-dark);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 8px 24px var(--job-danger-shadow);
 }
 
 .goals-btn-danger svg {
@@ -3331,7 +3402,7 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-card.batch-mode.selected {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px var(--primary-light);
     transform: translateY(-2px);
 }
 
@@ -3401,7 +3472,7 @@ goals_formatValueAbbreviated(value, unit) {
     background: var(--surface);
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     margin-top: 2rem;
     z-index: 100;
 }
@@ -3428,37 +3499,38 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-batch-btn-complete {
     background: var(--success);
     color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: var(--shadow);
 }
 
 .goals-batch-btn-complete:hover {
-    background: #059669;
+    background: var(--success);
+    opacity: 0.9;
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+    box-shadow: var(--shadow-lg);
 }
 
 .goals-batch-btn-reset {
     background: var(--primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
 }
 
 .goals-batch-btn-reset:hover {
-    background: #5568d3;
+    background: var(--primary-dark);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px var(--job-btn-shadow-hover);
 }
 
 .goals-batch-btn-delete {
     background: var(--danger);
     color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 12px var(--job-danger-shadow);
 }
 
 .goals-batch-btn-delete:hover {
-    background: #dc2626;
+    background: var(--danger-dark);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 8px 24px var(--job-danger-shadow);
 }
 
 .goals-banners {
@@ -3486,13 +3558,13 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-banner:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-    border-color: #667eea; /* Always blue outline on hover */
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary); /* Always blue outline on hover */
 }
 
 .goals-banner.active {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
+    background: var(--primary-bg);
 }
 
 .goals-banner-icon-wrapper {
@@ -3501,13 +3573,13 @@ goals_formatValueAbbreviated(value, unit) {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
+    background: var(--job-profit-gradient);
     border-radius: var(--radius-lg);
     flex-shrink: 0;
 }
 
 .goals-banner-icon-completed {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+    background: var(--primary-bg);
 }
 
 
@@ -3516,10 +3588,6 @@ goals_formatValueAbbreviated(value, unit) {
     height: 2rem;
     stroke: var(--primary);
     stroke-width: 2;
-}
-
-.goals-banner-icon-completed svg {
-    stroke: var(--success);
 }
 
 .goals-banner-content { flex: 1; }
@@ -3609,7 +3677,7 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-search-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .goals-search-input::placeholder {
@@ -3623,7 +3691,7 @@ goals_formatValueAbbreviated(value, unit) {
     min-width: 2rem;
     height: 2rem;
     padding: 0 0.75rem;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
+    background: var(--job-profit-gradient);
     color: var(--primary);
     border-radius: 9999px;
     font-size: 0.875rem;
@@ -3660,8 +3728,8 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-    border-color: #667eea; /* Always blue outline on hover */
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary); /* Always blue outline on hover */
 }
 
 .goals-card.goals-card-completed {
@@ -3669,7 +3737,7 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-card.goals-card-completed::before {
-    background: linear-gradient(90deg, var(--success), #059669);
+    background: linear-gradient(90deg, var(--success), var(--success));
 }
 
 .goals-card.goals-card-completed .goals-card-title {
@@ -3759,7 +3827,7 @@ goals_formatValueAbbreviated(value, unit) {
     border-color: var(--primary);
     border-width: 3px;
     transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 4px 12px var(--job-hover-shadow);
 }
 
 .goals-task-item-content {
@@ -3790,8 +3858,8 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-task-selected-count {
     margin-top: 1rem;
     padding: 0.75rem;
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    background: var(--primary-light);
+    border: 1px solid var(--primary-border);
     border-radius: var(--radius);
     text-align: center;
     font-weight: 700;
@@ -3845,8 +3913,8 @@ goals_formatValueAbbreviated(value, unit) {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: rgba(16, 185, 129, 0.05);
-    border: 2px solid rgba(16, 185, 129, 0.2);
+    background: var(--success-light);
+    border: 2px solid var(--success-light);
     border-radius: var(--radius);
 }
 
@@ -3927,8 +3995,8 @@ goals_formatValueAbbreviated(value, unit) {
     gap: 0.75rem;
     padding: 1rem;
     margin-top: 1rem;
-    background: rgba(102, 126, 234, 0.05);
-    border: 2px solid rgba(102, 126, 234, 0.2);
+    background: var(--primary-bg);
+    border: 2px solid var(--primary);
     border-radius: var(--radius);
     color: var(--text-secondary);
     font-size: 0.875rem;
@@ -3954,8 +4022,8 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-detail-task-item.completed {
     opacity: 0.6;
-    background: rgba(16, 185, 129, 0.05);
-    border-color: rgba(16, 185, 129, 0.2);
+    background: var(--success-light);
+    border-color: var(--success-light);
 }
 
 .goals-detail-task-check {
@@ -4056,7 +4124,7 @@ goals_formatValueAbbreviated(value, unit) {
 }
 
 .goals-badge-manual {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(139, 92, 246, 0.15));
+    background: var(--job-profit-gradient);
     color: var(--primary);
     max-width: 200px;
     overflow: hidden;
@@ -4094,22 +4162,6 @@ goals_formatValueAbbreviated(value, unit) {
     border-radius: 9999px;
     position: relative;
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-}
-
-.goals-progress-shimmer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: goalsShimmer 2s infinite;
-}
-
-@keyframes goalsShimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
 }
 
 @keyframes goalsSpin {
@@ -4228,8 +4280,8 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.3);
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4255,7 +4307,7 @@ goals_formatValueAbbreviated(value, unit) {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-xl);
 }
 
 .goals-modal-overlay.show .goals-modal {
@@ -4354,7 +4406,7 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-form-input-v2:focus, .goals-form-select-v2:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
     background: var(--background) !important;
 }
 
@@ -4384,7 +4436,7 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-form-textarea-v2:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
     background: var(--background);
 }
 
@@ -4419,7 +4471,7 @@ goals_formatValueAbbreviated(value, unit) {
     background: var(--primary);
     border-color: var(--primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
 }
 
 #goalUnit {
@@ -4449,7 +4501,7 @@ goals_formatValueAbbreviated(value, unit) {
 #goalUnit:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 4px var(--primary-light);
 }
 
 .goals-card-completions {
@@ -4457,12 +4509,12 @@ goals_formatValueAbbreviated(value, unit) {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: var(--primary-bg);
+    border: 1px solid var(--primary-border);
     border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 700;
-    color: var(--success);
+    color: var(--primary);
     margin-top: 0.75rem;
 }
 
@@ -4599,7 +4651,7 @@ goals_formatValueAbbreviated(value, unit) {
     border-radius: var(--radius-lg);
     border: 3px solid transparent;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px var(--shadow-md);
 }
 
 .goals-color-none span {
@@ -4631,7 +4683,7 @@ goals_formatValueAbbreviated(value, unit) {
 
 .goals-color-option:hover span {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow);
 }
 
 .goals-color-option input:checked + span {
@@ -4697,7 +4749,7 @@ goals_formatValueAbbreviated(value, unit) {
     width: 4rem;
     height: 4rem;
     border-radius: var(--radius-lg);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px var(--shadow-md);
     flex-shrink: 0;
 }
 
@@ -4881,7 +4933,7 @@ goals_formatValueAbbreviated(value, unit) {
     text-align: center;
     padding: 2rem;
     background: rgba(239, 68, 68, 0.05);
-    border: 2px solid rgba(239, 68, 68, 0.2);
+    border: 2px solid var(--danger-light);
     border-radius: var(--radius-lg);
     margin-bottom: 2rem;
 }
@@ -4951,7 +5003,7 @@ goals_formatValueAbbreviated(value, unit) {
 .goals-form-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .goals-form-hint {
@@ -5025,44 +5077,18 @@ goals_formatValueAbbreviated(value, unit) {
 
 [data-theme="dark"] .goals-banner,
 [data-theme="dark"] .goals-card {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow);
 }
 
 [data-theme="dark"] .goals-banner:hover,
 [data-theme="dark"] .goals-card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--shadow-lg);
 }
 
 [data-theme="dark"] .goals-modal {
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px var(--modal-overlay);
 }
 
-/* Module-level animations */
-@keyframes goalsWaveIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes goalsFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.goals-wave-in {
-    animation: goalsWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-}
-
-.goals-fade-in {
-    animation: goalsFadeIn 0.3s ease forwards;
-    opacity: 0;
-}
 </style>`;
     }
 };

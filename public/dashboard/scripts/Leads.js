@@ -16,8 +16,7 @@ window.AddLeadModule = {
         },
         batchEditMode: false,
         selectedLeadIds: [],
-        leadLimit: 5000,
-        hasInitialized: false  // Track if module has loaded before
+        leadLimit: 5000
     },
 
     // Init with fade-in
@@ -30,13 +29,15 @@ window.AddLeadModule = {
 
             const container = document.getElementById(targetContainer);
 
+            // Get user profile and set correct lead limit based on tier
+            const profile = await API.getProfile();
+            const limits = API.getTierLimits(profile.user_type);
+            this.addlead_state.leadLimit = limits.leads;
+
             await this.addlead_loadLeads();
             this.addlead_render();
 
-            // Slide-in animation happens via CSS
             if (typeof lucide !== 'undefined') lucide.createIcons();
-
-            this.addlead_state.hasInitialized = true;
             console.log('AddLead module ready');
 
         } catch (error) {
@@ -50,8 +51,29 @@ window.AddLeadModule = {
     // Load leads from API
     async addlead_loadLeads() {
         try {
+            // Check cache first
+            const cached = AppCache.get('leads');
+            if (cached) {
+                if (cached.all) {
+                    this.addlead_state.leads = cached.all;
+                } else if (Array.isArray(cached)) {
+                    this.addlead_state.leads = cached;
+                } else if (cached.leads) {
+                    this.addlead_state.leads = cached.leads;
+                } else {
+                    this.addlead_state.leads = [];
+                }
+                console.log(`[Leads] ⚡ Loaded ${this.addlead_state.leads.length} leads from cache (instant)`);
+                return;
+            }
+
+            // Cache miss - fetch from API
+            console.log('[Leads] 🔄 Cache miss - fetching from API');
             const leadData = await API.getLeads();
-            
+
+            // Store in cache
+            AppCache.set('leads', leadData);
+
             if (leadData.all) {
                 this.addlead_state.leads = leadData.all;
             } else if (Array.isArray(leadData)) {
@@ -62,8 +84,8 @@ window.AddLeadModule = {
                 this.addlead_state.leads = [];
             }
 
-            console.log(`Loaded ${this.addlead_state.leads.length} leads`);
-            
+            console.log(`[Leads] Loaded ${this.addlead_state.leads.length} leads from API`);
+
         } catch (error) {
             console.error('Failed to load leads:', error);
             this.addlead_state.leads = [];
@@ -76,8 +98,6 @@ window.AddLeadModule = {
         const container = document.getElementById(this.addlead_state.targetContainer);
         if (!container) return;
 
-        const isFirstLoad = !this.addlead_state.hasInitialized;
-
         container.innerHTML = `
             <div class="addlead-container">
                 ${this.addlead_state.currentView === 'table' ?
@@ -87,34 +107,15 @@ window.AddLeadModule = {
             </div>
         `;
 
-        // Apply animations based on load state
-        if (isFirstLoad) {
-            // First load: Staggered wave animation
+        // Simple fade-in animation
+        const addleadContainer = container.querySelector('.addlead-container');
+        if (addleadContainer) {
+            addleadContainer.style.opacity = '0';
             requestAnimationFrame(() => {
-                const bubbles = container.querySelectorAll('.addlead-action-bubble');
-                bubbles.forEach((bubble, i) => {
-                    bubble.classList.add('addlead-wave-in');
-                    bubble.style.animationDelay = `${i * 0.15}s`;
+                requestAnimationFrame(() => {
+                    addleadContainer.style.transition = 'opacity 0.5s ease';
+                    addleadContainer.style.opacity = '1';
                 });
-
-                const recentSection = container.querySelector('.addlead-recent-section');
-                if (recentSection) {
-                    recentSection.classList.add('addlead-wave-in');
-                    recentSection.style.animationDelay = `${bubbles.length * 0.15}s`;
-                }
-
-                // For table view
-                const tableElements = container.querySelectorAll('.addlead-table-header, .addlead-table-container');
-                tableElements.forEach((el, i) => {
-                    el.classList.add('addlead-wave-in');
-                    el.style.animationDelay = `${i * 0.1}s`;
-                });
-            });
-        } else {
-            // Subsequent loads: Fast fade
-            requestAnimationFrame(() => {
-                const allElements = container.querySelectorAll('.addlead-action-bubble, .addlead-recent-section, .addlead-table-header, .addlead-table-container');
-                allElements.forEach(el => el.classList.add('addlead-fade-in'));
             });
         }
 
@@ -1530,6 +1531,10 @@ addlead_showCustomSourceInput(targetInput) {
             // Create lead
             const newLead = await API.createLead(leadData);
 
+            // Invalidate cache (new lead added)
+            AppCache.invalidate('leads');
+            AppCache.invalidate('dashboard-stats');
+
             this.addlead_state.leads.unshift(newLead);
             this.addlead_hideAddLeadModal();
 
@@ -1616,11 +1621,14 @@ addlead_showCustomSourceInput(targetInput) {
             }
         }
 
+        // Store lead ID before hiding modal (which sets currentEditLead to null)
+        const leadId = this.addlead_state.currentEditLead.id;
+
         // OPTIMISTIC UI: Close modal immediately
         this.addlead_hideEditLeadModal();
 
         // OPTIMISTIC UI: Store old lead data for rollback
-        const leadIndex = this.addlead_state.leads.findIndex(l => l.id === this.addlead_state.currentEditLead.id);
+        const leadIndex = this.addlead_state.leads.findIndex(l => l.id === leadId);
         if (leadIndex === -1) return;
 
         const oldLead = { ...this.addlead_state.leads[leadIndex] };
@@ -1640,7 +1648,7 @@ addlead_showCustomSourceInput(targetInput) {
 
         // OPTIMISTIC UI: Make API call in background
         try {
-            await API.updateLead(this.addlead_state.currentEditLead.id, leadData);
+            await API.updateLead(leadId, leadData);
 
             if (window.PipelineModule?.pipeline_init) {
                 const pipelineContainer = document.getElementById('pipeline-content');
@@ -1735,6 +1743,10 @@ addlead_showCustomSourceInput(targetInput) {
         // OPTIMISTIC UI: Make API call in background
         try {
             await API.deleteLead(leadId);
+
+            // Invalidate cache (lead deleted)
+            AppCache.invalidate('leads');
+            AppCache.invalidate('dashboard-stats');
 
             if (window.PipelineModule?.pipeline_init) {
                 const pipelineContainer = document.getElementById('pipeline-content');
@@ -2692,8 +2704,8 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: var(--modal-overlay);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -2706,7 +2718,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-custom-source-popup {
                 background: var(--surface);
                 border-radius: 16px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                box-shadow: var(--shadow-modal);
                 width: 100%;
                 max-width: 600px;
                 max-height: 80vh;
@@ -2721,7 +2733,7 @@ addlead_showCustomSourceInput(targetInput) {
                 justify-content: space-between;
                 align-items: center;
                 padding: 1.5rem;
-                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                 color: white;
             }
             
@@ -2745,7 +2757,7 @@ addlead_showCustomSourceInput(targetInput) {
             }
             
             .addlead-popup-close:hover {
-                background: rgba(255, 255, 255, 0.2);
+                background: var(--hover-overlay-light);
             }
             
             .addlead-source-popup-content {
@@ -2774,7 +2786,7 @@ addlead_showCustomSourceInput(targetInput) {
             
             .addlead-source-option:hover {
                 border-color: var(--primary);
-                background: rgba(102, 126, 234, 0.1);
+                background: var(--primary-light);
                 transform: translateY(-2px);
             }
             
@@ -2814,7 +2826,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-custom-source-input:focus {
                 outline: none;
                 border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                box-shadow: 0 0 0 3px var(--primary-light);
             }
             
             .addlead-custom-source-actions {
@@ -2832,28 +2844,6 @@ addlead_showCustomSourceInput(targetInput) {
             @keyframes addlead-scaleIn {
                 from { opacity: 0; transform: scale(0.8) translateY(20px); }
                 to { opacity: 1; transform: scale(1) translateY(0); }
-            }
-
-            /* Module-level animations */
-            @keyframes addleadWaveIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(30px) scale(0.95);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0) scale(1);
-                }
-            }
-
-            .addlead-wave-in {
-                animation: addleadWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                opacity: 0;
-            }
-
-            .addlead-fade-in {
-                animation: addlead-fadeIn 0.3s ease forwards;
-                opacity: 0;
             }
 
             @media (max-width: 768px) {
@@ -3091,13 +3081,13 @@ addlead_showCustomSourceInput(targetInput) {
                 }
 
                 .addlead-bubble-primary {
-                    border-color: rgba(102, 126, 234, 0.3);
-                    background: rgba(102, 126, 234, 0.02);
+                    border-color: var(--primary-border);
+                    background: var(--primary-bg);
                 }
 
                 .addlead-bubble-secondary {
-                    border-color: rgba(16, 185, 129, 0.3);
-                    background: rgba(16, 185, 129, 0.02);
+                    border-color: var(--primary-border);
+                    background: var(--primary-bg);
                 }
 
                 .addlead-bubble-icon {
@@ -3132,7 +3122,7 @@ addlead_showCustomSourceInput(targetInput) {
                     display: inline-flex;
                     align-items: center;
                     gap: 0.75rem;
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     padding: 0.875rem 1.75rem;
                     border-radius: var(--radius);
@@ -3144,7 +3134,7 @@ addlead_showCustomSourceInput(targetInput) {
 
                 .addlead-bubble-button:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 8px 25px var(--job-btn-shadow-hover);
                 }
 
                 .addlead-arrow {
@@ -3192,7 +3182,7 @@ addlead_showCustomSourceInput(targetInput) {
                 }
 
                 .addlead-view-all-btn:hover {
-                    background: rgba(102, 126, 234, 0.1);
+                    background: var(--primary-light);
                     transform: translateX(4px);
                 }
 
@@ -3223,7 +3213,7 @@ addlead_showCustomSourceInput(targetInput) {
                     width: 48px;
                     height: 48px;
                     border-radius: var(--radius);
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -3338,7 +3328,7 @@ addlead_showCustomSourceInput(targetInput) {
                 .addlead-search-input:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 0 0 3px var(--primary-light);
                 }
 
                 .addlead-search-icon {
@@ -3364,7 +3354,7 @@ addlead_showCustomSourceInput(targetInput) {
                 .addlead-add-btn:hover {
                     background: var(--primary-dark);
                     transform: translateY(-1px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 8px 25px var(--job-btn-shadow);
                 }
 
                 /* Table Container with Horizontal Scroll */
@@ -3455,7 +3445,7 @@ addlead_showCustomSourceInput(targetInput) {
                     width: 32px;
                     height: 32px;
                     border-radius: var(--radius);
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -3498,12 +3488,12 @@ addlead_showCustomSourceInput(targetInput) {
                     text-transform: capitalize;
                 }
 
-                .addlead-status-new { background: rgba(59, 130, 246, 0.1); color: var(--info); }
-                .addlead-status-contacted { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-                .addlead-status-qualified { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-                .addlead-status-negotiation { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-                .addlead-status-closed { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-                .addlead-status-lost { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+                .addlead-status-new { background: var(--info-bg); color: var(--info); }
+                .addlead-status-contacted { background: var(--warning-bg); color: var(--warning); }
+                .addlead-status-qualified { background: var(--success-light); color: var(--success); }
+                .addlead-status-negotiation { background: var(--job-status-invoiced-bg); color: var(--job-status-invoiced); }
+                .addlead-status-closed { background: var(--success-light); color: var(--success); }
+                .addlead-status-lost { background: var(--danger-light); color: var(--danger); }
 
                 .addlead-source-badge {
                     background: var(--surface-hover);
@@ -3541,7 +3531,7 @@ addlead_showCustomSourceInput(targetInput) {
                 }
 
                 .addlead-header-filter:hover {
-                    background: rgba(102, 126, 234, 0.1);
+                    background: var(--primary-light);
                 }
 
                 .addlead-header-filter.addlead-active {
@@ -3567,7 +3557,7 @@ addlead_showCustomSourceInput(targetInput) {
                     background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: 12px;
-                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 8px 25px var(--shadow-md);
                     min-width: 180px;
                     max-height: 400px;
                     overflow-y: auto;
@@ -3651,8 +3641,8 @@ addlead_showCustomSourceInput(targetInput) {
 
             /* Active Filters Panel */
             .addlead-active-filters-panel {
-                background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-                border: 1px solid rgba(102, 126, 234, 0.2);
+                background: var(--job-profit-gradient);
+                border: 1px solid var(--primary);
                 border-radius: 12px;
                 padding: 1rem 1.5rem;
                 margin-bottom: 1.5rem;
@@ -3739,7 +3729,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-empty-action-btn:hover {
                 background: var(--primary-dark);
                 transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                box-shadow: 0 8px 25px var(--job-btn-shadow);
             }
 
             /* Modals - INSTANT STYLE */
@@ -3749,7 +3739,7 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.6);
+                background: var(--modal-overlay);
                 z-index: 10000;
                 display: flex;
                 align-items: center;
@@ -3874,13 +3864,13 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-form-select:hover {
-                border-color: #667eea;
+                border-color: var(--primary);
             }
 
             .addlead-form-select:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px var(--primary-light);
             }
 
             .addlead-form-input:focus,
@@ -3952,7 +3942,7 @@ addlead_showCustomSourceInput(targetInput) {
                 flex: 1;
                 height: 8px;
                 border-radius: 5px;
-                background: #d1d5db;
+                background: var(--border);
                 outline: none;
                 -webkit-appearance: none;
             }
@@ -3964,7 +3954,7 @@ addlead_showCustomSourceInput(targetInput) {
                 border-radius: 50%;
                 background: var(--primary);
                 cursor: pointer;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                box-shadow: var(--shadow);
                 transition: all 0.3s ease;
             }
 
@@ -4049,15 +4039,15 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-primary {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: var(--gradient-primary);
                 color: white;
                 border: none;
             }
 
             .addlead-btn-primary:hover:not(:disabled) {
-                background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%);
+                background: var(--gradient-primary);
                 transform: translateY(-1px);
-                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                box-shadow: 0 8px 25px var(--job-btn-shadow);
             }
 
             .addlead-btn-primary:disabled {
@@ -4081,15 +4071,15 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-danger:hover {
-                background: #dc2626;
+                background: var(--danger-dark);
                 transform: translateY(-1px);
-                box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+                box-shadow: 0 8px 25px var(--job-danger-shadow);
             }
 
             .addlead-btn-loading-spinner {
                 width: 20px;
                 height: 20px;
-                border: 2px solid rgba(255, 255, 255, 0.3);
+                border: 2px solid var(--hover-overlay-light);
                 border-top: 2px solid white;
                 border-radius: 50%;
                 animation: addlead-spin 1s linear infinite;
@@ -4106,8 +4096,8 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: var(--modal-overlay);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -4118,7 +4108,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-delete-confirm-modal {
                 background: var(--surface);
                 border-radius: 16px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                box-shadow: var(--shadow-modal);
                 width: 100%;
                 max-width: 400px;
                 border: 1px solid var(--border);
@@ -4127,7 +4117,7 @@ addlead_showCustomSourceInput(targetInput) {
 
             .addlead-confirm-header {
                 padding: 1.5rem;
-                background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+                background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
                 color: white;
             }
 
@@ -4155,7 +4145,7 @@ addlead_showCustomSourceInput(targetInput) {
                 color: var(--text-secondary);
                 margin: 0;
                 padding: 0.75rem 1rem;
-                background: rgba(239, 68, 68, 0.1);
+                background: var(--danger-light);
                 border-radius: 8px;
                 border-left: 3px solid var(--danger);
                 line-height: 1.4;
@@ -4192,13 +4182,13 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-confirm-delete {
-                background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+                background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
                 color: white;
             }
 
             .addlead-btn-confirm-delete:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+                box-shadow: 0 6px 20px var(--job-danger-shadow);
             }
 
             /* Lead Detail View Popup */
@@ -4208,8 +4198,8 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: var(--modal-overlay);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -4221,7 +4211,7 @@ addlead_showCustomSourceInput(targetInput) {
                 background: var(--surface);
                 border-radius: 20px;
                 position: relative;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 4px 20px var(--shadow-md);
                 width: 100%;
                 max-width: 700px;
                 max-height: 90vh;
@@ -4271,12 +4261,12 @@ addlead_showCustomSourceInput(targetInput) {
                 width: 80px;
                 height: 80px;
                 border-radius: 50%;
-                background: linear-gradient(135deg, var(--primary) 0%, #5B7CE8 100%);
+                background: var(--gradient-primary);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+                box-shadow: 0 4px 12px var(--primary);
             }
 
             .addlead-avatar-text-large {
@@ -4422,7 +4412,7 @@ addlead_showCustomSourceInput(targetInput) {
 
             .addlead-edit-lead-btn:hover {
                 background: var(--primary-dark);
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+                box-shadow: 0 2px 8px var(--job-btn-shadow);
                 transform: translateY(-1px);
             }
 
@@ -4432,8 +4422,8 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-delete-lead-btn:hover {
-                background: #dc2626;
-                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+                background: var(--danger-dark);
+                box-shadow: 0 2px 8px var(--job-danger-shadow);
                 transform: translateY(-1px);
             }
 
@@ -4445,8 +4435,8 @@ addlead_showCustomSourceInput(targetInput) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(4px);
+    background: var(--modal-overlay);
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4458,7 +4448,7 @@ addlead_showCustomSourceInput(targetInput) {
 .addlead-similar-popup {
     background: var(--surface);
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-modal);
     width: 100%;
     max-width: 500px;
     max-height: 80vh;
@@ -4467,7 +4457,7 @@ addlead_showCustomSourceInput(targetInput) {
 }
 
 .addlead-duplicate-popup-header {
-    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    background: linear-gradient(135deg, var(--warning) 0%, var(--stage-negotiation) 100%);
     color: white;
     padding: 1.5rem;
     display: flex;
@@ -4477,7 +4467,7 @@ addlead_showCustomSourceInput(targetInput) {
 
 .addlead-duplicate-popup-header .addlead-popup-close,
 .addlead-similar-popup-header .addlead-popup-close {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--hover-overlay-light);
     border: none;
     color: white;
     font-size: 1.5rem;
@@ -4493,12 +4483,12 @@ addlead_showCustomSourceInput(targetInput) {
 }
 
 .addlead-popup-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: var(--hover-overlay-light);
     transform: scale(1.1);
 }
 
 .addlead-similar-popup-header {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--info) 0%, var(--job-status-in-progress) 100%);
     color: white;
     padding: 1.5rem;
     display: flex;
@@ -4537,7 +4527,7 @@ addlead_showCustomSourceInput(targetInput) {
 .addlead-duplicate-lead-card:hover,
 .addlead-similar-lead-card:hover {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.1);
+    background: var(--primary-light);
     transform: translateY(-2px);
 }
 
@@ -4568,7 +4558,7 @@ addlead_showCustomSourceInput(targetInput) {
     width: 48px;
     height: 48px;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4586,7 +4576,7 @@ addlead_showCustomSourceInput(targetInput) {
 }
 
 .addlead-confidence-badge {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--info) 0%, var(--job-status-in-progress) 100%);
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
@@ -4659,8 +4649,8 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(4px);
+                background: var(--modal-overlay);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -4671,7 +4661,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-upgrade-prompt {
                 background: var(--surface);
                 border-radius: 16px;
-                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                box-shadow: var(--shadow-modal);
                 width: 100%;
                 max-width: 450px;
                 border: 1px solid var(--border);
@@ -4679,7 +4669,7 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-upgrade-header {
-                background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                 color: white;
                 padding: 2rem;
                 text-align: center;
@@ -4812,20 +4802,20 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-btn-batch-edit:hover {
-                border-color: #667eea;
-                color: #667eea;
+                border-color: var(--primary);
+                color: var(--primary);
                 transform: translateY(-1px);
             }
 
             .addlead-btn-batch-edit.active {
-                background: #667eea;
+                background: var(--primary);
                 color: white;
-                border-color: #667eea;
+                border-color: var(--primary);
             }
 
             .addlead-btn-batch-edit.active:hover {
-                background: #5568d3;
-                border-color: #5568d3;
+                background: var(--primary-dark);
+                border-color: var(--primary-dark);
                 transform: translateY(-1px);
             }
 
@@ -4840,7 +4830,7 @@ addlead_showCustomSourceInput(targetInput) {
                 background: var(--surface);
                 border: 2px solid var(--border);
                 border-radius: var(--radius-lg);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                box-shadow: var(--shadow-lg);
                 z-index: 100;
             }
 
@@ -4853,7 +4843,7 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-batch-selected {
                 font-size: 0.9rem;
                 font-weight: 600;
-                color: #667eea;
+                color: var(--primary);
             }
 
             .addlead-batch-actions-right {
@@ -4895,14 +4885,14 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-batch-status-select:hover {
-                border-color: #667eea;
-                background-color: rgba(102, 126, 234, 0.05);
+                border-color: var(--primary);
+                background-color: var(--primary-bg);
             }
 
             .addlead-batch-status-select:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px var(--primary-light);
             }
 
             .addlead-batch-btn {
@@ -4926,18 +4916,18 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-batch-btn:hover {
-                background: rgba(102, 126, 234, 0.1);
-                border-color: #667eea;
+                background: var(--primary-light);
+                border-color: var(--primary);
             }
 
             .addlead-batch-btn.delete {
-                color: #ef4444;
-                border-color: rgba(239, 68, 68, 0.3);
+                color: var(--danger);
+                border-color: var(--danger-border);
             }
 
             .addlead-batch-btn.delete:hover {
-                background: rgba(239, 68, 68, 0.1);
-                border-color: #ef4444;
+                background: var(--danger-light);
+                border-color: var(--danger);
             }
 
             /* Delete Modal - Dark/Light Mode Adaptive */
@@ -4947,8 +4937,8 @@ addlead_showCustomSourceInput(targetInput) {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.6);
-                backdrop-filter: blur(8px);
+                background: rgba(0, 0, 0, 0.3);
+                
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -4962,12 +4952,12 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-delete-modal {
-                background: var(--surface, #ffffff);
+                background: var(--surface);
                 border-radius: 16px;
                 width: 90%;
                 max-width: 420px;
                 padding: 2rem;
-                box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+                box-shadow: var(--shadow-modal);
                 transform: scale(0.9) translateY(20px);
                 transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
                 text-align: center;
@@ -4982,7 +4972,7 @@ addlead_showCustomSourceInput(targetInput) {
                 height: 64px;
                 margin: 0 auto 1.5rem;
                 border-radius: 50%;
-                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                background: var(--danger-bg);
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -4991,45 +4981,21 @@ addlead_showCustomSourceInput(targetInput) {
             .addlead-delete-modal-icon svg {
                 width: 32px;
                 height: 32px;
-                color: #ef4444;
-            }
-
-            @media (prefers-color-scheme: dark) {
-                .addlead-delete-modal {
-                    background: #1f2937;
-                }
-                .addlead-delete-modal-icon {
-                    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
-                }
-                .addlead-delete-modal-icon svg {
-                    color: #fca5a5;
-                }
+                color: var(--danger);
             }
 
             .addlead-delete-modal-title {
                 font-size: 1.5rem;
                 font-weight: 700;
-                color: var(--text-primary, #111827);
+                color: var(--text-primary);
                 margin: 0 0 1rem 0;
-            }
-
-            @media (prefers-color-scheme: dark) {
-                .addlead-delete-modal-title {
-                    color: #f9fafb;
-                }
             }
 
             .addlead-delete-modal-text {
                 font-size: 1rem;
                 line-height: 1.6;
-                color: var(--text-secondary, #6b7280);
+                color: var(--text-secondary);
                 margin: 0 0 2rem 0;
-            }
-
-            @media (prefers-color-scheme: dark) {
-                .addlead-delete-modal-text {
-                    color: #9ca3af;
-                }
             }
 
             .addlead-delete-modal-actions {
@@ -5051,34 +5017,24 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-delete-modal-cancel {
-                background: var(--background, #f3f4f6);
-                color: var(--text-primary, #374151);
+                background: var(--background);
+                color: var(--text-primary);
             }
 
             .addlead-delete-modal-cancel:hover {
-                background: var(--surface, #e5e7eb);
+                background: var(--surface-hover);
                 transform: translateY(-1px);
             }
 
-            @media (prefers-color-scheme: dark) {
-                .addlead-delete-modal-cancel {
-                    background: #374151;
-                    color: #f9fafb;
-                }
-                .addlead-delete-modal-cancel:hover {
-                    background: #4b5563;
-                }
-            }
-
             .addlead-delete-modal-confirm {
-                background: #ef4444;
+                background: var(--danger);
                 color: white;
             }
 
             .addlead-delete-modal-confirm:hover {
-                background: #dc2626;
+                background: var(--danger-dark);
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+                box-shadow: 0 4px 12px var(--job-danger-shadow);
             }
 
             .addlead-table-row.batch-mode {
@@ -5131,8 +5087,8 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-checkbox-input:checked + .addlead-checkbox-custom {
-                background: #667eea;
-                border-color: #667eea;
+                background: var(--primary);
+                border-color: var(--primary);
             }
 
             .addlead-checkbox-input:checked + .addlead-checkbox-custom svg {
@@ -5142,7 +5098,7 @@ addlead_showCustomSourceInput(targetInput) {
             }
 
             .addlead-checkbox-custom:hover {
-                border-color: #667eea;
+                border-color: var(--primary);
             }
 
             /* Responsive */

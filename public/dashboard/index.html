@@ -5,59 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
         (function() {
-            const savedTheme = localStorage.getItem('dashboard-theme');
-            if (savedTheme) {
-                document.documentElement.setAttribute('data-theme', savedTheme);
-            }
+            const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
         })();
     </script>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; font-src 'self' data:;">
     <title>SteadyManager - Dashboard</title>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    
-    <style>
-        :root {
-            --primary: #667eea;
-            --primary-dark: #4f46e5;
-            --primary-light: #dbeafe;
-            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #06b6d4;
-            
-            --background: #f8fafc;
-            --surface: #ffffff;
-            --surface-hover: #f1f5f9;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --text-tertiary: #64748b;
-            --border: #e2e8f0;
-            
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-            
-            --radius: 8px;
-            --radius-lg: 16px;
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
 
-        [data-theme="dark"] {
-            --background: #0a0f1c;
-            --surface: #1a1f2e;
-            --surface-hover: #242938;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-tertiary: #94a3b8;
-            --border: #374151;
-            --primary: #6366f1;
-            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-            --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
+    <!-- Theme System -->
+    <link rel="stylesheet" href="/dashboard/shared/css/themes.css">
+
+    <style>
+        /* All theme colors and variables are defined in /dashboard/shared/css/themes.css */
 
         * {
             margin: 0;
@@ -100,8 +60,8 @@
             top: 0;
             bottom: 0;
             width: 280px;
-            background: var(--gradient-primary);
-            color: white;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
             z-index: 1000;
             overflow-y: auto;
             box-shadow: var(--shadow-xl);
@@ -119,7 +79,7 @@
 
         .sidebar-header {
             padding: 0 1.5rem 2rem;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 2px solid var(--hover-overlay-light);
             margin-bottom: 2rem;
         }
 
@@ -127,8 +87,8 @@
             font-size: 1.75rem;
             font-weight: 900;
             text-align: center;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--sidebar-text);
+            text-shadow: var(--shadow);
         }
 
         .sidebar-nav {
@@ -147,7 +107,7 @@
             align-items: center;
             gap: 1rem;
             padding: 1rem 1.5rem;
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--sidebar-text-secondary);
             text-decoration: none;
             transition: var(--transition);
             font-weight: 500;
@@ -157,14 +117,14 @@
         }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: var(--sidebar-item-hover);
+            color: var(--sidebar-text);
             transform: translateX(8px);
         }
 
         .nav-link.active {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
+            background: var(--sidebar-item-active);
+            color: var(--sidebar-text);
             font-weight: 600;
             transform: translateX(8px);
         }
@@ -187,13 +147,10 @@
 
         .page-content {
             display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
         }
 
         .page-content.active {
             display: block;
-            opacity: 1;
         }
 
         .header {
@@ -240,7 +197,7 @@
 
         .header-title:hover {
             border: 2px solid var(--primary);
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+            box-shadow: 0 0 20px var(--job-btn-shadow-hover);
             transform: scale(1.05);
             padding-right: 2.5rem;
         }
@@ -301,7 +258,7 @@
 
         .user-tier {
             font-size: 0.75rem;
-            color: var(--success);
+            color: var(--primary);
             font-weight: 500;
         }
 
@@ -343,7 +300,7 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(102, 126, 234, 0.3);
+            border: 2px solid var(--border);
             border-radius: 50%;
             border-top-color: var(--primary);
             animation: spin 0.8s linear infinite;
@@ -353,12 +310,53 @@
             to { transform: rotate(360deg); }
         }
 
-        [data-theme="dark"] .sidebar {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+        /* Module Loading State */
+        .module-loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: var(--background);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .module-loading-overlay.active {
+            display: flex;
+        }
+
+        .module-loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .module-loading-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .page-content {
+            position: relative;
+            min-height: 400px;
+        }
+
+        @media (max-width: 1024px) {
+            .module-loading-overlay {
+                left: 0;
+            }
         }
     </style>
 </head>
-<body data-theme="light">
+<body>
     <div class="sidebar" id="sidebar">
         <div class="sidebar-content">
             <div class="sidebar-header">
@@ -366,49 +364,8 @@
             </div>
 
             <nav>
-                <ul class="sidebar-nav">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link active" data-page="dashboard">
-                            <i data-lucide="layout-dashboard" class="nav-icon"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="leads">
-                            <i data-lucide="user-plus" class="nav-icon"></i>
-                            <span>Add Leads</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="pipeline">
-                            <i data-lucide="git-branch" class="nav-icon"></i>
-                            <span>Pipeline</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="tasks">
-                            <i data-lucide="list-checks" class="nav-icon"></i>
-                            <span>Tasks</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="jobs">
-                            <i data-lucide="briefcase" class="nav-icon"></i>
-                            <span>Jobs</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="goals">
-                            <i data-lucide="target" class="nav-icon"></i>
-                            <span>Goals</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="settings">
-                            <i data-lucide="settings" class="nav-icon"></i>
-                            <span>Settings</span>
-                        </a>
-                    </li>
+                <ul class="sidebar-nav" id="sidebar-nav">
+                    <!-- Dynamically generated based on modules_selected -->
                 </ul>
             </nav>
         </div>
@@ -440,9 +397,17 @@
                 <div id="jobs-content" class="page-content"></div>
                 <div id="goals-content" class="page-content"></div>
                 <div id="estimates-content" class="page-content"></div>
+                <div id="notes-content" class="page-content"></div>
                 <div id="settings-content" class="page-content"></div>
+                <div id="module-market-content" class="page-content"></div>
             </div>
         </main>
+
+        <!-- Module Loading Overlay -->
+        <div class="module-loading-overlay" id="moduleLoadingOverlay">
+            <div class="module-loading-spinner"></div>
+            <div class="module-loading-text" id="moduleLoadingText">Loading...</div>
+        </div>
     </div>
 
     <!-- Cache module (must load first) -->
@@ -508,6 +473,16 @@
                 const profile = await API.getProfile();
                 if (!profile?.id) throw new Error('Invalid profile');
 
+                // Check if user was just upgraded to admin - clear cache if tier changed
+                const cachedTier = localStorage.getItem('cached_user_tier');
+                if (cachedTier && cachedTier !== profile.user_type) {
+                    console.log(`🔄 Tier changed from ${cachedTier} to ${profile.user_type} - clearing cache`);
+                    if (window.AppCache) {
+                        window.AppCache.clear();
+                    }
+                }
+                localStorage.setItem('cached_user_tier', profile.user_type);
+
                 appState.profile = profile;
                 loadUserProfile(profile);
 
@@ -522,8 +497,74 @@
             }
         }
 
+        async function buildSidebar() {
+            try {
+                const enabledModules = await API.getEnabledModules();
+
+                // Module definitions with icons and labels
+                const moduleDefinitions = {
+                    dashboard: { icon: 'layout-dashboard', label: 'Dashboard' },
+                    leads: { icon: 'user-plus', label: 'Add Leads' },
+                    pipeline: { icon: 'git-branch', label: 'Pipeline' },
+                    tasks: { icon: 'list-checks', label: 'Tasks' },
+                    jobs: { icon: 'briefcase', label: 'Jobs' },
+                    goals: { icon: 'target', label: 'Goals' },
+                    estimates: { icon: 'file-text', label: 'Estimates' },
+                    notes: { icon: 'sticky-note', label: 'Notes' },
+                    settings: { icon: 'settings', label: 'Settings' }
+                };
+
+                // Build nav items HTML - settings always goes last
+                const modulesWithoutSettings = enabledModules.filter(id => id !== 'settings');
+                const navHTML = modulesWithoutSettings
+                    .filter(moduleId => moduleDefinitions[moduleId]) // Only include defined modules
+                    .map(moduleId => {
+                        const module = moduleDefinitions[moduleId];
+                        return `
+                            <li class="nav-item">
+                                <a href="#" class="nav-link" data-page="${moduleId}">
+                                    <i data-lucide="${module.icon}" class="nav-icon"></i>
+                                    <span>${module.label}</span>
+                                </a>
+                            </li>
+                        `;
+                    })
+                    .join('') +
+                    // Always add Settings at the end
+                    `<li class="nav-item">
+                        <a href="#" class="nav-link" data-page="settings">
+                            <i data-lucide="settings" class="nav-icon"></i>
+                            <span>Settings</span>
+                        </a>
+                    </li>`;
+
+                // Update sidebar
+                const sidebarNav = document.getElementById('sidebar-nav');
+                if (sidebarNav) {
+                    sidebarNav.innerHTML = navHTML;
+
+                    // Re-init lucide icons
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    // Re-attach navigation listeners
+                    setupNavigation();
+                }
+
+                console.log(`✅ Sidebar built with ${enabledModules.length} modules`);
+
+            } catch (error) {
+                console.error('Failed to build sidebar:', error);
+            }
+        }
+
+        // Expose global refresh function for ModuleMarket
+        window.refreshSidebar = buildSidebar;
+
         async function loadUserPreferences() {
             try {
+                // Build sidebar first
+                await buildSidebar();
+
                 const prefs = await API.getPreferences();
 
                 // Apply theme
@@ -592,7 +633,9 @@
                 jobs: 'Jobs',
                 goals: 'Goals',
                 estimates: 'Estimates',
-                settings: 'Settings'
+                notes: 'Notes',
+                settings: 'Settings',
+                'module-market': 'Module Market'
             };
             document.getElementById('pageTitle').textContent = titles[pageName] || 'Dashboard';
 
@@ -605,6 +648,30 @@
 
         async function loadModule(pageName) {
             try {
+                // Show loading overlay
+                const overlay = document.getElementById('moduleLoadingOverlay');
+                const loadingText = document.getElementById('moduleLoadingText');
+
+                const moduleNames = {
+                    'dashboard': 'Dashboard',
+                    'leads': 'Leads',
+                    'pipeline': 'Pipeline',
+                    'tasks': 'Tasks',
+                    'jobs': 'Jobs Hub',
+                    'goals': 'Goals',
+                    'estimates': 'Estimates',
+                    'notes': 'Notes',
+                    'settings': 'Settings',
+                    'module-market': 'Module Market'
+                };
+
+                if (loadingText) {
+                    loadingText.textContent = `Loading ${moduleNames[pageName] || 'Module'}...`;
+                }
+                if (overlay) {
+                    overlay.classList.add('active');
+                }
+
                 const modules = {
                     dashboard: window.DashboardModule,
                     leads: window.AddLeadModule,
@@ -613,17 +680,25 @@
                     jobs: window.JobsModule,
                     goals: window.GoalsModule,
                     estimates: window.EstimatesModule,
-                    settings: window.SettingsModule
+                    notes: window.NotesModule,
+                    settings: window.SettingsModule,
+                    'module-market': window.ModuleMarketModule
                 };
 
                 const module = modules[pageName];
                 if (!module?.init) {
                     console.log(`⚠️ Module ${pageName} not loaded yet`);
+                    if (overlay) overlay.classList.remove('active');
                     return;
                 }
 
                 // Always reload to get fresh data
                 await module.init(`${pageName}-content`);
+
+                // Hide loading overlay
+                if (overlay) {
+                    overlay.classList.remove('active');
+                }
 
                 appState.loadedModules.add(pageName);
                 console.log(`📦 ${pageName} loaded`);
@@ -731,14 +806,14 @@
                     align-items: center;
                     justify-content: center;
                     min-height: 100vh;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: var(--gradient-primary);
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 ">
                     <div style="
-                        background: white;
+                        background: var(--surface);
                         padding: 3rem;
                         border-radius: 20px;
-                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                        box-shadow: var(--shadow-modal);
                         text-align: center;
                         max-width: 500px;
                         animation: slideUp 0.4s ease;
@@ -750,24 +825,24 @@
                         <h1 style="
                             font-size: 2rem;
                             font-weight: 900;
-                            color: #1a202c;
+                            color: var(--text-primary);
                             margin-bottom: 1rem;
                         ">Wrong Tier!</h1>
                         <p style="
-                            color: #6b7280;
+                            color: var(--text-secondary);
                             font-size: 1.125rem;
                             margin-bottom: 0.5rem;
                             line-height: 1.6;
                         ">You're trying to access <strong>Professional</strong> features</p>
                         <p style="
-                            color: #6b7280;
+                            color: var(--text-secondary);
                             font-size: 1rem;
                             margin-bottom: 2rem;
-                        ">Your current tier: <strong style="color: #ef4444;">${API.escapeHtml(tierCheck.userTier.toUpperCase())}</strong></p>
+                        ">Your current tier: <strong style="color: var(--danger);">${API.escapeHtml(tierCheck.userTier.toUpperCase())}</strong></p>
                         <div style="display: flex; gap: 1rem; justify-content: center;">
                             <button onclick="window.location.href='/dashboard/'" style="
                                 padding: 0.875rem 2rem;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                background: var(--gradient-primary);
                                 color: white;
                                 border: none;
                                 border-radius: 12px;
@@ -775,8 +850,8 @@
                                 font-weight: 700;
                                 font-size: 1rem;
                                 transition: all 0.3s ease;
-                                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';">
+                                box-shadow: var(--job-btn-shadow-hover);
+                            " onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';">
                                 Go Back to Dashboard
                             </button>
                         </div>
@@ -810,6 +885,8 @@
     <script src="/dashboard/scripts/Clients.js"></script>
     <script src="/dashboard/scripts/Goals.js"></script>
     <script src="/dashboard/scripts/Estimates.js"></script>
+    <script src="/dashboard/scripts/Notes.js"></script>
     <script src="/dashboard/scripts/Settings.js"></script>
+    <script src="/dashboard/scripts/ModuleMarket.js"></script>
 </body>
 </html>

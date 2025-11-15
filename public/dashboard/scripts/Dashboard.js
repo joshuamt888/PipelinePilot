@@ -7,8 +7,7 @@ window.DashboardModule = {
         profile: null,
         subscriptionInfo: null,
         container: 'dashboard-content',
-        modalSearchTerm: '',
-        hasInitialized: false  // Track if module has loaded before
+        modalSearchTerm: ''
     },
 
     // INIT - Sharp and direct
@@ -17,10 +16,13 @@ window.DashboardModule = {
 
         this.state.container = targetContainer;
 
+        // Fade out container immediately before loading data
+        const container = document.getElementById(this.state.container);
+        if (container) container.style.opacity = '0';
+
         try {
             await this.dashboard_loadData();
             this.dashboard_render();
-            this.state.hasInitialized = true;
             console.log('Dashboard module ready');
         } catch (error) {
             console.error('Dashboard init failed:', error);
@@ -30,13 +32,39 @@ window.DashboardModule = {
 
     // DATA LOADING - Single Promise.all like Pipeline
     async dashboard_loadData() {
+        // Check cache first for each data type
+        const cachedStats = AppCache.get('dashboard-stats');
+        const cachedLeads = AppCache.get('leads');
+        const cachedTasks = AppCache.get('tasks');
+        const cachedProfile = AppCache.get('profile');
+
+        // If all data is cached, use it (instant load!)
+        if (cachedStats && cachedLeads && cachedTasks && cachedProfile) {
+            this.state.stats = cachedStats;
+            this.state.leads = (cachedLeads.all || [])
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            this.state.tasks = cachedTasks
+                .sort((a, b) => new Date(a.due_date || '9999') - new Date(b.due_date || '9999'));
+            this.state.profile = cachedProfile;
+            console.log('[Dashboard] ⚡ Loaded from cache (instant)');
+            return;
+        }
+
+        // Cache miss - fetch from API
+        console.log('[Dashboard] 🔄 Cache miss - fetching from API');
         const [stats, leadsData, tasks, profile] = await Promise.all([
             API.getBasicStats(),
             API.getLeads(),
             API.getTasks(),
             API.getProfile()
         ]);
-        
+
+        // Store in cache
+        AppCache.set('dashboard-stats', stats);
+        AppCache.set('leads', leadsData);
+        AppCache.set('tasks', tasks);
+        AppCache.set('profile', profile);
+
         this.state.stats = stats;
         this.state.leads = (leadsData.all || [])
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -57,15 +85,17 @@ window.DashboardModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
+        // Clear container opacity to prevent snap on re-render
+        container.style.opacity = '0';
+
         const isFreeTier = this.state.profile.user_type === 'free';
-        const isFirstLoad = !this.state.hasInitialized;
 
         // Await async render functions first
         const metricsHtml = await this.dashboard_renderMetrics();
 
         container.innerHTML = `
             ${this.dashboard_renderStyles()}
-            <div class="dashboard-container">
+            <div class="dashboard-container" style="opacity: 0;">
                 ${metricsHtml}
                 ${this.dashboard_renderPipeline()}
                 <div class="dashboard-split">
@@ -77,28 +107,22 @@ window.DashboardModule = {
             </div>
         `;
 
-        // Apply animations based on load state
-        if (isFirstLoad) {
-            // First load: Staggered wave animation
-            requestAnimationFrame(() => {
-                const metrics = container.querySelectorAll('.dashboard-metric-card');
-                metrics.forEach((metric, i) => {
-                    metric.classList.add('dash-wave-in');
-                    metric.style.animationDelay = `${i * 0.1}s`;
-                });
+        // Force a reflow before animation
+        const dashboardContainer = container.querySelector('.dashboard-container');
+        if (dashboardContainer) {
+            // Fade outer container back to visible
+            container.style.opacity = '1';
 
-                const sections = container.querySelectorAll('.dashboard-pipeline, .dashboard-split > div, .dashboard-activity');
-                sections.forEach((section, i) => {
-                    section.classList.add('dash-wave-in');
-                    section.style.animationDelay = `${(metrics.length * 0.1) + (i * 0.1)}s`;
-                });
-            });
-        } else {
-            // Subsequent loads: Fast fade
-            requestAnimationFrame(() => {
-                const allElements = container.querySelectorAll('.dashboard-metric-card, .dashboard-pipeline, .dashboard-split > div, .dashboard-activity');
-                allElements.forEach(el => el.classList.add('dash-fade-in'));
-            });
+            // Force browser to acknowledge the opacity: 0 state
+            void dashboardContainer.offsetHeight;
+
+            // NOW add transition and fade in
+            dashboardContainer.style.transition = 'opacity 0.5s ease';
+
+            // Use setTimeout to ensure transition is registered
+            setTimeout(() => {
+                dashboardContainer.style.opacity = '1';
+            }, 10);
         }
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -204,12 +228,12 @@ window.DashboardModule = {
     // PIPELINE OVERVIEW - With value formatting
     dashboard_renderPipeline() {
         const stages = [
-            { id: 'new', name: 'New', icon: 'sparkles', color: '#06b6d4' },
-            { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b' },
-            { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6' },
-            { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#f97316' },
-            { id: 'closed', name: 'Closed', icon: 'trophy', color: '#10b981' },
-            { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444' }
+            { id: 'new', name: 'New', icon: 'sparkles' },
+            { id: 'contacted', name: 'Contacted', icon: 'phone' },
+            { id: 'qualified', name: 'Qualified', icon: 'check-circle' },
+            { id: 'negotiation', name: 'Negotiation', icon: 'handshake' },
+            { id: 'closed', name: 'Closed', icon: 'trophy' },
+            { id: 'lost', name: 'Lost', icon: 'x-circle' }
         ];
         
         const stageData = stages.map(stage => {
@@ -341,12 +365,12 @@ window.DashboardModule = {
     dashboard_renderTaskItem(task, today) {
         const isOverdue = task.due_date && task.due_date < today;
         const isToday = task.due_date === today;
-        const dueLabel = isOverdue ? 'Overdue' : 
-                        isToday ? 'Today' : 
+        const dueLabel = isOverdue ? 'Overdue' :
+                        isToday ? 'Today' :
                         this.dashboard_formatDate(task.due_date);
         const safeTitle = API.escapeHtml(task.title);
         const formattedTime = task.due_time ? this.dashboard_formatTime(task.due_time) : '';
-        
+
         return `
             <div class="dashboard-list-item ${isOverdue ? 'dashboard-item-overdue' : ''}"
                  data-action="view-task-detail"
@@ -357,12 +381,14 @@ window.DashboardModule = {
                 <div class="dashboard-item-content">
                     <div class="dashboard-item-title">${safeTitle}</div>
                     <div class="dashboard-item-subtitle">
-                        ${formattedTime ? formattedTime + ' • ' : ''}${dueLabel}
+                        ${formattedTime ? formattedTime + ' • ' : ''}${dueLabel || 'No due date'}
                     </div>
                 </div>
-                <div class="dashboard-item-badge dashboard-badge-${isOverdue ? 'danger' : isToday ? 'warning' : 'neutral'}">
-                    ${dueLabel}
-                </div>
+                ${task.due_date ? `
+                    <div class="dashboard-item-badge dashboard-badge-${isOverdue ? 'danger' : isToday ? 'warning' : 'neutral'}">
+                        ${dueLabel}
+                    </div>
+                ` : ''}
             </div>
         `;
     },
@@ -370,7 +396,7 @@ window.DashboardModule = {
     // ACTIVITY FEED
     dashboard_renderActivityFeed() {
         const activities = this.dashboard_generateActivityFeed();
-        
+
         return `
             <div class="dashboard-activity">
                 <div class="dashboard-section-header">
@@ -378,6 +404,9 @@ window.DashboardModule = {
                         <i data-lucide="activity" class="dashboard-section-icon" style="width: 20px; height: 20px;"></i>
                         Recent Activity
                     </h3>
+                    <button class="dashboard-view-btn" data-action="view-all-activity">
+                        View All →
+                    </button>
                 </div>
 
                 <div class="dashboard-activity-timeline">
@@ -504,6 +533,9 @@ window.DashboardModule = {
                 case 'drill-winrate':
                     this.dashboard_showWinRateModal();
                     break;
+                case 'view-all-activity':
+                    this.dashboard_showActivitySummaryModal();
+                    break;
                 case 'upgrade':
                     if (window.loadPage) window.loadPage('upgrade');
                     break;
@@ -576,11 +608,12 @@ window.DashboardModule = {
     dashboard_showLeadDetailModal(leadId) {
         const lead = this.state.leads.find(l => l.id === leadId);
         if (!lead) return;
-        
+
         const relatedTasks = this.state.tasks.filter(t => t.lead_id === leadId);
-        
+
         const modal = document.createElement('div');
         modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10003'; // Above filtered modals
         modal.innerHTML = `
             <div class="dashboard-modal dashboard-modal-detail">
                 <div class="dashboard-modal-header">
@@ -612,6 +645,7 @@ window.DashboardModule = {
 
         const modal = document.createElement('div');
         modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10003'; // Above filtered modals
         modal.innerHTML = `
             <div class="dashboard-modal dashboard-modal-detail">
                 <div class="dashboard-modal-header">
@@ -946,6 +980,775 @@ window.DashboardModule = {
         document.body.appendChild(modal);
         if (typeof lucide !== 'undefined') lucide.createIcons();
         this.dashboard_setupModalEvents(modal);
+    },
+
+    async dashboard_showActivitySummaryModal() {
+        // Prevent duplicate modals (check both DOM and loading flag)
+        if (document.getElementById('activitySummaryModal') || this._loadingActivitySummary) return;
+
+        this._loadingActivitySummary = true;
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.id = 'activitySummaryModal';
+
+        // Default to "This Week"
+        const timeRange = 'week';
+        const summary = await this.dashboard_calculateActivitySummary(timeRange);
+
+        this._loadingActivitySummary = false;
+
+        // Store current summary for movement clicks
+        this.currentActivitySummary = summary;
+
+        modal.innerHTML = this.dashboard_renderActivitySummaryModal(summary, timeRange);
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Setup modal close
+        modal.querySelector('.dashboard-modal-close').onclick = () => {
+            this._loadingActivitySummary = false;
+            modal.remove();
+        };
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this._loadingActivitySummary = false;
+                modal.remove();
+            }
+        };
+
+        // Setup movement badge clicks
+        this.dashboard_setupMovementClicks(modal);
+
+        // Setup summary card clicks
+        this.dashboard_setupSummaryCardClicks(modal);
+
+        // Setup daily card clicks
+        this.dashboard_setupDailyCardClicks(modal);
+
+        // Setup time range dropdown
+        const dropdown = modal.querySelector('#activityTimeRange');
+        if (dropdown) {
+            dropdown.onchange = async (e) => {
+                const newRange = e.target.value;
+                const newSummary = await this.dashboard_calculateActivitySummary(newRange);
+                this.currentActivitySummary = newSummary; // Update stored summary
+                const modalContent = modal.querySelector('.dashboard-modal');
+                if (modalContent) {
+                    modalContent.innerHTML = this.dashboard_renderActivitySummaryModalContent(newSummary, newRange);
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    // Re-attach close handler
+                    modalContent.querySelector('.dashboard-modal-close').onclick = () => modal.remove();
+
+                    // Re-attach movement clicks
+                    this.dashboard_setupMovementClicks(modal);
+
+                    // Re-attach summary card clicks
+                    this.dashboard_setupSummaryCardClicks(modal);
+
+                    // Re-attach daily card clicks
+                    this.dashboard_setupDailyCardClicks(modal);
+
+                    // Re-attach dropdown listener
+                    const newDropdown = modal.querySelector('#activityTimeRange');
+                    if (newDropdown) {
+                        newDropdown.onchange = dropdown.onchange;
+                    }
+                }
+            };
+        }
+    },
+
+    dashboard_setupMovementClicks(modal) {
+        const movementItems = modal.querySelectorAll('.activity-movement-item');
+        movementItems.forEach(item => {
+            item.style.cursor = 'pointer';
+            item.onclick = () => {
+                const fromStage = item.dataset.fromStage || null;
+                const toStage = item.dataset.toStage;
+                this.dashboard_showMovementLeadsModal(fromStage, toStage);
+            };
+        });
+    },
+
+    dashboard_setupSummaryCardClicks(modal) {
+        const summaryCards = modal.querySelectorAll('.activity-card-clickable');
+        summaryCards.forEach(card => {
+            card.style.cursor = 'pointer';
+            card.onclick = () => {
+                const cardType = card.dataset.cardType;
+                if (cardType === 'leads') {
+                    this.dashboard_showFilteredLeadsModal();
+                } else if (cardType === 'tasks') {
+                    this.dashboard_showFilteredTasksModal();
+                } else if (cardType === 'deals') {
+                    this.dashboard_showFilteredDealsModal();
+                }
+            };
+        });
+    },
+
+    dashboard_setupDailyCardClicks(modal) {
+        const dailyCards = modal.querySelectorAll('.activity-daily-card-clickable');
+        dailyCards.forEach(card => {
+            card.style.cursor = 'pointer';
+            card.onclick = () => {
+                const dayIndex = parseInt(card.dataset.dayIndex);
+                if (!this.currentActivitySummary || !this.currentActivitySummary.dailyBreakdown) return;
+                const dayData = this.currentActivitySummary.dailyBreakdown[dayIndex];
+                if (dayData) {
+                    this.dashboard_showDailyDetailModal(dayData);
+                }
+            };
+        });
+    },
+
+    dashboard_showMovementLeadsModal(fromStage, toStage) {
+        if (!this.currentActivitySummary || !this.currentActivitySummary.allStageChanges) return;
+
+        // Find all stage changes for this specific movement
+        const movementChanges = this.currentActivitySummary.allStageChanges.filter(sc => {
+            const matchesFrom = fromStage ? sc.from_stage === fromStage : !sc.from_stage;
+            const matchesTo = sc.to_stage === toStage;
+            return matchesFrom && matchesTo;
+        });
+
+        // Get unique lead IDs
+        const leadIds = [...new Set(movementChanges.map(sc => sc.lead_id))];
+
+        // Get lead details
+        const leads = this.state.leads.filter(l => leadIds.includes(l.id));
+
+        // Create modal using existing Dashboard modal pattern
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10001'; // Above activity summary modal
+
+        const movementLabel = fromStage ? `${fromStage} → ${toStage}` : toStage;
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">${movementLabel}</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(leads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Setup modal events using existing pattern
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showFilteredLeadsModal() {
+        if (!this.currentActivitySummary) return;
+
+        const leads = this.currentActivitySummary.filteredLeads || [];
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10001';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Leads Added</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(leads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showFilteredTasksModal() {
+        if (!this.currentActivitySummary) return;
+
+        const tasks = this.currentActivitySummary.filteredTasks || [];
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10001';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Tasks Completed</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalTasksList(tasks)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showFilteredDealsModal() {
+        if (!this.currentActivitySummary) return;
+
+        const leads = this.currentActivitySummary.closedDealsLeads || [];
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10001';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Deals Closed</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(leads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showDailyDetailModal(dayData) {
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10001';
+
+        // Store day data for card clicks
+        this.currentDayData = dayData;
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <div class="dashboard-modal-header-content">
+                        <h2 class="dashboard-modal-title">${dayData.dateLabel}</h2>
+                        <div class="dashboard-modal-subtitle">Complete daily activity breakdown</div>
+                    </div>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+
+                <div class="dashboard-modal-body">
+                    <!-- Summary Cards -->
+                    <div class="activity-summary-header">TOTALS</div>
+                    <div class="activity-summary-cards">
+                        <div class="activity-card activity-card-clickable" data-day-card-type="leads">
+                            <div class="activity-card-label">LEADS ADDED</div>
+                            <div class="activity-card-value">${dayData.leadsAdded}</div>
+                        </div>
+                        <div class="activity-card activity-card-clickable" data-day-card-type="tasks">
+                            <div class="activity-card-label">TASKS DONE</div>
+                            <div class="activity-card-value">${dayData.tasksCompleted}</div>
+                        </div>
+                        <div class="activity-card activity-card-clickable" data-day-card-type="deals">
+                            <div class="activity-card-label">DEALS CLOSED</div>
+                            <div class="activity-card-value">${dayData.dealsClosed}</div>
+                            ${dayData.revenue > 0 ? `<div class="activity-card-sub">${this.dashboard_formatValue(dayData.revenue)}</div>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Pipeline Movement -->
+                    ${dayData.movements.length > 0 ? `
+                        <div class="activity-section-divider"></div>
+                        <div class="activity-summary-header">PIPELINE MOVEMENT</div>
+                        <div class="activity-pipeline-movement">
+                            ${dayData.movements.map(m => `
+                                <div class="activity-movement-item" data-from-stage="${m.from_stage || ''}" data-to-stage="${m.to_stage}">
+                                    <div class="activity-movement-badge badge-${m.to_stage}">${m.from_stage ? `${m.from_stage} → ${m.to_stage}` : m.to_stage}</div>
+                                    <div class="activity-movement-count">${m.count} ${m.count === 1 ? 'lead' : 'leads'}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+
+        // Setup card clicks for this daily modal
+        this.dashboard_setupDayDetailCardClicks(modal);
+
+        // Setup movement clicks for this daily modal
+        this.dashboard_setupDayDetailMovementClicks(modal);
+    },
+
+    dashboard_setupDayDetailCardClicks(modal) {
+        const dayCards = modal.querySelectorAll('.activity-card-clickable');
+        dayCards.forEach(card => {
+            card.style.cursor = 'pointer';
+            card.onclick = () => {
+                const cardType = card.dataset.dayCardType;
+                if (!this.currentDayData) return;
+
+                if (cardType === 'leads') {
+                    this.dashboard_showDayLeadsModal(this.currentDayData);
+                } else if (cardType === 'tasks') {
+                    this.dashboard_showDayTasksModal(this.currentDayData);
+                } else if (cardType === 'deals') {
+                    this.dashboard_showDayDealsModal(this.currentDayData);
+                }
+            };
+        });
+    },
+
+    dashboard_setupDayDetailMovementClicks(modal) {
+        const movementItems = modal.querySelectorAll('.activity-movement-item');
+        movementItems.forEach(item => {
+            item.style.cursor = 'pointer';
+            item.onclick = () => {
+                const fromStage = item.dataset.fromStage || null;
+                const toStage = item.dataset.toStage;
+                if (!this.currentDayData) return;
+                this.dashboard_showDayMovementLeadsModal(fromStage, toStage, this.currentDayData);
+            };
+        });
+    },
+
+    dashboard_showDayLeadsModal(dayData) {
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10002'; // Above daily detail modal
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Leads Added - ${dayData.dateLabel}</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(dayData.leads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showDayTasksModal(dayData) {
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10002';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Tasks Completed - ${dayData.dateLabel}</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalTasksList(dayData.tasks)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showDayDealsModal(dayData) {
+        // Get closed deals from movements for this day
+        const closedDealsMoves = dayData.deduplicatedMoves.filter(sc =>
+            sc.to_stage === 'closed' || sc.to_stage === 'closed_won'
+        );
+        const closedDealLeadIds = closedDealsMoves.map(sc => sc.lead_id);
+        const closedDealsLeads = this.state.leads.filter(l => closedDealLeadIds.includes(l.id));
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10002';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">Deals Closed - ${dayData.dateLabel}</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(closedDealsLeads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_showDayMovementLeadsModal(fromStage, toStage, dayData) {
+        // Filter the deduplicated movements for this specific movement type
+        const movementChanges = dayData.deduplicatedMoves.filter(sc => {
+            const matchesFrom = fromStage ? sc.from_stage === fromStage : !sc.from_stage;
+            const matchesTo = sc.to_stage === toStage;
+            return matchesFrom && matchesTo;
+        });
+
+        // Get unique lead IDs
+        const leadIds = [...new Set(movementChanges.map(sc => sc.lead_id))];
+
+        // Get lead details
+        const leads = this.state.leads.filter(l => leadIds.includes(l.id));
+
+        const movementLabel = fromStage ? `${fromStage} → ${toStage}` : toStage;
+
+        const modal = document.createElement('div');
+        modal.className = 'dashboard-modal-overlay show';
+        modal.style.zIndex = '10002';
+
+        modal.innerHTML = `
+            <div class="dashboard-modal dashboard-modal-large">
+                <div class="dashboard-modal-header">
+                    <h2 class="dashboard-modal-title">${movementLabel} - ${dayData.dateLabel}</h2>
+                    <button class="dashboard-modal-close">×</button>
+                </div>
+                <div class="dashboard-modal-body">
+                    ${this.dashboard_renderModalLeadsList(leads)}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        this.dashboard_setupModalEvents(modal);
+    },
+
+    dashboard_renderActivitySummaryModal(summary, timeRange) {
+        return `
+            <div class="dashboard-modal dashboard-modal-large">
+                ${this.dashboard_renderActivitySummaryModalContent(summary, timeRange)}
+            </div>
+        `;
+    },
+
+    dashboard_renderActivitySummaryModalContent(summary, timeRange) {
+        const dateDisplay = this.dashboard_getDateRangeDisplay(timeRange);
+
+        return `
+            <div class="dashboard-modal-header">
+                <div class="dashboard-modal-header-content">
+                    <h2 class="dashboard-modal-title">Activity Summary</h2>
+                    <div class="dashboard-modal-subtitle">Track your productivity and pipeline movement</div>
+                </div>
+                <button class="dashboard-modal-close">×</button>
+            </div>
+
+            <div class="dashboard-modal-body">
+                <!-- Time Range Selector -->
+                <div class="activity-time-selector">
+                    <label for="activityTimeRange">Time Period:</label>
+                    <select id="activityTimeRange" class="activity-time-dropdown">
+                        <option value="today" ${timeRange === 'today' ? 'selected' : ''}>Today</option>
+                        <option value="week" ${timeRange === 'week' ? 'selected' : ''}>This Week</option>
+                        <option value="month" ${timeRange === 'month' ? 'selected' : ''}>This Month</option>
+                    </select>
+                    <span class="activity-date-display">${dateDisplay}</span>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="activity-summary-header">${timeRange === 'today' ? 'TODAY' : timeRange === 'week' ? 'WEEK' : 'MONTH'} TOTALS</div>
+                <div class="activity-summary-cards">
+                    <div class="activity-card activity-card-clickable" data-card-type="leads">
+                        <div class="activity-card-label">LEADS ADDED</div>
+                        <div class="activity-card-value">${summary.totals.leadsAdded}</div>
+                    </div>
+                    <div class="activity-card activity-card-clickable" data-card-type="tasks">
+                        <div class="activity-card-label">TASKS DONE</div>
+                        <div class="activity-card-value">${summary.totals.tasksCompleted}</div>
+                    </div>
+                    <div class="activity-card activity-card-clickable" data-card-type="deals">
+                        <div class="activity-card-label">DEALS CLOSED</div>
+                        <div class="activity-card-value">${summary.totals.dealsClosed}</div>
+                        <div class="activity-card-sub">${this.dashboard_formatValue(summary.totals.revenue)}</div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Movement -->
+                ${summary.movements.length > 0 ? `
+                    <div class="activity-section-divider"></div>
+                    <div class="activity-summary-header">PIPELINE MOVEMENT (${timeRange === 'today' ? 'Today' : timeRange === 'week' ? 'This Week' : 'This Month'})</div>
+                    <div class="activity-pipeline-movement">
+                        ${summary.movements.map(m => `
+                            <div class="activity-movement-item" data-from-stage="${m.from_stage || ''}" data-to-stage="${m.to_stage}">
+                                <div class="activity-movement-badge badge-${m.to_stage}">${m.from_stage ? `${m.from_stage} → ${m.to_stage}` : m.to_stage}</div>
+                                <div class="activity-movement-count">${m.count} ${m.count === 1 ? 'lead' : 'leads'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Daily Breakdown (only for week/month) -->
+                ${timeRange !== 'today' && summary.dailyBreakdown.length > 0 ? `
+                    <div class="activity-section-divider"></div>
+                    <div class="activity-summary-header">DAILY BREAKDOWN</div>
+                    <div class="activity-daily-breakdown">
+                        ${summary.dailyBreakdown.map((day, index) => `
+                            <div class="activity-daily-card activity-daily-card-clickable" data-day-index="${index}">
+                                <div class="activity-daily-date">${day.dateLabel}</div>
+                                <div class="activity-daily-stats">
+                                    <div class="activity-daily-stat">
+                                        <div class="activity-daily-stat-value">${day.leadsAdded}</div>
+                                        <div class="activity-daily-stat-label">Leads</div>
+                                    </div>
+                                    <div class="activity-daily-stat">
+                                        <div class="activity-daily-stat-value">${day.tasksCompleted}</div>
+                                        <div class="activity-daily-stat-label">Tasks</div>
+                                    </div>
+                                    <div class="activity-daily-stat">
+                                        <div class="activity-daily-stat-value">${day.dealsClosed}</div>
+                                        <div class="activity-daily-stat-label">Deals</div>
+                                        ${day.revenue > 0 ? `<div class="activity-daily-stat-sub">${this.dashboard_formatValue(day.revenue)}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    },
+
+    async dashboard_calculateActivitySummary(timeRange) {
+        const { startDate, endDate } = this.dashboard_getDateRange(timeRange);
+
+        // Filter data by date range
+        const filteredLeads = this.state.leads.filter(l =>
+            new Date(l.created_at) >= startDate && new Date(l.created_at) <= endDate
+        );
+
+        const filteredTasks = this.state.tasks.filter(t =>
+            t.status === 'completed' &&
+            t.completed_at &&
+            new Date(t.completed_at) >= startDate &&
+            new Date(t.completed_at) <= endDate
+        );
+
+        // Get all stage changes for the period
+        const allStageChanges = await API.getStageChanges(startDate, endDate);
+
+        // Deduplicate to get final movement per lead per day
+        const deduplicatedMoves = this.dashboard_deduplicateMovements(allStageChanges, startDate, endDate);
+
+        // Get deals that ended in "closed" status (deduplicated)
+        const closedDealsMoves = deduplicatedMoves.filter(sc =>
+            sc.to_stage === 'closed' || sc.to_stage === 'closed_won'
+        );
+
+        const closedDealsCount = closedDealsMoves.length;
+        const closedDealsRevenue = closedDealsMoves.reduce((sum, sc) =>
+            sum + (parseFloat(sc.potential_value) || 0), 0
+        );
+
+        // Calculate pipeline movements (ALL movements for activity view)
+        const movements = this.dashboard_groupMovements(allStageChanges);
+
+        // Calculate daily breakdown
+        const dailyBreakdown = this.dashboard_calculateDailyBreakdown(
+            filteredLeads,
+            filteredTasks,
+            deduplicatedMoves,
+            startDate,
+            endDate
+        );
+
+        // Get closed deal lead IDs for filtering
+        const closedDealLeadIds = closedDealsMoves.map(sc => sc.lead_id);
+        const closedDealsLeads = this.state.leads.filter(l => closedDealLeadIds.includes(l.id));
+
+        return {
+            totals: {
+                leadsAdded: filteredLeads.length,
+                tasksCompleted: filteredTasks.length,
+                dealsClosed: closedDealsCount,
+                revenue: closedDealsRevenue
+            },
+            movements: movements,
+            dailyBreakdown: dailyBreakdown,
+            allStageChanges: allStageChanges, // Store for clickable movements
+            filteredLeads: filteredLeads, // Store for clickable cards
+            filteredTasks: filteredTasks, // Store for clickable cards
+            closedDealsLeads: closedDealsLeads // Store for clickable cards
+        };
+    },
+
+    dashboard_getDateRange(timeRange) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        switch (timeRange) {
+            case 'today':
+                return {
+                    startDate: today,
+                    endDate: new Date(today.getTime() + 86400000) // +1 day
+                };
+            case 'week':
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 7);
+                return { startDate: weekStart, endDate: weekEnd };
+            case 'month':
+                const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                return { startDate: monthStart, endDate: monthEnd };
+            default:
+                return { startDate: today, endDate: new Date(today.getTime() + 86400000) };
+        }
+    },
+
+    dashboard_getDateRangeDisplay(timeRange) {
+        const now = new Date();
+        const { startDate, endDate } = this.dashboard_getDateRange(timeRange);
+
+        const formatDate = (date) => {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+        };
+
+        const formatShortDate = (date) => {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[date.getMonth()]} ${date.getDate()}`;
+        };
+
+        switch (timeRange) {
+            case 'today':
+                return formatDate(now);
+            case 'week':
+                return `${formatShortDate(startDate)} - ${formatShortDate(new Date(endDate.getTime() - 1))}`;
+            case 'month':
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                return `${months[now.getMonth()]} ${now.getFullYear()}`;
+            default:
+                return formatDate(now);
+        }
+    },
+
+    async dashboard_getStageMovements(startDate, endDate) {
+        try {
+            const movements = await API.getStageChanges(startDate, endDate);
+            return this.dashboard_groupMovements(movements);
+        } catch (error) {
+            console.error('Failed to load stage changes:', error);
+            return [];
+        }
+    },
+
+    dashboard_calculateDailyBreakdown(leads, tasks, deduplicatedMoves, startDate, endDate) {
+        const days = [];
+        const currentDate = new Date(startDate);
+
+        while (currentDate < endDate) {
+            const dayStart = new Date(currentDate);
+            const dayEnd = new Date(currentDate);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Filter data for this specific day
+            const dayLeads = leads.filter(l => {
+                const created = new Date(l.created_at);
+                return created >= dayStart && created <= dayEnd;
+            });
+
+            const dayTasks = tasks.filter(t => {
+                const completed = new Date(t.completed_at);
+                return completed >= dayStart && completed <= dayEnd;
+            });
+
+            // Filter deduplicated movements for this day (final state per lead)
+            const dayDeduplicatedMoves = deduplicatedMoves.filter(sc => {
+                const changed = new Date(sc.changed_at);
+                return changed >= dayStart && changed <= dayEnd;
+            });
+
+            // Count deals that ended in closed (deduplicated - final state only)
+            const dayClosedDealsMoves = dayDeduplicatedMoves.filter(sc =>
+                sc.to_stage === 'closed' || sc.to_stage === 'closed_won'
+            );
+            const dayDeals = dayClosedDealsMoves.length;
+            const dayRevenue = dayClosedDealsMoves.reduce((sum, sc) =>
+                sum + (parseFloat(sc.potential_value) || 0), 0
+            );
+
+            // Format day label
+            const dayLabel = this.dashboard_formatDayLabel(dayStart);
+
+            days.push({
+                date: dayStart.toISOString().split('T')[0],
+                dateLabel: dayLabel,
+                leadsAdded: dayLeads.length,
+                tasksCompleted: dayTasks.length,
+                dealsClosed: dayDeals,
+                revenue: dayRevenue,
+                movements: this.dashboard_groupMovements(dayDeduplicatedMoves),
+                leads: dayLeads,
+                tasks: dayTasks,
+                deduplicatedMoves: dayDeduplicatedMoves
+            });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        return days.filter(day => day.leadsAdded > 0 || day.tasksCompleted > 0 || day.dealsClosed > 0 || day.movements.length > 0);
+    },
+
+    dashboard_formatDayLabel(date) {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+    },
+
+    dashboard_groupMovements(movements) {
+        const grouped = {};
+        movements.forEach(m => {
+            const key = `${m.from_stage || 'new'}_${m.to_stage}`;
+            if (!grouped[key]) {
+                grouped[key] = {
+                    from_stage: m.from_stage,
+                    to_stage: m.to_stage,
+                    count: 0,
+                    lead_ids: []
+                };
+            }
+            grouped[key].count++;
+            grouped[key].lead_ids.push(m.lead_id);
+        });
+        return Object.values(grouped).sort((a, b) => b.count - a.count);
+    },
+
+    dashboard_deduplicateMovements(stageChanges, startDate, endDate) {
+        // Groups stage changes by lead_id and day, keeping only the most recent movement per lead per day
+        const dailyFinalMoves = {};
+
+        stageChanges.forEach(sc => {
+            const changeDate = new Date(sc.changed_at);
+            const dayKey = changeDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            const leadDayKey = `${sc.lead_id}_${dayKey}`;
+
+            // Only keep if this is the first record for this lead+day OR if it's more recent
+            if (!dailyFinalMoves[leadDayKey] || new Date(sc.changed_at) > new Date(dailyFinalMoves[leadDayKey].changed_at)) {
+                dailyFinalMoves[leadDayKey] = sc;
+            }
+        });
+
+        return Object.values(dailyFinalMoves);
     },
 
     // RENDER MODAL CONTENT
@@ -1446,32 +2249,6 @@ window.DashboardModule = {
     border-color: var(--primary);
 }
 
-/* ANIMATIONS - Wave for first load, fade for subsequent */
-@keyframes dashWaveIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes dashFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.dash-wave-in {
-    animation: dashWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-}
-
-.dash-fade-in {
-    animation: dashFadeIn 0.3s ease forwards;
-    opacity: 0;
-}
 
 .dashboard-metric-glow {
     position: absolute;
@@ -1551,7 +2328,7 @@ window.DashboardModule = {
 }
 
 .dashboard-metric-warning .dashboard-metric-fill {
-    background: linear-gradient(90deg, var(--warning), #fbbf24);
+    background: linear-gradient(90deg, var(--warning), var(--warning));
 }
 
 .dashboard-metric-detail {
@@ -1601,7 +2378,7 @@ window.DashboardModule = {
 }
 
 .dashboard-view-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
+    background: var(--primary-light);
     transform: translateX(4px);
 }
 
@@ -1638,7 +2415,7 @@ window.DashboardModule = {
 .dashboard-pipeline-stage:hover {
     transform: translateY(-4px);
     border-color: var(--stage-color);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 
 .dashboard-stage-icon-lg {
@@ -1722,7 +2499,7 @@ window.DashboardModule = {
 
 .dashboard-list-item.dashboard-item-overdue {
     border-color: var(--danger);
-    background: rgba(239, 68, 68, 0.05);
+    background: var(--danger-light);
 }
 
 .dashboard-item-avatar {
@@ -1797,10 +2574,10 @@ window.DashboardModule = {
     text-transform: uppercase;
 }
 
-.dashboard-badge-info { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
-.dashboard-badge-warning { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-.dashboard-badge-success { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.dashboard-badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.dashboard-badge-info { background: var(--info-light); color: var(--info); }
+.dashboard-badge-warning { background: var(--warning-light); color: var(--warning); }
+.dashboard-badge-success { background: var(--success-light); color: var(--success); }
+.dashboard-badge-danger { background: var(--danger-light); color: var(--danger); }
 .dashboard-badge-neutral { background: var(--surface-hover); color: var(--text-secondary); }
 
 .dashboard-empty-state {
@@ -1862,8 +2639,8 @@ window.DashboardModule = {
 
 /* UPGRADE CTA */
 .dashboard-upgrade {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
-    border: 2px solid rgba(102, 126, 234, 0.2);
+    background: var(--primary-light);
+    border: 2px solid var(--primary);
     border-radius: var(--radius-lg);
     padding: 2rem;
     display: flex;
@@ -1876,7 +2653,7 @@ window.DashboardModule = {
 .dashboard-upgrade-glow {
     position: absolute;
     inset: -50%;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.3), transparent);
+    background: radial-gradient(circle, var(--primary), transparent);
 }
 
 .dashboard-upgrade-content {
@@ -1916,7 +2693,7 @@ window.DashboardModule = {
 .dashboard-btn-shine {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    background: linear-gradient(90deg, transparent, var(--active-overlay), transparent);
     transform: translateX(-100%);
     transition: transform 0.6s;
 }
@@ -1927,15 +2704,15 @@ window.DashboardModule = {
 
 .dashboard-upgrade-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: var(--shadow-lg);
 }
 
 /* MODALS */
 .dashboard-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.3);
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2049,7 +2826,7 @@ window.DashboardModule = {
 .search-input:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .search-icon {
@@ -2648,6 +3425,271 @@ window.DashboardModule = {
     
     .dashboard-pipeline-stages {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ACTIVITY SUMMARY MODAL */
+.activity-time-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+}
+
+.activity-time-selector label {
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+.activity-time-dropdown {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 200px;
+}
+
+.activity-time-dropdown:hover {
+    border-color: var(--primary);
+    background-color: var(--background);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+.activity-time-dropdown:focus {
+    outline: none;
+    border-color: var(--primary);
+    background-color: var(--background);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.activity-time-dropdown option {
+    background: var(--background);
+    color: var(--text-primary);
+    padding: 0.75rem;
+}
+
+.activity-date-display {
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.activity-summary-header {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+}
+
+.activity-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.activity-card {
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.activity-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.activity-card-label {
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+}
+
+.activity-card-value {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.activity-card-sub {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--success);
+    margin-top: 0.5rem;
+}
+
+.activity-section-divider {
+    height: 2px;
+    background: var(--border);
+    margin: 2rem 0;
+}
+
+.activity-pipeline-movement {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.activity-movement-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s ease;
+}
+
+.activity-movement-item:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.activity-movement-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.activity-movement-badge.badge-new { background: #06b6d4; color: white; }
+.activity-movement-badge.badge-contacted { background: #f59e0b; color: white; }
+.activity-movement-badge.badge-qualified { background: #8b5cf6; color: white; }
+.activity-movement-badge.badge-negotiation { background: #F97316; color: white; }
+.activity-movement-badge.badge-closed { background: #10b981; color: white; }
+.activity-movement-badge.badge-closed_won { background: #10b981; color: white; }
+.activity-movement-badge.badge-lost { background: #ef4444; color: white; }
+.activity-movement-badge.badge-closed_lost { background: #ef4444; color: white; }
+
+.activity-movement-count {
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.activity-daily-breakdown {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.activity-daily-card {
+    background: var(--background);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.activity-daily-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.activity-daily-date {
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.activity-daily-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.activity-daily-stat {
+    text-align: center;
+}
+
+.activity-daily-stat-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.activity-daily-stat-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+.activity-daily-movements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.activity-daily-movement-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius);
+    background: var(--primary-bg);
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .activity-summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-daily-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .activity-time-selector {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .activity-date-display {
+        margin-left: 0;
     }
 }
 </style>`;

@@ -5,18 +5,17 @@ window.PipelineModule = {
         stats: { currentLeads: 0, currentLeadLimit: 50 },
         filters: { search: '', types: [], sources: [], scores: [] },
         draggedLead: null,
-        container: 'pipeline-content',
-        hasInitialized: false  // Track if module has loaded before
+        container: 'pipeline-content'
     },
 
     // Stage definitions
     stages: [
-        { id: 'new', name: 'New Leads', icon: 'sparkles', color: '#06b6d4', desc: 'Fresh leads', row: 'active' },
-        { id: 'contacted', name: 'Contacted', icon: 'phone', color: '#f59e0b', desc: 'Initial contact made', row: 'active' },
-        { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: '#F97316', desc: 'Deal terms discussed', row: 'active' },
-        { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: '#8b5cf6', desc: 'Potential confirmed', row: 'outcome' },
-        { id: 'closed', name: 'Closed Won', icon: 'trophy', color: '#10b981', desc: 'Successfully won', row: 'outcome' },
-        { id: 'lost', name: 'Lost', icon: 'x-circle', color: '#ef4444', desc: 'Deal not won', row: 'outcome' }
+        { id: 'new', name: 'New Leads', icon: 'sparkles', color: 'var(--stage-new)', desc: 'Fresh leads', row: 'active' },
+        { id: 'contacted', name: 'Contacted', icon: 'phone', color: 'var(--stage-contacted)', desc: 'Initial contact made', row: 'active' },
+        { id: 'negotiation', name: 'Negotiation', icon: 'handshake', color: 'var(--stage-negotiation)', desc: 'Deal terms discussed', row: 'active' },
+        { id: 'qualified', name: 'Qualified', icon: 'check-circle', color: 'var(--stage-qualified)', desc: 'Potential confirmed', row: 'outcome' },
+        { id: 'closed', name: 'Closed Won', icon: 'trophy', color: 'var(--stage-closed)', desc: 'Successfully won', row: 'outcome' },
+        { id: 'lost', name: 'Lost', icon: 'x-circle', color: 'var(--stage-lost)', desc: 'Deal not won', row: 'outcome' }
     ],
 
     // Initialize
@@ -24,10 +23,13 @@ window.PipelineModule = {
         console.log('Pipeline module loading');
 
         try {
+            // Fade out container immediately before loading data
+            const container = document.getElementById(this.state.container);
+            if (container) container.style.opacity = '0';
+
             await this.loadData();
             this.render();
             this.attachEvents();
-            this.state.hasInitialized = true;
             console.log('Pipeline module ready');
         } catch (error) {
             console.error('Pipeline init failed:', error);
@@ -37,10 +39,39 @@ window.PipelineModule = {
 
     // Load all data in parallel
     async loadData() {
+        // Check cache first
+        const cachedLeads = AppCache.get('leads');
+        const cachedStats = AppCache.get('stats');
+
+        // If both are cached, use them (instant load!)
+        if (cachedLeads && cachedStats) {
+            this.state.leads = (Array.isArray(cachedLeads) ? cachedLeads : cachedLeads.all || []).map(lead => ({
+                ...lead,
+                status: lead.status || 'new',
+                potential_value: lead.potential_value || 0,
+                quality_score: lead.quality_score || 5,
+                type: lead.type || ''
+            }));
+
+            this.state.stats = {
+                currentLeads: cachedStats.currentLeads || 0,
+                currentLeadLimit: cachedStats.currentLeadLimit || 50
+            };
+
+            console.log('[Pipeline] ⚡ Loaded from cache (instant)');
+            return;
+        }
+
+        // Cache miss - fetch from API
+        console.log('[Pipeline] 🔄 Cache miss - fetching from API');
         const [leadData, stats] = await Promise.all([
             API.getLeads(),
             API.getCurrentStats()
         ]);
+
+        // Store in cache
+        AppCache.set('leads', leadData);
+        AppCache.set('stats', stats);
 
         this.state.leads = (Array.isArray(leadData) ? leadData : leadData.all || []).map(lead => ({
             ...lead,
@@ -247,7 +278,6 @@ window.PipelineModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        const isFirstLoad = !this.state.hasInitialized;
         const organized = this.getOrganizedLeads();
         const analytics = this.getAnalytics();
         const activeCount = ['new', 'contacted', 'negotiation']
@@ -261,7 +291,7 @@ window.PipelineModule = {
 
         container.innerHTML = `
             ${this.renderStyles()}
-            <div class="pipeline-container">
+            <div class="pipeline-container" style="opacity: 0;">
                 ${this.renderHeader()}
                 ${this.renderFilters()}
                 ${this.hasActiveFilters() ? this.renderActiveFilters(organized) : ''}
@@ -298,41 +328,23 @@ window.PipelineModule = {
             </div>
         `;
 
-        // Apply animations based on load state
-        if (isFirstLoad) {
-            // First load: Staggered wave animation
-            requestAnimationFrame(() => {
-                const header = container.querySelector('.pipeline-header');
-                if (header) {
-                    header.classList.add('pipe-wave-in');
-                    header.style.animationDelay = '0s';
-                }
+        // Force a reflow before animation
+    const pipelineContainer = container.querySelector('.pipeline-container');
+    if (pipelineContainer) {
+        // Fade outer container back to visible
+        container.style.opacity = '1';
 
-                const filters = container.querySelector('.pipeline-filters');
-                if (filters) {
-                    filters.classList.add('pipe-wave-in');
-                    filters.style.animationDelay = '0.1s';
-                }
+        // Force browser to acknowledge the opacity: 0 state
+        void pipelineContainer.offsetHeight;
 
-                const sections = container.querySelectorAll('.pipeline-section');
-                sections.forEach((section, i) => {
-                    section.classList.add('pipe-wave-in');
-                    section.style.animationDelay = `${0.2 + (i * 0.15)}s`;
-                });
+        // NOW add transition and fade in
+        pipelineContainer.style.transition = 'opacity 0.5s ease';
 
-                const analyticsSection = container.querySelector('.analytics-section');
-                if (analyticsSection) {
-                    analyticsSection.classList.add('pipe-wave-in');
-                    analyticsSection.style.animationDelay = `${0.2 + (sections.length * 0.15)}s`;
-                }
-            });
-        } else {
-            // Subsequent loads: Fast fade
-            requestAnimationFrame(() => {
-                const allElements = container.querySelectorAll('.pipeline-header, .pipeline-filters, .pipeline-section, .analytics-section');
-                allElements.forEach(el => el.classList.add('pipe-fade-in'));
-            });
-        }
+        // Use setTimeout to ensure transition is registered
+        setTimeout(() => {
+            pipelineContainer.style.opacity = '1';
+        }, 10);
+    }
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
@@ -435,9 +447,11 @@ window.PipelineModule = {
     // Render lead card
     renderLeadCard(lead) {
         const typeIcon = lead.type === 'warm' ? 'flame' : lead.type === 'cold' ? 'snowflake' : 'minus';
-        const scoreColor = lead.quality_score >= 8 ? 'var(--primary)' :
-                          lead.quality_score >= 6 ? 'var(--success)' :
-                          lead.quality_score >= 4 ? 'var(--warning)' : 'var(--danger)';
+        // Universal score colors (NOT theme-based) for instant recognition - stoplight scale
+        const scoreColor = lead.quality_score >= 8 ? '#10b981' :  // Green (8-10 = excellent)
+                          lead.quality_score >= 6 ? '#fbbf24' :  // Yellow (6-7 = good)
+                          lead.quality_score >= 4 ? '#f59e0b' :  // Orange (4-5 = okay)
+                          '#ef4444';                              // Red (1-3 = poor)
 
         const truncateText = (text, maxLength) => {
             if (!text || text.length <= maxLength) return text;
@@ -446,8 +460,6 @@ window.PipelineModule = {
 
         const safeName = API.escapeHtml(truncateText(lead.name, 18));
         const safeCompany = API.escapeHtml(truncateText(lead.company || 'No company', 25));
-        const safeEmail = API.escapeHtml(truncateText(lead.email || '', 30));
-        const safePhone = API.escapeHtml(lead.phone || '');
         const safeNotes = API.escapeHtml(truncateText(lead.notes || '', 100));
         const initials = this.getInitials(lead.name);
         const timeAgo = this.formatTimeAgo(lead.created_at);
@@ -473,13 +485,6 @@ window.PipelineModule = {
                 </div>
 
                 <div class="card-body">
-                    ${safeEmail || safePhone ? `
-                        <div class="contact-info">
-                            ${safeEmail ? `<div class="contact-item"><i data-lucide="mail" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safeEmail}</div>` : ''}
-                            ${safePhone ? `<div class="contact-item"><i data-lucide="phone" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>${safePhone}</div>` : ''}
-                        </div>
-                    ` : ''}
-
                     ${safeNotes ? `<div class="lead-notes">${safeNotes}</div>` : ''}
 
                     ${lead.potential_value ? `
@@ -815,6 +820,14 @@ window.PipelineModule = {
         // API call in background
         try {
             await API.updateLead(leadId, { status: newStatus });
+
+            // Update cache with new status
+            AppCache.update('leads', (cachedData) => {
+                const leads = Array.isArray(cachedData) ? cachedData : (cachedData.all || []);
+                const cachedLead = leads.find(l => l.id.toString() === leadId.toString());
+                if (cachedLead) cachedLead.status = newStatus;
+                return Array.isArray(cachedData) ? leads : { ...cachedData, all: leads };
+            });
         } catch (error) {
             console.error('Failed to update lead status:', error);
             this.notify('Failed to update lead status', 'error');
@@ -961,6 +974,14 @@ window.PipelineModule = {
             try {
                 await API.updateLead(lead.id, updateData);
                 this.notify('Lead updated successfully', 'success');
+
+                // Update cache with new values
+                AppCache.update('leads', (cachedData) => {
+                    const leads = Array.isArray(cachedData) ? cachedData : (cachedData.all || []);
+                    const cachedLead = leads.find(l => l.id.toString() === lead.id.toString());
+                    if (cachedLead) Object.assign(cachedLead, updateData);
+                    return Array.isArray(cachedData) ? leads : { ...cachedData, all: leads };
+                });
             } catch (error) {
                 console.error('Failed to update lead:', error);
                 this.notify('Failed to update lead', 'error');
@@ -1153,6 +1174,14 @@ window.PipelineModule = {
             try {
                 await API.updateLead(leadId, { potential_value: value });
                 this.notify(`Deal value added: $${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'success');
+
+                // Update cache with new potential value
+                AppCache.update('leads', (cachedData) => {
+                    const leads = Array.isArray(cachedData) ? cachedData : (cachedData.all || []);
+                    const cachedLead = leads.find(l => l.id.toString() === leadId.toString());
+                    if (cachedLead) cachedLead.potential_value = value;
+                    return Array.isArray(cachedData) ? leads : { ...cachedData, all: leads };
+                });
             } catch (error) {
                 console.error('Failed to add deal value:', error);
                 this.notify('Failed to add deal value', 'error');
@@ -1319,6 +1348,14 @@ window.PipelineModule = {
             try {
                 await API.updateLead(leadId, { lost_reason: reason });
                 this.notify(`Loss reason added: ${reason}`, 'success');
+
+                // Update cache with new lost reason
+                AppCache.update('leads', (cachedData) => {
+                    const leads = Array.isArray(cachedData) ? cachedData : (cachedData.all || []);
+                    const cachedLead = leads.find(l => l.id.toString() === leadId.toString());
+                    if (cachedLead) cachedLead.lost_reason = reason;
+                    return Array.isArray(cachedData) ? leads : { ...cachedData, all: leads };
+                });
             } catch (error) {
                 console.error('Failed to add loss reason:', error);
                 this.notify('Failed to add loss reason', 'error');
@@ -1441,6 +1478,10 @@ window.PipelineModule = {
         try {
             await API.deleteLead(leadId);
             this.notify('Lead deleted successfully', 'success');
+
+            // Invalidate cache after successful delete
+            AppCache.invalidate('leads');
+            AppCache.invalidate('dashboard-stats');
         } catch (error) {
             console.error('Failed to delete lead:', error);
             this.notify('Failed to delete lead', 'error');
@@ -1513,7 +1554,7 @@ window.PipelineModule = {
                 .pipeline-container { max-width: 1800px; margin: 0 auto; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
                 .stage-content.drag-over {
-                    background: rgba(102, 126, 234, 0.05);
+                    background: var(--primary-bg);
                     border: 2px dashed var(--primary);
                     border-radius: var(--radius-lg);
                 }
@@ -1522,22 +1563,22 @@ window.PipelineModule = {
                 .header-brand { display: flex; flex-direction: column; gap: 0.5rem; }
                 .pipeline-title { display: flex; align-items: center; gap: 1rem; font-size: 2rem; font-weight: 800; color: var(--text-primary); margin: 0; }
                 .title-icon { font-size: 1.75rem; }
-                .title-text { background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                .title-text { background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
                 .pipeline-subtitle { color: var(--text-secondary); font-size: 1.125rem; margin: 0; }
 
                 .pipeline-filters { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; gap: 1.5rem; align-items: center; }
                 .search-group { flex: 1; }
                 .search-wrapper { position: relative; display: flex; align-items: center; }
                 .search-input { width: 100%; padding: 0.875rem 3rem 0.875rem 1.25rem; border: 2px solid var(--border); border-radius: var(--radius); font-size: 1rem; background: var(--background); color: var(--text-primary); transition: all 0.2s ease; }
-                .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+                .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
                 .search-icon { position: absolute; right: 1rem; color: var(--text-tertiary); pointer-events: none; }
                 .filter-controls { display: flex; gap: 1rem; }
                 .filter-btn { padding: 0.875rem 1.25rem; background: var(--background); border: 2px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s ease; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
                 .filter-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
-                .filter-btn.active { border-color: var(--primary); background: rgba(102, 126, 234, 0.1); color: var(--primary); }
+                .filter-btn.active { border-color: var(--primary); background: var(--primary-bg); color: var(--primary); }
                 .filter-arrow { font-size: 0.7rem; transition: transform 0.2s ease; }
 
-                .filter-dropdown { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); z-index: 10000; max-height: 300px; overflow-y: auto; }
+                .filter-dropdown { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000; max-height: 300px; overflow-y: auto; }
                 .filter-options { padding: 0.5rem; }
                 .filter-option { padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s ease; border-radius: var(--radius); display: flex; align-items: center; gap: 0.75rem; }
                 .filter-option:hover { background: var(--surface-hover); }
@@ -1547,7 +1588,7 @@ window.PipelineModule = {
                 .checkbox.checked { background: var(--primary); border-color: var(--primary); color: white; }
                 .option-text { flex: 1; }
 
-                .active-filters-panel { background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius-lg); padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+                .active-filters-panel { background: var(--primary-bg); border: 1px solid var(--primary-border); border-radius: var(--radius-lg); padding: 1rem 1.5rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
                 .filters-info { display: flex; flex-direction: column; gap: 0.25rem; }
                 .filter-count { font-weight: 700; color: var(--primary); }
                 .filter-details { font-size: 0.85rem; color: var(--text-secondary); }
@@ -1558,7 +1599,7 @@ window.PipelineModule = {
                 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
                 .section-title-group { display: flex; align-items: center; gap: 1rem; }
                 .section-title { font-size: 1.375rem; font-weight: 700; color: var(--text-primary); margin: 0; }
-                .section-badge { background: rgba(102, 126, 234, 0.1); color: var(--primary); padding: 0.375rem 0.875rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
+                .section-badge { background: var(--primary-bg); color: var(--primary); padding: 0.375rem 0.875rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
                 .section-value { font-size: 1.25rem; font-weight: 800; color: var(--success); }
 
                 .stages-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
@@ -1574,11 +1615,11 @@ window.PipelineModule = {
                 .stage-count { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
                 .stage-content { flex: 1; padding: 1rem; overflow-y: auto; max-height: 600px; transition: all 0.3s ease; }
 
-                .lead-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; cursor: grab; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; }
-                .lead-card:hover { border-color: var(--primary); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15); transform: translateY(-3px); }
+                .lead-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; cursor: grab; transition: all 0.3s ease; box-shadow: var(--shadow); margin-bottom: 1rem; }
+                .lead-card:hover { border-color: var(--primary); box-shadow: var(--shadow-lg); transform: translateY(-3px); }
                 .lead-card:active { cursor: grabbing; }
                 .card-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
-                .lead-avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--radius); background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+                .lead-avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--radius); background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
                 .avatar-text { color: white; font-weight: 700; font-size: 0.9rem; }
                 .lead-main-info { flex: 1; min-width: 0; }
                 .lead-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem 0; }
@@ -1587,35 +1628,35 @@ window.PipelineModule = {
                 .lead-score { color: white; padding: 0.25rem 0.5rem; border-radius: 9999px; font-weight: 700; font-size: 0.75rem; }
                 .lead-type { font-size: 1.125rem; }
                 .card-body { margin-bottom: 1rem; }
-                .contact-info { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
-                .contact-item { font-size: 0.8rem; color: var(--text-secondary); }
                 .lead-notes { font-size: 0.8rem; color: var(--text-tertiary); font-style: italic; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.75rem; background: var(--surface-hover); border-radius: var(--radius); border-left: 3px solid var(--border); white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-height: 5.5rem; overflow: hidden; }
 
-                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius); border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
-                .deal-value-display:hover { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); transform: translateY(-1px); }
+                .deal-value-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--success-bg); border-radius: var(--radius); border: 1px solid var(--success-border); margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .deal-value-display:hover { background: var(--success-bg-hover); border-color: var(--success-border-hover); transform: translateY(-1px); }
                 .value-icon { font-size: 1rem; }
                 .value-amount { font-weight: 700; color: var(--success); flex: 1; }
-                .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
-                .value-edit-btn:hover { background: rgba(16, 185, 129, 0.2); }
+                .value-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+                .value-edit-btn svg { color: var(--text-primary) !important; width: 14px; height: 14px; }
+                .value-edit-btn:hover { background: var(--success-bg-hover); }
 
-                .deal-value-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
-                .deal-value-btn:hover { background: rgba(102, 126, 234, 0.2); }
+                .deal-value-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--success-bg); border: 1px solid var(--success-border); border-radius: var(--radius); color: var(--success); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .deal-value-btn:hover { background: var(--success-bg-hover); border-color: var(--success-border-hover); }
 
-                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: var(--radius); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 0.75rem; transition: all 0.2s ease; }
-                .loss-reason-display:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); transform: translateY(-1px); }
+                .loss-reason-display { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--danger-bg); border-radius: var(--radius); border: 1px solid var(--danger-border); margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .loss-reason-display:hover { background: var(--danger-bg-hover); border-color: var(--danger-border-hover); transform: translateY(-1px); }
                 .loss-icon { font-size: 0.9rem; }
                 .loss-text { font-size: 0.8rem; color: var(--danger); font-weight: 600; flex: 1; }
-                .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; font-size: 0.9rem; }
-                .loss-edit-btn:hover { background: rgba(239, 68, 68, 0.2); }
+                .loss-edit-btn { background: none; border: none; cursor: pointer; padding: 0.25rem; border-radius: var(--radius); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+                .loss-edit-btn svg { color: var(--text-primary) !important; width: 14px; height: 14px; }
+                .loss-edit-btn:hover { background: var(--danger-bg-hover); }
 
-                .loss-reason-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius); color: var(--danger); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
-                .loss-reason-btn:hover { background: rgba(239, 68, 68, 0.2); }
+                .loss-reason-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: var(--radius); color: var(--danger); cursor: pointer; font-weight: 600; font-size: 0.8rem; width: 100%; margin-bottom: 0.75rem; transition: all 0.2s ease; }
+                .loss-reason-btn:hover { background: var(--danger-bg-hover); border-color: var(--danger-border-hover); }
 
                 .card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 0.875rem; border-top: 1px solid var(--border); }
                 .card-date { color: var(--text-tertiary); font-size: 0.75rem; font-weight: 500; }
                 .card-actions { display: flex; gap: 0.5rem; }
-                .action-btn { padding: 0.5rem 0.75rem; background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: var(--radius); color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; }
-                .action-btn:hover { background: rgba(102, 126, 234, 0.2); transform: translateY(-1px); }
+                .action-btn { padding: 0.5rem 0.75rem; background: var(--surface-hover); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; }
+                .action-btn:hover { background: var(--background); border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
 
                 .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-tertiary); }
                 .empty-icon { font-size: 3rem; opacity: 0.6; display: block; margin-bottom: 1rem; }
@@ -1640,8 +1681,8 @@ window.PipelineModule = {
 
                 .pipeline-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
                 .pipeline-modal.show { opacity: 1; visibility: visible; }
-                .modal-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); }
-                .modal-content { background: var(--surface); border-radius: 24px; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3); width: 100%; max-width: 600px; max-height: 90vh; overflow: hidden; position: relative; z-index: 1; border: 1px solid var(--border); }
+                .modal-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.3); }
+                .modal-content { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow-xl); width: 100%; max-width: 600px; max-height: 90vh; overflow: hidden; position: relative; z-index: 1; border: 1px solid var(--border); }
                 .modal-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-hover); }
                 .modal-title { font-size: 1.375rem; font-weight: 800; color: var(--text-primary); margin: 0; }
                 .modal-close { background: none; border: none; width: 32px; height: 32px; border-radius: var(--radius); cursor: pointer; font-size: 28px; color: var(--text-secondary); transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
@@ -1654,12 +1695,12 @@ window.PipelineModule = {
                 .temperature-toggle { display: flex; gap: 1rem; }
                 .temp-btn { flex: 1; padding: 1rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); color: var(--text-secondary); cursor: pointer; transition: all 0.3s ease; font-weight: 600; }
                 .temp-btn:hover { border-color: var(--primary); }
-                .temp-btn.active { border-color: var(--primary); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+                .temp-btn.active { border-color: var(--primary); background: var(--gradient-primary); color: white; }
 
                 .quality-slider-container { display: flex; align-items: center; gap: 2rem; }
                 .score-track { flex: 1; }
                 .quality-slider { width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--danger) 0%, var(--warning) 40%, var(--success) 70%, var(--primary) 100%); outline: none; cursor: pointer; }
-                .quality-slider::-webkit-slider-thumb { appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 3px solid white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); transition: all 0.2s ease; }
+                .quality-slider::-webkit-slider-thumb { appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 3px solid white; box-shadow: var(--shadow); transition: all 0.2s ease; }
                 .quality-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
                 .score-display { text-align: center; min-width: 80px; }
                 .score-number { font-size: 2.5rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 0.25rem; }
@@ -1677,19 +1718,19 @@ window.PipelineModule = {
                 .form-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--border); }
                 .form-actions-right { display: flex; gap: 1rem; }
                 .btn-primary, .btn-secondary, .btn-danger { padding: 10px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
-                .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; }
-                .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #5568d3 0%, #653a8e 100%); transform: translateY(-2px); }
+                .btn-primary { background: var(--gradient-primary); color: white; border: none; }
+                .btn-primary:hover:not(:disabled) { background: var(--gradient-primary); transform: translateY(-2px); }
                 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
                 .btn-secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
                 .btn-secondary:hover { background: var(--surface-hover); }
                 .btn-danger { background: var(--danger); color: white; border: none; }
-                .btn-danger:hover { background: #dc2626; }
+                .btn-danger:hover { background: var(--danger-dark); }
 
                 .move-options { display: flex; flex-direction: column; gap: 0.75rem; }
                 .move-option { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s ease; text-align: left; }
                 .move-option:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-2px); }
                 .move-option:disabled { opacity: 0.6; cursor: not-allowed; }
-                .move-option.current { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
+                .move-option.current { border-color: var(--success); background: var(--success-bg); }
                 .option-icon { width: 3rem; height: 3rem; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: white; }
                 .option-content { flex: 1; }
                 .option-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
@@ -1703,7 +1744,7 @@ window.PipelineModule = {
 
                 .quick-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1rem; }
                 .quick-value-btn { padding: 0.75rem 1rem; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); cursor: pointer; transition: all 0.2s; font-weight: 600; }
-                .quick-value-btn:hover { border-color: var(--success); color: var(--success); background: rgba(16, 185, 129, 0.05); }
+                .quick-value-btn:hover { border-color: var(--success); color: var(--success); background: var(--success-bg); }
 
                 .reason-select {
                     width: 100%;
@@ -1788,32 +1829,6 @@ window.PipelineModule = {
                     .modal-body { padding: 1.5rem; max-height: 50vh; }
                 }
 
-                /* Module-level animations */
-                @keyframes pipeWaveIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px) scale(0.95);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0) scale(1);
-                    }
-                }
-
-                @keyframes pipeFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-
-                .pipe-wave-in {
-                    animation: pipeWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-                    opacity: 0;
-                }
-
-                .pipe-fade-in {
-                    animation: pipeFadeIn 0.3s ease forwards;
-                    opacity: 0;
-                }
             </style>
         `;
     }

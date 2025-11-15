@@ -38,7 +38,7 @@ window.JobsModule = {
 
         container.innerHTML = `
             ${this.renderStyles()}
-            <div class="jobs-hub-container">
+            <div class="jobs-hub-container" style="opacity: 0;">
                 <div class="jobs-hub-header">
                     <h1 class="jobs-hub-title">Project Management Hub</h1>
                     <p class="jobs-hub-subtitle">Select a section to get started</p>
@@ -89,6 +89,17 @@ window.JobsModule = {
 
             </div>
         `;
+
+        // Simple fade-in animation
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const jobsHubContainer = container.querySelector('.jobs-hub-container');
+                if (jobsHubContainer) {
+                    jobsHubContainer.style.transition = 'opacity 0.5s ease';
+                    jobsHubContainer.style.opacity = '1';
+                }
+            });
+        });
 
         this.attachEvents();
     },
@@ -150,6 +161,17 @@ window.JobsModule = {
             });
         }
 
+        // Show loading overlay
+        const overlay = document.getElementById('moduleLoadingOverlay');
+        const loadingText = document.getElementById('moduleLoadingText');
+        if (overlay) {
+            overlay.classList.add('active');
+            if (loadingText) {
+                const names = { estimates: 'Estimates', jobs: 'Jobs', clients: 'Clients' };
+                loadingText.textContent = `Loading ${names[sectionName] || 'Module'}...`;
+            }
+        }
+
         // Load the appropriate module
         try {
             if (sectionName === 'estimates') {
@@ -180,6 +202,11 @@ window.JobsModule = {
         } catch (error) {
             console.error(`Error loading ${sectionName}:`, error);
             this.showError(`Failed to load ${sectionName}`);
+        } finally {
+            // Hide loading overlay
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
         }
     },
 
@@ -250,7 +277,7 @@ window.JobsModule = {
                 .jobs-hub-section:hover {
                     border-color: var(--primary);
                     transform: translateY(-8px);
-                    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+                    box-shadow: 0 20px 40px var(--primary);
                 }
 
                 .jobs-hub-section-icon {

@@ -83,3 +83,9 @@ ehthumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Admin Documentation - Contains sensitive database info
+public/dashboard/Admin/
+MIGRATION_*.sql
+HANDOFF_OLD_*.md
+SCALING_PLAN.md

@@ -147,16 +147,24 @@ class TierScalingAPI {
   // =====================================================
   
   static async getProfile() {
+    // Check cache first
+    const cached = window.AppCache?.get('profile');
+    if (cached) return cached;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
-    
+
     if (error) throw error;
+
+    // Cache the result
+    window.AppCache?.set('profile', data);
+
     return data;
   }
 
@@ -170,14 +178,18 @@ class TierScalingAPI {
 
   static async updateProfile(updates) {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     const { data, error } = await supabase
       .from('users')
       .update(updates)
       .eq('id', user.id)
       .select();
-    
+
     if (error) throw error;
+
+    // Invalidate profile cache so next getProfile() fetches fresh data
+    window.AppCache?.invalidate('profile');
+
     return data[0];
   }
 
@@ -298,7 +310,7 @@ class TierScalingAPI {
     // Check cache first (unless force refresh)
     if (!forceRefresh && window.AppCache) {
       const cached = window.AppCache.get('leads');
-      if (cached) {
+      if (cached && Array.isArray(cached)) {
         return {
           cold: cached.filter(l => l.type === 'cold'),
           warm: cached.filter(l => l.type === 'warm'),
@@ -397,7 +409,18 @@ class TierScalingAPI {
       if (window.AppCache && data) {
         window.AppCache.update('leads', (leads) => {
           if (!leads) return [data];
-          return leads.map(l => l.id === leadId ? data : l);
+          // Handle both array and object {all, cold, warm} formats
+          if (Array.isArray(leads)) {
+            return leads.map(l => l.id === leadId ? data : l);
+          } else if (leads.all) {
+            const updated = leads.all.map(l => l.id === leadId ? data : l);
+            return {
+              all: updated,
+              cold: updated.filter(l => l.type === 'cold'),
+              warm: updated.filter(l => l.type === 'warm')
+            };
+          }
+          return leads;
         });
       }
 
@@ -497,9 +520,21 @@ class TierScalingAPI {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
-    
+
     if (error) throw error;
     return data;
+  }
+
+  static async getStageChanges(startDate, endDate) {
+    const { data, error } = await supabase
+      .from('stage_changes')
+      .select('*')
+      .gte('changed_at', startDate.toISOString())
+      .lte('changed_at', endDate.toISOString())
+      .order('changed_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 
   // =====================================================
@@ -779,7 +814,7 @@ class TierScalingAPI {
     // Check cache first (unless force refresh)
     if (!forceRefresh && window.AppCache && !filters.status && !filters.type) {
       const cached = window.AppCache.get('tasks');
-      if (cached) return cached;
+      if (cached && Array.isArray(cached)) return cached;
     }
 
     let query = supabase
@@ -1123,7 +1158,7 @@ class TierScalingAPI {
     const hasFilters = filters.status || filters.job_type || filters.lead_id || filters.payment_status || filters.estimate_id;
     if (!forceRefresh && window.AppCache && !hasFilters) {
       const cached = window.AppCache.get('jobs');
-      if (cached) return cached;
+      if (cached && Array.isArray(cached)) return cached;
     }
 
     let query = supabase
@@ -1705,7 +1740,7 @@ class TierScalingAPI {
     // Check cache first (unless force refresh) - only if no filters
     if (!forceRefresh && window.AppCache && !filters.status && !filters.lead_id) {
       const cached = window.AppCache.get('estimates');
-      if (cached) return cached;
+      if (cached && Array.isArray(cached)) return cached;
     }
 
     let query = supabase
@@ -2171,7 +2206,7 @@ static async getGoals(status = 'active', forceRefresh = false) {
     // Check cache first (unless force refresh) - only if getting all goals
     if (!forceRefresh && window.AppCache && status === null) {
       const cached = window.AppCache.get('goals');
-      if (cached) return cached;
+      if (cached && Array.isArray(cached)) return cached;
     }
 
     let query = supabase
@@ -2630,6 +2665,155 @@ static async getTaskGoalProgress(goalId) {
     const currentPrefs = await this.getPreferences();
     currentPrefs[featureName] = enabled;
     return await this.updatePreferences(currentPrefs);
+  }
+
+  /**
+   * Update theme preference with tier restriction enforcement
+   * Admin-only (Early Access) themes: founders-edition (Lightning Blue), joshs-style
+   * Pro-only themes: slate, minimal-red, whiteout
+   * Free themes: light, dark
+   */
+  static async updateTheme(themeName) {
+    const ADMIN_THEMES = ['founders-edition', 'joshs-style'];
+    const PRO_THEMES = ['slate', 'minimal-red', 'whiteout'];
+    const FREE_THEMES = ['light', 'dark'];
+
+    // Validate theme exists
+    if (![...FREE_THEMES, ...PRO_THEMES, ...ADMIN_THEMES].includes(themeName)) {
+      throw new Error('Invalid theme name');
+    }
+
+    const profile = await this.getProfile();
+    const isPro = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(profile.user_type);
+    const isAdmin = profile.user_type === 'admin';
+
+    // Check if theme requires Admin tier (Early Access)
+    if (ADMIN_THEMES.includes(themeName)) {
+      if (!isAdmin) {
+        throw new Error('This theme is in Early Access and only available to administrators.');
+      }
+    }
+
+    // Check if theme requires Pro tier
+    if (PRO_THEMES.includes(themeName)) {
+      if (!isPro) {
+        throw new Error('This theme requires a Professional plan. Upgrade to unlock premium themes!');
+      }
+    }
+
+    // Update theme preference
+    const currentPrefs = await this.getPreferences();
+    currentPrefs.theme = themeName;
+    return await this.updatePreferences(currentPrefs);
+  }
+
+  /**
+   * Get user's current theme (with tier fallback)
+   * Returns 'light' if user tries to use Pro/Admin theme without proper tier
+   */
+  static async getTheme() {
+    const ADMIN_THEMES = ['founders-edition', 'joshs-style'];
+    const PRO_THEMES = ['slate', 'minimal-red', 'whiteout'];
+    const prefs = await this.getPreferences();
+    const savedTheme = prefs.theme || 'light';
+
+    const profile = await this.getProfile();
+    const isPro = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(profile.user_type);
+    const isAdmin = profile.user_type === 'admin';
+
+    // If saved theme is Admin-only (Early Access), verify user is admin
+    if (ADMIN_THEMES.includes(savedTheme)) {
+      if (!isAdmin) {
+        return 'light';
+      }
+    }
+
+    // If saved theme is Pro-only, verify user still has Pro tier
+    if (PRO_THEMES.includes(savedTheme)) {
+      if (!isPro) {
+        // User lost Pro access, revert to free theme
+        return 'light';
+      }
+    }
+
+    return savedTheme;
+  }
+
+  /**
+   * Update enabled modules with tier restriction enforcement
+   * Admin-only (Early Access) modules: notes
+   * Pro-only modules: reports, integrations, teams
+   * Free modules: goals, jobs
+   */
+  static async updateModules(moduleIds) {
+    const ADMIN_MODULES = ['notes'];
+    const PRO_MODULES = ['reports', 'integrations', 'teams'];
+    const FREE_MODULES = ['goals', 'jobs'];
+    const CORE_MODULES = ['dashboard', 'leads', 'pipeline', 'tasks', 'settings', 'estimates'];
+
+    // Validate all module IDs
+    const validModules = [...FREE_MODULES, ...PRO_MODULES, ...ADMIN_MODULES, ...CORE_MODULES];
+    const invalidModules = moduleIds.filter(id => !validModules.includes(id));
+
+    if (invalidModules.length > 0) {
+      throw new Error(`Invalid module IDs: ${invalidModules.join(', ')}`);
+    }
+
+    const profile = await this.getProfile();
+    const isPro = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(profile.user_type);
+    const isAdmin = profile.user_type === 'admin';
+
+    // Check if any Admin modules are being enabled (Early Access)
+    const requestedAdminModules = moduleIds.filter(id => ADMIN_MODULES.includes(id));
+
+    if (requestedAdminModules.length > 0) {
+      if (!isAdmin) {
+        throw new Error('This module is in Early Access and only available to administrators.');
+      }
+    }
+
+    // Check if any Pro modules are being enabled
+    const requestedProModules = moduleIds.filter(id => PRO_MODULES.includes(id));
+
+    if (requestedProModules.length > 0) {
+      if (!isPro) {
+        throw new Error(`These modules require a Professional plan: ${requestedProModules.join(', ')}. Upgrade to unlock!`);
+      }
+    }
+
+    // Update modules_selected preference
+    const currentPrefs = await this.getPreferences();
+    currentPrefs.modules_selected = moduleIds;
+    return await this.updatePreferences(currentPrefs);
+  }
+
+  /**
+   * Get user's enabled modules (with tier filtering)
+   * Auto-removes Pro/Admin modules if user lost proper access
+   */
+  static async getEnabledModules() {
+    const ADMIN_MODULES = ['notes'];
+    const PRO_MODULES = ['reports', 'integrations', 'teams'];
+    const prefs = await this.getPreferences();
+    let enabledModules = prefs.modules_selected || ['dashboard', 'leads', 'pipeline', 'tasks', 'settings', 'goals', 'jobs'];
+
+    const profile = await this.getProfile();
+    const isPro = ['professional', 'professional_trial', 'business', 'enterprise', 'admin'].includes(profile.user_type);
+    const isAdmin = profile.user_type === 'admin';
+
+    // Filter out Admin modules if user is not admin
+    const adminModulesInList = enabledModules.filter(id => ADMIN_MODULES.includes(id));
+    if (adminModulesInList.length > 0 && !isAdmin) {
+      enabledModules = enabledModules.filter(id => !ADMIN_MODULES.includes(id));
+    }
+
+    // Filter out Pro modules if user doesn't have Pro tier
+    const proModulesInList = enabledModules.filter(id => PRO_MODULES.includes(id));
+    if (proModulesInList.length > 0 && !isPro) {
+      enabledModules = enabledModules.filter(id => !PRO_MODULES.includes(id));
+    }
+
+    return enabledModules;
   }
 
   // =====================================================

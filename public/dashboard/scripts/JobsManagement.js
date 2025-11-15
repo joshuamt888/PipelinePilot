@@ -49,7 +49,6 @@ window.JobsManagementModule = {
         showCustomJobType: false,
 
         // Init flag
-        hasInitialized: false  // Track if module has loaded before
     },
 
     STATUSES: ['draft', 'scheduled', 'in_progress', 'completed', 'invoiced', 'paid', 'cancelled'],
@@ -64,10 +63,33 @@ window.JobsManagementModule = {
         this.state.container = targetContainer;
 
         try {
+            // Check cache first
+            const cachedJobs = AppCache.get('jobs');
+            const cachedLeads = AppCache.get('leads');
+
+            // If both are cached, use them (instant load!)
+            if (cachedJobs && cachedLeads) {
+                this.state.jobs = Array.isArray(cachedJobs) ? cachedJobs : [];
+                this.state.leads = cachedLeads?.all || [];
+                this.state.filteredJobs = this.state.jobs;
+
+                console.log(`[Jobs] ⚡ Loaded ${this.state.jobs.length} jobs from cache (instant)`);
+
+                this.jobs_calculateStats();
+                this.jobs_render();
+                return;
+            }
+
+            // Cache miss - fetch from API
+            console.log('[Jobs] 🔄 Cache miss - fetching from API');
             const [jobs, leadsData] = await Promise.all([
                 API.getJobs(),
                 API.getLeads()
             ]);
+
+            // Store in cache
+            AppCache.set('jobs', jobs);
+            AppCache.set('leads', leadsData);
 
             this.state.jobs = Array.isArray(jobs) ? jobs : [];
             this.state.leads = leadsData?.all || [];
@@ -77,7 +99,6 @@ window.JobsManagementModule = {
 
             this.jobs_calculateStats();
             this.jobs_render();
-            this.state.hasInitialized = true;
         } catch (error) {
             console.error('Error initializing Jobs:', error);
             this.jobs_showError('Failed to load jobs');
@@ -91,7 +112,6 @@ window.JobsManagementModule = {
         const container = document.getElementById(this.state.container);
         if (!container) return;
 
-        const isFirstLoad = !this.state.hasInitialized;
         this.jobs_applyFilters();
 
         container.innerHTML = `
@@ -105,48 +125,19 @@ window.JobsManagementModule = {
             </div>
         `;
 
-        // Use requestAnimationFrame for smoother rendering
-        requestAnimationFrame(() => {
-            // Apply animations based on load state
-            if (isFirstLoad) {
-                // First load: Staggered wave animation
-                const header = container.querySelector('.jobs-header');
-                if (header) {
-                    header.classList.add('jobs-wave-in');
-                    header.style.animationDelay = '0s';
-                }
-
-                const limitBar = container.querySelector('.jobs-limit-bar');
-                if (limitBar) {
-                    limitBar.classList.add('jobs-wave-in');
-                    limitBar.style.animationDelay = '0.1s';
-                }
-
-                const statusBoxes = container.querySelectorAll('.jobs-status-box');
-                statusBoxes.forEach((box, i) => {
-                    box.classList.add('jobs-wave-in');
-                    box.style.animationDelay = `${0.15 + (i * 0.06)}s`;
+        // Simple fade-in animation
+        const jobsContainer = container.querySelector('.jobs-container');
+        if (jobsContainer) {
+            jobsContainer.style.opacity = '0';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    jobsContainer.style.transition = 'opacity 0.5s ease';
+                    jobsContainer.style.opacity = '1';
                 });
+            });
+        }
 
-                const toolbar = container.querySelector('.jobs-toolbar');
-                if (toolbar) {
-                    toolbar.classList.add('jobs-wave-in');
-                    toolbar.style.animationDelay = `${0.15 + (statusBoxes.length * 0.06)}s`;
-                }
-
-                const cards = container.querySelectorAll('.jobs-card');
-                cards.forEach((card, i) => {
-                    card.classList.add('jobs-wave-in');
-                    card.style.animationDelay = `${0.25 + (Math.min(i, 6) * 0.06)}s`;
-                });
-            } else {
-                // Subsequent loads: Fast fade
-                const allElements = container.querySelectorAll('.jobs-header, .jobs-limit-bar, .jobs-status-box, .jobs-toolbar, .jobs-card');
-                allElements.forEach(el => el.classList.add('jobs-fade-in'));
-            }
-
-            this.jobs_attachEvents();
-        });
+        this.jobs_attachEvents();
     },
 
     /**
@@ -974,6 +965,9 @@ window.JobsManagementModule = {
             // Make API call in background
             await API.batchDeleteJobs(idsToDelete);
 
+            // Invalidate cache after successful batch delete
+            AppCache.invalidate('jobs');
+
             window.SteadyUtils.showToast(`${count} job${count > 1 ? 's' : ''} deleted`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
@@ -1038,7 +1032,7 @@ window.JobsManagementModule = {
     jobs_showError(message) {
         const container = document.getElementById(this.state.container);
         if (container) {
-            container.innerHTML = `<div style="text-align: center; padding: 60px; color: #ef4444;">${message}</div>`;
+            container.innerHTML = `<div style="text-align: center; padding: 60px; color: var(--danger);">${message}</div>`;
         }
     },
 
@@ -1087,7 +1081,7 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
+                    background: rgba(0, 0, 0, 0.3);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1105,7 +1099,7 @@ window.JobsManagementModule = {
                     max-height: 90vh;
                     display: flex;
                     flex-direction: column;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    box-shadow: var(--shadow-modal);
                     animation: scaleIn 0.2s ease;
                     margin: auto;
                 }
@@ -1178,11 +1172,11 @@ window.JobsManagementModule = {
                 }
 
                 .job-form-section-toggle:hover h3 {
-                    color: #667eea;
+                    color: var(--primary);
                 }
 
                 .job-form-section-toggle:hover .job-form-section-toggle-info {
-                    color: #667eea;
+                    color: var(--primary);
                 }
 
                 .job-form-section-toggle-info {
@@ -1241,7 +1235,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-form-group label .required {
-                    color: #ef4444;
+                    color: var(--danger);
                 }
 
                 .job-form-group input,
@@ -1331,7 +1325,7 @@ window.JobsManagementModule = {
 
                 .job-lead-search-btn:hover {
                     border-color: var(--primary);
-                    background: rgba(102, 126, 234, 0.05);
+                    background: var(--job-profit-calculator-bg);
                     color: var(--primary);
                 }
 
@@ -1342,7 +1336,7 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
+                    background: rgba(0, 0, 0, 0.3);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1358,7 +1352,7 @@ window.JobsManagementModule = {
                     max-height: 80vh;
                     display: flex;
                     flex-direction: column;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    box-shadow: var(--shadow-modal);
                     animation: scaleIn 0.2s ease;
                 }
 
@@ -1399,7 +1393,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-modal-close-btn:hover {
-                    background: rgba(255, 255, 255, 0.1);
+                    background: var(--hover-overlay-light);
                     color: var(--text-primary);
                 }
 
@@ -1439,7 +1433,7 @@ window.JobsManagementModule = {
                 .job-search-input-wrapper input:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 0 0 3px var(--primary-light);
                 }
 
                 .job-lead-results {
@@ -1461,7 +1455,7 @@ window.JobsManagementModule = {
 
                 .job-lead-result-item:hover {
                     border-color: var(--primary);
-                    background: rgba(102, 126, 234, 0.05);
+                    background: var(--job-profit-calculator-bg);
                 }
 
                 .job-lead-result-name {
@@ -1490,7 +1484,7 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.7);
+                    background: rgba(0, 0, 0, 0.3);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -1503,7 +1497,7 @@ window.JobsManagementModule = {
                     border-radius: 12px;
                     width: 90%;
                     max-width: 450px;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    box-shadow: var(--shadow-modal);
                     animation: scaleIn 0.2s ease;
                 }
 
@@ -1548,7 +1542,7 @@ window.JobsManagementModule = {
                 .job-photo-type-body input:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 0 0 3px var(--primary-light);
                 }
 
                 .job-photo-type-footer {
@@ -1577,7 +1571,7 @@ window.JobsManagementModule = {
 
                 .job-btn-primary {
                     padding: 0.75rem 1.5rem;
-                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    background: var(--btn-primary-bg);
                     border: none;
                     border-radius: 8px;
                     font-size: 14px;
@@ -1589,7 +1583,7 @@ window.JobsManagementModule = {
 
                 .job-btn-primary:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 4px 12px var(--job-btn-shadow-hover);
                 }
 
                 .job-btn-primary:active {
@@ -1694,7 +1688,7 @@ window.JobsManagementModule = {
                     background: transparent;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    color: #ef4444;
+                    color: var(--danger);
                     cursor: pointer;
                     padding: 8px;
                     display: flex;
@@ -1704,8 +1698,8 @@ window.JobsManagementModule = {
                 }
 
                 .job-line-item-remove:hover {
-                    background: rgba(239, 68, 68, 0.1);
-                    border-color: #ef4444;
+                    background: var(--danger-light);
+                    border-color: var(--danger);
                 }
 
                 .job-add-line-item {
@@ -1726,14 +1720,14 @@ window.JobsManagementModule = {
                 }
 
                 .job-add-line-item:hover {
-                    background: rgba(59, 130, 246, 0.05);
+                    background: var(--job-info-bg);
                     border-color: var(--primary);
                 }
 
                 .job-total-box {
                     margin-top: 16px;
                     padding: 16px;
-                    background: rgba(59, 130, 246, 0.05);
+                    background: var(--job-info-bg);
                     border: 1px solid var(--primary);
                     border-radius: 6px;
                     text-align: right;
@@ -1773,8 +1767,8 @@ window.JobsManagementModule = {
                 }
 
                 .job-photo-upload:hover {
-                    border-color: #667eea;
-                    background: rgba(102, 126, 234, 0.05);
+                    border-color: var(--primary);
+                    background: var(--job-profit-calculator-bg);
                 }
 
                 .job-photo-upload input {
@@ -1817,7 +1811,7 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.7) 100%);
+                    background: var(--job-photo-overlay-gradient);
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
@@ -1833,7 +1827,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-photo-delete {
-                    background: rgba(239, 68, 68, 0.9);
+                    background: var(--job-danger-overlay);
                     border: none;
                     color: white;
                     padding: 0.5rem;
@@ -1859,7 +1853,7 @@ window.JobsManagementModule = {
                     margin: 0 0 1rem 0;
                     font-size: 1rem;
                     font-weight: 700;
-                    color: #667eea;
+                    color: var(--primary);
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
@@ -1868,9 +1862,9 @@ window.JobsManagementModule = {
                 .job-profit-calculator {
                     margin-top: 2rem;
                     padding: 1.5rem;
-                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
-                    border: 2px solid rgba(102, 126, 234, 0.3);
-                    border-radius: 12px;
+                    background: var(--job-info-bg);
+                    border: 1px solid var(--primary);
+                    border-radius: 6px;
                 }
 
                 .job-profit-header {
@@ -1881,7 +1875,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-profit-header svg {
-                    color: #667eea;
+                    color: var(--primary);
                 }
 
                 .job-profit-header h4 {
@@ -1930,11 +1924,11 @@ window.JobsManagementModule = {
                 }
 
                 .job-profit-result.positive span:last-child {
-                    color: #10b981;
+                    color: var(--success);
                 }
 
                 .job-profit-result.negative span:last-child {
-                    color: #ef4444;
+                    color: var(--danger);
                 }
 
                 #profitMargin {
@@ -1953,7 +1947,7 @@ window.JobsManagementModule = {
                 .job-profit-calculator-header svg {
                     width: 1.5rem;
                     height: 1.5rem;
-                    color: #667eea;
+                    color: var(--primary);
                 }
 
                 .job-profit-calculator-header h4 {
@@ -2033,11 +2027,11 @@ window.JobsManagementModule = {
                 }
 
                 .job-profit-amount.positive {
-                    color: #10b981;
+                    color: var(--success);
                 }
 
                 .job-profit-amount.negative {
-                    color: #ef4444;
+                    color: var(--danger);
                 }
 
                 .job-profit-margin {
@@ -2075,14 +2069,14 @@ window.JobsManagementModule = {
                 }
 
                 .job-modal-btn-save {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: var(--gradient-primary);
                     color: white;
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 4px 12px var(--job-btn-shadow);
                 }
 
                 .job-modal-btn-save:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 6px 16px var(--job-btn-shadow-hover);
                 }
 
                 @keyframes fadeIn {
@@ -2750,13 +2744,13 @@ window.JobsManagementModule = {
         };
 
         const statusColors = {
-            draft: '#6b7280',
-            scheduled: '#fbbf24',
-            in_progress: '#3b82f6',
-            completed: '#10b981',
-            invoiced: '#8b5cf6',
-            paid: '#22c55e',
-            cancelled: '#ef4444'
+            draft: 'var(--job-status-draft)',
+            scheduled: 'var(--warning)',
+            in_progress: 'var(--job-status-in-progress)',
+            completed: 'var(--success)',
+            invoiced: 'var(--job-status-invoiced)',
+            paid: 'var(--job-status-paid)',
+            cancelled: 'var(--danger)'
         };
 
         const overlay = document.createElement('div');
@@ -2769,8 +2763,8 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.6);
-                    backdrop-filter: blur(8px);
+                    background: rgba(0, 0, 0, 0.3);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -2802,7 +2796,7 @@ window.JobsManagementModule = {
                     max-width: 800px;
                     max-height: 90vh;
                     overflow-y: auto;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    box-shadow: var(--shadow-modal);
                     animation: scaleIn 0.2s ease;
                 }
 
@@ -2844,38 +2838,38 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-status-badge[data-status="draft"] {
-                    background: rgba(156, 163, 175, 0.15);
-                    color: #6b7280;
+                    background: var(--surface-hover);
+                    color: var(--text-secondary);
                 }
 
                 .job-view-status-badge[data-status="scheduled"] {
-                    background: rgba(251, 191, 36, 0.15);
-                    color: #fbbf24;
+                    background: var(--warning-bg);
+                    color: var(--warning);
                 }
 
                 .job-view-status-badge[data-status="in_progress"] {
-                    background: rgba(59, 130, 246, 0.15);
-                    color: #3b82f6;
+                    background: var(--info-bg);
+                    color: var(--info);
                 }
 
                 .job-view-status-badge[data-status="completed"] {
-                    background: rgba(16, 185, 129, 0.15);
-                    color: #10b981;
+                    background: var(--success-bg);
+                    color: var(--success);
                 }
 
                 .job-view-status-badge[data-status="invoiced"] {
-                    background: rgba(139, 92, 246, 0.15);
-                    color: #8b5cf6;
+                    background: var(--primary-bg);
+                    color: var(--primary);
                 }
 
                 .job-view-status-badge[data-status="paid"] {
-                    background: rgba(34, 197, 94, 0.15);
-                    color: #22c55e;
+                    background: var(--success-bg);
+                    color: var(--success);
                 }
 
                 .job-view-status-badge[data-status="cancelled"] {
-                    background: rgba(239, 68, 68, 0.15);
-                    color: #ef4444;
+                    background: var(--danger-bg);
+                    color: var(--danger);
                 }
 
                 .job-view-status-badge svg {
@@ -2979,16 +2973,16 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-financial-value.profit {
-                    color: #10b981;
+                    color: var(--success);
                 }
 
                 .job-view-financial-value.loss {
-                    color: #ef4444;
+                    color: var(--danger);
                 }
 
                 .job-view-profit-box {
-                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(139, 92, 246, 0.1));
-                    border: 2px solid rgba(102, 126, 234, 0.3);
+                    background: var(--job-profit-gradient);
+                    border: 2px solid var(--job-btn-shadow);
                     border-radius: 12px;
                     padding: 24px;
                 }
@@ -3041,11 +3035,11 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-profit-total-value.positive {
-                    color: #10b981;
+                    color: var(--success);
                 }
 
                 .job-view-profit-total-value.negative {
-                    color: #ef4444;
+                    color: var(--danger);
                 }
 
                 .job-view-profit-margin {
@@ -3085,7 +3079,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-table tr:hover {
-                    background: rgba(102, 126, 234, 0.05);
+                    background: var(--job-profit-calculator-bg);
                 }
 
                 .job-view-photos-grid {
@@ -3105,7 +3099,7 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-photo:hover {
-                    border-color: #667eea;
+                    border-color: var(--primary);
                     transform: scale(1.05);
                 }
 
@@ -3119,7 +3113,7 @@ window.JobsManagementModule = {
                     position: absolute;
                     top: 8px;
                     left: 8px;
-                    background: rgba(0, 0, 0, 0.7);
+                    background: var(--job-photo-badge-bg);
                     color: white;
                     padding: 4px 12px;
                     border-radius: 4px;
@@ -3134,7 +3128,7 @@ window.JobsManagementModule = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.9);
+                    background: var(--modal-overlay-darker);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -3147,7 +3141,7 @@ window.JobsManagementModule = {
                     max-width: 90%;
                     max-height: 90vh;
                     border-radius: 8px;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                    box-shadow: var(--shadow-modal-dark);
                 }
 
                 .job-view-footer {
@@ -3174,14 +3168,14 @@ window.JobsManagementModule = {
                 }
 
                 .job-view-btn-edit {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: var(--gradient-primary);
                     color: white;
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 4px 12px var(--job-btn-shadow);
                 }
 
                 .job-view-btn-edit:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 6px 16px var(--job-btn-shadow-hover);
                 }
 
                 .job-view-btn-edit svg {
@@ -3224,12 +3218,12 @@ window.JobsManagementModule = {
 
                 .job-view-btn-delete {
                     background: transparent;
-                    border: 2px solid #ef4444;
-                    color: #ef4444;
+                    border: 2px solid var(--danger);
+                    color: var(--danger);
                 }
 
                 .job-view-btn-delete:hover {
-                    background: rgba(239, 68, 68, 0.1);
+                    background: var(--danger-light);
                 }
 
                 .job-view-btn-delete svg {
@@ -3491,6 +3485,15 @@ window.JobsManagementModule = {
             // Update server in background
             try {
                 await API.updateJob(job.id, { status: newStatus });
+
+                // Update cache with new status
+                AppCache.update('jobs', (cachedJobs) => {
+                    const jobs = Array.isArray(cachedJobs) ? cachedJobs : [];
+                    const cachedJob = jobs.find(j => j.id === job.id);
+                    if (cachedJob) cachedJob.status = newStatus;
+                    return jobs;
+                });
+
                 window.SteadyUtils.showToast(`Status updated to ${this.jobs_formatStatus(newStatus)}`, 'success');
             } catch (error) {
                 console.error('Update status error:', error);
@@ -3547,6 +3550,10 @@ window.JobsManagementModule = {
             // Delete from server in background
             try {
                 await API.deleteJob(job.id);
+
+                // Invalidate cache after successful delete
+                AppCache.invalidate('jobs');
+
                 window.SteadyUtils.showToast('Job deleted successfully', 'success');
             } catch (error) {
                 console.error('Error deleting job:', error);
@@ -4389,6 +4396,9 @@ window.JobsManagementModule = {
                     this.state.jobs[index] = result;
                 }
 
+                // Invalidate cache after successful update
+                AppCache.invalidate('jobs');
+
                 // Success - close modal and show toast
                 this.jobs_closeModal();
                 window.SteadyUtils.showToast('Job updated successfully', 'success');
@@ -4431,6 +4441,9 @@ window.JobsManagementModule = {
                 if (tempIndex !== -1) {
                     this.state.jobs[tempIndex] = result;
                 }
+
+                // Invalidate cache after successful create
+                AppCache.invalidate('jobs');
 
                 // Update UI to replace temp ID with real ID
                 this.jobs_instantFilterChange();
@@ -4490,9 +4503,9 @@ window.JobsManagementModule = {
             };
 
             const colors = {
-                warning: '#f59e0b',
-                danger: '#ef4444',
-                success: '#10b981'
+                warning: 'var(--warning)',
+                danger: 'var(--danger)',
+                success: 'var(--success)'
             };
 
             const overlay = document.createElement('div');
@@ -4505,7 +4518,7 @@ window.JobsManagementModule = {
                         left: 0;
                         right: 0;
                         bottom: 0;
-                        background: rgba(0, 0, 0, 0.6);
+                        background: rgba(0, 0, 0, 0.3);
                         display: flex;
                         align-items: center;
                         justify-content: center;
@@ -4518,7 +4531,7 @@ window.JobsManagementModule = {
                         border-radius: 12px;
                         width: 90%;
                         max-width: 480px;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        box-shadow: var(--shadow-modal);
                         animation: scaleIn 0.2s ease;
                     }
 
@@ -4693,7 +4706,7 @@ window.JobsManagementModule = {
 .jobs-header h1 {
     font-size: 2.5rem;
     font-weight: 900;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0 0 0.5rem 0;
@@ -4718,7 +4731,7 @@ window.JobsManagementModule = {
     align-items: center;
     gap: 0.5rem;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-primary);
     color: white;
     border: none;
     border-radius: var(--radius-lg);
@@ -4726,12 +4739,12 @@ window.JobsManagementModule = {
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 12px var(--job-btn-shadow);
 }
 
 .jobs-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px var(--job-btn-shadow-hover);
 }
 
 .jobs-btn-primary svg {
@@ -4762,7 +4775,7 @@ window.JobsManagementModule = {
 }
 
 .jobs-limit-counter svg {
-    color: #667eea;
+    color: var(--primary);
 }
 
 .jobs-btn-batch {
@@ -4787,15 +4800,15 @@ window.JobsManagementModule = {
 }
 
 .jobs-btn-batch:hover {
-    border-color: #667eea;
-    color: #667eea;
+    border-color: var(--primary);
+    color: var(--primary);
     transform: translateY(-1px);
 }
 
 .jobs-btn-batch.active {
-    background: #667eea;
+    background: var(--primary);
     color: white;
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 /* STATUS FILTERS */
@@ -4827,13 +4840,13 @@ window.JobsManagementModule = {
 .jobs-status-box:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 16px var(--job-card-shadow);
 }
 
 .jobs-status-box.active {
     border-color: var(--primary);
-    background: rgba(102, 126, 234, 0.05);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    background: var(--job-profit-calculator-bg);
+    box-shadow: 0 4px 12px var(--job-hover-shadow);
 }
 
 .jobs-status-count {
@@ -4896,8 +4909,8 @@ window.JobsManagementModule = {
 
 .jobs-search input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .jobs-search svg {
@@ -4935,13 +4948,13 @@ window.JobsManagementModule = {
 }
 
 .jobs-sort select:hover {
-    border-color: #667eea;
+    border-color: var(--primary);
 }
 
 .jobs-sort select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .jobs-sort svg {
@@ -4980,8 +4993,8 @@ window.JobsManagementModule = {
 
 .job-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-    border-color: #667eea;
+    box-shadow: 0 12px 24px var(--job-input-shadow);
+    border-color: var(--primary);
 }
 
 .job-card.batch-mode {
@@ -4989,8 +5002,8 @@ window.JobsManagementModule = {
 }
 
 .job-card.selected {
-    border-color: #667eea;
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+    border-color: var(--primary);
+    box-shadow: 0 8px 16px var(--primary);
 }
 
 .job-card-checkbox {
@@ -5040,8 +5053,8 @@ window.JobsManagementModule = {
 }
 
 .job-card.selected .job-checkbox-custom {
-    background: #667eea;
-    border-color: #667eea;
+    background: var(--primary);
+    border-color: var(--primary);
 }
 
 .job-card.selected .job-checkbox-custom svg {
@@ -5102,38 +5115,38 @@ window.JobsManagementModule = {
 }
 
 .job-status.draft {
-    background: rgba(156, 163, 175, 0.15);
-    color: #6b7280;
+    background: var(--surface-hover);
+    color: var(--text-secondary);
 }
 
 .job-status.scheduled {
-    background: rgba(251, 191, 36, 0.15);
-    color: #fbbf24;
+    background: var(--warning-bg);
+    color: var(--warning);
 }
 
 .job-status.in_progress {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
+    background: var(--info-bg);
+    color: var(--info);
 }
 
 .job-status.completed {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
+    background: var(--success-bg);
+    color: var(--success);
 }
 
 .job-status.invoiced {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
+    background: var(--primary-bg);
+    color: var(--primary);
 }
 
 .job-status.paid {
-    background: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    background: var(--success-bg);
+    color: var(--success);
 }
 
 .job-status.cancelled {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background: var(--danger-bg);
+    color: var(--danger);
 }
 
 .job-status svg {
@@ -5184,11 +5197,11 @@ window.JobsManagementModule = {
 }
 
 .job-financial-value.profit {
-    color: #10b981;
+    color: var(--success);
 }
 
 .job-financial-value.margin {
-    color: #fbbf24;
+    color: var(--warning);
 }
 
 .job-deposit-badge {
@@ -5196,18 +5209,18 @@ window.JobsManagementModule = {
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.625rem;
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.2);
+    background: var(--job-warning-bg);
+    border: 1px solid var(--job-warning-bg-hover);
     border-radius: 6px;
-    color: #fbbf24;
+    color: var(--warning);
     font-size: 0.75rem;
     font-weight: 600;
 }
 
 .job-deposit-badge.paid {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: rgba(16, 185, 129, 0.2);
-    color: #10b981;
+    background: var(--success-light);
+    border-color: var(--success-light);
+    color: var(--success);
 }
 
 .job-deposit-badge svg {
@@ -5220,10 +5233,10 @@ window.JobsManagementModule = {
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.625rem;
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
     border-radius: 6px;
-    color: #667eea;
+    color: var(--primary);
     font-size: 0.8rem;
     font-weight: 600;
 }
@@ -5245,7 +5258,7 @@ window.JobsManagementModule = {
     background: var(--surface);
     border: 2px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px var(--job-input-shadow);
     z-index: 100;
 }
 
@@ -5258,7 +5271,7 @@ window.JobsManagementModule = {
 .jobs-batch-selected {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #667eea;
+    color: var(--primary);
 }
 
 .jobs-batch-actions-right {
@@ -5282,8 +5295,8 @@ window.JobsManagementModule = {
 }
 
 .jobs-batch-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: #667eea;
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 .jobs-batch-btn svg {
@@ -5292,13 +5305,13 @@ window.JobsManagementModule = {
 }
 
 .jobs-batch-btn.delete {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    border-color: var(--job-danger-shadow);
 }
 
 .jobs-batch-btn.delete:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: #ef4444;
+    background: var(--danger-light);
+    border-color: var(--danger);
 }
 
 .jobs-batch-status-group {
@@ -5333,25 +5346,25 @@ window.JobsManagementModule = {
 }
 
 .jobs-batch-status-select:hover {
-    border-color: #667eea;
-    background-color: rgba(102, 126, 234, 0.05);
+    border-color: var(--primary);
+    background-color: var(--job-profit-calculator-bg);
 }
 
 .jobs-batch-status-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .jobs-batch-btn-confirm {
-    background: #10b981;
+    background: var(--success);
     color: white;
-    border-color: #10b981;
+    border-color: var(--success);
 }
 
 .jobs-batch-btn-confirm:hover {
-    background: #059669;
-    border-color: #059669;
+    background: var(--success);
+    border-color: var(--success);
 }
 
 .jobs-batch-btn-confirm svg {
@@ -5419,32 +5432,6 @@ window.JobsManagementModule = {
     }
 }
 
-/* Module-level animations */
-@keyframes jobsWaveIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes jobsFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.jobs-wave-in {
-    animation: jobsWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-}
-
-.jobs-fade-in {
-    animation: jobsFadeIn 0.3s ease forwards;
-    opacity: 0;
-}
 </style>`;
     }
 };

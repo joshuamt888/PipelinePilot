@@ -15,6 +15,7 @@ window.SchedulingModule = {
         targetContainer: 'tasks-content',
         eventListeners: [],
         taskActionLoading: false,
+        taskToggleDebounce: {}, // Prevent spam clicking - maps taskId to timeout
         lastNotificationMessage: null,
         lastNotificationTime: 0,
         currentFilters: {
@@ -24,8 +25,7 @@ window.SchedulingModule = {
         },
         batchEditMode: false,
         selectedTaskIds: [],
-        taskLimit: 5000,
-        hasInitialized: false  // Track if module has loaded before
+        taskLimit: 5000
     },
 
     // Init with fade-in
@@ -38,12 +38,15 @@ window.SchedulingModule = {
 
             const container = document.getElementById(targetContainer);
 
+            // Get user profile and set correct task limit based on tier
+            const profile = await API.getProfile();
+            const limits = API.getTierLimits(profile.user_type);
+            this.scheduling_state.taskLimit = limits.tasks;
+
             await this.scheduling_loadTasks();
             await this.scheduling_loadLeads();
             this.scheduling_render();
 
-            // Slide-in animation happens via CSS
-            this.scheduling_state.hasInitialized = true;
             console.log('Scheduling module ready');
 
         } catch (error) {
@@ -57,7 +60,21 @@ window.SchedulingModule = {
     // Load Data
     async scheduling_loadTasks() {
         try {
+            // Check cache first
+            const cached = AppCache.get('tasks');
+            if (cached) {
+                this.scheduling_state.tasks = Array.isArray(cached) ? cached : [];
+                console.log(`[Scheduling] ⚡ Loaded ${this.scheduling_state.tasks.length} tasks from cache (instant)`);
+                return;
+            }
+
+            // Cache miss - fetch from API
+            console.log('[Scheduling] 🔄 Cache miss - fetching tasks from API');
             const tasks = await API.getTasks();
+
+            // Store in cache
+            AppCache.set('tasks', tasks);
+
             this.scheduling_state.tasks = Array.isArray(tasks) ? tasks : [];
             console.log(`Loaded ${this.scheduling_state.tasks.length} tasks`);
         } catch (error) {
@@ -69,7 +86,21 @@ window.SchedulingModule = {
 
     async scheduling_loadLeads() {
         try {
+            // Check cache first
+            const cached = AppCache.get('leads');
+            if (cached) {
+                this.scheduling_state.leads = cached.all || cached || [];
+                console.log(`[Scheduling] ⚡ Loaded ${this.scheduling_state.leads.length} leads from cache (instant)`);
+                return;
+            }
+
+            // Cache miss - fetch from API
+            console.log('[Scheduling] 🔄 Cache miss - fetching leads from API');
             const leadData = await API.getLeads();
+
+            // Store in cache
+            AppCache.set('leads', leadData);
+
             this.scheduling_state.leads = leadData.all || leadData || [];
             console.log(`Loaded ${this.scheduling_state.leads.length} leads`);
         } catch (error) {
@@ -83,8 +114,6 @@ window.SchedulingModule = {
         const container = document.getElementById(this.scheduling_state.targetContainer);
         if (!container) return;
 
-        const isFirstLoad = !this.scheduling_state.hasInitialized;
-
         container.innerHTML = `
             <div class="scheduling-container">
                 ${this.scheduling_state.currentView === 'table' ?
@@ -94,34 +123,15 @@ window.SchedulingModule = {
             </div>
         `;
 
-        // Apply animations based on load state
-        if (isFirstLoad) {
-            // First load: Staggered wave animation
+        // Simple fade-in animation
+        const schedulingContainer = container.querySelector('.scheduling-container');
+        if (schedulingContainer) {
+            schedulingContainer.style.opacity = '0';
             requestAnimationFrame(() => {
-                const bubbles = container.querySelectorAll('.scheduling-action-bubble');
-                bubbles.forEach((bubble, i) => {
-                    bubble.classList.add('sched-wave-in');
-                    bubble.style.animationDelay = `${i * 0.15}s`;
+                requestAnimationFrame(() => {
+                    schedulingContainer.style.transition = 'opacity 0.5s ease';
+                    schedulingContainer.style.opacity = '1';
                 });
-
-                const calendarSection = container.querySelector('.scheduling-calendar-section');
-                if (calendarSection) {
-                    calendarSection.classList.add('sched-wave-in');
-                    calendarSection.style.animationDelay = `${bubbles.length * 0.15}s`;
-                }
-
-                // For table view
-                const tableElements = container.querySelectorAll('.scheduling-table-header, .scheduling-table-container');
-                tableElements.forEach((el, i) => {
-                    el.classList.add('sched-wave-in');
-                    el.style.animationDelay = `${i * 0.1}s`;
-                });
-            });
-        } else {
-            // Subsequent loads: Fast fade
-            requestAnimationFrame(() => {
-                const allElements = container.querySelectorAll('.scheduling-action-bubble, .scheduling-calendar-section, .scheduling-table-header, .scheduling-table-container');
-                allElements.forEach(el => el.classList.add('sched-fade-in'));
             });
         }
 
@@ -939,7 +949,7 @@ modal.addEventListener('mouseup', (e) => {
                     this.scheduling_showNotification('Custom task type is required', 'error');
                     if (customTaskTypeInput) {
                         customTaskTypeInput.style.borderColor = 'var(--danger)';
-                        customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                        customTaskTypeInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
                         customTaskTypeInput.focus();
                     }
                     return;
@@ -982,6 +992,10 @@ modal.addEventListener('mouseup', (e) => {
                 if (taskIndex !== -1) {
                     this.scheduling_state.tasks[taskIndex] = newTask;
                 }
+
+                // Invalidate cache after successful create
+                AppCache.invalidate('tasks');
+                AppCache.invalidate('dashboard-stats');
 
                 this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" created successfully!`, 'success');
             } catch (error) {
@@ -1036,7 +1050,7 @@ modal.addEventListener('mouseup', (e) => {
                     this.scheduling_showNotification('Custom task type is required', 'error');
                     if (customTaskTypeInput) {
                         customTaskTypeInput.style.borderColor = 'var(--danger)';
-                        customTaskTypeInput.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                        customTaskTypeInput.style.boxShadow = '0 0 0 4px var(--danger-light)';
                         customTaskTypeInput.focus();
                     }
                     return;
@@ -1069,6 +1083,15 @@ modal.addEventListener('mouseup', (e) => {
             // API CALL IN BACKGROUND
             try {
                 await API.updateTask(taskId, taskData);
+
+                // Update cache with new task data
+                AppCache.update('tasks', (cachedTasks) => {
+                    const tasks = Array.isArray(cachedTasks) ? cachedTasks : [];
+                    const cachedTask = tasks.find(t => t.id === taskId);
+                    if (cachedTask) Object.assign(cachedTask, taskData);
+                    return tasks;
+                });
+
                 this.scheduling_showNotification(`Task "${API.escapeHtml(taskData.title)}" updated successfully!`, 'success');
             } catch (error) {
                 console.error('Failed to update task:', error);
@@ -1095,7 +1118,12 @@ modal.addEventListener('mouseup', (e) => {
 
     // Toggle Complete
     async scheduling_toggleTaskComplete(taskId, isCompleted) {
-        // Update state first
+        // Debounce to prevent spam clicking
+        if (this.scheduling_state.taskToggleDebounce[taskId]) {
+            clearTimeout(this.scheduling_state.taskToggleDebounce[taskId]);
+        }
+
+        // Update state first (optimistic)
         const taskIndex = this.scheduling_state.tasks.findIndex(t => t.id.toString() === taskId.toString());
         if (taskIndex !== -1) {
             this.scheduling_state.tasks[taskIndex].status = isCompleted ? 'completed' : 'pending';
@@ -1105,11 +1133,13 @@ modal.addEventListener('mouseup', (e) => {
                 this.scheduling_state.tasks[taskIndex].completed_at = null;
             }
         }
-        
+
         this.scheduling_updateTaskVisually(taskId, isCompleted);
-        
-        if (this.scheduling_state.taskActionLoading) return;
-        this.scheduling_state.taskActionLoading = true;
+
+        // Debounce API call (300ms delay)
+        this.scheduling_state.taskToggleDebounce[taskId] = setTimeout(async () => {
+            if (this.scheduling_state.taskActionLoading) return;
+            this.scheduling_state.taskActionLoading = true;
         
         try {
             if (isCompleted) {
@@ -1125,6 +1155,17 @@ modal.addEventListener('mouseup', (e) => {
                 // No need to manually check - goal status is always calculated dynamically
             }
 
+            // Update cache with new task status
+            AppCache.update('tasks', (cachedTasks) => {
+                const tasks = Array.isArray(cachedTasks) ? cachedTasks : [];
+                const cachedTask = tasks.find(t => t.id.toString() === taskId.toString());
+                if (cachedTask) {
+                    cachedTask.status = isCompleted ? 'completed' : 'pending';
+                    cachedTask.completed_at = isCompleted ? new Date().toISOString() : null;
+                }
+                return tasks;
+            });
+
             // Notify Goals module that task status changed so it can refresh percentages
             document.dispatchEvent(new CustomEvent('taskStatusChanged', { detail: { taskId } }));
         } catch (error) {
@@ -1132,7 +1173,9 @@ modal.addEventListener('mouseup', (e) => {
             console.error('Task toggle failed:', error);
         } finally {
             this.scheduling_state.taskActionLoading = false;
+            delete this.scheduling_state.taskToggleDebounce[taskId];
         }
+        }, 300); // 300ms debounce delay
     },
 
     scheduling_updateTaskVisually(taskId, isCompleted) {
@@ -1261,6 +1304,11 @@ modal.addEventListener('mouseup', (e) => {
         // API CALL IN BACKGROUND
         try {
             await API.deleteTask(taskId);
+
+            // Invalidate cache after successful delete
+            AppCache.invalidate('tasks');
+            AppCache.invalidate('dashboard-stats');
+
             this.scheduling_showNotification(`Task "${API.escapeHtml(deletedTask.title)}" deleted successfully`, 'success');
         } catch (error) {
             console.error('Failed to delete task:', error);
@@ -1564,16 +1612,19 @@ modal.addEventListener('mouseup', (e) => {
         picker.innerHTML = `
             <div class="scheduling-lead-picker-popup" onclick="event.stopPropagation()">
                 <div class="scheduling-lead-picker-header">
-                    <h3 class="scheduling-lead-picker-title">🔍 Select Lead</h3>
+                    <h3 class="scheduling-lead-picker-title">
+                        <i data-lucide="search" style="width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>
+                        Select Lead
+                    </h3>
                     <button class="scheduling-lead-picker-close" onclick="SchedulingModule.scheduling_closeLeadPicker()">×</button>
                 </div>
-                
+
                 <div class="scheduling-lead-picker-search">
-                    <input type="text" 
-                           class="scheduling-lead-search-input" 
+                    <input type="text"
+                           class="scheduling-lead-search-input"
                            placeholder="Search leads by name, company, or email..."
                            oninput="SchedulingModule.scheduling_filterLeads(this.value)">
-                    <span class="scheduling-search-icon">🔍</span>
+                    <span class="scheduling-search-icon"><i data-lucide="search"></i></span>
                 </div>
                 
                 <div class="scheduling-lead-picker-results" id="scheduling_leadResults">
@@ -1620,9 +1671,9 @@ modal.addEventListener('mouseup', (e) => {
                 const statusColor = API.getStatusColor(lead.status);
                 // Use Lucide icons instead of emojis for lead type
                 const typeIconMap = {
-                    'cold': '<i data-lucide="snowflake" style="width: 16px; height: 16px; color: #3b82f6;"></i>',
-                    'warm': '<i data-lucide="flame" style="width: 16px; height: 16px; color: #f59e0b;"></i>',
-                    'hot': '<i data-lucide="zap" style="width: 16px; height: 16px; color: #ef4444;"></i>'
+                    'cold': '<i data-lucide="snowflake" style="width: 16px; height: 16px; color: var(--info);"></i>',
+                    'warm': '<i data-lucide="flame" style="width: 16px; height: 16px; color: var(--warning);"></i>',
+                    'hot': '<i data-lucide="zap" style="width: 16px; height: 16px; color: var(--danger);"></i>'
                 };
                 const typeIcon = typeIconMap[lead.type?.toLowerCase()] || '';
 
@@ -2778,6 +2829,11 @@ modal.addEventListener('mouseup', (e) => {
         // API CALL IN BACKGROUND
         try {
             await API.batchDeleteTasks(selectedIds);
+
+            // Invalidate cache after successful batch delete
+            AppCache.invalidate('tasks');
+            AppCache.invalidate('dashboard-stats');
+
             this.scheduling_showNotification(`Deleted ${count} task(s)`, 'success');
         } catch (error) {
             console.error('Batch delete error:', error);
@@ -2852,13 +2908,13 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-bubble-primary {
-                    border-color: rgba(102, 126, 234, 0.3);
-                    background: rgba(102, 126, 234, 0.02);
+                    border-color: var(--primary-border);
+                    background: var(--primary-bg);
                 }
 
                 .scheduling-bubble-secondary {
-                    border-color: rgba(16, 185, 129, 0.3);
-                    background: rgba(16, 185, 129, 0.02);
+                    border-color: var(--primary-border);
+                    background: var(--primary-bg);
                 }
 
                 .scheduling-bubble-icon {
@@ -2893,7 +2949,7 @@ modal.addEventListener('mouseup', (e) => {
                     display: inline-flex;
                     align-items: center;
                     gap: 0.75rem;
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     padding: 0.875rem 1.75rem;
                     border-radius: var(--radius);
@@ -2905,7 +2961,7 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-bubble-button:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 8px 25px var(--job-btn-shadow-hover);
                 }
 
                 .scheduling-arrow {
@@ -2941,7 +2997,7 @@ modal.addEventListener('mouseup', (e) => {
                     font-weight: 700;
                     color: var(--text-primary);
                     margin: 0;
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
@@ -2955,7 +3011,7 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-nav-btn,
                 .scheduling-today-btn {
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     border: none;
                     padding: 0.5rem 1rem;
@@ -2963,13 +3019,13 @@ modal.addEventListener('mouseup', (e) => {
                     cursor: pointer;
                     font-weight: 500;
                     transition: transform 0.2s ease, box-shadow 0.2s ease;
-                    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+                    box-shadow: 0 2px 4px var(--primary);
                 }
 
                 .scheduling-nav-btn:hover,
                 .scheduling-today-btn:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 3px 6px rgba(102, 126, 234, 0.25);
+                    box-shadow: 0 3px 6px var(--job-btn-shadow);
                 }
 
                 .scheduling-calendar-grid {
@@ -2978,7 +3034,7 @@ modal.addEventListener('mouseup', (e) => {
                     gap: 1px;
                     background: var(--border);
                     border-radius: var(--radius);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                    box-shadow: var(--shadow);
                     padding: 6px;
                     overflow: visible;
                     margin: 6px;
@@ -3013,14 +3069,14 @@ modal.addEventListener('mouseup', (e) => {
                     transform: scale(1.02);
                     z-index: 10;
                     border: 2px solid transparent;
-                    box-shadow: 
-                        0 0 0 2px rgba(102, 126, 234, 0.4),
-                        0 0 0 4px rgba(139, 92, 246, 0.2),
+                    box-shadow:
+                        0 0 0 2px var(--primary-border-hover),
+                        0 0 0 4px var(--primary-bg),
                         var(--shadow-lg);
                 }
 
                 .scheduling-calendar-day.scheduling-today {
-                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+                    background: var(--primary-bg);
                     border: 2px solid var(--primary);
                 }
 
@@ -3048,7 +3104,7 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-pending-badge {
                     position: absolute;
-                    background: #ff3b30;
+                    background: var(--danger);
                     color: white;
                     border-radius: 50%;
                     font-size: 0.75rem;
@@ -3059,12 +3115,12 @@ modal.addEventListener('mouseup', (e) => {
                     align-items: center;
                     justify-content: center;
                     padding: 0 4px;
-                    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.4);
+                    box-shadow: 0 2px 8px var(--job-danger-shadow);
                 }
 
                 .scheduling-completed-badge {
                     position: absolute;
-                    background: #34d399;
+                    background: var(--success);
                     color: white;
                     border-radius: 50%;
                     font-size: 0.75rem;
@@ -3075,7 +3131,7 @@ modal.addEventListener('mouseup', (e) => {
                     align-items: center;
                     justify-content: center;
                     padding: 0 4px;
-                    box-shadow: 0 2px 8px rgba(52, 211, 153, 0.4);
+                    box-shadow: var(--shadow);
                 }
 
                 .scheduling-top-right {
@@ -3094,21 +3150,21 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 @keyframes scheduling-overduePulse {
-                    0%, 85% { 
-                        transform: scale(1); 
-                        box-shadow: 0 2px 8px rgba(255, 59, 48, 0.4);
+                    0%, 85% {
+                        transform: scale(1);
+                        box-shadow: 0 2px 8px var(--job-danger-shadow);
                     }
-                    90% { 
-                        transform: scale(1.15); 
-                        box-shadow: 0 4px 12px rgba(255, 59, 48, 0.7);
+                    90% {
+                        transform: scale(1.15);
+                        box-shadow: 0 4px 12px var(--job-danger-shadow);
                     }
-                    95% { 
-                        transform: scale(1.1); 
-                        box-shadow: 0 3px 10px rgba(255, 59, 48, 0.6);
+                    95% {
+                        transform: scale(1.1);
+                        box-shadow: 0 3px 10px var(--job-danger-shadow);
                     }
-                    100% { 
-                        transform: scale(1); 
-                        box-shadow: 0 2px 8px rgba(255, 59, 48, 0.4);
+                    100% {
+                        transform: scale(1);
+                        box-shadow: 0 2px 8px var(--job-danger-shadow);
                     }
                 }
 
@@ -3185,7 +3241,7 @@ modal.addEventListener('mouseup', (e) => {
                     color: white;
                     border-color: var(--primary);
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 4px 12px var(--job-btn-shadow);
                 }
 
                 .scheduling-search-box {
@@ -3208,7 +3264,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-search-input:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 0 0 3px var(--primary-light);
                 }
 
                 .scheduling-search-icon {
@@ -3219,7 +3275,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-add-task-btn {
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     border: none;
                     padding: 0.75rem 1.5rem;
@@ -3233,7 +3289,7 @@ modal.addEventListener('mouseup', (e) => {
 
                 .scheduling-add-task-btn:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 4px 12px var(--job-btn-shadow);
                 }
 
                 .scheduling-table-container {
@@ -3334,43 +3390,43 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-task-row[data-priority="low"]:not(.scheduling-completed):not(.scheduling-overdue) {
-                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, rgba(16, 185, 129, 0.4));
-                    box-shadow: inset -3px 0 0 rgba(16, 185, 129, 0.4);
+                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, var(--success-bg-hover));
+                    box-shadow: inset -3px 0 0 var(--success-border);
                 }
 
                 .scheduling-task-row[data-priority="medium"]:not(.scheduling-completed):not(.scheduling-overdue) {
-                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, rgba(245, 158, 11, 0.4));
-                    box-shadow: inset -3px 0 0 rgba(245, 158, 11, 0.4);
+                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, var(--warning-bg-hover));
+                    box-shadow: inset -3px 0 0 var(--warning-border);
                 }
 
                 .scheduling-task-row[data-priority="high"]:not(.scheduling-completed):not(.scheduling-overdue) {
-                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, rgba(249, 115, 22, 0.4));
-                    box-shadow: inset -3px 0 0 rgba(249, 115, 22, 0.4);
+                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, var(--warning-bg-hover));
+                    box-shadow: inset -3px 0 0 var(--warning-border-hover);
                 }
 
                 .scheduling-task-row[data-priority="urgent"]:not(.scheduling-completed):not(.scheduling-overdue) {
-                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, rgba(239, 68, 68, 0.4));
-                    box-shadow: inset -3px 0 0 rgba(239, 68, 68, 0.4);
+                    background: linear-gradient(to right, var(--surface), var(--surface) 90%, var(--danger-bg-hover));
+                    box-shadow: inset -3px 0 0 var(--danger-border);
                 }
 
                 .scheduling-task-row[data-priority="low"]:not(.scheduling-completed):not(.scheduling-overdue):hover {
-                    background: linear-gradient(to right, var(--surface-hover) 70%, rgba(16, 185, 129, 0.5)) !important;
-                    box-shadow: inset -3px 0 0 rgba(16, 185, 129, 0.6) !important;
+                    background: linear-gradient(to right, var(--surface-hover) 70%, var(--success-bg-hover)) !important;
+                    box-shadow: inset -3px 0 0 var(--success-border-hover) !important;
                 }
 
                 .scheduling-task-row[data-priority="medium"]:not(.scheduling-completed):not(.scheduling-overdue):hover {
-                    background: linear-gradient(to right, var(--surface-hover) 70%, rgba(245, 158, 11, 0.5)) !important;
-                    box-shadow: inset -3px 0 0 rgba(245, 158, 11, 0.6) !important;
+                    background: linear-gradient(to right, var(--surface-hover) 70%, var(--warning-bg-hover)) !important;
+                    box-shadow: inset -3px 0 0 var(--warning-border-hover) !important;
                 }
 
                 .scheduling-task-row[data-priority="high"]:not(.scheduling-completed):not(.scheduling-overdue):hover {
-                    background: linear-gradient(to right, var(--surface-hover) 70%, rgba(249, 115, 22, 0.5)) !important;
-                    box-shadow: inset -3px 0 0 rgba(249, 115, 22, 0.6) !important;
+                    background: linear-gradient(to right, var(--surface-hover) 70%, var(--warning-bg-hover)) !important;
+                    box-shadow: inset -3px 0 0 var(--warning-border-hover) !important;
                 }
 
                 .scheduling-task-row[data-priority="urgent"]:not(.scheduling-completed):not(.scheduling-overdue):hover {
-                    background: linear-gradient(to right, var(--surface-hover) 70%, rgba(239, 68, 68, 0.5)) !important;
-                    box-shadow: inset -3px 0 0 rgba(239, 68, 68, 0.6) !important;
+                    background: linear-gradient(to right, var(--surface-hover) 70%, var(--danger-bg-hover)) !important;
+                    box-shadow: inset -3px 0 0 var(--danger-border-hover) !important;
                 }
 
                 .scheduling-task-row.scheduling-completed {
@@ -3387,13 +3443,13 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-task-row.scheduling-overdue:not(.scheduling-completed) {
-                    background: rgba(239, 68, 68, 0.15) !important;
+                    background: var(--danger-light) !important;
                     box-shadow: none !important;
                 }
 
                 .scheduling-task-row.scheduling-overdue:not(.scheduling-completed):hover {
                     background: rgba(239, 68, 68, 0.25) !important;
-                    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2) !important;
+                    box-shadow: 0 2px 8px var(--danger-light) !important;
                 }
 
                 .scheduling-clickable-row {
@@ -3475,7 +3531,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-header-filter:hover {
-                    background: rgba(102, 126, 234, 0.1);
+                    background: var(--primary-light);
                 }
 
                 .scheduling-header-filter.scheduling-active {
@@ -3500,7 +3556,7 @@ modal.addEventListener('mouseup', (e) => {
                     background: var(--surface);
                     border: 1px solid var(--border);
                     border-radius: 12px;
-                    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 8px 25px var(--shadow-md);
                     min-width: 180px;
                     max-height: 300px;
                     overflow-y: auto;
@@ -3550,7 +3606,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-filter-option.scheduling-active {
-                    background: rgba(102, 126, 234, 0.1);
+                    background: var(--primary-light);
                     color: var(--primary);
                     font-weight: 600;
                 }
@@ -3613,7 +3669,7 @@ modal.addEventListener('mouseup', (e) => {
                 /* Active Filters Panel */
                 .scheduling-active-filters-panel {
                     background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-                    border: 1px solid rgba(102, 126, 234, 0.2);
+                    border: 1px solid var(--primary);
                     border-radius: 12px;
                     padding: 1rem 1.5rem;
                     margin-bottom: 1.5rem;
@@ -3675,7 +3731,7 @@ modal.addEventListener('mouseup', (e) => {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.6);
+                    background: var(--modal-overlay);
                     z-index: 10000;
                     display: flex;
                     align-items: center;
@@ -3692,7 +3748,7 @@ modal.addEventListener('mouseup', (e) => {
                     opacity: 1;
                     visibility: visible;
                     pointer-events: auto;
-                    backdrop-filter: blur(4px);
+                    
                 }
 
                 .scheduling-modal {
@@ -3875,7 +3931,7 @@ modal.addEventListener('mouseup', (e) => {
                 /* Priority Glow */
                 .scheduling-form-select[name="priority"].scheduling-priority-low {
                     border-color: #10b981;
-                    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2), 0 0 15px rgba(16, 185, 129, 0.3);
+                    box-shadow: 0 0 0 3px var(--success-light), 0 0 15px rgba(16, 185, 129, 0.3);
                 }
 
                 .scheduling-form-select[name="priority"].scheduling-priority-medium {
@@ -3969,7 +4025,7 @@ modal.addEventListener('mouseup', (e) => {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(4px);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -3990,7 +4046,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-lead-picker-header {
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     padding: 1.5rem 2rem;
                     display: flex;
@@ -4042,7 +4098,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-lead-search-input:focus {
                     outline: none;
                     border-color: var(--primary);
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    box-shadow: 0 0 0 3px var(--primary-light);
                 }
 
                 .scheduling-lead-picker-search .scheduling-search-icon {
@@ -4187,7 +4243,7 @@ modal.addEventListener('mouseup', (e) => {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(4px);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -4209,7 +4265,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-popup-header {
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     padding: 1rem 1.5rem;
                     display: flex;
@@ -4338,7 +4394,7 @@ modal.addEventListener('mouseup', (e) => {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(4px);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -4351,7 +4407,7 @@ modal.addEventListener('mouseup', (e) => {
                     background: var(--surface);
                     border-radius: 20px;
                     position: relative;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 4px 20px var(--shadow-md);
                     width: 100%;
                     max-width: 700px;
                     max-height: 90vh;
@@ -4418,7 +4474,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-task-status-badge.scheduling-completed {
                     background: var(--surface-hover);
                     color: var(--success);
-                    border-color: rgba(16, 185, 129, 0.2);
+                    border-color: var(--success-light);
                 }
 
                 .scheduling-task-status-badge.scheduling-pending {
@@ -4510,7 +4566,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-quick-action-btn.scheduling-complete {
-                    border-color: rgba(102, 126, 234, 0.2);
+                    border-color: var(--primary);
                     color: var(--primary);
                 }
 
@@ -4582,7 +4638,7 @@ modal.addEventListener('mouseup', (e) => {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(4px);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -4594,7 +4650,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-delete-confirm-modal {
                     background: var(--surface);
                     border-radius: 20px;
-                    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 30px 100px var(--modal-overlay);
                     width: 100%;
                     max-width: 500px;
                     overflow: hidden;
@@ -4671,7 +4727,7 @@ modal.addEventListener('mouseup', (e) => {
                     color: var(--text-secondary);
                     margin: 0;
                     padding: 0.75rem 1rem;
-                    background: rgba(239, 68, 68, 0.1);
+                    background: var(--danger-light);
                     border-radius: 8px;
                     border-left: 3px solid var(--danger);
                     line-height: 1.4;
@@ -4758,7 +4814,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-btn-primary {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: var(--gradient-primary);
                     color: white;
                 }
 
@@ -4866,7 +4922,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-loading-spinner {
                     width: 50px;
                     height: 50px;
-                    border: 4px solid rgba(102, 126, 234, 0.2);
+                    border: 4px solid var(--primary);
                     border-top: 4px solid var(--primary);
                     border-radius: 50%;
                     animation: scheduling-spin 1s linear infinite;
@@ -4901,7 +4957,7 @@ modal.addEventListener('mouseup', (e) => {
                     font-weight: 700;
                     margin-bottom: 1rem;
                     color: var(--text-primary);
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     background-clip: text;
@@ -4919,7 +4975,7 @@ modal.addEventListener('mouseup', (e) => {
                     align-items: center;
                     gap: 0.75rem;
                     padding: 1rem 2rem;
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     border: none;
                     border-radius: var(--radius);
@@ -4943,7 +4999,7 @@ modal.addEventListener('mouseup', (e) => {
                     right: 0;
                     bottom: 0;
                     background: rgba(0, 0, 0, 0.3);
-                    backdrop-filter: blur(4px);
+                    
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -4955,7 +5011,7 @@ modal.addEventListener('mouseup', (e) => {
                 .scheduling-upgrade-prompt {
                     background: var(--surface);
                     border-radius: 20px;
-                    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
+                    box-shadow: 0 30px 100px var(--modal-overlay);
                     width: 100%;
                     max-width: 500px;
                     overflow: hidden;
@@ -4964,7 +5020,7 @@ modal.addEventListener('mouseup', (e) => {
                 }
 
                 .scheduling-upgrade-header {
-                    background: linear-gradient(135deg, var(--primary) 0%, #8B5CF6 100%);
+                    background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
                     color: white;
                     padding: 2rem;
                     display: flex;
@@ -5373,7 +5429,7 @@ modal.addEventListener('mouseup', (e) => {
 }
 
 .scheduling-batch-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
+    background: var(--primary-light);
     border-color: #667eea;
 }
 
@@ -5383,7 +5439,7 @@ modal.addEventListener('mouseup', (e) => {
 }
 
 .scheduling-batch-btn.delete:hover {
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--danger-light);
     border-color: #ef4444;
 }
 
@@ -5394,8 +5450,8 @@ modal.addEventListener('mouseup', (e) => {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: var(--modal-overlay);
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5601,32 +5657,6 @@ modal.addEventListener('mouseup', (e) => {
     }
 }
 
-/* Module-level animations */
-@keyframes schedWaveIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes schedFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.sched-wave-in {
-    animation: schedWaveIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
-}
-
-.sched-fade-in {
-    animation: schedFadeIn 0.3s ease forwards;
-    opacity: 0;
-}
             </style>
         `;
     }
